@@ -243,3 +243,4 @@ sequenceDiagram
 - [データフロー・通信](./data-flow.md)
 - [ゲームコンテンツ詳細](./game-content.md)
 - [Elixir as SSoT 移行計画](./elixir-as-ssot-migration.md)
+- [ビジュアルエディタ アーキテクチャ](./visual-editor-architecture.md)
