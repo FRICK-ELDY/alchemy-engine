@@ -1,0 +1,10 @@
+[package]
+name = "game_window"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+game_render = { path = "../game_render" }
+winit = "0.30.12"
+pollster = "0.3"
+log = "0.4"

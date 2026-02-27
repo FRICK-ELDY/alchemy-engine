@@ -1,0 +1,11 @@
+[workspace]
+resolver = "2"
+members = ["game_core", "game_native", "game_render", "game_window"]
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
