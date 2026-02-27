@@ -7,15 +7,19 @@ AlchemyEngineは、ElixirをSingle Source of Truth（SSoT）としてゲーム�
 ## ✨ Core Concepts
 
 - **Elixir as SSoT (Single Source of Truth)** 
+
   ゲームの権威ある状態（State）やロジックは、すべてElixir側で管理します。これにより、クライアント用のコードをそのままマルチプレイ用の専用サーバー（ヘッドレス化）としてシームレスに転用可能です。1000人規模のプレイヤーが交差するような大規模なネットワークルーティングも、Elixirの並行処理能力で安全に捌きます。
 
 - **Data-Driven with Rust ECS** 
+
   Elixirから同期された状態をもとに、Rust側のECSが毎フレームの予測・補間（Dead Reckoning）と物理演算、描画を行います。機能ごとの固定スレッドではなく、タスクベースの並列処理を行うことで、広大なオープンワールドやVR環境でも高いフレームレートを死守します。
 
 - **SuperCollider-inspired Audio Architecture** 
+
   クライアント（Elixir）が「指揮者」として非同期の制御メッセージを発行し、サーバー（Rust側の専用スレッド）がノードグラフを構築してDSP処理を行う、SuperColliderの思想を取り入れた強力な音響システムを搭載。複雑な空間オーディオ（3Dサウンド）や動的なルーティングを低遅延で実現します。
 
 - **VR & Custom Hardware Ready** 
+
   Elixir側の柔軟なネットワークインターフェースにより、標準的なコントローラーだけでなく、自作のIoTデバイスからのUDPストリームを直接エンジンに吸い上げ、超低遅延でアバターに反映させる基盤を持ち合わせています。
 
 ## 🏗️ Architecture
