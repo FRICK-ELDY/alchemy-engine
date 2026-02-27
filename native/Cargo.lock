@@ -1067,24 +1067,24 @@ dependencies = [
 ]
 
 [[package]]
-name = "game_core"
+name = "game_audio"
 version = "0.1.0"
 dependencies = [
- "rustc-hash 2.1.1",
+ "log",
+ "rodio",
 ]
 
 [[package]]
-name = "game_native"
+name = "game_nif"
 version = "0.1.0"
 dependencies = [
  "bincode",
  "env_logger",
- "game_core",
+ "game_audio",
  "game_render",
- "game_window",
+ "game_simulation",
  "log",
  "rayon",
- "rodio",
  "rustler",
  "serde",
 ]
@@ -1097,20 +1097,22 @@ dependencies = [
  "egui",
  "egui-wgpu",
  "egui-winit",
- "game_core",
+ "game_simulation",
  "image",
+ "log",
+ "pollster",
  "wgpu",
  "winit",
 ]
 
 [[package]]
-name = "game_window"
+name = "game_simulation"
 version = "0.1.0"
 dependencies = [
- "game_render",
  "log",
- "pollster",
- "winit",
+ "rayon",
+ "rustc-hash 2.1.1",
+ "rustler",
 ]
 
 [[package]]

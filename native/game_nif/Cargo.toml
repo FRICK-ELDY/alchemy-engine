@@ -1,0 +1,24 @@
+[package]
+name = "game_nif"
+version = "0.1.0"
+edition = "2021"
+description = "Elixir <-> Rust NIF通信インターフェース（Rustler）"
+
+[features]
+default = ["umbrella"]
+umbrella = []
+
+[lib]
+name = "game_nif"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+game_simulation = { path = "../game_simulation", features = ["nif"] }
+game_audio      = { path = "../game_audio" }
+game_render     = { path = "../game_render" }
+rustler = "0.34"
+rayon = "1"
+log = "0.4"
+env_logger = "0.11"
+serde = { version = "1", features = ["derive"] }
+bincode = "1.3"

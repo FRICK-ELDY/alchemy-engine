@@ -1,0 +1,9 @@
+[package]
+name = "game_audio"
+version = "0.1.0"
+edition = "2021"
+description = "SuperCollider風コマンド駆動オーディオスレッド・アセットローダー"
+
+[dependencies]
+log = "0.4"
+rodio = { version = "0.21", default-features = false, features = ["playback", "wav", "vorbis"] }

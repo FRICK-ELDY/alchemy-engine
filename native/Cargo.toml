@@ -1,6 +1,11 @@
 [workspace]
 resolver = "2"
-members = ["game_core", "game_native", "game_render", "game_window"]
+members = [
+    "game_simulation",
+    "game_audio",
+    "game_render",
+    "game_nif",
+]
 
 [profile.dev]
 opt-level = 1

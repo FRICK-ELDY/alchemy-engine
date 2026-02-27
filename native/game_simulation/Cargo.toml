@@ -1,0 +1,17 @@
+[package]
+name = "game_simulation"
+version = "0.1.0"
+edition = "2021"
+description = "ECS World・ゲームロジック・物理演算・Dead Reckoning（ヘッドレス動作可能）"
+
+[dependencies]
+rustc-hash = "2"
+rayon = "1"
+log = "0.4"
+
+[dependencies.rustler]
+version = "0.34"
+optional = true
+
+[features]
+nif = ["rustler"]

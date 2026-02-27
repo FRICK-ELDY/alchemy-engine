@@ -2,8 +2,8 @@
 //! Summary: wgpu によるスプライト描画・パイプライン・テクスチャ管理
 //! 1.8: game_native から game_render へ分離移設。
 
-use game_core::constants::{BG_B, BG_G, BG_R, SPRITE_SIZE};
-use game_core::item::{RENDER_KIND_GEM, RENDER_KIND_MAGNET, RENDER_KIND_POTION};
+use game_simulation::constants::{BG_B, BG_G, BG_R, SPRITE_SIZE};
+use game_simulation::item::{RENDER_KIND_GEM, RENDER_KIND_MAGNET, RENDER_KIND_POTION};
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
 use winit::window::Window;
