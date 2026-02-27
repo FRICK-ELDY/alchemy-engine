@@ -18,6 +18,10 @@ pub struct WeaponSlotSave {
 }
 
 /// ゲーム状態のスナップショット（セーブ/ロード用）
+///
+/// フェーズ1〜3 の移行後:
+/// - score/kill_count は Elixir 側が権威を持つため、SaveManager が Elixir 側の値を保存する
+/// - Rust 側のスナップショットには物理演算に必要な値のみ含める
 #[derive(Debug, Clone, rustler::NifMap)]
 pub struct SaveSnapshot {
     pub player_hp:        f32,
@@ -26,10 +30,8 @@ pub struct SaveSnapshot {
     pub player_max_hp:    f32,
     pub level:            u32,
     pub exp:              u32,
-    pub score:            u32,
     pub elapsed_seconds:  f32,
     pub weapon_slots:     Vec<WeaponSlotSave>,
-    pub kill_count:       u32,
 }
 
 #[rustler::nif]
@@ -46,10 +48,8 @@ pub fn get_save_snapshot(world: ResourceArc<GameWorld>) -> NifResult<SaveSnapsho
         player_max_hp:   w.player_max_hp,
         level:           w.level,
         exp:             w.exp,
-        score:           w.score,
         elapsed_seconds: w.elapsed_seconds,
         weapon_slots,
-        kill_count:      w.kill_count,
     })
 }
 
@@ -65,11 +65,9 @@ pub fn load_save_snapshot(world: ResourceArc<GameWorld>, snapshot: SaveSnapshot)
     w.player.invincible_timer = 0.0;
 
     w.player_max_hp   = snapshot.player_max_hp;
-    w.score           = snapshot.score;
     w.elapsed_seconds = snapshot.elapsed_seconds;
     w.exp             = snapshot.exp;
     w.level           = snapshot.level;
-    w.level_up_pending = false;
 
     let mut slots: Vec<WeaponSlot> = snapshot.weapon_slots
         .into_iter()
@@ -87,7 +85,6 @@ pub fn load_save_snapshot(world: ResourceArc<GameWorld>, snapshot: SaveSnapshot)
     w.boss     = None;
     w.frame_events.clear();
     w.magnet_timer = 0.0;
-    w.kill_count   = snapshot.kill_count;
     w.score_popups.clear();
     w.weapon_choices.clear();
 

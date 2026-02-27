@@ -56,4 +56,9 @@ defmodule GameContent.VampireSurvivor do
   def weapon_label(weapon, level) do
     GameContent.VampireSurvivor.LevelSystem.weapon_label(weapon, level)
   end
+
+  @impl GameEngine.GameBehaviour
+  def generate_weapon_choices(weapon_levels) do
+    GameContent.VampireSurvivor.LevelSystem.generate_weapon_choices(weapon_levels)
+  end
 end

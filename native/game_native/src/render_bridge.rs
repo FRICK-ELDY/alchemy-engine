@@ -1,8 +1,8 @@
 //! Path: native/game_native/src/render_bridge.rs
-//! Summary: game_window の RenderBridge 実装（1.8.4）
+//! Summary: game_window の RenderBridge 実装（フェーズ5: 直接 Elixir 送信対応）
 
 use crate::asset::AssetLoader;
-use crate::lock_metrics::{record_read_wait, record_write_wait};
+use crate::lock_metrics::record_read_wait;
 use crate::render_snapshot::{
     build_render_frame, calc_interpolation_alpha, copy_interpolation_data, interpolate_player_pos,
 };
@@ -10,11 +10,13 @@ use crate::world::GameWorld;
 use game_core::constants::{SCREEN_HEIGHT, SCREEN_WIDTH};
 use game_render::RenderFrame;
 use game_window::{run_render_loop, RenderBridge, RendererInit, WindowConfig};
-use rustler::ResourceArc;
+use rustler::env::OwnedEnv;
+use rustler::{Encoder, LocalPid, ResourceArc};
 use std::time::Instant;
 
-pub fn run_render_thread(world: ResourceArc<GameWorld>) {
-    let bridge = NativeRenderBridge { world };
+/// フェーズ5: 描画スレッドに Elixir PID を渡して直接メッセージ送信できるようにする
+pub fn run_render_thread(world: ResourceArc<GameWorld>, elixir_pid: LocalPid) {
+    let bridge = NativeRenderBridge { world, elixir_pid };
     let loader = AssetLoader::new();
 
     let config = WindowConfig {
@@ -33,6 +35,8 @@ pub fn run_render_thread(world: ResourceArc<GameWorld>) {
 
 struct NativeRenderBridge {
     world: ResourceArc<GameWorld>,
+    /// フェーズ5: UI アクション・移動入力を直接 Elixir プロセスに送信するための PID
+    elixir_pid: LocalPid,
 }
 
 impl RenderBridge for NativeRenderBridge {
@@ -85,39 +89,23 @@ impl RenderBridge for NativeRenderBridge {
         frame
     }
 
+    /// フェーズ5: 移動入力を Elixir プロセスに直接送信する
+    /// 変更前: write lock で GameWorldInner.player.input_dx/dy に直接書き込み
+    /// 変更後: OwnedEnv::send_and_clear で {:move_input, dx, dy} を GameEvents に送信
     fn on_move_input(&self, dx: f32, dy: f32) {
-        let wait_start = Instant::now();
-        match self.world.0.write() {
-            Ok(mut guard) => {
-                record_write_wait("render.on_move_input", wait_start.elapsed());
-                guard.player.input_dx = dx;
-                guard.player.input_dy = dy;
-            }
-            Err(e) => {
-                log::error!("Render bridge: failed to acquire write lock for input: {e:?}");
-            }
-        }
+        let mut env = OwnedEnv::new();
+        let _ = env.send_and_clear(&self.elixir_pid, |env| {
+            (crate::move_input(), dx as f64, dy as f64).encode(env)
+        });
     }
 
+    /// フェーズ5: UI アクションを Elixir プロセスに直接送信する
+    /// 変更前: pending_ui_action Mutex に書き込み → ゲームループスレッドが取得
+    /// 変更後: OwnedEnv::send_and_clear で {:ui_action, action} を GameEvents に送信
     fn on_ui_action(&self, action: String) {
-        let wait_start = Instant::now();
-        match self.world.0.read() {
-            Ok(guard) => {
-                record_read_wait("render.on_ui_action", wait_start.elapsed());
-                match guard.pending_ui_action.lock() {
-                    Ok(mut pending) => {
-                        *pending = Some(action);
-                    }
-                    Err(e) => {
-                        log::error!("Render bridge: pending_ui_action mutex poisoned: {e:?}");
-                        let mut pending = e.into_inner();
-                        *pending = Some(action);
-                    }
-                }
-            }
-            Err(e) => {
-                log::error!("Render bridge: failed to acquire read lock for ui action: {e:?}");
-            }
-        }
+        let mut env = OwnedEnv::new();
+        let _ = env.send_and_clear(&self.elixir_pid, |env| {
+            (crate::ui_action(), action).encode(env)
+        });
     }
 }

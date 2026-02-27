@@ -1,10 +1,8 @@
-use super::leveling::compute_weapon_choices;
 use crate::world::{FrameEvent, GameWorldInner};
 use crate::BULLET_KIND_ROCK;
 use game_core::constants::{BULLET_RADIUS, INVINCIBLE_DURATION, PLAYER_RADIUS, SCREEN_HEIGHT, SCREEN_WIDTH};
 use game_core::entity_params::{BossParams, BOSS_ID_BAT_LORD, BOSS_ID_SLIME_KING, BOSS_ID_STONE_GOLEM};
 use game_core::item::ItemKind;
-use game_core::util::exp_required_for_next;
 
 /// 1.2.9: ボス更新（Elixir が spawn_boss で生成したボスを毎フレーム動かす）
 pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
@@ -174,9 +172,13 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
                     .push((bi, dmg as f32, !w.bullets.piercing[bi]));
             }
         }
-        // ダメージ適用
+        // フェーズ4: ダメージ適用 - HP の権威は Elixir 側に移行。
+        // BossDamaged イベントを発行して Elixir 側で HP を減算する。
+        // Rust 側の boss.hp は Elixir から set_boss_hp NIF で注入された値を参照する。
         let total_dmg: f32 = eff.bullet_hits.iter().map(|&(_, d, _)| d).sum();
         if total_dmg > 0.0 {
+            w.frame_events.push(FrameEvent::BossDamaged { damage: total_dmg });
+            // Rust 側でも HP を更新して死亡判定に使用する（Elixir からの注入は次フレーム）
             if let Some(ref mut boss) = w.boss {
                 boss.hp -= total_dmg;
                 if boss.hp <= 0.0 {
@@ -190,10 +192,10 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
     }
 
     // フェーズ2: boss 借用を解放してから副作用を適用
+    // HP の権威は Elixir 側に移行。ここではイベント発行のみ行う。
     if eff.hurt_player {
         if w.player.invincible_timer <= 0.0 && w.player.hp > 0.0 {
             let dmg = eff.boss_damage * dt;
-            w.player.hp = (w.player.hp - dmg).max(0.0);
             w.player.invincible_timer = INVINCIBLE_DURATION;
             w.frame_events.push(FrameEvent::PlayerDamaged { damage: dmg });
             w.particles
@@ -254,22 +256,13 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
     }
     if eff.boss_killed {
         let boss_k = w.boss.as_ref().map(|b| b.kind_id).unwrap_or(0);
-        w.kill_count += 1;
+        // フェーズ1: score/kill_count の権威は Elixir 側に移行。
+        // フェーズ3: exp/level/level_up_pending の権威は Elixir 側に移行。
+        // score_popups は描画用なので Rust 側で管理を継続する。
         w.score_popups
             .push((eff.kill_x, eff.kill_y - 20.0, eff.exp_reward * 2, 0.8));
         w.frame_events
             .push(FrameEvent::BossDefeated { boss_kind: boss_k });
-        w.score += eff.exp_reward * 2;
-        w.exp += eff.exp_reward;
-        if !w.level_up_pending {
-            let required = exp_required_for_next(w.level);
-            if w.exp >= required {
-                let new_lv = w.level + 1;
-                w.level_up_pending = true;
-                w.weapon_choices = compute_weapon_choices(w);
-                w.frame_events.push(FrameEvent::LevelUp { new_level: new_lv });
-            }
-        }
         w.particles
             .emit(eff.kill_x, eff.kill_y, 40, [1.0, 0.5, 0.0, 1.0]);
         for _ in 0..10 {

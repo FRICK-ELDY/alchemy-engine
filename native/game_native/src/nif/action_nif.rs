@@ -41,6 +41,8 @@ pub fn spawn_boss(world: ResourceArc<GameWorld>, kind_id: u8) -> NifResult<Atom>
         let bx = (px + 600.0).min(SCREEN_WIDTH  - bp.radius);
         let by = py.clamp(bp.radius, SCREEN_HEIGHT - bp.radius);
         w.boss = Some(BossState::new(kind_id, bx, by));
+        // フェーズ4: BossSpawn イベントを発行して Elixir 側でボス HP を初期化する
+        w.frame_events.push(crate::world::FrameEvent::BossSpawn { boss_kind: kind_id });
     }
     Ok(ok())
 }

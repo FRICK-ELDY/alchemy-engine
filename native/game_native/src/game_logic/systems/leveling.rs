@@ -5,6 +5,9 @@ use game_core::entity_params::{
 };
 
 /// 1.7.5: レベルアップ時の武器選択肢を計算（未所持優先 → 低レベル順、Lv8 除外）
+/// フェーズ3: 武器選択肢の生成は Elixir 側（LevelSystem）に移行済み。
+/// HUD 表示用に weapon_choices を Rust 側でも保持するため残す。
+#[allow(dead_code)]
 pub(crate) fn compute_weapon_choices(w: &GameWorldInner) -> Vec<String> {
     const ALL: &[(&str, u8)] = &[
         ("magic_wand", WEAPON_ID_MAGIC_WAND),

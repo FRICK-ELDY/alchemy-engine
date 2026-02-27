@@ -22,7 +22,6 @@ defmodule GameEngine.SaveManager do
       {:ok, binary} ->
         try do
           snapshot = :erlang.binary_to_term(binary)
-          snapshot = Map.put_new(snapshot, :kill_count, 0)
           GameEngine.NifBridge.load_save_snapshot(world_ref, snapshot)
           :ok
         rescue

@@ -19,6 +19,11 @@ pub(crate) fn drain_frame_events_inner(w: &mut GameWorldInner) -> Vec<(Atom, u32
                 (crate::item_pickup(), item_kind as u32, 0),
             FrameEvent::BossDefeated { boss_kind } =>
                 (crate::boss_defeated(), boss_kind as u32, 0),
+            // フェーズ4: ボス出現・ダメージイベント
+            FrameEvent::BossSpawn { boss_kind } =>
+                (crate::boss_spawn(), boss_kind as u32, 0),
+            FrameEvent::BossDamaged { damage } =>
+                (crate::boss_damaged(), (damage * 1000.0) as u32, 0),
         })
         .collect()
 }
