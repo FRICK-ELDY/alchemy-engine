@@ -31,7 +31,7 @@ graph LR
 ### `constants.rs`
 
 | 定数 | 値 | 説明 |
-|---|---|---|
+|:---|:---|:---|
 | `SCREEN_WIDTH` | 1280 | 画面幅（px） |
 | `SCREEN_HEIGHT` | 720 | 画面高さ（px） |
 | `MAP_WIDTH` | 4096 | マップ幅（px） |
@@ -48,7 +48,7 @@ graph LR
 **`EnemyParams`（5 種）:**
 
 | ID | 種別 | HP | 速度 | ダメージ | EXP |
-|---|---|---|---|---|---|
+|:---|:---|:---|:---|:---|:---|
 | 0 | Slime | 30 | 60 | 10 | 5 |
 | 1 | Bat | 20 | 90 | 8 | 4 |
 | 2 | Golem | 100 | 30 | 20 | 15 |
@@ -58,7 +58,7 @@ graph LR
 **`WeaponParams`（7 種）:**
 
 | ID | 種別 | ダメージ | クールダウン | 弾数 |
-|---|---|---|---|---|
+|:---|:---|:---|:---|:---|
 | 0 | MagicWand | 20 | 0.8s | 1 |
 | 1 | Axe | 40 | 1.5s | 1 |
 | 2 | Cross | 15 | 0.5s | 4（方向） |
@@ -70,7 +70,7 @@ graph LR
 **`BossParams`（3 種）:**
 
 | ID | 種別 | HP | 速度 |
-|---|---|---|---|
+|:---|:---|:---|:---|
 | 0 | SlimeKing | 1000 | 40 |
 | 1 | BatLord | 2000 | 120 |
 | 2 | StoneGolem | 5000 | 20 |
@@ -157,7 +157,7 @@ graph TD
 **`world_nif.rs`:**
 
 | NIF 関数 | 説明 |
-|---|---|
+|:---|:---|
 | `create_world()` | `GameWorld` リソースを生成して返す |
 | `set_player_input(world, dx, dy)` | 移動ベクトルを設定 |
 | `spawn_enemies(world, kind_id, count, hp_mult)` | 敵をスポーン |
@@ -166,7 +166,7 @@ graph TD
 **`action_nif.rs`:**
 
 | NIF 関数 | 説明 |
-|---|---|
+|:---|:---|
 | `add_weapon(world, weapon_id)` | 武器を追加/アップグレード |
 | `skip_level_up(world)` | レベルアップをスキップ |
 | `spawn_boss(world, boss_id)` | ボスをスポーン |
@@ -175,7 +175,7 @@ graph TD
 **`read_nif.rs`（軽量・毎フレーム利用可）:**
 
 | NIF 関数 | 説明 |
-|---|---|
+|:---|:---|
 | `get_player_pos(world)` | プレイヤー座標 `{x, y}` |
 | `get_player_hp(world)` | プレイヤー HP |
 | `get_enemy_count(world)` | 生存敵数 |
@@ -189,7 +189,7 @@ graph TD
 **`game_loop_nif.rs`:**
 
 | NIF 関数 | 説明 |
-|---|---|
+|:---|:---|
 | `physics_step(world, dt)` | 1 フレーム物理ステップ（DirtyCpu） |
 | `drain_frame_events(world)` | フレームイベントを取り出す |
 | `create_game_loop_control()` | `GameLoopControl` リソース生成 |
@@ -311,7 +311,7 @@ graph TD
 **7 武器の発射パターン:**
 
 | 武器 | 発射パターン |
-|---|---|
+|:---|:---|
 | MagicWand | 最近傍の敵に向けて 1 発 |
 | Axe | 上方向に投げ、放物線軌道 |
 | Cross | 上下左右 4 方向に同時発射 |
@@ -323,7 +323,7 @@ graph TD
 **ボス AI パターン:**
 
 | ボス | 移動 | 特殊行動 |
-|---|---|---|
+|:---|:---|:---|
 | SlimeKing | 低速追跡 | 定期的にスライムを召喚 |
 | BatLord | 高速追跡 | ダッシュ攻撃（phase_timer で制御） |
 | StoneGolem | 超低速 | 岩弾を放射状に発射 |
@@ -365,7 +365,7 @@ graph LR
 ### `lock_metrics.rs` — RwLock 待機時間メトリクス
 
 | 閾値 | アクション |
-|---|---|
+|:---|:---|
 | read lock > 300μs | `log::warn!` |
 | write lock > 500μs | `log::warn!` |
 | 5 秒ごと | 平均待機時間をレポート |
@@ -411,7 +411,7 @@ sequenceDiagram
 **スプライトアトラスレイアウト（1600×64px）:**
 
 | オフセット | 内容 |
-|---|---|
+|:---|:---|
 | 0〜255 | プレイヤー 4 フレームアニメ |
 | 256〜511 | 敵アニメ（Slime/Bat/Golem） |
 | 512〜767 | 静止スプライト（アイテム等） |
@@ -420,7 +420,7 @@ sequenceDiagram
 ### `renderer/ui.rs` — egui HUD（708行）
 
 | 画面 | 内容 |
-|---|---|
+|:---|:---|
 | タイトル | START ボタン |
 | ゲームオーバー | 生存時間・スコア・撃破数・RETRY ボタン |
 | プレイ中 | HP バー・EXP バー・スコア・タイマー・武器スロット・Save/Load |
@@ -448,7 +448,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 ### キー入力マッピング
 
 | キー | 動作 |
-|---|---|
+|:---|:---|
 | W / ↑ | 上移動 |
 | S / ↓ | 下移動 |
 | A / ← | 左移動 |

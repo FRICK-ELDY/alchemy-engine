@@ -175,7 +175,7 @@ alchemy-engine/
 ## レイヤー間の責務分担
 
 | レイヤー | 責務 | 技術 |
-|---|---|---|
+|:---|:---|:---|
 | `game_server` | OTP Application 起動・Supervisor ツリー構築 | Elixir / OTP |
 | `game_engine` | ゲームループ制御・シーン管理・イベント配信・セーブ | Elixir GenServer / ETS |
 | `game_content` | ゲーム固有ロジック（VampireSurvivor のルール） | Elixir |

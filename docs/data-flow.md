@@ -192,7 +192,7 @@ graph TD
 ### NIF 関数カテゴリ別ロック種別
 
 | カテゴリ | 代表関数 | ロック | 呼び出し頻度 |
-|---|---|---|---|
+|:---|:---|:---|:---|
 | control | `create_world`, `spawn_enemies` | write | 低（イベント時） |
 | query_light | `get_player_hp`, `get_enemy_count` | read | 高（毎フレーム可） |
 | snapshot_heavy | `get_save_snapshot`, `load_save_snapshot` | write | 低（明示操作時） |
