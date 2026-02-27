@@ -3,8 +3,9 @@ use crate::constants::{BULLET_RADIUS, INVINCIBLE_DURATION, PLAYER_RADIUS, SCREEN
 use crate::entity_params::{BossParams, BOSS_ID_BAT_LORD, BOSS_ID_SLIME_KING, BOSS_ID_STONE_GOLEM};
 use crate::item::ItemKind;
 
-/// 1.2.9: ボス更新（Elixir が spawn_boss で生成したボスを毎フレーム動かす）
+/// ボス更新（Elixir が spawn_boss で生成したボスを毎フレーム動かす）
 pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
+    // 借用競合を避けるため、副作用データを先に収集する
     struct BossEffect {
         spawn_slimes: bool,
         spawn_rocks: bool,
@@ -15,7 +16,7 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
         hurt_x: f32,
         hurt_y: f32,
         boss_damage: f32,
-        bullet_hits: Vec<(usize, f32, bool)>,
+        bullet_hits: Vec<(usize, f32, bool)>, // (bullet_idx, dmg, kill_bullet)
         boss_x: f32,
         boss_y: f32,
         boss_invincible: bool,
@@ -36,15 +37,19 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
         boss_killed: false, exp_reward: 0, kill_x: 0.0, kill_y: 0.0,
     };
 
+    // フェーズ1: boss の移動・タイマー更新（boss のみを借用）
     if let Some(boss) = w.boss.as_mut() {
+        // プレイヤー座標をコピーして boss 借用前に取得
         let px = w.player.x + PLAYER_RADIUS;
         let py = w.player.y + PLAYER_RADIUS;
 
+        // 無敵タイマー
         if boss.invincible_timer > 0.0 {
             boss.invincible_timer = (boss.invincible_timer - dt).max(0.0);
             if boss.invincible_timer <= 0.0 { boss.invincible = false; }
         }
 
+        // 移動 AI
         let bp = BossParams::get(boss.kind_id);
         match boss.kind_id {
             BOSS_ID_SLIME_KING | BOSS_ID_STONE_GOLEM => {
@@ -77,6 +82,7 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
         boss.x = boss.x.clamp(bp.radius, SCREEN_WIDTH - bp.radius);
         boss.y = boss.y.clamp(bp.radius, SCREEN_HEIGHT - bp.radius);
 
+        // 特殊行動タイマー
         boss.phase_timer -= dt;
         if boss.phase_timer <= 0.0 {
             boss.phase_timer = bp.special_interval;
@@ -109,6 +115,7 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
             }
         }
 
+        // ボス vs プレイヤー接触ダメージ: フラグだけ立てる
         let boss_r = bp.radius;
         let hit_r = PLAYER_RADIUS + boss_r;
         let ddx = px - boss.x;
@@ -120,6 +127,7 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
             eff.boss_damage = bp.damage_per_sec;
         }
 
+        // 弾丸 vs ボス: ヒット判定に必要なデータをコピー
         eff.boss_invincible = boss.invincible;
         eff.boss_r = bp.radius;
         eff.boss_exp_reward = bp.exp_reward;
@@ -127,6 +135,7 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
         eff.boss_y = boss.y;
     }
 
+    // 弾丸 vs ボス: boss 借用の外で処理
     if w.boss.is_some() && !eff.boss_invincible {
         let bullet_len = w.bullets.positions_x.len();
         for bi in 0..bullet_len {
@@ -142,9 +151,12 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
                 eff.bullet_hits.push((bi, dmg as f32, !w.bullets.piercing[bi]));
             }
         }
+        // BossDamaged イベントを発行して Elixir 側で HP を減算する。
+        // Rust 側の boss.hp は Elixir から set_boss_hp NIF で注入された値を参照する。
         let total_dmg: f32 = eff.bullet_hits.iter().map(|&(_, d, _)| d).sum();
         if total_dmg > 0.0 {
             w.frame_events.push(FrameEvent::BossDamaged { damage: total_dmg });
+            // Rust 側でも HP を更新して死亡判定に使用する（Elixir からの注入は次フレーム）
             if let Some(ref mut boss) = w.boss {
                 boss.hp -= total_dmg;
                 if boss.hp <= 0.0 {
@@ -157,6 +169,8 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
         }
     }
 
+    // フェーズ2: boss 借用を解放してから副作用を適用
+    // HP の権威は Elixir 側。ここではイベント発行のみ行う。
     if eff.hurt_player {
         if w.player.invincible_timer <= 0.0 && w.player.hp > 0.0 {
             let dmg = eff.boss_damage * dt;
@@ -166,6 +180,7 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
         }
     }
 
+    // 弾丸ヒットパーティクル & 弾丸消去
     if !eff.bullet_hits.is_empty() {
         w.particles.emit(eff.boss_x, eff.boss_y, 4, [1.0, 0.8, 0.2, 1.0]);
         for &(bi, _, kill_bullet) in &eff.bullet_hits {
@@ -173,6 +188,7 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
         }
     }
 
+    // 特殊行動の副作用
     if eff.spawn_slimes {
         let positions: Vec<(f32, f32)> = (0..8)
             .map(|i| {
@@ -180,7 +196,7 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
                 (eff.special_x + angle.cos() * 120.0, eff.special_y + angle.sin() * 120.0)
             })
             .collect();
-        w.enemies.spawn(&positions, 0);
+        w.enemies.spawn(&positions, 0); // Slime
         w.particles.emit(eff.special_x, eff.special_y, 16, [0.2, 1.0, 0.2, 1.0]);
     }
     if eff.spawn_rocks {
@@ -194,6 +210,7 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
     }
     if eff.boss_killed {
         let boss_k = w.boss.as_ref().map(|b| b.kind_id).unwrap_or(0);
+        // score_popups は描画用なので Rust 側で管理を継続する
         w.score_popups.push((eff.kill_x, eff.kill_y - 20.0, eff.exp_reward * 2, 0.8));
         w.frame_events.push(FrameEvent::BossDefeated { boss_kind: boss_k });
         w.particles.emit(eff.kill_x, eff.kill_y, 40, [1.0, 0.5, 0.0, 1.0]);

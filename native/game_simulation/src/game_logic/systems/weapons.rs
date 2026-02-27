@@ -9,12 +9,14 @@ use crate::entity_params::{
 use crate::item::ItemKind;
 
 pub(crate) fn update_weapon_attacks(w: &mut GameWorldInner, dt: f32, px: f32, py: f32) {
+    // プレイヤーの移動方向（Whip の向き計算用）
     let facing_angle = {
         let fdx = w.player.input_dx;
         let fdy = w.player.input_dy;
         if fdx * fdx + fdy * fdy > 0.0001 {
             fdy.atan2(fdx)
         } else {
+            // 停止中は右向きをデフォルトとする
             0.0_f32
         }
     };
@@ -28,6 +30,7 @@ pub(crate) fn update_weapon_attacks(w: &mut GameWorldInner, dt: f32, px: f32, py
 
         let kind_id = w.weapon_slots[si].kind_id;
         let wp = WeaponParams::get(kind_id);
+        // レベルに応じたクールダウン・ダメージ・弾数を使用
         let cd = w.weapon_slots[si].effective_cooldown();
         let dmg = w.weapon_slots[si].effective_damage();
         let level = w.weapon_slots[si].level;
@@ -64,8 +67,10 @@ fn fire_magic_wand(
         let ty = w.enemies.positions_y[ti] + target_r;
         let bdx = tx - px;
         let bdy = ty - py;
+        // bcount 発同時発射（Lv3 で 2 発、Lv5 で 3 発）
+        // 複数発は少しずつ角度をずらして扇状に発射
         let base_angle = bdy.atan2(bdx);
-        let spread = std::f32::consts::PI * 0.08;
+        let spread = std::f32::consts::PI * 0.08; // 約 14 度の広がり
         let half = (bcount as f32 - 1.0) / 2.0;
         for bi in 0..bcount {
             let angle = base_angle + (bi as f32 - half) * spread;
@@ -86,6 +91,7 @@ fn fire_axe(
     weapon_kind: u8,
     cd: f32,
 ) {
+    // 上方向に直進（簡易実装）
     w.bullets.spawn(px, py, 0.0, -BULLET_SPEED, dmg, BULLET_LIFETIME, weapon_kind);
     w.weapon_slots[si].cooldown_timer = cd;
 }
@@ -100,6 +106,7 @@ fn fire_cross(
     weapon_kind: u8,
     cd: f32,
 ) {
+    // Lv1〜3: 上下左右 4 方向、Lv4 以上: 斜め 4 方向も追加
     let dirs_4: [(f32, f32); 4] = [(0.0, -1.0), (0.0, 1.0), (-1.0, 0.0), (1.0, 0.0)];
     let diag = std::f32::consts::FRAC_1_SQRT_2;
     let dirs_8: [(f32, f32); 8] = [
@@ -125,11 +132,14 @@ fn fire_whip(
     cd: f32,
     facing_angle: f32,
 ) {
+    // プレイヤーの移動方向に扇状の判定を出す（弾丸を生成しない直接判定）
     let range = whip_range(kind_id, level);
-    let whip_half_angle = std::f32::consts::PI * 0.3;
+    let whip_half_angle = std::f32::consts::PI * 0.3; // 108度 / 2 = 54度
+    // facing_angle 方向の中間点にエフェクト弾を生成（黄緑の横長楕円）
     let eff_x = px + facing_angle.cos() * range * 0.5;
     let eff_y = py + facing_angle.sin() * range * 0.5;
     w.bullets.spawn_effect(eff_x, eff_y, 0.12, BULLET_KIND_WHIP);
+    // 空間ハッシュで範囲内の候補のみ取得し、全敵ループを回避
     let whip_range_sq = range * range;
     let candidates = w.collision.dynamic.query_nearby(px, py, range);
     for ei in candidates {
@@ -140,10 +150,12 @@ fn fire_whip(
         let ey = w.enemies.positions_y[ei];
         let ddx = ex - px;
         let ddy = ey - py;
+        // sqrt を避けて二乗比較で正確な円形クリップ
         if ddx * ddx + ddy * ddy > whip_range_sq {
             continue;
         }
         let angle = ddy.atan2(ddx);
+        // π/-π をまたぐ場合に正しく動作するよう -π〜π に正規化
         let mut diff = angle - facing_angle;
         if diff > std::f32::consts::PI { diff -= std::f32::consts::TAU; }
         if diff < -std::f32::consts::PI { diff += std::f32::consts::TAU; }
@@ -156,6 +168,7 @@ fn fire_whip(
                 let kind_e = w.enemies.kind_ids[ei];
                 let ep_hit = EnemyParams::get(kind_e);
                 w.enemies.kill(ei);
+                // score_popups は描画用なので Rust 側で管理を継続する
                 w.score_popups.push((hit_x, hit_y - 20.0, ep_hit.exp_reward * 2, 0.8));
                 w.frame_events.push(FrameEvent::EnemyKilled { enemy_kind: kind_e, weapon_kind });
                 w.particles.emit(hit_x, hit_y, 8, ep_hit.particle_color);
@@ -173,6 +186,7 @@ fn fire_whip(
             }
         }
     }
+    // Whip vs ボス
     {
         let boss_hit_pos: Option<(f32, f32)> = if let Some(ref boss) = w.boss {
             if !boss.invincible {
@@ -204,6 +218,7 @@ fn fire_fireball(
     weapon_kind: u8,
     cd: f32,
 ) {
+    // 最近接敵に向かって貫通弾を発射
     if let Some(ti) = find_nearest_enemy_spatial(&w.collision, &w.enemies, px, py, WEAPON_SEARCH_RADIUS) {
         let target_r = EnemyParams::get(w.enemies.kind_ids[ti]).radius;
         let tx = w.enemies.positions_x[ti] + target_r;
@@ -229,8 +244,11 @@ fn fire_lightning(
     weapon_kind: u8,
     cd: f32,
 ) {
+    // 最近接敵から始まり、最大 chain_count 体に連鎖
     let chain_count = lightning_chain_count(kind_id, level);
+    // chain_count は最大 6 程度と小さいため Vec で十分（HashSet 不要）
     let mut hit_vec: Vec<usize> = Vec::with_capacity(chain_count);
+    // 最初はプレイヤー位置から最近接敵を探す（空間ハッシュで候補を絞る）
     let mut current = find_nearest_enemy_spatial(&w.collision, &w.enemies, px, py, WEAPON_SEARCH_RADIUS);
     #[allow(unused_assignments)]
     let mut next_search_x = px;
@@ -242,12 +260,14 @@ fn fire_lightning(
             let hit_x = w.enemies.positions_x[ei] + enemy_r;
             let hit_y = w.enemies.positions_y[ei] + enemy_r;
             w.enemies.hp[ei] -= dmg as f32;
+            // 電撃エフェクト弾（水色の電撃球）+ パーティクル
             w.bullets.spawn_effect(hit_x, hit_y, 0.10, BULLET_KIND_LIGHTNING);
             w.particles.emit(hit_x, hit_y, 5, [0.3, 0.8, 1.0, 1.0]);
             if w.enemies.hp[ei] <= 0.0 {
                 let kind_e = w.enemies.kind_ids[ei];
                 let ep_chain = EnemyParams::get(kind_e);
                 w.enemies.kill(ei);
+                // score_popups は描画用なので Rust 側で管理を継続する
                 w.score_popups.push((hit_x, hit_y - 20.0, ep_chain.exp_reward * 2, 0.8));
                 w.frame_events.push(FrameEvent::EnemyKilled { enemy_kind: kind_e, weapon_kind });
                 let roll = w.rng.next_u32() % 100;
@@ -271,6 +291,7 @@ fn fire_lightning(
             break;
         }
     }
+    // Lightning vs ボス（600px 以内なら連鎖先としてダメージ）
     {
         let boss_hit_pos: Option<(f32, f32)> = if let Some(ref boss) = w.boss {
             if !boss.invincible {
@@ -299,6 +320,7 @@ fn fire_garlic(
     weapon_kind: u8,
     cd: f32,
 ) {
+    // プレイヤー周囲オーラで一定間隔ダメージ（5 dmg/sec 想定: 0.2s 毎に 1）
     let radius = garlic_radius(kind_id, level);
     let radius_sq = radius * radius;
     let candidates = w.collision.dynamic.query_nearby(px, py, radius);
@@ -316,6 +338,7 @@ fn fire_garlic(
         let hit_y = ey + ep.radius;
         if w.enemies.hp[ei] <= 0.0 {
             w.enemies.kill(ei);
+            // score_popups は描画用なので Rust 側で管理を継続する
             w.score_popups.push((hit_x, hit_y - 20.0, ep.exp_reward * 2, 0.8));
             w.frame_events.push(FrameEvent::EnemyKilled { enemy_kind: kind_e, weapon_kind });
             w.particles.emit(hit_x, hit_y, 8, ep.particle_color);

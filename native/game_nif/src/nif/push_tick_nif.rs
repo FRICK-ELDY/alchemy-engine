@@ -10,6 +10,11 @@ use std::time::Instant;
 
 use crate::ok;
 
+/// Elixir から入力を受け取り、物理計算して delta を返す。
+///
+/// inputs: プレイヤー入力（dx, dy）
+/// delta_ms: tick 間隔（ms）
+/// returns: `{:ok, frame_id, player_x, player_y, player_hp, enemy_count, physics_ms}`
 #[rustler::nif(schedule = "DirtyCpu")]
 pub fn push_tick(
     world: ResourceArc<GameWorld>,

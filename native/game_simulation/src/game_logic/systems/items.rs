@@ -36,7 +36,9 @@ pub(crate) fn update_items(w: &mut GameWorldInner, dt: f32, px: f32, py: f32) {
         if dx * dx + dy * dy <= collect_r_sq {
             let item_k = w.items.kinds[i];
             match item_k {
-                ItemKind::Gem => {}
+                ItemKind::Gem => {
+                    // EXP は撃破時に加算済みのため、収集イベント発行のみ
+                }
                 ItemKind::Potion => {
                     w.player.hp = (w.player.hp + w.items.value[i] as f32).min(w.player_max_hp);
                     w.particles.emit(px, py, 6, [0.2, 1.0, 0.4, 1.0]);

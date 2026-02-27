@@ -7,6 +7,8 @@ use game_simulation::constants::{INVINCIBLE_DURATION, PLAYER_SIZE, SCREEN_HEIGHT
 use game_simulation::entity_params::{BossParams, EnemyParams, WeaponParams};
 use game_simulation::util::exp_required_for_next;
 
+/// `GameWorldInner` から `RenderFrame` を構築する。
+/// `get_render_data` / `get_particle_data` / `get_item_data` / `get_frame_metadata` 相当のロジックを集約。
 pub fn build_render_frame(w: &GameWorldInner) -> RenderFrame {
     let anim_frame = ((w.frame_id / 4) % 4) as u8;
     let mut render_data = Vec::with_capacity(

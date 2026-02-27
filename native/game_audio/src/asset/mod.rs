@@ -91,6 +91,11 @@ impl AssetLoader {
         }
     }
 
+    /// アセットのバイト列をロードする。
+    /// 1. `game_assets_id` 指定時: `assets/{id}/...` を優先
+    /// 2. `base_path` + 相対パスでファイルが存在すればそこから読み込む
+    /// 3. カレントディレクトリからの相対パスで存在すれば読み込む
+    /// 4. どれも失敗すればコンパイル時埋め込みデータを使用
     pub fn load_bytes(&self, id: AssetId) -> Vec<u8> {
         let default_path = id.default_path();
         let mut paths_to_try: Vec<std::path::PathBuf> = Vec::new();
