@@ -50,6 +50,8 @@ graph TB
 
 ### 1. エディタ操作 → プレビュー更新
 
+`render_frame` を同期 NIF で呼び出すと、レンダリング中に `EditorServer` がブロックされ、ドラッグ操作などの高頻度更新時にエディタ全体の応答性が低下する。そのため **非同期 NIF** を採用し、レンダリング完了後に Rust 側から Elixir プロセスへメッセージを送信する方式とする。
+
 ```mermaid
 sequenceDiagram
     participant B  as ブラウザ
@@ -60,9 +62,9 @@ sequenceDiagram
     B->>LV: ユーザー操作（オブジェクト移動・プロパティ変更など）
     LV->>ES: update_scene(patch)
     ES->>ES: シーン状態を更新（SSoT）
-    ES->>ER: NIF: render_frame(scene_snapshot)
-    ER->>ER: wgpu オフスクリーン描画
-    ER-->>ES: Vec<u8>（PNG or 生ピクセル）
+    ES->>ER: NIF: request_render(scene_snapshot) ※すぐにリターン
+    note right of ER: 別スレッドで wgpu オフスクリーン描画
+    ER-->>ES: {:frame, binary} (プロセスへメッセージ送信)
     ES-->>LV: {:frame, binary}
     LV-->>B: Phoenix Channel push → <img> 更新
 ```
@@ -113,13 +115,14 @@ EditorServer.list_assets()              # アセット一覧取得
 責務：
 - wgpu Surface の代わりに Texture をレンダーターゲットとして使用
 - 描画結果を Vec<u8>（RGBA ピクセル列）として返す
-- PNG エンコードはオプション（低頻度更新時は PNG、高頻度時は生ピクセル）
+- レンダリング完了後、Elixir プロセスへ非同期メッセージを送信する
 ```
 
 ```rust
-// 概念的なインターフェース
+// 概念的なインターフェース（非同期 NIF）
 impl EditorRenderer {
-    pub fn render_frame(&mut self, scene: &SceneSnapshot) -> Vec<u8>;
+    // すぐにリターンし、完了時に pid へ {:frame, binary} を送信する
+    pub fn request_render(&mut self, scene: &SceneSnapshot, pid: LocalPid);
 }
 ```
 
@@ -146,10 +149,12 @@ Elixir binary
 | モード | fps | 転送方式 | 用途 |
 |---|---|---|---|
 | 静止プレビュー | オンデマンド | PNG（Base64） | オブジェクト選択・プロパティ編集 |
-| アニメーションプレビュー | 30fps | 生ピクセル or WebCodecs | パーティクル・アニメーション確認 |
+| アニメーションプレビュー | 30fps | JPEG（Motion JPEG）または WebCodecs | パーティクル・アニメーション確認 |
 | ゲーム起動後 | 60fps | winit ウィンドウ（既存） | 本番プレイ |
 
 エディタ使用中は **静止プレビューが主体** のため、操作のたびにオンデマンドで1フレーム描画する方式が最もシンプルで効率的。
+
+アニメーションプレビューで生ピクセル（RGBA）をそのまま転送すると、1280×720 解像度では 1フレームあたり約 3.7MB・30fps で 110MB/s を超える。ローカル環境でもボトルネックになりうるため、**JPEG 圧縮（Motion JPEG）を第一候補**とし、ブラウザの対応状況に応じて WebCodecs への移行を検討する。
 
 ---
 
