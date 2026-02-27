@@ -15,16 +15,25 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
   @impl GameEngine.SceneBehaviour
   def update(context, state) do
     %{
-      world_ref:     world_ref,
-      now:           now,
-      elapsed:       elapsed,
-      last_spawn_ms: last_spawn_ms,
-      weapon_levels: weapon_levels,
+      world_ref:        world_ref,
+      now:              now,
+      elapsed:          elapsed,
+      last_spawn_ms:    last_spawn_ms,
+      weapon_levels:    weapon_levels,
+      # フェーズ2: Elixir 側の権威ある HP を使用
+      player_hp:        player_hp,
+      # フェーズ3: Elixir 側の権威あるレベル・EXP を使用
+      level:            level,
+      exp:              exp,
+      exp_to_next:      exp_to_next,
+      level_up_pending: level_up_pending,
+      weapon_choices:   weapon_choices,
     } = context
 
     spawned_bosses = Map.get(state, :spawned_bosses, [])
 
-    if GameEngine.is_player_dead?(world_ref) do
+    # フェーズ2: 死亡判定を Elixir 側の player_hp <= 0.0 に変更
+    if player_hp <= 0.0 do
       Logger.info("[GAME OVER] Player HP reached 0 at #{div(elapsed, 1000)}s")
       {:transition, {:replace, GameContent.VampireSurvivor.Scenes.GameOver, %{}}, state}
     else
@@ -42,12 +51,12 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
           }}, new_state}
 
         :no_boss ->
-          {exp, level, level_up_pending, exp_to_next} =
-            GameEngine.get_level_up_data(world_ref)
-
+          # フェーズ3: Elixir 側の level_up_pending を使用
           if level_up_pending do
             :telemetry.execute([:game, :level_up], %{level: level, count: 1}, %{})
-            choices = GameContent.VampireSurvivor.LevelSystem.generate_weapon_choices(weapon_levels)
+
+            # weapon_choices は GameEvents が生成済み（context 経由で受け取る）
+            choices = weapon_choices
 
             if choices == [] do
               Logger.info("[LEVEL UP] All weapons at max level - skipping weapon selection")

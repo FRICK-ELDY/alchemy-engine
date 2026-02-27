@@ -25,7 +25,7 @@ defmodule GameEngine.NifBridge do
   def spawn_elite_enemy(_world, _kind, _count, _hp_multiplier), do: :erlang.nif_error(:nif_not_loaded)
   def create_game_loop_control(), do: :erlang.nif_error(:nif_not_loaded)
   def start_rust_game_loop(_world, _control, _pid), do: :erlang.nif_error(:nif_not_loaded)
-  def start_render_thread(_world), do: :erlang.nif_error(:nif_not_loaded)
+  def start_render_thread(_world, _pid), do: :erlang.nif_error(:nif_not_loaded)
   def pause_physics(_control), do: :erlang.nif_error(:nif_not_loaded)
   def resume_physics(_control), do: :erlang.nif_error(:nif_not_loaded)
 
@@ -42,6 +42,15 @@ defmodule GameEngine.NifBridge do
   def get_magnet_timer(_world), do: :erlang.nif_error(:nif_not_loaded)
   def get_boss_info(_world), do: :erlang.nif_error(:nif_not_loaded)
   def is_player_dead(_world), do: :erlang.nif_error(:nif_not_loaded)
+
+  # ── Elixir SSoT 注入 NIF（毎フレーム呼ばれる）──────────────────────
+  def set_player_hp(_world, _hp), do: :erlang.nif_error(:nif_not_loaded)
+  def set_player_level(_world, _level, _exp), do: :erlang.nif_error(:nif_not_loaded)
+  def set_elapsed_seconds(_world, _elapsed), do: :erlang.nif_error(:nif_not_loaded)
+  def set_boss_hp(_world, _hp), do: :erlang.nif_error(:nif_not_loaded)
+
+  # ── 移行検証用（フェーズ0）───────────────────────────────────────
+  def get_full_game_state(_world), do: :erlang.nif_error(:nif_not_loaded)
 
   # ── snapshot_heavy（明示操作時のみ）──────────────────────────────
   def get_save_snapshot(_world), do: :erlang.nif_error(:nif_not_loaded)

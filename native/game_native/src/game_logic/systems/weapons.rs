@@ -1,4 +1,3 @@
-use super::leveling::compute_weapon_choices;
 use crate::game_logic::{find_nearest_enemy_spatial, find_nearest_enemy_spatial_excluding};
 use crate::world::{FrameEvent, GameWorldInner};
 use crate::{BULLET_KIND_LIGHTNING, BULLET_KIND_WHIP};
@@ -9,13 +8,10 @@ use game_core::entity_params::{
     WEAPON_ID_MAGIC_WAND, WEAPON_ID_WHIP,
 };
 use game_core::item::ItemKind;
-use game_core::util::exp_required_for_next;
 
 pub(crate) fn update_weapon_attacks(w: &mut GameWorldInner, dt: f32, px: f32, py: f32) {
-    // level_up_pending 中は発射を止めてゲームを一時停止する
-    if w.level_up_pending {
-        return;
-    }
+    // フェーズ3: level_up_pending の権威は Elixir 側に移行済み。
+    // レベルアップ中のポーズは GameLoopControl.pause() で制御される。
 
     // プレイヤーの移動方向（Whip の向き計算用）
     let facing_angle = {
@@ -196,24 +192,13 @@ fn fire_whip(
                 let kind_e = w.enemies.kind_ids[ei];
                 let ep_hit = EnemyParams::get(kind_e);
                 w.enemies.kill(ei);
-                w.kill_count += 1;
+                // フェーズ1/3: score/kill_count/exp/level_up_pending の権威は Elixir 側に移行済み
                 w.score_popups
                     .push((hit_x, hit_y - 20.0, ep_hit.exp_reward * 2, 0.8));
                 w.frame_events.push(FrameEvent::EnemyKilled {
                     enemy_kind: kind_e,
                     weapon_kind,
                 });
-                w.score += ep_hit.exp_reward * 2;
-                w.exp += ep_hit.exp_reward;
-                if !w.level_up_pending {
-                    let required = exp_required_for_next(w.level);
-                    if w.exp >= required {
-                        let new_lv = w.level + 1;
-                        w.level_up_pending = true;
-                        w.weapon_choices = compute_weapon_choices(w);
-                        w.frame_events.push(FrameEvent::LevelUp { new_level: new_lv });
-                    }
-                }
                 w.particles.emit(hit_x, hit_y, 8, ep_hit.particle_color);
                 let roll = w.rng.next_u32() % 100;
                 let (item_kind, item_value) = if roll < 2 {
@@ -329,24 +314,13 @@ fn fire_lightning(
                 let kind_e = w.enemies.kind_ids[ei];
                 let ep_chain = EnemyParams::get(kind_e);
                 w.enemies.kill(ei);
-                w.kill_count += 1;
+                // フェーズ1/3: score/kill_count/exp/level_up_pending の権威は Elixir 側に移行済み
                 w.score_popups
                     .push((hit_x, hit_y - 20.0, ep_chain.exp_reward * 2, 0.8));
                 w.frame_events.push(FrameEvent::EnemyKilled {
                     enemy_kind: kind_e,
                     weapon_kind,
                 });
-                w.score += ep_chain.exp_reward * 2;
-                w.exp += ep_chain.exp_reward;
-                if !w.level_up_pending {
-                    let required = exp_required_for_next(w.level);
-                    if w.exp >= required {
-                        let new_lv = w.level + 1;
-                        w.level_up_pending = true;
-                        w.weapon_choices = compute_weapon_choices(w);
-                        w.frame_events.push(FrameEvent::LevelUp { new_level: new_lv });
-                    }
-                }
                 let roll = w.rng.next_u32() % 100;
                 let (item_kind, item_value) = if roll < 2 {
                     (ItemKind::Magnet, 0)
@@ -434,25 +408,13 @@ fn fire_garlic(
         let hit_y = ey + ep.radius;
         if w.enemies.hp[ei] <= 0.0 {
             w.enemies.kill(ei);
-            w.kill_count += 1;
+            // フェーズ1/3: score/kill_count/exp/level_up_pending の権威は Elixir 側に移行済み
             w.score_popups
                 .push((hit_x, hit_y - 20.0, ep.exp_reward * 2, 0.8));
             w.frame_events.push(FrameEvent::EnemyKilled {
                 enemy_kind: kind_e,
                 weapon_kind,
             });
-            w.score += ep.exp_reward * 2;
-            w.exp += ep.exp_reward;
-            if !w.level_up_pending {
-                let required = exp_required_for_next(w.level);
-                if w.exp >= required {
-                    w.level_up_pending = true;
-                    w.weapon_choices = compute_weapon_choices(w);
-                    w.frame_events.push(FrameEvent::LevelUp {
-                        new_level: w.level + 1,
-                    });
-                }
-            }
             w.particles.emit(hit_x, hit_y, 8, ep.particle_color);
             let roll = w.rng.next_u32() % 100;
             let (item_kind, item_value) = if roll < 2 {

@@ -11,7 +11,7 @@ use game_core::physics::spatial_hash::CollisionWorld;
 use game_core::weapon::WeaponSlot;
 use rustler::types::list::ListIterator;
 use rustler::{Atom, NifResult, ResourceArc, Term};
-use std::sync::{Mutex, RwLock};
+use std::sync::RwLock;
 
 use crate::{ok, BulletWorld, EnemyWorld, ParticleWorld};
 
@@ -36,19 +36,15 @@ pub fn create_world() -> ResourceArc<GameWorld> {
         collision:          CollisionWorld::new(CELL_SIZE),
         obstacle_query_buf: Vec::new(),
         last_frame_time_ms: 0.0,
-        score:              0,
         elapsed_seconds:    0.0,
         player_max_hp:      100.0,
         exp:                0,
         level:              1,
-        level_up_pending:   false,
         weapon_slots:       vec![WeaponSlot::new(0)], // MagicWand
         boss:               None,
         frame_events:       Vec::new(),
-        pending_ui_action:  Mutex::new(None),
         weapon_choices:     Vec::new(),
         score_popups:       Vec::new(),
-        kill_count:         0,
         prev_player_x:      SCREEN_WIDTH  / 2.0 - PLAYER_SIZE / 2.0,
         prev_player_y:      SCREEN_HEIGHT / 2.0 - PLAYER_SIZE / 2.0,
         prev_tick_ms:       0,
@@ -69,6 +65,41 @@ pub fn spawn_enemies(world: ResourceArc<GameWorld>, kind_id: u8, count: usize) -
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
     let positions = get_spawn_positions_around_player(&mut w, count);
     w.enemies.spawn(&positions, kind_id);
+    Ok(ok())
+}
+
+/// フェーズ2: Elixir 側の権威ある HP を Rust に注入する（毎フレーム呼ばれる）
+#[rustler::nif]
+pub fn set_player_hp(world: ResourceArc<GameWorld>, hp: f64) -> NifResult<Atom> {
+    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
+    w.player.hp = hp as f32;
+    Ok(ok())
+}
+
+/// フェーズ3: Elixir 側の権威あるレベル・EXP を Rust に注入する（毎フレーム呼ばれる）
+#[rustler::nif]
+pub fn set_player_level(world: ResourceArc<GameWorld>, level: u32, exp: u32) -> NifResult<Atom> {
+    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
+    w.level = level;
+    w.exp = exp;
+    Ok(ok())
+}
+
+/// フェーズ3: Elixir 側の権威ある経過時間を Rust に注入する（毎フレーム呼ばれる）
+#[rustler::nif]
+pub fn set_elapsed_seconds(world: ResourceArc<GameWorld>, elapsed: f64) -> NifResult<Atom> {
+    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
+    w.elapsed_seconds = elapsed as f32;
+    Ok(ok())
+}
+
+/// フェーズ4: Elixir 側の権威あるボス HP を Rust に注入する（毎フレーム呼ばれる）
+#[rustler::nif]
+pub fn set_boss_hp(world: ResourceArc<GameWorld>, hp: f64) -> NifResult<Atom> {
+    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
+    if let Some(boss) = &mut w.boss {
+        boss.hp = hp as f32;
+    }
     Ok(ok())
 }
 

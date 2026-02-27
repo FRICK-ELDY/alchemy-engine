@@ -16,4 +16,5 @@ defmodule GameEngine.GameBehaviour do
   @callback version() :: String.t()
   @callback context_defaults() :: map()
   @callback assets_path() :: String.t()
+  @callback generate_weapon_choices(weapon_levels :: map()) :: [atom()]
 end

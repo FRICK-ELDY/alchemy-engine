@@ -9,4 +9,8 @@ pub enum FrameEvent {
     LevelUp      { new_level: u32 },
     ItemPickup   { item_kind: u8 },
     BossDefeated { boss_kind: u8 },
+    /// フェーズ4: ボス出現イベント（Elixir 側でボス HP を初期化するために使用）
+    BossSpawn    { boss_kind: u8 },
+    /// フェーズ4: ボスへのダメージイベント（Elixir 側でボス HP を減算するために使用）
+    BossDamaged  { damage: f32 },
 }

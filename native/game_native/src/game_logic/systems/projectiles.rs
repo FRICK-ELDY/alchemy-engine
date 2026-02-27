@@ -1,9 +1,7 @@
-use super::leveling::compute_weapon_choices;
 use crate::world::{FrameEvent, GameWorldInner};
 use game_core::constants::{BULLET_RADIUS, MAP_HEIGHT, MAP_WIDTH};
 use game_core::entity_params::EnemyParams;
 use game_core::item::ItemKind;
-use game_core::util::exp_required_for_next;
 
 pub(crate) fn update_projectiles_and_enemy_hits(w: &mut GameWorldInner, dt: f32) {
     // 弾丸を移動・寿命更新
@@ -67,23 +65,14 @@ pub(crate) fn update_projectiles_and_enemy_hits(w: &mut GameWorldInner, dt: f32)
                 if w.enemies.hp[ei] <= 0.0 {
                     let weapon_k = w.bullets.weapon_kind[bi];
                     w.enemies.kill(ei);
-                    w.kill_count += 1;
+                    // フェーズ1: score/kill_count の権威は Elixir 側に移行。
+                    // フェーズ3: exp/level/level_up_pending の権威は Elixir 側に移行。
+                    // score_popups は描画用なので Rust 側で管理を継続する。
                     w.score_popups.push((ex, ey - 20.0, ep.exp_reward * 2, 0.8));
                     w.frame_events.push(FrameEvent::EnemyKilled {
                         enemy_kind: kind_id,
                         weapon_kind: weapon_k,
                     });
-                    w.score += ep.exp_reward * 2;
-                    w.exp += ep.exp_reward;
-                    if !w.level_up_pending {
-                        let required = exp_required_for_next(w.level);
-                        if w.exp >= required {
-                            let new_lv = w.level + 1;
-                            w.level_up_pending = true;
-                            w.weapon_choices = compute_weapon_choices(w);
-                            w.frame_events.push(FrameEvent::LevelUp { new_level: new_lv });
-                        }
-                    }
                     w.particles.emit(ex, ey, 8, ep.particle_color);
                     let roll = w.rng.next_u32() % 100;
                     let (item_kind, item_value) = if roll < 2 {

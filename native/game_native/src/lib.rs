@@ -33,9 +33,14 @@ rustler::atoms! {
     level_up_event,
     item_pickup,
     boss_defeated,
+    // フェーズ4: ボスイベント用アトム
+    boss_spawn,
+    boss_damaged,
     // Rust ゲームループ → Elixir 送信用
     frame_events,
     ui_action,
+    // フェーズ5: 移動入力用アトム
+    move_input,
 }
 
 mod asset;

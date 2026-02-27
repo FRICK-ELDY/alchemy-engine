@@ -100,10 +100,11 @@ pub(crate) fn physics_step_inner(w: &mut GameWorldInner, delta_ms: f64) {
         let dist_sq = ddx * ddx + ddy * ddy;
 
         if dist_sq < hit_radius * hit_radius {
-            // 敵→プレイヤーへのダメージ（無敵時間中は無効）
+            // フェーズ2: HP の権威は Elixir 側に移行。ここではイベント発行のみ行う。
+            // Elixir が PlayerDamaged を受信して player_hp を減算し、
+            // 次フレームで set_player_hp NIF で注入する。
             if w.player.invincible_timer <= 0.0 && w.player.hp > 0.0 {
                 let dmg = params.damage_per_sec * dt;
-                w.player.hp = (w.player.hp - dmg).max(0.0);
                 w.player.invincible_timer = INVINCIBLE_DURATION;
                 w.frame_events.push(FrameEvent::PlayerDamaged { damage: dmg });
                 // 赤いパーティクルをプレイヤー位置に発生
