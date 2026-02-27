@@ -1,0 +1,23 @@
+# Elixir / Mix
+/_build/
+/deps/
+/priv/native/
+apps/*/priv/native/
+*.ez
+erl_crash.dump
+.elixir_ls/
+
+# Rust / Cargo
+native/target/
+native/game_native/target/
+
+# セーブデータ
+saves/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# エディタ
+.vscode/
+*.swp

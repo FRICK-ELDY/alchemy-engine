@@ -1,0 +1,14 @@
+[package]
+name = "game_render"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+game_core = { path = "../game_core" }
+wgpu = "24"
+winit = "0.30.12"
+bytemuck = { version = "1", features = ["derive"] }
+image = "0.25"
+egui = "0.31"
+egui-wgpu = "0.31"
+egui-winit = "0.31"
