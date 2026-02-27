@@ -417,7 +417,7 @@ sequenceDiagram
 | 512〜767 | 静止スプライト（アイテム等） |
 | 768〜1023 | ボス（SlimeKing/BatLord/StoneGolem） |
 
-### `renderer/ui.rs` — egui HUD（708行）
+### `renderer/ui.rs` — egui HUD
 
 | 画面 | 内容 |
 |:---|:---|

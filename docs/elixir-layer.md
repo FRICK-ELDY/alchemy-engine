@@ -156,7 +156,7 @@ NIF 関数は 3 カテゴリに分類されます：
 
 ---
 
-### `game_events.ex` — メインゲームループ GenServer（437行）
+### `game_events.ex` — メインゲームループ GenServer
 
 Rust の 60Hz ゲームループから `{:frame_events, events}` を受信し、シーン遷移・UI アクションを処理するコアコンポーネント。
 
