@@ -102,17 +102,44 @@ NifBridge.get_full_game_state(world_ref)
 `EnemyKilled` と `BossDefeated` イベントを受信したとき、Elixir 側でスコアを加算する。
 Rust 側の `score` フィールドは将来的に削除するが、このフェーズでは並走させる。
 
+現在の `FrameEvent` の定義は以下の通り：
+
+```rust
+// native/game_native/src/world/frame_event.rs（現状）
+EnemyKilled  { enemy_kind: u8, weapon_kind: u8 },  // exp フィールドなし
+BossDefeated { boss_kind: u8 },                     // score フィールドなし
+```
+
+`exp_reward` は `enemy_kind` / `boss_kind` から `entity_params` テーブルを引いて取得する。
+Elixir 側でもこのテーブルを参照できるよう、`game_content` にパラメータ定義を移植する。
+
+```elixir
+# game_content/lib/game_content/entity_params.ex（新規追加）
+# Rust の entity_params.rs と同じ値を Elixir 側でも保持する
+@enemy_exp_rewards %{0 => 5, 1 => 3, 2 => 20, 3 => 10, 4 => 8}
+@boss_exp_rewards  %{0 => 200, 1 => 400, 2 => 800}
+@score_per_exp 2  # Rust 側の score += exp_reward * 2 と同じ係数
+
+def enemy_exp_reward(kind_id), do: Map.fetch!(@enemy_exp_rewards, kind_id)
+def boss_exp_reward(kind_id),  do: Map.fetch!(@boss_exp_rewards, kind_id)
+```
+
 ```elixir
 # handle_info({:frame_events, events}, state) 内
-defp apply_event({:enemy_killed, %{exp: exp}}, state) do
-  score_delta = exp * 10  # スコア計算ロジックを Elixir に移す
+defp apply_event({:enemy_killed, %{enemy_kind: kind_id}}, state) do
+  exp = EntityParams.enemy_exp_reward(kind_id)
+  score_delta = exp * @score_per_exp
   %{state | score: state.score + score_delta, kill_count: state.kill_count + 1}
 end
 
-defp apply_event({:boss_defeated, %{score: boss_score}}, state) do
-  %{state | score: state.score + boss_score}
+defp apply_event({:boss_defeated, %{boss_kind: kind_id}}, state) do
+  exp = EntityParams.boss_exp_reward(kind_id)
+  score_delta = exp * @score_per_exp
+  %{state | score: state.score + score_delta, kill_count: state.kill_count + 1}
 end
 ```
+
+> **注意**: `entity_params` の値が Rust 側と乖離しないよう、フェーズ 0 で追加する比較ログで定期的に検証すること。
 
 ### 1-3. `elapsed_ms` をゲームループタイマーから計算
 
@@ -124,8 +151,9 @@ end
 
 ### 1-5. Rust 側の `score` フィールドを削除
 
-`GameWorldInner` から `score`, `kill_count` を削除し、
-`BossDefeated` の `score` フィールドも `FrameEvent` から削除する。
+`GameWorldInner` から `score`, `kill_count` を削除する。
+`FrameEvent` の `EnemyKilled` / `BossDefeated` は現状すでに `exp` / `score` フィールドを持たないため、
+`FrameEvent` 定義の変更は不要。
 `elapsed_seconds` は物理演算で使用するため、このフェーズでは残す（フェーズ 3 で対処）。
 
 **完了条件**: `StressMonitor` と `Stats` が Elixir 側の値を参照し、Rust 側と一致している。
@@ -302,9 +330,21 @@ Rust の `elapsed_seconds` は物理演算（スポーンタイミング等）�
 
 ### 4-2. `BossSpawn` / `BossDefeated` イベントで Elixir 側を更新
 
+現在の `FrameEvent` には `BossSpawn` が存在しないため、`BossDamaged` と同様に新設する。
+
+```rust
+// frame_event.rs に追加（2つ同時に追加する）
+FrameEvent::BossSpawn   { boss_kind: u8 },
+FrameEvent::BossDamaged { damage: f32 },
+```
+
+`BossSpawn` イベントは `spawn_boss` NIF（`action_nif.rs`）の中でボス生成直後に発行する。
+ボスの初期 HP は `BossParams::get(boss_kind).max_hp` から取得できる。
+
 ```elixir
-defp apply_event({:boss_spawn, %{kind_id: kind_id, hp: hp}}, state) do
-  %{state | boss_hp: hp, boss_max_hp: hp, boss_kind_id: kind_id}
+defp apply_event({:boss_spawn, %{boss_kind: kind_id}}, state) do
+  max_hp = EntityParams.boss_max_hp(kind_id)  # BossParams テーブルから取得
+  %{state | boss_hp: max_hp, boss_max_hp: max_hp, boss_kind_id: kind_id}
 end
 
 defp apply_event({:boss_defeated, _}, state) do
@@ -315,12 +355,7 @@ end
 ### 4-3. `BossDamaged` イベントを新設
 
 Rust の `physics_step` でボスへのダメージを `BossDamaged` イベントとして発行し、
-Elixir 側でボス HP を減算する。
-
-```rust
-// frame_event.rs に追加
-FrameEvent::BossDamaged { damage: f32 },
-```
+Elixir 側でボス HP を減算する。（`frame_event.rs` への追加は 4-2 で実施済み）
 
 ```elixir
 defp apply_event({:boss_damaged, %{damage: damage}}, state) do
@@ -383,17 +418,24 @@ fn on_ui_action(&self, action: String) {
 ### 5-2. `RenderApp` のキー入力状態（`move_up/down/left/right`）を整理
 
 `RenderApp` のキー入力フラグは描画スレッド内でのみ使用する一時状態として残す。
-ただし、`on_move_input` 経由で `GameWorldInner.player_input` に書き込む代わりに、
-Elixir の `InputHandler` ETS を経由するフローに統一する。
+ただし、`on_move_input` 経由で `GameWorldInner.player.input_dx/dy` に書き込む代わりに、
+Elixir プロセスにメッセージを送るフローに変更する。
+
+`InputHandler` ETS（`:input_state`）は現状 Elixir 側からの入力受付用として存在しているが、
+このフローでは描画スレッドが `GameEvents` に直接送信する。
+`InputHandler` は将来のネットワーク対応（リモートクライアントからの入力受付）のために残す。
 
 ```
 【変更前】
-winit → RenderApp.move_* → on_move_input → GameWorldInner.player_input (write lock)
+winit → RenderApp.move_* → on_move_input → GameWorldInner.player.input_dx/dy (write lock)
 
 【変更後】
 winit → RenderApp.move_* → OwnedEnv::send_and_clear(pid, {:move_input, dx, dy})
-→ GameEvents.handle_info → NifBridge.set_player_input(world_ref, dx, dy)
+→ GameEvents.handle_info({:move_input, dx, dy}) → NifBridge.set_player_input(world_ref, dx, dy)
 ```
+
+これにより `RenderBridge.on_move_input` の write lock が不要になり、
+描画スレッドと物理スレッドの RwLock 競合が1つ減る。
 
 ### 5-3. `RENDER_THREAD_RUNNING` をプロセス辞書または ETS で管理
 
@@ -441,18 +483,19 @@ end
 ```rust
 // 移行後: 計算に必要な最小状態のみ
 pub struct GameWorldInner {
-    // 物理演算用（Elixir から毎フレーム注入される）
-    pub player_input_dx:    f32,
-    pub player_input_dy:    f32,
-    pub player_hp:          f32,      // Elixir から注入
-    pub player_max_hp:      f32,      // Elixir から注入
-    pub level:              u32,      // 武器ダメージ計算用。Elixir から注入
-    pub elapsed_seconds:    f32,      // スポーン計算用。Elixir から注入
-    pub boss_hp:            f32,      // ボス AI 用。Elixir から注入（Option<BossState>は残す）
-
     // 物理演算の内部状態（Rust が権威を持つ）
     pub frame_id:           u32,
-    pub player:             PlayerState,   // 座標・速度・無敵時間
+    pub player:             PlayerState,
+    //   ↑ PlayerState は以下を保持し続ける（Elixir から注入される値を含む）:
+    //     pub x:                f32,   // 座標（Rust が権威）
+    //     pub y:                f32,
+    //     pub input_dx:         f32,   // Elixir から毎フレーム注入
+    //     pub input_dy:         f32,   // Elixir から毎フレーム注入
+    //     pub hp:               f32,   // Elixir から毎フレーム注入
+    //     pub invincible_timer: f32,   // Rust が権威
+    pub player_max_hp:      f32,      // Elixir から注入（HP バー計算用）
+    pub level:              u32,      // 武器ダメージ計算用。Elixir から注入
+    pub elapsed_seconds:    f32,      // スポーン計算用。Elixir から注入
     pub enemies:            EnemyWorld,
     pub bullets:            BulletWorld,
     pub particles:          ParticleWorld,
@@ -464,6 +507,7 @@ pub struct GameWorldInner {
     pub last_frame_time_ms: f64,
     pub weapon_slots:       Vec<WeaponSlot>,  // クールダウン管理のみ
     pub boss:               Option<BossState>,
+    //   ↑ BossState.hp は Elixir から毎フレーム注入される
     pub frame_events:       Vec<FrameEvent>,
     pub score_popups:       Vec<(f32, f32, u32, f32)>,
     pub prev_player_x:      f32,
@@ -472,6 +516,10 @@ pub struct GameWorldInner {
     pub curr_tick_ms:       u64,
 }
 ```
+
+> **補足**: `PlayerState` 構造体自体は変更しない。`player.input_dx/dy` と `player.hp` は
+> 引き続き `PlayerState` のフィールドとして存在するが、その値の権威は Elixir に移る。
+> `PlayerState` のリファクタリング（フィールドの移動等）はこの移行スコープには含めない。
 
 ### 6-3. 削除できる NIF 関数の整理
 
