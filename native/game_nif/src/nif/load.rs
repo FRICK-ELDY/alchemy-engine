@@ -17,8 +17,12 @@ pub fn load(env: rustler::Env, _: rustler::Term) -> bool {
     init_panic_hook();
     let _ = env_logger::Builder::from_default_env().try_init();
 
-    env.register::<GameWorld>().unwrap();
-    env.register::<GameLoopControl>().unwrap();
+    if env.register::<GameWorld>().is_err() {
+        return false;
+    }
+    if env.register::<GameLoopControl>().is_err() {
+        return false;
+    }
     let _ = crate::ok();
     let _ = crate::frame_events();
     let _ = crate::slime();

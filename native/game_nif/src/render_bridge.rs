@@ -41,21 +41,21 @@ impl RenderBridge for NativeRenderBridge {
     fn next_frame(&self) -> RenderFrame {
         let wait_start = Instant::now();
 
-        let (interp_data, mut frame) = match self.world.0.read() {
-            Ok(guard) => {
-                record_read_wait("render.next_frame", wait_start.elapsed());
-                let interp = copy_interpolation_data(&guard);
-                let frame  = build_render_frame(&guard);
-                (interp, frame)
-            }
-            Err(e) => {
-                log::error!("Render bridge: read lock poisoned in next_frame: {e:?}");
-                let guard = e.into_inner();
-                record_read_wait("render.next_frame_poisoned", wait_start.elapsed());
-                let interp = copy_interpolation_data(&guard);
-                let frame  = build_render_frame(&guard);
-                (interp, frame)
-            }
+        let (interp_data, mut frame) = {
+            let guard = match self.world.0.read() {
+                Ok(guard) => {
+                    record_read_wait("render.next_frame", wait_start.elapsed());
+                    guard
+                }
+                Err(e) => {
+                    log::error!("Render bridge: read lock poisoned in next_frame: {e:?}");
+                    record_read_wait("render.next_frame_poisoned", wait_start.elapsed());
+                    e.into_inner()
+                }
+            };
+            let interp = copy_interpolation_data(&guard);
+            let frame  = build_render_frame(&guard);
+            (interp, frame)
         };
 
         if interp_data.curr_tick_ms > 0 {

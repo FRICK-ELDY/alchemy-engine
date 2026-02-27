@@ -156,9 +156,7 @@ fn fire_whip(
         }
         let angle = ddy.atan2(ddx);
         // π/-π をまたぐ場合に正しく動作するよう -π〜π に正規化
-        let mut diff = angle - facing_angle;
-        if diff > std::f32::consts::PI { diff -= std::f32::consts::TAU; }
-        if diff < -std::f32::consts::PI { diff += std::f32::consts::TAU; }
+        let diff = (angle - facing_angle + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
         if diff.abs() < whip_half_angle {
             let enemy_r = EnemyParams::get(w.enemies.kind_ids[ei]).radius;
             let hit_x = ex + enemy_r;
@@ -194,9 +192,7 @@ fn fire_whip(
                 let ddy = boss.y - py;
                 if ddx * ddx + ddy * ddy <= whip_range_sq {
                     let angle = ddy.atan2(ddx);
-                    let mut diff = angle - facing_angle;
-                    if diff > std::f32::consts::PI { diff -= std::f32::consts::TAU; }
-                    if diff < -std::f32::consts::PI { diff += std::f32::consts::TAU; }
+                    let diff = (angle - facing_angle + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
                     if diff.abs() < whip_half_angle { Some((boss.x, boss.y)) } else { None }
                 } else { None }
             } else { None }
