@@ -5,3 +5,8 @@
 pub(crate) fn lock_poisoned_err() -> rustler::Error {
     rustler::Error::RaiseAtom("lock_poisoned")
 }
+
+#[inline]
+pub(crate) fn params_not_loaded_err() -> rustler::Error {
+    rustler::Error::RaiseAtom("entity_params_not_loaded")
+}

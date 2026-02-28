@@ -44,9 +44,28 @@ defmodule GameEngine.GameEvents do
 
     # Phase 3-A: WorldBehaviour が setup_world_params/1 を実装していれば呼び出す
     world = GameEngine.Config.current_world()
+    Code.ensure_loaded(world)
     if function_exported?(world, :setup_world_params, 1) do
-      world.setup_world_params(world_ref)
+      result = world.setup_world_params(world_ref)
+      if result != :ok do
+        require Logger
+        Logger.error("[GameEvents] setup_world_params failed: #{inspect(result)}")
+      end
+    else
+      require Logger
+      Logger.warning("[GameEvents] #{inspect(world)}.setup_world_params/1 is not exported, skipping.")
     end
+
+    # Playing シーンの初期 weapon_levels に基づいて Rust 側に初期武器を追加する
+    rule = GameEngine.Config.current_rule()
+    {:ok, initial_scene_state} = rule.playing_scene().init(nil)
+    initial_weapon_levels = Map.get(initial_scene_state, :weapon_levels, %{})
+    weapon_registry = world.entity_registry().weapons
+    Enum.each(initial_weapon_levels, fn {weapon_name, _level} ->
+      if weapon_id = weapon_registry[weapon_name] do
+        GameEngine.NifBridge.add_weapon(world_ref, weapon_id)
+      end
+    end)
 
     map_id = Application.get_env(:game_server, :map, :plain)
     obstacles = GameEngine.MapLoader.obstacles_for_map(map_id)

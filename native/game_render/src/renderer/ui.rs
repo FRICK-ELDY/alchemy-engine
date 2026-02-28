@@ -1,5 +1,4 @@
 use super::{GamePhase, GameUiState, HudData};
-use game_simulation::weapon::weapon_upgrade_desc_by_name;
 
 /// HUD を描画し、ボタン操作があった場合はアクション文字列を返す。
 /// - レベルアップ選択: 武器名
@@ -594,13 +593,17 @@ fn build_weapon_choice_ui(ui: &mut egui::Ui, hud: &HudData) -> Option<String> {
     ui.add_space(16.0);
 
     ui.horizontal(|ui| {
-        for choice in &hud.weapon_choices {
+        for (i, choice) in hud.weapon_choices.iter().enumerate() {
             let current_lv = hud.weapon_levels
                 .iter()
                 .find(|(n, _)| n == choice)
                 .map(|(_, lv)| *lv)
                 .unwrap_or(0);
-            if build_weapon_card(ui, choice, current_lv).is_some() {
+            let upgrade_desc = hud.weapon_upgrade_descs
+                .get(i)
+                .map(|v| v.as_slice())
+                .unwrap_or(&[]);
+            if build_weapon_card(ui, choice, current_lv, upgrade_desc).is_some() {
                 chosen = Some(choice.clone());
             }
             ui.add_space(12.0);
@@ -621,7 +624,7 @@ fn build_weapon_choice_ui(ui: &mut egui::Ui, hud: &HudData) -> Option<String> {
 }
 
 /// 武器1枚分のカードUIを描画し、選択されたら `Some(())` を返す
-fn build_weapon_card(ui: &mut egui::Ui, choice: &str, current_lv: u32) -> Option<()> {
+fn build_weapon_card(ui: &mut egui::Ui, choice: &str, current_lv: u32, upgrade_desc: &[String]) -> Option<()> {
     let is_upgrade  = current_lv > 0;
     let next_lv     = current_lv + 1;
 
@@ -671,7 +674,7 @@ fn build_weapon_card(ui: &mut egui::Ui, choice: &str, current_lv: u32) -> Option
             );
             ui.add_space(6.0);
 
-            for line in weapon_upgrade_desc_by_name(choice, current_lv) {
+            for line in upgrade_desc {
                 ui.label(
                     egui::RichText::new(line)
                         .color(egui::Color32::from_rgb(180, 200, 180))

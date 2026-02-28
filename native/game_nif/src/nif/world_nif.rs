@@ -1,7 +1,7 @@
 //! Path: native/game_nif/src/nif/world_nif.rs
 //! Summary: ワールド作成・入力・スポーン・障害物設定 NIF
 
-use super::util::lock_poisoned_err;
+use super::util::{lock_poisoned_err, params_not_loaded_err};
 use game_simulation::entity_params::{
     BossParams, EnemyParams, EntityParamTables, FirePattern, WeaponParams,
 };
@@ -11,7 +11,6 @@ use game_simulation::constants::{CELL_SIZE, MAP_HEIGHT, MAP_WIDTH, PARTICLE_RNG_
 use game_simulation::item::ItemWorld;
 use game_simulation::physics::rng::SimpleRng;
 use game_simulation::physics::spatial_hash::CollisionWorld;
-use game_simulation::weapon::WeaponSlot;
 use rustler::types::list::ListIterator;
 use rustler::{Atom, NifResult, ResourceArc, Term};
 use std::sync::RwLock;
@@ -42,7 +41,7 @@ pub fn create_world() -> ResourceArc<GameWorld> {
         last_frame_time_ms: 0.0,
         elapsed_seconds:    0.0,
         player_max_hp:      100.0,
-        weapon_slots:       vec![WeaponSlot::new(0)],
+        weapon_slots:       vec![],
         boss:               None,
         frame_events:       Vec::new(),
         score_popups:       Vec::new(),
@@ -74,8 +73,10 @@ pub fn set_player_input(world: ResourceArc<GameWorld>, dx: f64, dy: f64) -> NifR
 #[rustler::nif]
 pub fn spawn_enemies(world: ResourceArc<GameWorld>, kind_id: u8, count: usize) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
+    let ep = w.params.enemies.get(kind_id as usize)
+        .ok_or_else(params_not_loaded_err)?
+        .clone();
     let positions = get_spawn_positions_around_player(&mut w, count);
-    let ep = w.params.get_enemy(kind_id).clone();
     w.enemies.spawn(&positions, kind_id, &ep);
     Ok(ok())
 }
@@ -85,9 +86,11 @@ pub fn spawn_enemies(world: ResourceArc<GameWorld>, kind_id: u8, count: usize) -
 #[rustler::nif]
 pub fn spawn_enemies_at(world: ResourceArc<GameWorld>, kind_id: u8, positions_term: Term) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
+    let ep = w.params.enemies.get(kind_id as usize)
+        .ok_or_else(params_not_loaded_err)?
+        .clone();
     let positions_list: Vec<(f64, f64)> = positions_term.decode()?;
     let positions: Vec<(f32, f32)> = positions_list.iter().map(|&(x, y)| (x as f32, y as f32)).collect();
-    let ep = w.params.get_enemy(kind_id).clone();
     w.enemies.spawn(&positions, kind_id, &ep);
     Ok(ok())
 }
@@ -209,7 +212,7 @@ fn decode_enemy_params(term: Term) -> NifResult<Vec<EnemyParams>> {
             speed:            map_get::<f64>(item, "speed")? as f32,
             radius:           map_get::<f64>(item, "radius")? as f32,
             damage_per_sec:   map_get::<f64>(item, "damage_per_sec")? as f32,
-            render_kind:      map_get::<u32>(item, "render_kind")? as u8,
+            render_kind:      map_get::<i64>(item, "render_kind")? as u8,
             particle_color,
             passes_obstacles: map_get::<bool>(item, "passes_obstacles")?,
         })
@@ -217,15 +220,9 @@ fn decode_enemy_params(term: Term) -> NifResult<Vec<EnemyParams>> {
 }
 
 fn decode_particle_color(item: Term) -> [f32; 4] {
-    let env = item.get_env();
-    let key = rustler::types::atom::Atom::from_str(env, "particle_color").ok();
-    if let Some(k) = key {
-        if let Ok(list_term) = item.map_get(k.to_term(env)) {
-            if let Ok(v) = list_term.decode::<Vec<f64>>() {
-                if v.len() == 4 {
-                    return [v[0] as f32, v[1] as f32, v[2] as f32, v[3] as f32];
-                }
-            }
+    if let Ok(v) = map_get::<Vec<f64>>(item, "particle_color") {
+        if v.len() == 4 {
+            return [v[0] as f32, v[1] as f32, v[2] as f32, v[3] as f32];
         }
     }
     [1.0, 0.5, 0.1, 1.0]
@@ -256,12 +253,18 @@ fn decode_weapon_params(term: Term) -> NifResult<Vec<WeaponParams>> {
         };
         let pattern_str: String = map_get::<String>(item, "fire_pattern")?;
         let fire_pattern = decode_fire_pattern(&pattern_str);
-        let range: f32 = map_get::<f64>(item, "range").unwrap_or(0.0) as f32;
-        let chain_count: u8 = map_get::<u32>(item, "chain_count").unwrap_or(0) as u8;
+        let range: f32 = map_get::<f64>(item, "range")
+            .or_else(|_| map_get::<i64>(item, "range").map(|v| v as f64))
+            .unwrap_or(0.0) as f32;
+        let chain_count: u8 = map_get::<u64>(item, "chain_count")
+            .or_else(|_| map_get::<i64>(item, "chain_count").map(|v| v as u64))
+            .unwrap_or(0) as u8;
         Ok(WeaponParams {
             cooldown:     map_get::<f64>(item, "cooldown")? as f32,
-            damage:       map_get::<i32>(item, "damage")?,
-            as_u8:        map_get::<u32>(item, "as_u8")? as u8,
+            damage:       map_get::<i64>(item, "damage")? as i32,
+            as_u8:        map_get::<u64>(item, "as_u8")
+                .or_else(|_| map_get::<i64>(item, "as_u8").map(|v| v as u64))
+                .unwrap_or(0) as u8,
             bullet_table,
             fire_pattern,
             range,
@@ -278,7 +281,7 @@ fn decode_boss_params(term: Term) -> NifResult<Vec<BossParams>> {
             speed:            map_get::<f64>(item, "speed")? as f32,
             radius:           map_get::<f64>(item, "radius")? as f32,
             damage_per_sec:   map_get::<f64>(item, "damage_per_sec")? as f32,
-            render_kind:      map_get::<u32>(item, "render_kind")? as u8,
+            render_kind:      map_get::<i64>(item, "render_kind")? as u8,
             special_interval: map_get::<f64>(item, "special_interval")? as f32,
         })
     }).collect()

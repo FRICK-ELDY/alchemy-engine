@@ -243,6 +243,8 @@ pub struct HudData {
     pub fps:              f32,
     pub level_up_pending: bool,
     pub weapon_choices:   Vec<String>,
+    /// `weapon_choices` と同順のアップグレード説明文。`render_snapshot` で事前生成される。
+    pub weapon_upgrade_descs: Vec<Vec<String>>,
     pub weapon_levels:    Vec<(String, u32)>,
     pub magnet_timer:     f32,
     pub item_count:       usize,
@@ -273,6 +275,7 @@ impl Default for HudData {
             hp: 0.0, max_hp: 100.0, score: 0, elapsed_seconds: 0.0,
             level: 1, exp: 0, exp_to_next: 10, enemy_count: 0, bullet_count: 0,
             fps: 0.0, level_up_pending: false, weapon_choices: Vec::new(),
+            weapon_upgrade_descs: Vec::new(),
             weapon_levels: Vec::new(), magnet_timer: 0.0, item_count: 0,
             camera_x: 0.0, camera_y: 0.0,
             boss_info: None,

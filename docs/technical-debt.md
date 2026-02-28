@@ -24,7 +24,38 @@
 
 ## 残課題
 
-現時点で未解決の技術的負債はありません。
+### 課題6: `RuleBehaviour` に `initial_weapons/0` コールバックを追加する
+
+**背景**
+
+現在、ゲーム開始時の初期武器は `Playing.init/1` の `weapon_levels: %{magic_wand: 1}` として Elixir 側に定義されているが、
+Rust 側の `weapon_slots` への追加は `GameEvents.init/1` が `Playing.init` の戻り値を直接参照することで行っている。
+これは `game_engine` が `game_content` の内部実装に依存しており、Engine / Rule の分離原則に反する。
+
+**目標**
+
+`RuleBehaviour` に `initial_weapons/0` コールバックを追加し、`GameEvents.init/1` はそのコールバックを通じて初期武器を取得する。
+
+```elixir
+# RuleBehaviour に追加
+@callback initial_weapons() :: [atom()]
+
+# VampireSurvivorRule での実装例
+def initial_weapons, do: [:magic_wand]
+
+# GameEvents.init/1 での使用
+Enum.each(rule.initial_weapons(), fn weapon_name ->
+  if weapon_id = weapon_registry[weapon_name] do
+    GameEngine.NifBridge.add_weapon(world_ref, weapon_id)
+  end
+end)
+```
+
+**影響範囲**
+
+- `apps/game_engine/lib/game_engine/rule_behaviour.ex` — コールバック追加
+- `apps/game_content/lib/game_content/vampire_survivor_rule.ex` — `@impl` 実装追加
+- `apps/game_engine/lib/game_engine/game_events.ex` — `init/1` の初期武器追加ロジックを変更
 
 2つ目のコンテンツを追加する場合は、以下の手順に従ってください：
 

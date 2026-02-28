@@ -4,6 +4,10 @@ use crate::constants::{BULLET_LIFETIME, BULLET_SPEED, WEAPON_SEARCH_RADIUS};
 use crate::entity_params::FirePattern;
 
 pub(crate) fn update_weapon_attacks(w: &mut GameWorldInner, dt: f32, px: f32, py: f32) {
+    if w.params.weapons.is_empty() {
+        return;
+    }
+
     let facing_angle = {
         let fdx = w.player.input_dx;
         let fdy = w.player.input_dy;

@@ -130,17 +130,6 @@ pub fn weapon_upgrade_desc(
     }
 }
 
-/// デフォルトパラメータテーブルを使う `weapon_upgrade_desc` のラッパー。
-/// `game_render` など `GameWorldInner` を持たないクレートから呼び出す用。
-pub fn weapon_upgrade_desc_default(weapon_id: u8, current_lv: u32) -> Vec<String> {
-    weapon_upgrade_desc(weapon_id, current_lv, &crate::entity_params::EntityParamTables::default())
-}
-
-/// 武器名文字列から `weapon_upgrade_desc_default` を呼ぶ後方互換ラッパー。
-/// `game_render` の UI レイヤーから武器名で呼び出す用（パラメータテーブル未注入時は汎用メッセージを返す）。
-pub fn weapon_upgrade_desc_by_name(_name: &str, _current_lv: u32) -> Vec<String> {
-    vec!["Upgrade weapon".to_string()]
-}
 
 #[cfg(test)]
 mod tests {
