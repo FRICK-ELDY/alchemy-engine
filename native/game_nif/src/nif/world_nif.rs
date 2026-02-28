@@ -152,10 +152,10 @@ pub fn set_world_size(world: ResourceArc<GameWorld>, width: f64, height: f64) ->
 
 /// Phase 3-A: エンティティパラメータテーブルを外部から注入する。
 ///
-/// 引数:
-/// - `enemies`: `[{max_hp, speed, radius, exp_reward, damage_per_sec, render_kind, passes_obstacles}]`
-/// - `weapons`: `[{cooldown, damage, as_u8, name, bullet_table_or_nil}]`
-/// - `bosses`:  `[{max_hp, speed, radius, exp_reward, damage_per_sec, render_kind, special_interval, name}]`
+/// 引数はいずれもアトムキーのマップのリスト。
+/// - `enemies`: `[%{max_hp, speed, radius, exp_reward, damage_per_sec, render_kind, passes_obstacles}]`
+/// - `weapons`: `[%{cooldown, damage, as_u8, name, bullet_table}]`  ※ `bullet_table` は `nil` または整数リスト
+/// - `bosses`:  `[%{max_hp, speed, radius, exp_reward, damage_per_sec, render_kind, special_interval}]`
 #[rustler::nif]
 pub fn set_entity_params(
     world: ResourceArc<GameWorld>,
@@ -171,67 +171,63 @@ pub fn set_entity_params(
     Ok(ok())
 }
 
+/// マップから指定キーの値を取得するヘルパー。
+/// キーは Elixir アトム（例: `max_hp`）。
+fn map_get<'a, T: rustler::Decoder<'a>>(map: Term<'a>, key: &str) -> NifResult<T> {
+    let env = map.get_env();
+    let key_term = rustler::types::atom::Atom::from_str(env, key)
+        .map_err(|_| rustler::Error::Atom("invalid_key"))?;
+    map.map_get(key_term.to_term(env))?.decode::<T>()
+}
+
 fn decode_enemy_params(term: Term) -> NifResult<Vec<EnemyParams>> {
     let list: ListIterator = term.decode()?;
-    let mut result = Vec::new();
-    for item in list {
-        // {max_hp, speed, radius, exp_reward, damage_per_sec, render_kind, passes_obstacles}
-        let t: (f64, f64, f64, u32, f64, u32, bool) = item.decode()?;
-        result.push(EnemyParams {
-            max_hp:           t.0 as f32,
-            speed:            t.1 as f32,
-            radius:           t.2 as f32,
-            exp_reward:       t.3,
-            damage_per_sec:   t.4 as f32,
-            render_kind:      t.5 as u8,
+    list.map(|item| {
+        Ok(EnemyParams {
+            max_hp:           map_get::<f64>(item, "max_hp")? as f32,
+            speed:            map_get::<f64>(item, "speed")? as f32,
+            radius:           map_get::<f64>(item, "radius")? as f32,
+            exp_reward:       map_get::<u32>(item, "exp_reward")?,
+            damage_per_sec:   map_get::<f64>(item, "damage_per_sec")? as f32,
+            render_kind:      map_get::<u32>(item, "render_kind")? as u8,
             particle_color:   [1.0, 0.5, 0.1, 1.0], // デフォルト色（後で拡張可能）
-            passes_obstacles: t.6,
-        });
-    }
-    Ok(result)
+            passes_obstacles: map_get::<bool>(item, "passes_obstacles")?,
+        })
+    }).collect()
 }
 
 fn decode_weapon_params(term: Term) -> NifResult<Vec<WeaponParams>> {
     let list: ListIterator = term.decode()?;
-    let mut result = Vec::new();
-    for item in list {
-        // {cooldown, damage, as_u8, name, bullet_table_or_nil}
-        // bullet_table は nil または整数リスト
-        let t: (f64, i32, u32, String, Term) = item.decode()?;
-        let bullet_table: Option<Vec<usize>> = if t.4.is_atom() {
+    list.map(|item| {
+        let bt_term: Term = map_get(item, "bullet_table")?;
+        let bullet_table: Option<Vec<usize>> = if bt_term.is_atom() {
             None
         } else {
-            let bt_list: ListIterator = t.4.decode()?;
+            let bt_list: ListIterator = bt_term.decode()?;
             Some(bt_list.map(|x| x.decode::<usize>()).collect::<rustler::NifResult<Vec<usize>>>()?)
         };
-        result.push(WeaponParams {
-            cooldown:     t.0 as f32,
-            damage:       t.1,
-            as_u8:        t.2 as u8,
-            name:         t.3,
+        Ok(WeaponParams {
+            cooldown:     map_get::<f64>(item, "cooldown")? as f32,
+            damage:       map_get::<i32>(item, "damage")?,
+            as_u8:        map_get::<u32>(item, "as_u8")? as u8,
+            name:         map_get::<String>(item, "name")?,
             bullet_table,
-        });
-    }
-    Ok(result)
+        })
+    }).collect()
 }
 
 fn decode_boss_params(term: Term) -> NifResult<Vec<BossParams>> {
     let list: ListIterator = term.decode()?;
-    let mut result = Vec::new();
-    for item in list {
-        // {max_hp, speed, radius, exp_reward, damage_per_sec, render_kind, special_interval}
-        // 名前は省略（HUD 表示名は Elixir 側で管理）
-        let t: (f64, f64, f64, u32, f64, u32, f64) = item.decode()?;
-        result.push(BossParams {
-            max_hp:           t.0 as f32,
-            speed:            t.1 as f32,
-            radius:           t.2 as f32,
-            exp_reward:       t.3,
-            damage_per_sec:   t.4 as f32,
-            render_kind:      t.5 as u8,
-            special_interval: t.6 as f32,
+    list.map(|item| {
+        Ok(BossParams {
+            max_hp:           map_get::<f64>(item, "max_hp")? as f32,
+            speed:            map_get::<f64>(item, "speed")? as f32,
+            radius:           map_get::<f64>(item, "radius")? as f32,
+            exp_reward:       map_get::<u32>(item, "exp_reward")?,
+            damage_per_sec:   map_get::<f64>(item, "damage_per_sec")? as f32,
+            render_kind:      map_get::<u32>(item, "render_kind")? as u8,
+            special_interval: map_get::<f64>(item, "special_interval")? as f32,
             name:             String::new(),
-        });
-    }
-    Ok(result)
+        })
+    }).collect()
 }

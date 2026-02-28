@@ -133,37 +133,37 @@ fn fire_whip(
 ) {
     // プレイヤーの移動方向に扇状の判定を出す（弾丸を生成しない直接判定）
     let range = whip_range(kind_id, level);
-        let whip_half_angle = std::f32::consts::PI * 0.3; // 108度 / 2 = 54度
-        // facing_angle 方向の中間点にエフェクト弾を生成（黄緑の横長楕円）
-        let eff_x = px + facing_angle.cos() * range * 0.5;
-        let eff_y = py + facing_angle.sin() * range * 0.5;
-        w.bullets.spawn_effect(eff_x, eff_y, 0.12, BULLET_KIND_WHIP);
-        // 空間ハッシュで範囲内の候補のみ取得し、全敵ループを回避
-        let whip_range_sq = range * range;
-        w.collision.dynamic.query_nearby_into(px, py, range, &mut w.spatial_query_buf);
-        for ei in w.spatial_query_buf.iter().copied() {
-            if !w.enemies.alive[ei] {
-                continue;
-            }
-            let ex = w.enemies.positions_x[ei];
-            let ey = w.enemies.positions_y[ei];
-            let ddx = ex - px;
-            let ddy = ey - py;
-            // sqrt を避けて二乗比較で正確な円形クリップ
-            if ddx * ddx + ddy * ddy > whip_range_sq {
-                continue;
-            }
-            let angle = ddy.atan2(ddx);
-            // π/-π をまたぐ場合に正しく動作するよう -π〜π に正規化
-            let diff = (angle - facing_angle + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
-            if diff.abs() < whip_half_angle {
-                let enemy_r = w.params.get_enemy(w.enemies.kind_ids[ei]).radius;
-                let hit_x = ex + enemy_r;
-                let hit_y = ey + enemy_r;
-                w.enemies.hp[ei] -= dmg as f32;
-                if w.enemies.hp[ei] <= 0.0 {
-                    let kind_e = w.enemies.kind_ids[ei];
-                    let ep_hit = w.params.get_enemy(kind_e);
+    let whip_half_angle = std::f32::consts::PI * 0.3; // 108度 / 2 = 54度
+    // facing_angle 方向の中間点にエフェクト弾を生成（黄緑の横長楕円）
+    let eff_x = px + facing_angle.cos() * range * 0.5;
+    let eff_y = py + facing_angle.sin() * range * 0.5;
+    w.bullets.spawn_effect(eff_x, eff_y, 0.12, BULLET_KIND_WHIP);
+    // 空間ハッシュで範囲内の候補のみ取得し、全敵ループを回避
+    let whip_range_sq = range * range;
+    w.collision.dynamic.query_nearby_into(px, py, range, &mut w.spatial_query_buf);
+    for ei in w.spatial_query_buf.iter().copied() {
+        if !w.enemies.alive[ei] {
+            continue;
+        }
+        let ex = w.enemies.positions_x[ei];
+        let ey = w.enemies.positions_y[ei];
+        let ddx = ex - px;
+        let ddy = ey - py;
+        // sqrt を避けて二乗比較で正確な円形クリップ
+        if ddx * ddx + ddy * ddy > whip_range_sq {
+            continue;
+        }
+        let angle = ddy.atan2(ddx);
+        // π/-π をまたぐ場合に正しく動作するよう -π〜π に正規化
+        let diff = (angle - facing_angle + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
+        if diff.abs() < whip_half_angle {
+            let enemy_r = w.params.get_enemy(w.enemies.kind_ids[ei]).radius;
+            let hit_x = ex + enemy_r;
+            let hit_y = ey + enemy_r;
+            w.enemies.hp[ei] -= dmg as f32;
+            if w.enemies.hp[ei] <= 0.0 {
+                let kind_e = w.enemies.kind_ids[ei];
+                let ep_hit = w.params.get_enemy(kind_e).clone();
                 w.enemies.kill(ei);
                 // score_popups は描画用なので Rust 側で管理を継続する
                 w.score_popups.push((hit_x, hit_y - 20.0, ep_hit.exp_reward * 2, 0.8));
