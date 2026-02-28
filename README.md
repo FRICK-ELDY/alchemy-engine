@@ -1,14 +1,14 @@
 # AlchemyEngine
 
-> A platform for infinite worlds. You bring the rules.
+> A platform for worlds. You bring the rules.
 
-AlchemyEngine は「無限の3D空間」と「そこに存在するユーザー」だけを保証するゲームエンジン基盤です。
+3D空間とそこに存在するユーザーを保証するゲームエンジンです。
 
 詳細は [ビジョンと設計思想](./docs/vision.md) を参照。
 
 ## アーキテクチャのハイライト
 
-- **Elixir as SSoT (Single Source of Truth)**
+- **Elixir as SSoT**
 
   ゲームの権威ある状態とロジックはすべて Elixir 側で管理します。クライアント用のコードをそのままヘッドレスのマルチプレイサーバーとして転用可能です。1000人規模のプレイヤーが交差する大規模ネットワークも Elixir の並行処理能力で捌きます。
 - **Rust ECS for Physics & Rendering**
@@ -17,9 +17,6 @@ AlchemyEngine は「無限の3D空間」と「そこに存在するユーザー�
 - **SuperCollider-inspired Audio**
 
   Elixir が「指揮者」として非同期コマンドを発行し、Rust の専用スレッドが DSP 処理を行います。複雑な空間オーディオと動的ルーティングを低遅延で実現します。
-- **Hub — Publish Your World**
-
-  クリエイターが作った Game（World + Rule）は Hub にパブリッシュされます。ユーザーは Hub から好きな世界を選んで遊びます。Hub 自体もエンジンが動かす一つの世界です。
 
 ## 🏗️ Architecture
 
