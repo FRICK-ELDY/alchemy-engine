@@ -1,7 +1,7 @@
 //! Path: native/game_simulation/src/world/boss.rs
 //! Summary: ボス状態（BossState）
 
-use crate::entity_params::EntityParamTables;
+use crate::entity_params::BossParams;
 
 /// ボス状態（kind_id: u8 で参照）
 pub struct BossState {
@@ -20,9 +20,9 @@ pub struct BossState {
 }
 
 impl BossState {
-    /// `params` は `GameWorldInner::params` を渡す。
-    pub fn new(kind_id: u8, x: f32, y: f32, params: &EntityParamTables) -> Self {
-        let bp = params.get_boss(kind_id);
+    /// `bp` は呼び出し元で `params.get_boss(kind_id).clone()` して渡す。
+    /// （可変借用と不変借用の競合を避けるため、テーブルではなく値を受け取る）
+    pub fn new(kind_id: u8, x: f32, y: f32, bp: &BossParams) -> Self {
         Self {
             kind_id,
             x, y,

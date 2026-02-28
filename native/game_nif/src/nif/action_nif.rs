@@ -39,8 +39,7 @@ pub fn spawn_boss(world: ResourceArc<GameWorld>, kind_id: u8) -> NifResult<Atom>
         let py = w.player.y + PLAYER_RADIUS;
         let bx = (px + 600.0).min(w.map_width  - bp.radius);
         let by = py.clamp(bp.radius, w.map_height - bp.radius);
-        let params_clone = w.params.clone();
-        w.boss = Some(BossState::new(kind_id, bx, by, &params_clone));
+        w.boss = Some(BossState::new(kind_id, bx, by, &bp));
         w.frame_events.push(FrameEvent::BossSpawn { boss_kind: kind_id });
     }
     Ok(ok())
@@ -52,8 +51,10 @@ pub fn spawn_elite_enemy(world: ResourceArc<GameWorld>, kind_id: u8, count: usiz
     let base_max_hp = w.params.get_enemy(kind_id).max_hp;
     let positions = get_spawn_positions_around_player(&mut w, count);
     let before_len = w.enemies.positions_x.len();
-    let params_clone = w.params.clone();
-    w.enemies.spawn(&positions, kind_id, &params_clone);
+    // w.enemies（可変借用）と w.params（不変借用）の同時借用を避けるため
+    // 必要なパラメータのみ先にコピーする
+    let ep = w.params.get_enemy(kind_id).clone();
+    w.enemies.spawn(&positions, kind_id, &ep);
     let after_len = w.enemies.positions_x.len();
     let base_hp = base_max_hp * hp_multiplier as f32;
     let mut applied = 0;

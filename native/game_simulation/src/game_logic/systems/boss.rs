@@ -203,8 +203,7 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
                 (eff.special_x + angle.cos() * 120.0, eff.special_y + angle.sin() * 120.0)
             })
             .collect();
-        let params_clone = w.params.clone();
-        w.enemies.spawn(&positions, 0, &params_clone); // Slime
+        w.enemies.spawn(&positions, 0, w.params.get_enemy(0)); // Slime
         w.particles.emit(eff.special_x, eff.special_y, 16, [0.2, 1.0, 0.2, 1.0]);
     }
     if eff.spawn_rocks {

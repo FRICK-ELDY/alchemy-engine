@@ -1,7 +1,7 @@
 //! Path: native/game_simulation/src/world/enemy.rs
 //! Summary: 敵 SoA（EnemyWorld）と EnemySeparation の実装
 
-use crate::entity_params::EntityParamTables;
+use crate::entity_params::EnemyParams;
 use crate::physics::separation::EnemySeparation;
 
 /// 敵 SoA（Structure of Arrays）
@@ -57,9 +57,9 @@ impl EnemyWorld {
     }
 
     /// 指定 ID の敵を `positions` の座標にスポーン（O(1) でスロット取得）
-    /// `tables` は `GameWorldInner::params` を渡す。
-    pub fn spawn(&mut self, positions: &[(f32, f32)], kind_id: u8, tables: &EntityParamTables) {
-        let ep     = tables.get_enemy(kind_id);
+    /// `ep` は呼び出し元で `params.get_enemy(kind_id).clone()` して渡す。
+    /// （可変借用と不変借用の競合を避けるため、テーブルではなく値を受け取る）
+    pub fn spawn(&mut self, positions: &[(f32, f32)], kind_id: u8, ep: &EnemyParams) {
         let speed  = ep.speed;
         let max_hp = ep.max_hp;
 

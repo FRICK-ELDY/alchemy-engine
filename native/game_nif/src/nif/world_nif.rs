@@ -74,8 +74,8 @@ pub fn set_player_input(world: ResourceArc<GameWorld>, dx: f64, dy: f64) -> NifR
 pub fn spawn_enemies(world: ResourceArc<GameWorld>, kind_id: u8, count: usize) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
     let positions = get_spawn_positions_around_player(&mut w, count);
-    let params_clone = w.params.clone();
-    w.enemies.spawn(&positions, kind_id, &params_clone);
+    let ep = w.params.get_enemy(kind_id).clone();
+    w.enemies.spawn(&positions, kind_id, &ep);
     Ok(ok())
 }
 
@@ -202,10 +202,7 @@ fn decode_weapon_params(term: Term) -> NifResult<Vec<WeaponParams>> {
             None
         } else {
             let bt_list: ListIterator = t.4.decode()?;
-            Some(bt_list.map(|x| {
-                let v: usize = x.decode().unwrap_or(0);
-                v
-            }).collect())
+            Some(bt_list.map(|x| x.decode::<usize>()).collect::<rustler::NifResult<Vec<usize>>>()?)
         };
         result.push(WeaponParams {
             cooldown:     t.0 as f32,
