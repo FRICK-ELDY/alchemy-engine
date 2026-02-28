@@ -135,8 +135,5 @@ defmodule GameEngine.SceneManager do
     {:ok, %{module: module, state: scene_state}}
   end
 
-  defp current_rule do
-    Application.get_env(:game_server, :current_rule) ||
-      Application.get_env(:game_server, :current_game, GameContent.VampireSurvivor)
-  end
+  defp current_rule, do: GameEngine.Config.current_rule()
 end
