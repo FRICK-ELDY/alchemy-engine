@@ -115,16 +115,12 @@ defmodule GameContent.AsteroidArena.SpawnSystem do
 
   defp current_wave(elapsed_sec) do
     @waves
-    |> Enum.filter(fn {start, _i, _c} -> elapsed_sec >= start end)
-    |> List.last({0, 4_000, 2})
+    |> Enum.find_last(fn {start, _i, _c} -> elapsed_sec >= start end)
     |> then(fn {_start, interval, count} -> {interval, count} end)
   end
 
   defp ufo_interval(elapsed_sec) do
-    @ufo_schedule
-    |> Enum.filter(fn {start, _i} -> elapsed_sec >= start end)
-    |> List.last(nil)
-    |> case do
+    case Enum.find_last(@ufo_schedule, fn {start, _i} -> elapsed_sec >= start end) do
       nil -> nil
       {_start, interval} -> interval
     end
