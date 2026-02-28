@@ -7,13 +7,13 @@ defmodule GameContent.VampireSurvivor.BossComponent do
   """
   @behaviour GameEngine.Component
 
-  # ── アイテム種別 ID（Rust の ItemKind と対応）──────────────────────
-  @item_gem 0
+  # ── アイテム種別 ID（EntityParams から取得）──────────────────────
+  @item_gem GameContent.EntityParams.item_kind_gem()
 
-  # ── ボス種別 ID（EntityParams の値と同値・パターンマッチ用）──────────
-  @boss_slime_king  0
-  @boss_bat_lord    1
-  @boss_stone_golem 2
+  # ── ボス種別 ID（EntityParams から取得してパターンマッチ用定数に束縛）──
+  @boss_slime_king  GameContent.EntityParams.boss_kind_slime_king()
+  @boss_bat_lord    GameContent.EntityParams.boss_kind_bat_lord()
+  @boss_stone_golem GameContent.EntityParams.boss_kind_stone_golem()
 
   @impl GameEngine.Component
   def on_physics_process(context) do

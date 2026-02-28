@@ -72,9 +72,38 @@ defmodule GameContent.EntityParams do
   # スコア = EXP × この係数（physics_step.rs の score 加算ロジックと同値）
   @score_per_exp 2
 
+  # ── アイテム種別 ID（Rust の ItemKind と対応）──────────────────────
+  @item_gem    0
+  @item_potion 1
+  @item_magnet 2
+
+  @doc "Gem のアイテム種別 ID を返す"
+  @spec item_kind_gem() :: non_neg_integer()
+  def item_kind_gem, do: @item_gem
+
+  @doc "Potion のアイテム種別 ID を返す"
+  @spec item_kind_potion() :: non_neg_integer()
+  def item_kind_potion, do: @item_potion
+
+  @doc "Magnet のアイテム種別 ID を返す"
+  @spec item_kind_magnet() :: non_neg_integer()
+  def item_kind_magnet, do: @item_magnet
+
   @doc "スライムの敵種別 ID を返す（SlimeKing の特殊行動スポーン等で使用）"
   @spec enemy_kind_slime() :: non_neg_integer()
   def enemy_kind_slime, do: @enemy_slime
+
+  @doc "Slime King のボス種別 ID を返す"
+  @spec boss_kind_slime_king() :: non_neg_integer()
+  def boss_kind_slime_king, do: @boss_slime_king
+
+  @doc "Bat Lord のボス種別 ID を返す"
+  @spec boss_kind_bat_lord() :: non_neg_integer()
+  def boss_kind_bat_lord, do: @boss_bat_lord
+
+  @doc "Stone Golem のボス種別 ID を返す"
+  @spec boss_kind_stone_golem() :: non_neg_integer()
+  def boss_kind_stone_golem, do: @boss_stone_golem
 
   @doc "敵種別 ID の EXP 報酬を返す"
   @spec enemy_exp_reward(non_neg_integer()) :: non_neg_integer()

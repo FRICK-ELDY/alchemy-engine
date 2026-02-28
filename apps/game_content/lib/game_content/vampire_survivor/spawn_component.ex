@@ -41,11 +41,11 @@ defmodule GameContent.VampireSurvivor.SpawnComponent do
     )
 
     weapon_registry = entity_registry().weapons
-    Enum.each(initial_weapons(), fn weapon_name ->
-      if weapon_id = weapon_registry[weapon_name] do
-        GameEngine.NifBridge.add_weapon(world_ref, weapon_id)
-      end
-    end)
+    for weapon_name <- initial_weapons(),
+        weapon_id = Map.get(weapon_registry, weapon_name),
+        not is_nil(weapon_id) do
+      GameEngine.NifBridge.add_weapon(world_ref, weapon_id)
+    end
 
     :ok
   end

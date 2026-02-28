@@ -11,10 +11,10 @@ defmodule GameContent.VampireSurvivor.LevelComponent do
   @drop_magnet_threshold 2
   @drop_potion_threshold 7
 
-  # ── アイテム種別 ID（Rust の ItemKind と対応）──────────────────────
-  @item_gem    0
-  @item_potion 1
-  @item_magnet 2
+  # ── アイテム種別 ID（EntityParams から取得）──────────────────────
+  @item_gem    GameContent.EntityParams.item_kind_gem()
+  @item_potion GameContent.EntityParams.item_kind_potion()
+  @item_magnet GameContent.EntityParams.item_kind_magnet()
 
   # ── Potion の回復量 ────────────────────────────────────────────────
   @potion_heal_value 20

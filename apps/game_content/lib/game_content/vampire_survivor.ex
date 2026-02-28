@@ -40,8 +40,9 @@ defmodule GameContent.VampireSurvivor do
   def title, do: "Vampire Survivor"
   def version, do: "0.1.0"
 
-  # ── エンティティ登録（SpawnComponent に委譲）────────────────────
+  # ── アセット・エンティティ登録（SpawnComponent に委譲）──────────
 
+  def assets_path, do: GameContent.VampireSurvivor.SpawnComponent.assets_path()
   def entity_registry, do: GameContent.VampireSurvivor.SpawnComponent.entity_registry()
 
   # ── コンテキストデフォルト ────────────────────────────────────────

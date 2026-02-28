@@ -404,7 +404,8 @@ defmodule GameEngine.GameEvents do
     {state, score_delta} = apply_kill_score(state, exp, content)
     update_playing_scene_state(content, &scene.accumulate_exp(&1, exp))
     GameEngine.NifBridge.add_score_popup(state.world_ref, x, y, score_delta)
-    dispatch_event_to_components({:entity_removed, state.world_ref, enemy_kind, x, y}, build_context(state, now_ms(), 0))
+    now = now_ms()
+    dispatch_event_to_components({:entity_removed, state.world_ref, enemy_kind, x, y}, build_context(state, now, now - state.start_ms))
     state
   end
 
@@ -422,7 +423,8 @@ defmodule GameEngine.GameEvents do
       |> scene.apply_boss_defeated()
     end)
     GameEngine.NifBridge.add_score_popup(state.world_ref, x, y, score_delta)
-    dispatch_event_to_components({:boss_defeated, state.world_ref, boss_kind, x, y}, build_context(state, now_ms(), 0))
+    now = now_ms()
+    dispatch_event_to_components({:boss_defeated, state.world_ref, boss_kind, x, y}, build_context(state, now, now - state.start_ms))
     state
   end
 
