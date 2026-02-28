@@ -40,46 +40,80 @@ graph LR
 | `CELL_SIZE` | 80 | 空間ハッシュセルサイズ（px） |
 | `INVINCIBLE_DURATION` | 0.5 | 無敵時間（秒） |
 
-### `entity_params.rs` — ID ベースパラメータテーブル
+### `entity_params.rs` — 外部注入パラメータテーブル
 
-エンティティ ID（u8）からパラメータを引くテーブル。
+`EntityParamTables` 構造体として定義され、`set_entity_params` NIF 経由で Elixir 側から注入される。
+ハードコードされたパラメータは持たず、`default()` は空テーブルを返す。
 
-**`EnemyParams`（5 種）:**
+```rust
+pub struct EntityParamTables {
+    pub enemies:  Vec<EnemyParams>,
+    pub weapons:  Vec<WeaponParams>,
+    pub bosses:   Vec<BossParams>,
+}
+```
 
-| ID | 種別 | HP | 速度 | ダメージ | EXP |
-|:---|:---|:---|:---|:---|:---|
-| 0 | Slime | 30 | 60 | 10 | 5 |
-| 1 | Bat | 20 | 90 | 8 | 4 |
-| 2 | Golem | 100 | 30 | 20 | 15 |
-| 3 | Skeleton | 50 | 70 | 12 | 8 |
-| 4 | Ghost | 40 | 80 | 15 | 10 |
+**`EnemyParams`:**
 
-**`WeaponParams`（7 種）:**
+```rust
+pub struct EnemyParams {
+    pub max_hp:           f32,
+    pub speed:            f32,
+    pub radius:           f32,
+    pub damage_per_sec:   f32,
+    pub render_kind:      u8,
+    pub particle_color:   [f32; 4],
+    pub passes_obstacles: bool,   // Ghost など障害物すり抜け
+}
+```
 
-| ID | 種別 | ダメージ | クールダウン | 弾数 |
-|:---|:---|:---|:---|:---|
-| 0 | MagicWand | 20 | 0.8s | 1 |
-| 1 | Axe | 40 | 1.5s | 1 |
-| 2 | Cross | 15 | 0.5s | 4（方向） |
-| 3 | Whip | 30 | 1.0s | 1（範囲） |
-| 4 | Fireball | 35 | 1.2s | 1 |
-| 5 | Lightning | 50 | 2.0s | 1 |
-| 6 | Garlic | 10 | 0.3s | 1（近接） |
+**`WeaponParams` と `FirePattern`:**
 
-**`BossParams`（3 種）:**
+```rust
+pub enum FirePattern {
+    Aimed,     // 最近接敵に向けて扇状（magic_wand）
+    FixedUp,   // 固定方向（axe: 上方向）
+    Radial,    // 全方向（cross: 4/8方向）
+    Whip,      // 扇形直接判定（弾丸なし）
+    Aura,      // プレイヤー周囲オーラ（garlic）
+    Piercing,  // 貫通弾（fireball）
+    Chain,     // 連鎖電撃（lightning）
+}
 
-| ID | 種別 | HP | 速度 |
-|:---|:---|:---|:---|
-| 0 | SlimeKing | 1000 | 40 |
-| 1 | BatLord | 2000 | 120 |
-| 2 | StoneGolem | 5000 | 20 |
+pub struct WeaponParams {
+    pub cooldown:     f32,
+    pub damage:       i32,
+    pub as_u8:        u8,
+    pub bullet_table: Option<Vec<usize>>,  // レベル別弾数テーブル
+    pub fire_pattern: FirePattern,
+    pub range:        f32,        // Whip/Aura の基本半径
+    pub chain_count:  u8,         // Chain パターンの連鎖数
+}
+```
+
+**`BossParams`:**
+
+```rust
+pub struct BossParams {
+    pub max_hp:           f32,
+    pub speed:            f32,
+    pub radius:           f32,
+    pub damage_per_sec:   f32,
+    pub render_kind:      u8,
+    pub special_interval: f32,  // 特殊行動インターバル（秒）
+}
+```
 
 ### `weapon.rs` — WeaponSlot
 
+クールダウン管理のみを担当。ダメージ計算は `WeaponParams` を参照する。
+
 ```rust
-fn effective_cooldown(&self) -> f32  // レベルごとに 7% 短縮（最大 50%）
-fn effective_damage(&self) -> f32    // レベルごとに基礎ダメージの 25% 増加
-fn weapon_upgrade_desc(&self) -> String  // HUD 用アップグレード説明文
+pub struct WeaponSlot {
+    pub kind_id:  u8,
+    pub level:    u32,
+    pub cooldown: f32,  // 残りクールダウン（秒）
+}
 ```
 
 ### `physics/` — 物理演算ユーティリティ
@@ -116,21 +150,40 @@ struct CollisionWorld {
 graph TD
     GW["GameWorld\n(RwLock&lt;GameWorldInner&gt;)"]
     GWI[GameWorldInner<br/>全ゲーム状態]
+    PS[PlayerState]
     EW[EnemyWorld<br/>SoA 構造]
     BW[BulletWorld<br/>SoA 構造]
     PW[ParticleWorld<br/>SoA 構造]
+    IW[ItemWorld<br/>SoA 構造]
     BS[BossState<br/>ボス状態]
+    ET[EntityParamTables<br/>NIF で外部注入]
     GLC[GameLoopControl<br/>AtomicBool pause/resume]
     FE[FrameEvent<br/>イベント enum]
 
     GW --> GWI
+    GWI --> PS
     GWI --> EW
     GWI --> BW
     GWI --> PW
+    GWI --> IW
     GWI --> BS
+    GWI --> ET
     GWI --> FE
     GW --> GLC
 ```
+
+**`GameWorldInner` の主要フィールドと Elixir SSoT の対応:**
+
+| フィールド | 権威 | 注入 NIF |
+|:---|:---|:---|
+| `player.hp` | Elixir | `set_player_hp` |
+| `player.input_dx/dy` | Elixir | `set_player_input` |
+| `elapsed_seconds` | Elixir | `set_elapsed_seconds` |
+| `boss.hp` | Elixir | `set_boss_hp` |
+| `score`, `kill_count` | Elixir | `set_hud_state` |
+| `params` | Elixir | `set_entity_params`（Phase 3-A） |
+| `map_width/height` | Elixir | `set_world_size`（Phase 3-A） |
+| `hud_level/exp/exp_to_next` 等 | Elixir | `set_hud_level_state`（描画専用） |
 
 #### SoA（Structure of Arrays）構造
 
@@ -150,11 +203,11 @@ struct EnemyWorld {
 
 ```rust
 enum FrameEvent {
-    EnemyKilled  { kind_id: u8, exp: u32 },
+    EntityRemoved { kind_id: u8, x: f32, y: f32 },  // 敵撃破（アイテムドロップは Elixir 側）
     PlayerDamaged { damage: f32 },
-    LevelUp      { new_level: u32 },
-    ItemPickup   { kind: ItemKind },
-    BossDefeated { kind_id: u8, score: u32 },
+    LevelUp       { new_level: u32 },
+    ItemPickup    { kind: ItemKind },
+    BossDefeated  { kind_id: u8, x: f32, y: f32 },  // ボス撃破（ドロップは Elixir 側）
 }
 ```
 
@@ -198,12 +251,11 @@ graph LR
 ```mermaid
 graph TD
     SYS[systems/]
-    WEP[weapons.rs<br/>7 武器発射ロジック]
+    WEP[weapons.rs<br/>武器発射ロジック<br/>FirePattern 対応]
     PRJ[projectiles.rs<br/>弾丸移動・衝突・ドロップ]
-    BOSS[boss.rs<br/>ボス AI・特殊行動]
+    BOSS[boss.rs<br/>ボス物理のみ<br/>AI は Elixir 側]
     EFF[effects.rs<br/>パーティクル更新]
     ITEM[items.rs<br/>アイテム収集]
-    LEV[leveling.rs<br/>武器選択肢生成]
     COL[collision.rs<br/>敵 vs 障害物押し出し]
     SPW[spawn.rs<br/>スポーン位置生成]
 
@@ -212,30 +264,30 @@ graph TD
     SYS --> BOSS
     SYS --> EFF
     SYS --> ITEM
-    SYS --> LEV
     SYS --> COL
     SYS --> SPW
 ```
 
-**7 武器の発射パターン:**
+> `leveling.rs`（武器選択肢生成）は廃止済み。武器選択肢の生成は Elixir 側 `RuleBehaviour.generate_weapon_choices/1` が担当する。
 
-| 武器 | 発射パターン |
-|:---|:---|
-| MagicWand | 最近傍の敵に向けて 1 発 |
-| Axe | 上方向に投げ、放物線軌道 |
-| Cross | 上下左右 4 方向に同時発射 |
-| Whip | 左右に範囲攻撃（即時判定） |
-| Fireball | 最近傍の敵に向けて貫通弾 |
-| Lightning | 最近傍の敵に即時ダメージ（弾なし） |
-| Garlic | プレイヤー周囲に継続ダメージ |
+**武器発射パターン（`FirePattern` 対応）:**
 
-**ボス AI パターン:**
-
-| ボス | 移動 | 特殊行動 |
+| FirePattern | 武器例 | 発射パターン |
 |:---|:---|:---|
-| SlimeKing | 低速追跡 | 定期的にスライムを召喚 |
-| BatLord | 高速追跡 | ダッシュ攻撃（phase_timer で制御） |
-| StoneGolem | 超低速 | 岩弾を放射状に発射 |
+| `Aimed` | MagicWand | 最近傍の敵に向けて扇状発射 |
+| `FixedUp` | Axe | 上方向固定、放物線軌道 |
+| `Radial` | Cross | 全方向（4/8方向）同時発射 |
+| `Whip` | Whip | 扇形直接判定（弾丸なし） |
+| `Piercing` | Fireball | 最近傍の敵に向けて貫通弾 |
+| `Chain` | Lightning | 最近傍の敵に連鎖電撃 |
+| `Aura` | Garlic | プレイヤー周囲継続ダメージ |
+
+**ボス物理（`boss.rs`）:**
+
+Rust はボスの物理的存在（位置・HP・当たり判定・弾丸 vs ボス衝突）のみ管理する。
+- **移動**: Elixir が `set_boss_velocity` NIF で注入した速度ベクトルで移動
+- **特殊行動**: Elixir の `update_boss_ai` コールバックが NIF 経由で制御
+- **撃破判定**: Rust が判定し `BossDefeated` イベントを発行
 
 ---
 
@@ -282,23 +334,36 @@ graph TD
 
 #### NIF 関数一覧
 
-**`world_nif.rs`:**
+**`world_nif.rs`（ワールド生成・入力・スポーン・パラメータ注入）:**
 
 | NIF 関数 | 説明 |
 |:---|:---|
 | `create_world()` | `GameWorld` リソースを生成して返す |
 | `set_player_input(world, dx, dy)` | 移動ベクトルを設定 |
-| `spawn_enemies(world, kind_id, count, hp_mult)` | 敵をスポーン |
+| `spawn_enemies(world, kind_id, count)` | 敵をスポーン |
+| `spawn_enemies_at(world, kind_id, positions)` | 指定座標リストに敵をスポーン（Phase 3-B） |
 | `set_map_obstacles(world, obstacles)` | 障害物リストを設定 |
+| `set_entity_params(world, enemies, weapons, bosses)` | エンティティパラメータを注入（Phase 3-A） |
+| `set_world_size(world, width, height)` | マップサイズを設定（Phase 3-A） |
+| `set_player_hp(world, hp)` | プレイヤー HP を注入（フェーズ2） |
+| `set_elapsed_seconds(world, elapsed)` | 経過時間を注入（フェーズ3） |
+| `set_boss_hp(world, hp)` | ボス HP を注入（フェーズ4） |
+| `set_hud_state(world, score, kill_count)` | HUD スコア・キル数を注入（フェーズ1） |
+| `set_hud_level_state(world, level, exp, ...)` | HUD レベル・EXP 状態を注入（Phase 3-B・描画専用） |
 
-**`action_nif.rs`:**
+**`action_nif.rs`（武器・ボス操作）:**
 
 | NIF 関数 | 説明 |
 |:---|:---|
 | `add_weapon(world, weapon_id)` | 武器を追加/アップグレード |
-| `skip_level_up(world)` | レベルアップをスキップ |
 | `spawn_boss(world, boss_id)` | ボスをスポーン |
 | `spawn_elite_enemy(world, kind_id, count, hp_mult)` | エリート敵をスポーン |
+| `spawn_item(world, x, y, kind, value)` | アイテムをスポーン（Phase 3-B） |
+| `set_boss_velocity(world, vx, vy)` | ボス速度を注入（Phase 3-B・AI） |
+| `set_boss_invincible(world, invincible)` | ボス無敵状態を設定（Phase 3-B・AI） |
+| `set_boss_phase_timer(world, timer)` | ボス特殊行動タイマーを設定（Phase 3-B・AI） |
+| `fire_boss_projectile(world, dx, dy, speed, dmg, lifetime)` | ボス弾を発射（Phase 3-B・AI） |
+| `get_boss_state(world)` | ボス状態を取得（Phase 3-B・AI 用） |
 
 **`read_nif.rs`（軽量・毎フレーム利用可）:**
 
@@ -309,9 +374,7 @@ graph TD
 | `get_enemy_count(world)` | 生存敵数 |
 | `get_hud_data(world)` | HUD 表示データ全体 |
 | `get_frame_metadata(world)` | フレームメタデータ |
-| `get_level_up_data(world)` | レベルアップ選択肢 |
-| `get_weapon_levels(world)` | 全武器レベル |
-| `get_boss_info(world)` | ボス情報 |
+| `get_weapon_levels(world)` | 全武器レベル（`%{kind_id => level}`） |
 | `is_player_dead(world)` | 死亡判定 |
 
 **`game_loop_nif.rs`:**
