@@ -101,8 +101,8 @@ defmodule GameEngine.GameEvents do
 
   @impl true
   def handle_cast({:select_weapon, :__skip__}, state) do
-    game = current_game()
-    level_up_scene = game.level_up_scene()
+    rule = current_rule()
+    level_up_scene = rule.level_up_scene()
 
     case GameEngine.SceneManager.current() do
       {:ok, %{module: ^level_up_scene}} ->
@@ -110,7 +110,7 @@ defmodule GameEngine.GameEvents do
         Logger.info("[LEVEL UP] Skipped weapon selection -> resuming")
         GameEngine.NifBridge.resume_physics(state.control_ref)
         GameEngine.SceneManager.pop_scene()
-        update_playing_scene_state(&game.apply_level_up_skipped/1)
+        update_playing_scene_state(rule, &rule.apply_level_up_skipped/1)
         {:noreply, state}
 
       _ ->
@@ -119,18 +119,19 @@ defmodule GameEngine.GameEvents do
   end
 
   def handle_cast({:select_weapon, weapon}, state) do
-    game = current_game()
-    level_up_scene = game.level_up_scene()
+    rule = current_rule()
+    world = current_world()
+    level_up_scene = rule.level_up_scene()
 
     case GameEngine.SceneManager.current() do
       {:ok, %{module: ^level_up_scene}} ->
-        weapon_id = game.entity_registry().weapons[weapon] ||
+        weapon_id = world.entity_registry().weapons[weapon] ||
                       raise "Unknown weapon: #{inspect(weapon)}"
         GameEngine.NifBridge.add_weapon(state.world_ref, weapon_id)
         Logger.info("[LEVEL UP] Weapon selected: #{inspect(weapon)} -> resuming")
         GameEngine.NifBridge.resume_physics(state.control_ref)
         GameEngine.SceneManager.pop_scene()
-        update_playing_scene_state(&game.apply_weapon_selected(&1, weapon))
+        update_playing_scene_state(rule, &rule.apply_weapon_selected(&1, weapon))
         {:noreply, state}
 
       _ ->
@@ -150,12 +151,12 @@ defmodule GameEngine.GameEvents do
 
   @impl true
   def handle_call(:load_session, _from, state) do
-    game = current_game()
+    rule = current_rule()
     result = GameEngine.SaveManager.load_session(state.world_ref)
 
     case result do
       :ok ->
-        GameEngine.SceneManager.replace_scene(game.physics_scenes() |> List.first(), %{})
+        GameEngine.SceneManager.replace_scene(rule.physics_scenes() |> List.first(), %{})
         new_state = reset_elixir_state(state)
         {:reply, :ok, new_state}
 
@@ -204,14 +205,14 @@ defmodule GameEngine.GameEvents do
   # ── UI アクションハンドラ ─────────────────────────────────────────
 
   defp handle_ui_action_skip(state) do
-    game = current_game()
-    playing_state = get_playing_scene_state()
+    rule = current_rule()
+    playing_state = get_playing_scene_state(rule)
     is_level_up_pending = Map.get(playing_state, :level_up_pending, false)
 
     if is_level_up_pending do
       GameEngine.NifBridge.skip_level_up(state.world_ref)
       Logger.info("[LEVEL UP] Skipped from renderer UI")
-      update_playing_scene_state(&game.apply_level_up_skipped/1)
+      update_playing_scene_state(rule, &rule.apply_level_up_skipped/1)
       maybe_close_level_up_scene(state)
     else
       state
@@ -219,13 +220,14 @@ defmodule GameEngine.GameEvents do
   end
 
   defp handle_ui_action_weapon(state, weapon_name) do
-    game = current_game()
-    playing_state = get_playing_scene_state()
+    rule = current_rule()
+    world = current_world()
+    playing_state = get_playing_scene_state(rule)
     is_level_up_pending = Map.get(playing_state, :level_up_pending, false)
     current_weapon_levels = Map.get(playing_state, :weapon_levels, %{})
 
     if is_level_up_pending do
-      selected_weapon = resolve_weapon_from_name(weapon_name, current_weapon_levels, game, state.world_ref)
+      selected_weapon = resolve_weapon_from_name(weapon_name, current_weapon_levels, rule, world, state.world_ref)
       if selected_weapon != :__skip__ do
         Logger.info("[LEVEL UP] Weapon selected from renderer: #{inspect(selected_weapon)}")
       end
@@ -235,7 +237,7 @@ defmodule GameEngine.GameEvents do
     end
   end
 
-  defp resolve_weapon_from_name(weapon_name, weapon_levels, game, world_ref) when is_binary(weapon_name) do
+  defp resolve_weapon_from_name(weapon_name, weapon_levels, rule, world, world_ref) when is_binary(weapon_name) do
     requested_weapon =
       try do
         String.to_existing_atom(weapon_name)
@@ -243,26 +245,26 @@ defmodule GameEngine.GameEvents do
         ArgumentError -> nil
       end
 
-    weapons_registry = game.entity_registry().weapons
+    weapons_registry = world.entity_registry().weapons
     allowed_weapons = weapons_registry |> Map.keys() |> MapSet.new()
     fallback_weapon = Map.keys(weapon_levels) |> List.first() || :magic_wand
 
     cond do
       is_atom(requested_weapon) and MapSet.member?(allowed_weapons, requested_weapon) ->
         GameEngine.NifBridge.add_weapon(world_ref, weapons_registry[requested_weapon])
-        update_playing_scene_state(&game.apply_weapon_selected(&1, requested_weapon))
+        update_playing_scene_state(rule, &rule.apply_weapon_selected(&1, requested_weapon))
         requested_weapon
 
       MapSet.member?(allowed_weapons, fallback_weapon) ->
         Logger.warning("[LEVEL UP] Renderer weapon '#{weapon_name}' not available. Falling back to #{inspect(fallback_weapon)}.")
         GameEngine.NifBridge.add_weapon(world_ref, weapons_registry[fallback_weapon])
-        update_playing_scene_state(&game.apply_weapon_selected(&1, fallback_weapon))
+        update_playing_scene_state(rule, &rule.apply_weapon_selected(&1, fallback_weapon))
         fallback_weapon
 
       true ->
         Logger.warning("[LEVEL UP] Renderer weapon '#{weapon_name}' not available and no valid fallback. Skipping.")
         GameEngine.NifBridge.skip_level_up(world_ref)
-        update_playing_scene_state(&game.apply_level_up_skipped/1)
+        update_playing_scene_state(rule, &rule.apply_level_up_skipped/1)
         :__skip__
     end
   end
@@ -281,8 +283,8 @@ defmodule GameEngine.GameEvents do
   defp do_load_session(state) do
     case GameEngine.SaveManager.load_session(state.world_ref) do
       :ok ->
-        game = current_game()
-        GameEngine.SceneManager.replace_scene(game.physics_scenes() |> List.first(), %{})
+        rule = current_rule()
+        GameEngine.SceneManager.replace_scene(rule.physics_scenes() |> List.first(), %{})
         reset_elixir_state(state)
 
       :no_save ->
@@ -296,8 +298,7 @@ defmodule GameEngine.GameEvents do
   end
 
   defp maybe_close_level_up_scene(state) do
-    game = current_game()
-    level_up_scene = game.level_up_scene()
+    level_up_scene = current_rule().level_up_scene()
 
     case GameEngine.SceneManager.current() do
       {:ok, %{module: ^level_up_scene}} ->
@@ -316,34 +317,24 @@ defmodule GameEngine.GameEvents do
     now = now_ms()
     elapsed = now - state.start_ms
 
-    game = current_game()
-    physics_scenes = game.physics_scenes()
+    rule = current_rule()
+    physics_scenes = rule.physics_scenes()
 
     case GameEngine.SceneManager.current() do
       :empty ->
         {:noreply, %{state | last_tick: now}}
 
       {:ok, %{module: mod, state: scene_state}} ->
-        # フェーズ1: elapsed_ms を Elixir 側で管理
         delta_ms = now - state.last_tick
         state = %{state | elapsed_ms: state.elapsed_ms + delta_ms}
 
-        # フェーズ1〜4: イベントを Elixir 側で処理して状態を更新
         state = apply_frame_events(events, state)
 
-        # フェーズ1: score・kill_count を毎フレーム Rust に注入
         GameEngine.NifBridge.set_hud_state(state.world_ref, state.score, state.kill_count)
-
-        # フェーズ2: HP を毎フレーム Rust に注入
         GameEngine.NifBridge.set_player_hp(state.world_ref, state.player_hp)
-
-        # フェーズ3: レベル・EXP を毎フレーム Rust に注入
         GameEngine.NifBridge.set_player_level(state.world_ref, state.level, state.exp)
-
-        # フェーズ3: elapsed_seconds を毎フレーム Rust に注入
         GameEngine.NifBridge.set_elapsed_seconds(state.world_ref, state.elapsed_ms / 1000.0)
 
-        # フェーズ4: ボス HP を毎フレーム Rust に注入
         if state.boss_hp != nil do
           GameEngine.NifBridge.set_boss_hp(state.world_ref, state.boss_hp)
         end
@@ -357,8 +348,8 @@ defmodule GameEngine.GameEvents do
         GameEngine.SceneManager.update_current(fn _ -> new_scene_state end)
 
         state = apply_context_updates(state, opts)
-        state = process_transition(result, state, now, game)
-        state = maybe_log_and_cache(state, mod, elapsed, game)
+        state = process_transition(result, state, now, rule, current_world())
+        state = maybe_log_and_cache(state, mod, elapsed, rule)
 
         {:noreply, %{state | last_tick: now, frame_count: state.frame_count + 1}}
     end
@@ -430,14 +421,14 @@ defmodule GameEngine.GameEvents do
     required = exp_required_for_next(state.level)
 
     if state.exp >= required and required > 0 do
-      game = current_game()
-      playing_state = get_playing_scene_state()
+      rule = current_rule()
+      playing_state = get_playing_scene_state(rule)
       already_pending = Map.get(playing_state, :level_up_pending, false)
 
       unless already_pending do
         weapon_levels = Map.get(playing_state, :weapon_levels, %{})
-        choices = game.generate_weapon_choices(weapon_levels)
-        update_playing_scene_state(&game.apply_level_up(&1, choices))
+        choices = rule.generate_weapon_choices(weapon_levels)
+        update_playing_scene_state(rule, &rule.apply_level_up(&1, choices))
       end
 
       %{state | exp_to_next: exp_required_for_next(state.level + 1) - state.exp}
@@ -484,8 +475,7 @@ defmodule GameEngine.GameEvents do
       boss_max_hp:   state.boss_max_hp,
       boss_kind_id:  state.boss_kind_id,
     }
-    game = current_game()
-    Map.merge(game.context_defaults(), base)
+    Map.merge(current_rule().context_defaults(), base)
   end
 
   defp extract_state_and_opts({:continue, scene_state}), do: {scene_state, %{}}
@@ -500,24 +490,24 @@ defmodule GameEngine.GameEvents do
 
   # ── シーン遷移処理 ────────────────────────────────────────────────
 
-  defp process_transition({:continue, _}, state, _now, _game), do: state
-  defp process_transition({:continue, _, _}, state, _now, _game), do: state
+  defp process_transition({:continue, _}, state, _now, _rule, _world), do: state
+  defp process_transition({:continue, _, _}, state, _now, _rule, _world), do: state
 
-  defp process_transition({:transition, :pop, scene_state}, state, _now, game) do
+  defp process_transition({:transition, :pop, scene_state}, state, _now, rule, world) do
     auto_select = Map.get(scene_state, :auto_select, false)
 
     if auto_select do
       case scene_state do
         %{choices: [first | _]} ->
-          weapon_id = game.entity_registry().weapons[first] ||
+          weapon_id = world.entity_registry().weapons[first] ||
                         raise "Unknown weapon: #{inspect(first)}"
           GameEngine.NifBridge.add_weapon(state.world_ref, weapon_id)
           Logger.info("[LEVEL UP] Auto-selected: #{inspect(first)} -> resuming")
-          update_playing_scene_state(&game.apply_weapon_selected(&1, first))
+          update_playing_scene_state(rule, &rule.apply_weapon_selected(&1, first))
         _ ->
           GameEngine.NifBridge.skip_level_up(state.world_ref)
           Logger.info("[LEVEL UP] Auto-skipped (no choices) -> resuming")
-          update_playing_scene_state(&game.apply_level_up_skipped/1)
+          update_playing_scene_state(rule, &rule.apply_level_up_skipped/1)
       end
       GameEngine.NifBridge.resume_physics(state.control_ref)
       GameEngine.SceneManager.pop_scene()
@@ -529,16 +519,16 @@ defmodule GameEngine.GameEvents do
     end
   end
 
-  defp process_transition({:transition, {:push, mod, init_arg}, _}, state, _now, game) do
-    if mod == game.level_up_scene() or mod == game.boss_alert_scene() do
+  defp process_transition({:transition, {:push, mod, init_arg}, _}, state, _now, rule, _world) do
+    if mod == rule.level_up_scene() or mod == rule.boss_alert_scene() do
       GameEngine.NifBridge.pause_physics(state.control_ref)
     end
     GameEngine.SceneManager.push_scene(mod, init_arg)
     state
   end
 
-  defp process_transition({:transition, {:replace, mod, init_arg}, _}, state, _now, game) do
-    game_over_scene = game.game_over_scene()
+  defp process_transition({:transition, {:replace, mod, init_arg}, _}, state, _now, rule, _world) do
+    game_over_scene = rule.game_over_scene()
 
     init_arg =
       if mod == game_over_scene do
@@ -558,31 +548,29 @@ defmodule GameEngine.GameEvents do
     state
   end
 
-  defp process_transition(_, state, _, _), do: state
+  defp process_transition(_, state, _, _, _), do: state
 
   # ── ログ・キャッシュ更新 ──────────────────────────────────────────
 
-  defp maybe_log_and_cache(state, _mod, _elapsed, game) do
+  defp maybe_log_and_cache(state, _mod, _elapsed, rule) do
     if state.room_id == :main and rem(state.frame_count, 60) == 0 do
       elapsed_s = state.elapsed_ms / 1000.0
 
-      # フェーズ1〜4: Elixir 側の権威ある値を使用
       hud_data = {state.player_hp, state.player_max_hp, state.score, elapsed_s}
       render_type = GameEngine.SceneManager.render_type()
       high_scores = if render_type == :game_over, do: GameEngine.SaveManager.load_high_scores(), else: nil
 
-      # enemy_count と bullet_count は Rust 側の物理状態なので NIF で取得
       enemy_count = GameEngine.NifBridge.get_enemy_count(state.world_ref)
       bullet_count = GameEngine.NifBridge.get_bullet_count(state.world_ref)
       physics_ms = GameEngine.NifBridge.get_frame_time_ms(state.world_ref)
 
       GameEngine.FrameCache.put(enemy_count, bullet_count, physics_ms, hud_data, render_type, high_scores)
 
-      wave = game.wave_label(elapsed_s)
+      wave = rule.wave_label(elapsed_s)
       budget_warn = if physics_ms > @tick_ms, do: " [OVER BUDGET]", else: ""
 
       weapon_info =
-        get_playing_scene_weapon_levels()
+        get_playing_scene_weapon_levels(rule)
         |> Enum.map_join(", ", fn {w, lv} -> "#{w}:Lv#{lv}" end)
 
       boss_info =
@@ -636,27 +624,22 @@ defmodule GameEngine.GameEvents do
 
   defp now_ms, do: System.monotonic_time(:millisecond)
 
-  defp current_game do
-    Application.get_env(:game_server, :current_game, GameContent.VampireSurvivor)
-  end
+  defp current_rule, do: GameEngine.Config.current_rule()
+  defp current_world, do: GameEngine.Config.current_world()
 
   # Playing シーンの state を SceneManager 経由で更新する（スタック内のどの位置にあっても更新）
-  defp update_playing_scene_state(fun) when is_function(fun, 1) do
-    game = current_game()
-    playing_scene = game.playing_scene()
-    GameEngine.SceneManager.update_by_module(playing_scene, fun)
+  defp update_playing_scene_state(rule, fun) when is_function(fun, 1) do
+    GameEngine.SceneManager.update_by_module(rule.playing_scene(), fun)
   end
 
   # Playing シーンの weapon_levels を取得する（ログ用）
-  defp get_playing_scene_weapon_levels do
-    Map.get(get_playing_scene_state(), :weapon_levels, %{})
+  defp get_playing_scene_weapon_levels(rule) do
+    Map.get(get_playing_scene_state(rule), :weapon_levels, %{})
   end
 
   # Playing シーンの state を取得する
-  defp get_playing_scene_state do
-    game = current_game()
-    playing_scene = game.playing_scene()
-    GameEngine.SceneManager.get_scene_state(playing_scene)
+  defp get_playing_scene_state(rule) do
+    GameEngine.SceneManager.get_scene_state(rule.playing_scene())
   end
 
   # セーブロード後に Elixir 側の状態をリセット

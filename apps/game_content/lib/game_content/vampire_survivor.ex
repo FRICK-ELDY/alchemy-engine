@@ -1,80 +1,82 @@
 defmodule GameContent.VampireSurvivor do
   @moduledoc """
-  ヴァンパイアサバイバーの GameBehaviour 実装。
-  初期シーン・物理演算対象シーン・エンティティ ID マッピングを提供する。
+  **廃止予定**: `GameContent.VampireSurvivorWorld` と `GameContent.VampireSurvivorRule` に分割されました。
+
+  このモジュールは後方互換のために残されています。
+  設定ファイルでは以下のように移行してください:
+
+      # 旧
+      config :game_server, current_game: GameContent.VampireSurvivor
+
+      # 新
+      config :game_server,
+        current_world: GameContent.VampireSurvivorWorld,
+        current_rule:  GameContent.VampireSurvivorRule
   """
+
   @behaviour GameEngine.GameBehaviour
 
-  @impl GameEngine.GameBehaviour
-  def render_type, do: :playing
+  # ── WorldBehaviour 由来 ────────────────────────────────────────────
 
   @impl GameEngine.GameBehaviour
-  def initial_scenes do
-    [
-      %{module: GameContent.VampireSurvivor.Scenes.Playing, init_arg: %{}}
-    ]
-  end
+  def assets_path, do: GameContent.VampireSurvivorWorld.assets_path()
 
   @impl GameEngine.GameBehaviour
-  def entity_registry do
-    %{
-      enemies: %{slime: 0, bat: 1, golem: 2, skeleton: 3, ghost: 4},
-      weapons: %{
-        magic_wand: 0, axe: 1, cross: 2, whip: 3, fireball: 4, lightning: 5, garlic: 6
-      },
-      bosses: %{slime_king: 0, bat_lord: 1, stone_golem: 2},
-    }
-  end
+  def entity_registry, do: GameContent.VampireSurvivorWorld.entity_registry()
+
+  # ── RuleBehaviour 由来 ────────────────────────────────────────────
 
   @impl GameEngine.GameBehaviour
-  def physics_scenes do
-    [GameContent.VampireSurvivor.Scenes.Playing]
-  end
+  def render_type, do: GameContent.VampireSurvivorRule.render_type()
 
   @impl GameEngine.GameBehaviour
-  def title, do: "Vampire Survivor"
+  def initial_scenes, do: GameContent.VampireSurvivorRule.initial_scenes()
 
   @impl GameEngine.GameBehaviour
-  def version, do: "0.1.0"
+  def physics_scenes, do: GameContent.VampireSurvivorRule.physics_scenes()
 
   @impl GameEngine.GameBehaviour
-  def context_defaults, do: %{}
+  def title, do: GameContent.VampireSurvivorRule.title()
 
   @impl GameEngine.GameBehaviour
-  def assets_path, do: "vampire_survivor"
+  def version, do: GameContent.VampireSurvivorRule.version()
 
   @impl GameEngine.GameBehaviour
-  def playing_scene, do: GameContent.VampireSurvivor.Scenes.Playing
+  def context_defaults, do: GameContent.VampireSurvivorRule.context_defaults()
 
   @impl GameEngine.GameBehaviour
-  def generate_weapon_choices(weapon_levels) do
-    GameContent.VampireSurvivor.LevelSystem.generate_weapon_choices(weapon_levels)
-  end
+  def playing_scene, do: GameContent.VampireSurvivorRule.playing_scene()
 
   @impl GameEngine.GameBehaviour
-  def apply_level_up(scene_state, choices) do
-    GameContent.VampireSurvivor.Scenes.Playing.apply_level_up(scene_state, choices)
-  end
+  def generate_weapon_choices(weapon_levels),
+    do: GameContent.VampireSurvivorRule.generate_weapon_choices(weapon_levels)
 
   @impl GameEngine.GameBehaviour
-  def apply_weapon_selected(scene_state, weapon) do
-    GameContent.VampireSurvivor.Scenes.Playing.apply_weapon_selected(scene_state, weapon)
-  end
+  def apply_level_up(scene_state, choices),
+    do: GameContent.VampireSurvivorRule.apply_level_up(scene_state, choices)
 
   @impl GameEngine.GameBehaviour
-  def apply_level_up_skipped(scene_state) do
-    GameContent.VampireSurvivor.Scenes.Playing.apply_level_up_skipped(scene_state)
-  end
+  def apply_weapon_selected(scene_state, weapon),
+    do: GameContent.VampireSurvivorRule.apply_weapon_selected(scene_state, weapon)
 
-  # ── Vampire Survivor 固有 ──────────────────────────────────────────
+  @impl GameEngine.GameBehaviour
+  def apply_level_up_skipped(scene_state),
+    do: GameContent.VampireSurvivorRule.apply_level_up_skipped(scene_state)
 
-  def level_up_scene, do: GameContent.VampireSurvivor.Scenes.LevelUp
-  def boss_alert_scene, do: GameContent.VampireSurvivor.Scenes.BossAlert
-  def game_over_scene, do: GameContent.VampireSurvivor.Scenes.GameOver
+  @impl GameEngine.GameBehaviour
+  def game_over_scene, do: GameContent.VampireSurvivorRule.game_over_scene()
 
-  def wave_label(elapsed_sec) do
-    GameContent.VampireSurvivor.SpawnSystem.wave_label(elapsed_sec)
-  end
+  @impl GameEngine.GameBehaviour
+  def level_up_scene, do: GameContent.VampireSurvivorRule.level_up_scene()
+
+  @impl GameEngine.GameBehaviour
+  def boss_alert_scene, do: GameContent.VampireSurvivorRule.boss_alert_scene()
+
+  @impl GameEngine.GameBehaviour
+  def wave_label(elapsed_sec),
+    do: GameContent.VampireSurvivorRule.wave_label(elapsed_sec)
+
+  # ── 後方互換（weapon_label は RuleBehaviour 外の固有メソッド）────────
 
   def weapon_label(weapon, level) do
     GameContent.VampireSurvivor.LevelSystem.weapon_label(weapon, level)

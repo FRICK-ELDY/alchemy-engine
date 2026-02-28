@@ -1,35 +1,33 @@
 defmodule GameEngine.GameBehaviour do
   @moduledoc """
-  ゲームがエンジンに提供すべきインターフェース。
+  **廃止予定**: `GameEngine.WorldBehaviour` と `GameEngine.RuleBehaviour` に分割されました。
 
-  エンジンは config で指定されたこの behaviour を実装したモジュールを
-  起動時に取得し、初期シーン構築・物理演算対象の判定等に利用する。
+  このモジュールは Phase 2 で廃止されます。
+  新しいコンテンツは `WorldBehaviour` と `RuleBehaviour` を直接実装してください。
   """
+
+  @deprecated "GameEngine.WorldBehaviour と GameEngine.RuleBehaviour を使用してください"
 
   @type scene_spec :: %{module: module(), init_arg: term()}
 
+  # WorldBehaviour 由来
+  @callback assets_path() :: String.t()
+  @callback entity_registry() :: map()
+
+  # RuleBehaviour 由来
   @callback render_type() :: atom()
   @callback initial_scenes() :: [scene_spec()]
-  @callback entity_registry() :: map()
   @callback physics_scenes() :: [module()]
   @callback title() :: String.t()
   @callback version() :: String.t()
   @callback context_defaults() :: map()
-  @callback assets_path() :: String.t()
-
-  @doc "メインのプレイシーンモジュールを返す（Playing シーンの state 操作に使用）"
   @callback playing_scene() :: module()
-
-  @doc "武器選択肢を生成する（Playing シーンの state を受け取り、選択肢リストを返す）"
   @callback generate_weapon_choices(weapon_levels :: map()) :: [atom()]
-
-  @doc "レベルアップ時に Playing シーンの state を更新する"
   @callback apply_level_up(scene_state :: map(), choices :: [atom()]) :: map()
-
-  @doc "武器選択時に Playing シーンの state を更新する"
   @callback apply_weapon_selected(scene_state :: map(), weapon :: atom()) :: map()
-
-  @doc "レベルアップスキップ時に Playing シーンの state を更新する"
   @callback apply_level_up_skipped(scene_state :: map()) :: map()
-
+  @callback game_over_scene() :: module()
+  @callback level_up_scene() :: module()
+  @callback boss_alert_scene() :: module()
+  @callback wave_label(elapsed_sec :: float()) :: String.t()
 end
