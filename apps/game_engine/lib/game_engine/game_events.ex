@@ -391,20 +391,17 @@ defmodule GameEngine.GameEvents do
 
         # I-3: weapon_levels が変化したフレームのみ set_weapon_slots を呼ぶ
         state =
-          if function_exported?(content, :level_up_scene, 0) do
-            weapon_levels = Map.get(playing_state, :weapon_levels, %{})
-            if weapon_levels != state.last_weapon_levels do
-              playing_scene = content.playing_scene()
-              if function_exported?(playing_scene, :weapon_slots_for_nif, 1) do
-                slots = playing_scene.weapon_slots_for_nif(weapon_levels)
-                GameEngine.NifBridge.set_weapon_slots(state.world_ref, slots)
-              end
-              %{state | last_weapon_levels: weapon_levels}
-            else
-              state
+          with true <- function_exported?(content, :level_up_scene, 0),
+               weapon_levels = Map.get(playing_state, :weapon_levels, %{}),
+               true <- weapon_levels != state.last_weapon_levels do
+            playing_scene = content.playing_scene()
+            if function_exported?(playing_scene, :weapon_slots_for_nif, 1) do
+              slots = playing_scene.weapon_slots_for_nif(weapon_levels)
+              GameEngine.NifBridge.set_weapon_slots(state.world_ref, slots)
             end
+            %{state | last_weapon_levels: weapon_levels}
           else
-            state
+            _ -> state
           end
 
         state = maybe_set_input_and_broadcast(state, mod, physics_scenes, events)
