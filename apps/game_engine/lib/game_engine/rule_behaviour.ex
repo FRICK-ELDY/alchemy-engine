@@ -51,6 +51,18 @@ defmodule GameEngine.RuleBehaviour do
   @doc "ボス出現警告シーンのモジュールを返す"
   @callback boss_alert_scene() :: module()
 
+  @doc "ゲーム開始時に Rust 側へ追加する初期武器のリストを返す"
+  @callback initial_weapons() :: [atom()]
+
+  @doc "敵種別 ID の EXP 報酬を返す"
+  @callback enemy_exp_reward(enemy_kind :: non_neg_integer()) :: non_neg_integer()
+
+  @doc "ボス種別 ID の EXP 報酬を返す"
+  @callback boss_exp_reward(boss_kind :: non_neg_integer()) :: non_neg_integer()
+
+  @doc "EXP からスコア加算値を計算する"
+  @callback score_from_exp(exp :: non_neg_integer()) :: non_neg_integer()
+
   @doc "経過秒数からウェーブラベル文字列を返す（ログ用）"
   @callback wave_label(elapsed_sec :: float()) :: String.t()
 
