@@ -13,14 +13,27 @@
 
 1. `GameEngine.Component` を実装した `SpawnComponent` を作成し、`on_ready/1` で `set_entity_params` NIF に新コンテンツのエンティティパラメータを注入する
 2. コンテンツのメインモジュールを作成し、`components/0`・`initial_scenes/0`・`physics_scenes/0`・`playing_scene/0`・`game_over_scene/0`・`entity_registry/0`・`enemy_exp_reward/1`・`score_from_exp/1`・`wave_label/1` を実装する
-3. 武器・ボスの概念を持つ場合のみ `level_up_scene/0`・`boss_alert_scene/0`・`apply_level_up_skipped/1`・`apply_weapon_selected/2`・`boss_exp_reward/1` を追加する（`game_events.ex` が `function_exported?/3` で分岐するため、実装しなくても動作する）
+3. 武器・ボスの概念を持つ場合のみ `level_up_scene/0`・`boss_alert_scene/0`・`pause_on_push?/1`・`apply_level_up_skipped/1`・`apply_weapon_selected/2`・`boss_exp_reward/1` を追加する。UI アクション処理は `LevelComponent.on_event/2` で実装する
 4. `config :game_server, :current, NewContent` を設定する
 
 ---
 
-### 課題12: `GameEvents` がコンテンツ固有ロジックを知りすぎている
+### ~~課題12: `GameEvents` がコンテンツ固有ロジックを知りすぎている~~ ✅ 解消済み
 
-**優先度**: 高（コンテンツが増えるたびに悪化する）
+**解消内容（フェーズ1 I-D）**:
+- `GameEngine.ContentBehaviour` を新設し、コンテンツのオプショナルコールバックを定義
+- `GameEngine.Component` の `context` に `push_scene/pop_scene/replace_scene` API を追加
+- UI アクション（`__skip__`・武器選択）を `VampireSurvivor.LevelComponent.on_event/2` に移動
+- `process_transition` の `pause_on_push?/1` を `ContentBehaviour` のコールバックに委譲
+- `GameEvents` から `level_up_scene/0`・`boss_alert_scene/0` への直接参照を除去
+
+**残存する `function_exported?/3`**:
+- `on_ready/1`・`on_physics_process/1`・`on_event/2` のオプショナルコールバックチェック（エンジンの正当な使用）
+- `boss_exp_reward/1` チェック（`ContentBehaviour` のオプショナルコールバックとして定義済み）
+- `weapon_slots_for_nif/1` チェック（Playing シーンの拡張ポイント）
+- `pause_on_push?/1` チェック（`ContentBehaviour` のオプショナルコールバックとして定義済み）
+
+---
 
 **背景**
 

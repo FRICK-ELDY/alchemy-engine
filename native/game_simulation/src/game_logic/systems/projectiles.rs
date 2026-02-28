@@ -1,5 +1,6 @@
 use crate::world::{FrameEvent, GameWorldInner};
 use crate::constants::BULLET_RADIUS;
+use crate::entity_params::{DEFAULT_ENEMY_RADIUS, DEFAULT_PARTICLE_COLOR};
 
 pub(crate) fn update_projectiles_and_enemy_hits(w: &mut GameWorldInner, dt: f32) {
     // ── 弾丸を移動・寿命更新 ─────────────────────────────────────
@@ -42,8 +43,9 @@ pub(crate) fn update_projectiles_and_enemy_hits(w: &mut GameWorldInner, dt: f32)
         for ei in w.spatial_query_buf.iter().copied() {
             if !w.enemies.alive[ei] { continue; }
             let kind_id = w.enemies.kind_ids[ei];
-            let ep = w.params.get_enemy(kind_id).clone();
-            let enemy_r = ep.radius;
+            let (enemy_r, particle_color) = w.params.get_enemy(kind_id)
+                .map(|e| (e.radius, e.particle_color))
+                .unwrap_or((DEFAULT_ENEMY_RADIUS, DEFAULT_PARTICLE_COLOR));
             let hit_r = BULLET_RADIUS + enemy_r;
             let ex = w.enemies.positions_x[ei] + enemy_r;
             let ey = w.enemies.positions_y[ei] + enemy_r;
@@ -54,7 +56,7 @@ pub(crate) fn update_projectiles_and_enemy_hits(w: &mut GameWorldInner, dt: f32)
                 if w.enemies.hp[ei] <= 0.0 {
                     w.enemies.kill(ei);
                     w.frame_events.push(FrameEvent::EnemyKilled { enemy_kind: kind_id, x: ex, y: ey });
-                    w.particles.emit(ex, ey, 8, ep.particle_color);
+                    w.particles.emit(ex, ey, 8, particle_color);
                 } else {
                     let hit_color = if piercing { [1.0, 0.4, 0.0, 1.0] } else { [1.0, 0.9, 0.3, 1.0] };
                     w.particles.emit(ex, ey, 3, hit_color);

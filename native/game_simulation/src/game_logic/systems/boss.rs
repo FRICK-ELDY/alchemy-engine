@@ -35,7 +35,7 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
         let map_w = w.map_width;
         let map_h = w.map_height;
 
-        let boss = w.boss.as_mut().unwrap();
+        let Some(boss) = w.boss.as_mut() else { return; };
         let boss_r = boss.radius;
 
         // Elixir から注入された速度ベクトルで移動する

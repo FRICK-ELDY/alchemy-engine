@@ -12,6 +12,14 @@ defmodule GameEngine.Component do
   - `on_physics_process/1` — 物理フレーム（60Hz）
   - `on_event/2`           — イベント発生時
 
+  ## コンテキスト
+
+  `context` マップには以下のシーン遷移 API が含まれる：
+
+  - `context.push_scene.(mod, init_arg)`  — シーンをスタックに積む
+  - `context.pop_scene.()`               — 現在のシーンをスタックから取り出す
+  - `context.replace_scene.(mod, init_arg)` — 現在のシーンを置き換える
+
   ## コンテンツ定義
 
   コンテンツモジュールは `components/0` を実装し、
