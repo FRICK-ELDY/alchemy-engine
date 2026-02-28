@@ -36,8 +36,8 @@ defmodule GameEngine.StressMonitor do
 
       {:ok, %{enemy_count: enemy_count, bullet_count: bullet_count, physics_ms: physics_ms,
               hud_data: {hp, max_hp, score, elapsed_s}}} ->
-        game_module = Application.get_env(:game_server, :current_game, GameContent.VampireSurvivor)
-        wave = game_module.wave_label(elapsed_s)
+        rule_module = GameEngine.Config.current_rule()
+        wave = rule_module.wave_label(elapsed_s)
         overrun = physics_ms > @frame_budget_ms
 
         new_state = %{state |

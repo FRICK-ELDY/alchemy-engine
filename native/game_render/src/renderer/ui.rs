@@ -1,5 +1,5 @@
 use super::{GamePhase, GameUiState, HudData};
-use game_simulation::weapon::weapon_upgrade_desc_default;
+use game_simulation::weapon::weapon_upgrade_desc_by_name;
 
 /// HUD を描画し、ボタン操作があった場合はアクション文字列を返す。
 /// - レベルアップ選択: 武器名
@@ -671,7 +671,7 @@ fn build_weapon_card(ui: &mut egui::Ui, choice: &str, current_lv: u32) -> Option
             );
             ui.add_space(6.0);
 
-            for line in weapon_upgrade_desc_default(choice, current_lv) {
+            for line in weapon_upgrade_desc_by_name(choice, current_lv) {
                 ui.label(
                     egui::RichText::new(line)
                         .color(egui::Color32::from_rgb(180, 200, 180))

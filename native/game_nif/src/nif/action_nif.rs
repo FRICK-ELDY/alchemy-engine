@@ -33,7 +33,7 @@ pub fn spawn_boss(world: ResourceArc<GameWorld>, kind_id: u8) -> NifResult<Atom>
         let bx = (px + 600.0).min(w.map_width  - bp.radius);
         let by = py.clamp(bp.radius, w.map_height - bp.radius);
         w.boss = Some(BossState::new(kind_id, bx, by, &bp));
-        w.frame_events.push(FrameEvent::BossSpawn { boss_kind: kind_id });
+        w.frame_events.push(FrameEvent::SpecialEntitySpawned { entity_kind: kind_id });
     }
     Ok(ok())
 }

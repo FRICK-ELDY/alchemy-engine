@@ -3,7 +3,7 @@
 
 use super::util::lock_poisoned_err;
 use game_simulation::entity_params::{
-    BossParams, EnemyParams, EntityParamTables, WeaponParams,
+    BossParams, EnemyParams, EntityParamTables, FirePattern, WeaponParams,
 };
 use game_simulation::game_logic::systems::spawn::get_spawn_positions_around_player;
 use game_simulation::world::{GameWorld, GameWorldInner, PlayerState};
@@ -172,9 +172,10 @@ pub fn set_world_size(world: ResourceArc<GameWorld>, width: f64, height: f64) ->
 /// Phase 3-A: エンティティパラメータテーブルを外部から注入する。
 ///
 /// 引数はいずれもアトムキーのマップのリスト。
-/// - `enemies`: `[%{max_hp, speed, radius, exp_reward, damage_per_sec, render_kind, passes_obstacles}]`
-/// - `weapons`: `[%{cooldown, damage, as_u8, name, bullet_table}]`  ※ `bullet_table` は `nil` または整数リスト
-/// - `bosses`:  `[%{max_hp, speed, radius, exp_reward, damage_per_sec, render_kind, special_interval}]`
+/// - `enemies`: `[%{max_hp, speed, radius, damage_per_sec, render_kind, passes_obstacles}]`
+/// - `weapons`: `[%{cooldown, damage, as_u8, bullet_table, fire_pattern, range, chain_count}]`
+///   ※ `bullet_table` は `nil` または整数リスト、`fire_pattern` は文字列
+/// - `bosses`:  `[%{max_hp, speed, radius, damage_per_sec, render_kind, special_interval}]`
 #[rustler::nif]
 pub fn set_entity_params(
     world: ResourceArc<GameWorld>,
@@ -202,17 +203,45 @@ fn map_get<'a, T: rustler::Decoder<'a>>(map: Term<'a>, key: &str) -> NifResult<T
 fn decode_enemy_params(term: Term) -> NifResult<Vec<EnemyParams>> {
     let list: ListIterator = term.decode()?;
     list.map(|item| {
+        let particle_color = decode_particle_color(item);
         Ok(EnemyParams {
             max_hp:           map_get::<f64>(item, "max_hp")? as f32,
             speed:            map_get::<f64>(item, "speed")? as f32,
             radius:           map_get::<f64>(item, "radius")? as f32,
-            exp_reward:       map_get::<u32>(item, "exp_reward")?,
             damage_per_sec:   map_get::<f64>(item, "damage_per_sec")? as f32,
             render_kind:      map_get::<u32>(item, "render_kind")? as u8,
-            particle_color:   [1.0, 0.5, 0.1, 1.0], // デフォルト色（後で拡張可能）
+            particle_color,
             passes_obstacles: map_get::<bool>(item, "passes_obstacles")?,
         })
     }).collect()
+}
+
+fn decode_particle_color(item: Term) -> [f32; 4] {
+    let env = item.get_env();
+    let key = rustler::types::atom::Atom::from_str(env, "particle_color").ok();
+    if let Some(k) = key {
+        if let Ok(list_term) = item.map_get(k.to_term(env)) {
+            if let Ok(v) = list_term.decode::<Vec<f64>>() {
+                if v.len() == 4 {
+                    return [v[0] as f32, v[1] as f32, v[2] as f32, v[3] as f32];
+                }
+            }
+        }
+    }
+    [1.0, 0.5, 0.1, 1.0]
+}
+
+fn decode_fire_pattern(s: &str) -> FirePattern {
+    match s {
+        "aimed"    => FirePattern::Aimed,
+        "fixed_up" => FirePattern::FixedUp,
+        "radial"   => FirePattern::Radial,
+        "whip"     => FirePattern::Whip,
+        "aura"     => FirePattern::Aura,
+        "piercing" => FirePattern::Piercing,
+        "chain"    => FirePattern::Chain,
+        _          => FirePattern::Aimed,
+    }
 }
 
 fn decode_weapon_params(term: Term) -> NifResult<Vec<WeaponParams>> {
@@ -225,12 +254,18 @@ fn decode_weapon_params(term: Term) -> NifResult<Vec<WeaponParams>> {
             let bt_list: ListIterator = bt_term.decode()?;
             Some(bt_list.map(|x| x.decode::<usize>()).collect::<rustler::NifResult<Vec<usize>>>()?)
         };
+        let pattern_str: String = map_get::<String>(item, "fire_pattern")?;
+        let fire_pattern = decode_fire_pattern(&pattern_str);
+        let range: f32 = map_get::<f64>(item, "range").unwrap_or(0.0) as f32;
+        let chain_count: u8 = map_get::<u32>(item, "chain_count").unwrap_or(0) as u8;
         Ok(WeaponParams {
             cooldown:     map_get::<f64>(item, "cooldown")? as f32,
             damage:       map_get::<i32>(item, "damage")?,
             as_u8:        map_get::<u32>(item, "as_u8")? as u8,
-            name:         map_get::<String>(item, "name")?,
             bullet_table,
+            fire_pattern,
+            range,
+            chain_count,
         })
     }).collect()
 }
@@ -242,11 +277,9 @@ fn decode_boss_params(term: Term) -> NifResult<Vec<BossParams>> {
             max_hp:           map_get::<f64>(item, "max_hp")? as f32,
             speed:            map_get::<f64>(item, "speed")? as f32,
             radius:           map_get::<f64>(item, "radius")? as f32,
-            exp_reward:       map_get::<u32>(item, "exp_reward")?,
             damage_per_sec:   map_get::<f64>(item, "damage_per_sec")? as f32,
             render_kind:      map_get::<u32>(item, "render_kind")? as u8,
             special_interval: map_get::<f64>(item, "special_interval")? as f32,
-            name:             String::new(),
         })
     }).collect()
 }

@@ -1,21 +1,15 @@
 use crate::game_logic::{find_nearest_enemy_spatial, find_nearest_enemy_spatial_excluding};
 use crate::world::{FrameEvent, GameWorldInner, BULLET_KIND_LIGHTNING, BULLET_KIND_WHIP};
 use crate::constants::{BULLET_LIFETIME, BULLET_SPEED, WEAPON_SEARCH_RADIUS};
-use crate::entity_params::{
-    garlic_radius, lightning_chain_count, whip_range, WEAPON_ID_AXE,
-    WEAPON_ID_CROSS, WEAPON_ID_FIREBALL, WEAPON_ID_GARLIC, WEAPON_ID_LIGHTNING,
-    WEAPON_ID_MAGIC_WAND, WEAPON_ID_WHIP,
-};
+use crate::entity_params::FirePattern;
 
 pub(crate) fn update_weapon_attacks(w: &mut GameWorldInner, dt: f32, px: f32, py: f32) {
-    // プレイヤーの移動方向（Whip の向き計算用）
     let facing_angle = {
         let fdx = w.player.input_dx;
         let fdy = w.player.input_dy;
         if fdx * fdx + fdy * fdy > 0.0001 {
             fdy.atan2(fdx)
         } else {
-            // 停止中は右向きをデフォルトとする
             0.0_f32
         }
     };
@@ -29,26 +23,25 @@ pub(crate) fn update_weapon_attacks(w: &mut GameWorldInner, dt: f32, px: f32, py
 
         let kind_id = w.weapon_slots[si].kind_id;
         let wp = w.params.get_weapon(kind_id);
-        // レベルに応じたクールダウン・ダメージ・弾数を使用
         let cd     = w.weapon_slots[si].effective_cooldown(wp);
         let dmg    = w.weapon_slots[si].effective_damage(wp);
         let level  = w.weapon_slots[si].level;
         let bcount = w.weapon_slots[si].bullet_count(wp);
+        let pattern = wp.fire_pattern.clone();
 
-        match kind_id {
-            WEAPON_ID_MAGIC_WAND => fire_magic_wand(w, si, px, py, dmg, bcount, cd),
-            WEAPON_ID_AXE        => fire_axe(w, si, px, py, dmg, cd),
-            WEAPON_ID_CROSS      => fire_cross(w, si, px, py, dmg, bcount, cd),
-            WEAPON_ID_WHIP       => fire_whip(w, si, px, py, dmg, level, kind_id, cd, facing_angle),
-            WEAPON_ID_FIREBALL   => fire_fireball(w, si, px, py, dmg, cd),
-            WEAPON_ID_LIGHTNING  => fire_lightning(w, si, px, py, dmg, level, kind_id, cd),
-            WEAPON_ID_GARLIC     => fire_garlic(w, si, px, py, dmg, level, kind_id, cd),
-            _ => {}
+        match pattern {
+            FirePattern::Aimed   => fire_aimed(w, si, px, py, dmg, bcount, cd),
+            FirePattern::FixedUp => fire_fixed_up(w, si, px, py, dmg, cd),
+            FirePattern::Radial  => fire_radial(w, si, px, py, dmg, bcount, cd),
+            FirePattern::Whip    => fire_whip(w, si, px, py, dmg, level, kind_id, cd, facing_angle),
+            FirePattern::Piercing => fire_piercing(w, si, px, py, dmg, cd),
+            FirePattern::Chain   => fire_chain(w, si, px, py, dmg, level, kind_id, cd),
+            FirePattern::Aura    => fire_aura(w, si, px, py, dmg, level, kind_id, cd),
         }
     }
 }
 
-fn fire_magic_wand(
+fn fire_aimed(
     w: &mut GameWorldInner,
     si: usize,
     px: f32,
@@ -61,12 +54,8 @@ fn fire_magic_wand(
         let target_r = w.params.get_enemy(w.enemies.kind_ids[ti]).radius;
         let tx = w.enemies.positions_x[ti] + target_r;
         let ty = w.enemies.positions_y[ti] + target_r;
-        let bdx = tx - px;
-        let bdy = ty - py;
-        // bcount 発同時発射（Lv3 で 2 発、Lv5 で 3 発）
-        // 複数発は少しずつ角度をずらして扇状に発射
-        let base_angle = bdy.atan2(bdx);
-        let spread = std::f32::consts::PI * 0.08; // 約 14 度の広がり
+        let base_angle = (ty - py).atan2(tx - px);
+        let spread = std::f32::consts::PI * 0.08;
         let half = (bcount as f32 - 1.0) / 2.0;
         for bi in 0..bcount {
             let angle = base_angle + (bi as f32 - half) * spread;
@@ -78,7 +67,7 @@ fn fire_magic_wand(
     }
 }
 
-fn fire_axe(
+fn fire_fixed_up(
     w: &mut GameWorldInner,
     si: usize,
     px: f32,
@@ -86,12 +75,11 @@ fn fire_axe(
     dmg: i32,
     cd: f32,
 ) {
-    // 上方向に直進（簡易実装）
     w.bullets.spawn(px, py, 0.0, -BULLET_SPEED, dmg, BULLET_LIFETIME);
     w.weapon_slots[si].cooldown_timer = cd;
 }
 
-fn fire_cross(
+fn fire_radial(
     w: &mut GameWorldInner,
     si: usize,
     px: f32,
@@ -100,7 +88,6 @@ fn fire_cross(
     bcount: usize,
     cd: f32,
 ) {
-    // Lv1〜3: 上下左右 4 方向、Lv4 以上: 斜め 4 方向も追加
     let dirs_4: [(f32, f32); 4] = [(0.0, -1.0), (0.0, 1.0), (-1.0, 0.0), (1.0, 0.0)];
     let diag = std::f32::consts::FRAC_1_SQRT_2;
     let dirs_8: [(f32, f32); 8] = [
@@ -125,14 +112,11 @@ fn fire_whip(
     cd: f32,
     facing_angle: f32,
 ) {
-    // プレイヤーの移動方向に扇状の判定を出す（弾丸を生成しない直接判定）
-    let range = whip_range(kind_id, level);
-    let whip_half_angle = std::f32::consts::PI * 0.3; // 108度 / 2 = 54度
-    // facing_angle 方向の中間点にエフェクト弾を生成（黄緑の横長楕円）
+    let range = w.params.get_weapon(kind_id).whip_range(level);
+    let whip_half_angle = std::f32::consts::PI * 0.3;
     let eff_x = px + facing_angle.cos() * range * 0.5;
     let eff_y = py + facing_angle.sin() * range * 0.5;
     w.bullets.spawn_effect(eff_x, eff_y, 0.12, BULLET_KIND_WHIP);
-    // 空間ハッシュで範囲内の候補のみ取得し、全敵ループを回避
     let whip_range_sq = range * range;
     w.collision.dynamic.query_nearby_into(px, py, range, &mut w.spatial_query_buf);
     for ei in w.spatial_query_buf.iter().copied() {
@@ -143,12 +127,10 @@ fn fire_whip(
         let ey = w.enemies.positions_y[ei];
         let ddx = ex - px;
         let ddy = ey - py;
-        // sqrt を避けて二乗比較で正確な円形クリップ
         if ddx * ddx + ddy * ddy > whip_range_sq {
             continue;
         }
         let angle = ddy.atan2(ddx);
-        // π/-π をまたぐ場合に正しく動作するよう -π〜π に正規化
         let diff = (angle - facing_angle + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
         if diff.abs() < whip_half_angle {
             let enemy_r = w.params.get_enemy(w.enemies.kind_ids[ei]).radius;
@@ -187,7 +169,7 @@ fn fire_whip(
     w.weapon_slots[si].cooldown_timer = cd;
 }
 
-fn fire_fireball(
+fn fire_piercing(
     w: &mut GameWorldInner,
     si: usize,
     px: f32,
@@ -195,14 +177,11 @@ fn fire_fireball(
     dmg: i32,
     cd: f32,
 ) {
-    // 最近接敵に向かって貫通弾を発射
     if let Some(ti) = find_nearest_enemy_spatial(&w.collision, &w.enemies, px, py, WEAPON_SEARCH_RADIUS, &mut w.spatial_query_buf) {
         let target_r = w.params.get_enemy(w.enemies.kind_ids[ti]).radius;
         let tx = w.enemies.positions_x[ti] + target_r;
         let ty = w.enemies.positions_y[ti] + target_r;
-        let bdx = tx - px;
-        let bdy = ty - py;
-        let base_angle = bdy.atan2(bdx);
+        let base_angle = (ty - py).atan2(tx - px);
         let vx = base_angle.cos() * BULLET_SPEED;
         let vy = base_angle.sin() * BULLET_SPEED;
         w.bullets.spawn_piercing(px, py, vx, vy, dmg, BULLET_LIFETIME);
@@ -210,7 +189,7 @@ fn fire_fireball(
     }
 }
 
-fn fire_lightning(
+fn fire_chain(
     w: &mut GameWorldInner,
     si: usize,
     px: f32,
@@ -220,11 +199,8 @@ fn fire_lightning(
     kind_id: u8,
     cd: f32,
 ) {
-    // 最近接敵から始まり、最大 chain_count 体に連鎖
-    let chain_count = lightning_chain_count(kind_id, level);
-    // chain_count は最大 6 程度と小さいため Vec で十分（HashSet 不要）
+    let chain_count = w.params.get_weapon(kind_id).chain_count_for_level(level);
     let mut hit_vec: Vec<usize> = Vec::with_capacity(chain_count);
-    // 最初はプレイヤー位置から最近接敵を探す（空間ハッシュで候補を絞る）
     let mut current = find_nearest_enemy_spatial(&w.collision, &w.enemies, px, py, WEAPON_SEARCH_RADIUS, &mut w.spatial_query_buf);
     #[allow(unused_assignments)]
     let mut next_search_x = px;
@@ -236,12 +212,10 @@ fn fire_lightning(
             let hit_x = w.enemies.positions_x[ei] + enemy_r;
             let hit_y = w.enemies.positions_y[ei] + enemy_r;
             w.enemies.hp[ei] -= dmg as f32;
-            // 電撃エフェクト弾（水色の電撃球）+ パーティクル
             w.bullets.spawn_effect(hit_x, hit_y, 0.10, BULLET_KIND_LIGHTNING);
             w.particles.emit(hit_x, hit_y, 5, [0.3, 0.8, 1.0, 1.0]);
             if w.enemies.hp[ei] <= 0.0 {
                 let kind_e = w.enemies.kind_ids[ei];
-                let ep_chain = w.params.get_enemy(kind_e);
                 w.enemies.kill(ei);
                 w.frame_events.push(FrameEvent::EnemyKilled { enemy_kind: kind_e, x: hit_x, y: hit_y });
             }
@@ -256,7 +230,7 @@ fn fire_lightning(
             break;
         }
     }
-    // Lightning vs ボス（600px 以内なら連鎖先としてダメージ）
+    // Chain vs ボス（600px 以内なら連鎖先としてダメージ）
     {
         let boss_hit_pos: Option<(f32, f32)> = if let Some(ref boss) = w.boss {
             if !boss.invincible {
@@ -274,7 +248,7 @@ fn fire_lightning(
     w.weapon_slots[si].cooldown_timer = cd;
 }
 
-fn fire_garlic(
+fn fire_aura(
     w: &mut GameWorldInner,
     si: usize,
     px: f32,
@@ -284,8 +258,7 @@ fn fire_garlic(
     kind_id: u8,
     cd: f32,
 ) {
-    // プレイヤー周囲オーラで一定間隔ダメージ（5 dmg/sec 想定: 0.2s 毎に 1）
-    let radius = garlic_radius(kind_id, level);
+    let radius = w.params.get_weapon(kind_id).aura_radius(level);
     let radius_sq = radius * radius;
     w.collision.dynamic.query_nearby_into(px, py, radius, &mut w.spatial_query_buf);
     for ei in w.spatial_query_buf.iter().copied() {

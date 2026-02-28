@@ -77,14 +77,14 @@ pub fn build_render_frame(w: &GameWorldInner) -> RenderFrame {
     let camera_offset = (cam_x, cam_y);
 
     let boss_info = w.boss.as_ref().map(|b| BossHudInfo {
-        name:   w.params.get_boss(b.kind_id).name.clone(),
+        name:   format!("Boss {}", b.kind_id),
         hp:     b.hp,
         max_hp: b.max_hp,
     });
 
     let weapon_levels: Vec<(String, u32)> = w.weapon_slots
         .iter()
-        .map(|s| (w.params.get_weapon(s.kind_id).name.clone(), s.level))
+        .map(|s| (format!("weapon_{}", s.kind_id), s.level))
         .collect();
 
     let screen_flash_alpha = if w.player.invincible_timer > 0.0 && INVINCIBLE_DURATION > 0.0 {

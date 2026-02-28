@@ -8,9 +8,10 @@ pub enum FrameEvent {
     EnemyKilled  { enemy_kind: u8, x: f32, y: f32 },
     PlayerDamaged { damage: f32 },
     ItemPickup   { item_kind: u8 },
-    BossDefeated { boss_kind: u8, x: f32, y: f32 },
-    /// フェーズ4: ボス出現イベント（Elixir 側でボス HP を初期化するために使用）
-    BossSpawn    { boss_kind: u8 },
-    /// フェーズ4: ボスへのダメージイベント（Elixir 側でボス HP を減算するために使用）
-    BossDamaged  { damage: f32 },
+    /// 特殊エンティティ（ボス等）が撃破された。entity_kind は種別 ID。
+    SpecialEntityDefeated { entity_kind: u8, x: f32, y: f32 },
+    /// 特殊エンティティ（ボス等）が出現した。Elixir 側で HP 初期化に使用する。
+    SpecialEntitySpawned  { entity_kind: u8 },
+    /// 特殊エンティティ（ボス等）がダメージを受けた。Elixir 側で HP 減算に使用する。
+    SpecialEntityDamaged  { damage: f32 },
 }

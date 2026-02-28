@@ -5,7 +5,7 @@ use crate::constants::{BULLET_RADIUS, INVINCIBLE_DURATION, PLAYER_RADIUS};
 /// Rust はボスの物理的な存在（位置・HP・当たり判定）のみ管理する。
 /// - 移動: Elixir が set_boss_velocity NIF で注入した vx/vy で移動する
 /// - 特殊行動: Elixir が update_boss_ai コールバックで NIF を呼び出して制御する
-/// - 弾丸 vs ボス: Rust が判定し BossDamaged/BossDefeated イベントを発行する
+/// - 弾丸 vs ボス: Rust が判定し SpecialEntityDamaged/SpecialEntityDefeated イベントを発行する
 pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
     struct BossEffect {
         hurt_player: bool,
@@ -17,9 +17,7 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
         boss_y: f32,
         boss_invincible: bool,
         boss_r: f32,
-        boss_exp_reward: u32,
         boss_killed: bool,
-        exp_reward: u32,
         kill_x: f32,
         kill_y: f32,
     }
@@ -27,8 +25,8 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
         hurt_player: false, hurt_x: 0.0, hurt_y: 0.0, boss_damage: 0.0,
         bullet_hits: Vec::new(),
         boss_x: 0.0, boss_y: 0.0, boss_invincible: false,
-        boss_r: 0.0, boss_exp_reward: 0,
-        boss_killed: false, exp_reward: 0, kill_x: 0.0, kill_y: 0.0,
+        boss_r: 0.0,
+        boss_killed: false, kill_x: 0.0, kill_y: 0.0,
     };
 
     if w.boss.is_some() {
@@ -61,7 +59,6 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
 
         eff.boss_invincible = boss.invincible;
         eff.boss_r = bp.radius;
-        eff.boss_exp_reward = bp.exp_reward;
         eff.boss_x = boss.x;
         eff.boss_y = boss.y;
     }
@@ -84,12 +81,11 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
         }
         let total_dmg: f32 = eff.bullet_hits.iter().map(|&(_, d, _)| d).sum();
         if total_dmg > 0.0 {
-            w.frame_events.push(FrameEvent::BossDamaged { damage: total_dmg });
+            w.frame_events.push(FrameEvent::SpecialEntityDamaged { damage: total_dmg });
             if let Some(ref mut boss) = w.boss {
                 boss.hp -= total_dmg;
                 if boss.hp <= 0.0 {
                     eff.boss_killed = true;
-                    eff.exp_reward = eff.boss_exp_reward;
                     eff.kill_x = boss.x;
                     eff.kill_y = boss.y;
                 }
@@ -115,7 +111,7 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
 
     if eff.boss_killed {
         let boss_k = w.boss.as_ref().map(|b| b.kind_id).unwrap_or(0);
-        w.frame_events.push(FrameEvent::BossDefeated { boss_kind: boss_k, x: eff.kill_x, y: eff.kill_y });
+        w.frame_events.push(FrameEvent::SpecialEntityDefeated { entity_kind: boss_k, x: eff.kill_x, y: eff.kill_y });
         w.particles.emit(eff.kill_x, eff.kill_y, 40, [1.0, 0.5, 0.0, 1.0]);
         w.boss = None;
     }

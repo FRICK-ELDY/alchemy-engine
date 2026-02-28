@@ -2,21 +2,19 @@ defmodule GameEngine.Config do
   @moduledoc """
   ゲームエンジンの設定解決ヘルパー。
 
-  `:current_rule` / `:current_world` の新設定キーを優先し、
-  旧設定キー `:current_game` にフォールバックする。
+  `:current_rule` / `:current_world` の設定キーを使用する。
   """
 
-  @default GameContent.VampireSurvivor
+  @default_rule  GameContent.VampireSurvivorRule
+  @default_world GameContent.VampireSurvivorWorld
 
   @doc "RuleBehaviour を実装したモジュールを返す"
   def current_rule do
-    Application.get_env(:game_server, :current_rule) ||
-      Application.get_env(:game_server, :current_game, @default)
+    Application.get_env(:game_server, :current_rule, @default_rule)
   end
 
   @doc "WorldBehaviour を実装したモジュールを返す"
   def current_world do
-    Application.get_env(:game_server, :current_world) ||
-      Application.get_env(:game_server, :current_game, @default)
+    Application.get_env(:game_server, :current_world, @default_world)
   end
 end
