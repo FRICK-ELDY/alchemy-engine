@@ -32,21 +32,21 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
     if w.boss.is_some() {
         let px = w.player.x + PLAYER_RADIUS;
         let py = w.player.y + PLAYER_RADIUS;
-        let boss_kind_id = w.boss.as_ref().unwrap().kind_id;
-        let bp = w.params.get_boss(boss_kind_id).clone();
         let map_w = w.map_width;
         let map_h = w.map_height;
 
         let boss = w.boss.as_mut().unwrap();
+        let boss_r = boss.radius;
 
         // Elixir から注入された速度ベクトルで移動する
         boss.x += boss.vx * dt;
         boss.y += boss.vy * dt;
-        boss.x = boss.x.clamp(bp.radius, map_w - bp.radius);
-        boss.y = boss.y.clamp(bp.radius, map_h - bp.radius);
+        boss.x = boss.x.clamp(boss_r, map_w - boss_r);
+        boss.y = boss.y.clamp(boss_r, map_h - boss_r);
 
         // ボス vs プレイヤー接触ダメージ
-        let boss_r = bp.radius;
+        // damage_per_sec は Elixir 側が管理するため、ここでは固定値を使用する
+        // （将来的に set_boss_damage_per_sec NIF で注入可能）
         let hit_r = PLAYER_RADIUS + boss_r;
         let ddx = px - boss.x;
         let ddy = py - boss.y;
@@ -54,11 +54,11 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
             eff.hurt_player = true;
             eff.hurt_x = px;
             eff.hurt_y = py;
-            eff.boss_damage = bp.damage_per_sec;
+            eff.boss_damage = boss.damage_per_sec;
         }
 
         eff.boss_invincible = boss.invincible;
-        eff.boss_r = bp.radius;
+        eff.boss_r = boss_r;
         eff.boss_x = boss.x;
         eff.boss_y = boss.y;
     }
@@ -110,8 +110,9 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
     }
 
     if eff.boss_killed {
-        let boss_k = w.boss.as_ref().map(|b| b.kind_id).unwrap_or(0);
-        w.frame_events.push(FrameEvent::SpecialEntityDefeated { entity_kind: boss_k, x: eff.kill_x, y: eff.kill_y });
+        // I-2: ボス種別は Elixir 側 Rule state で管理するため entity_kind は 0 を送出する。
+        // Elixir 側は boss_kind_id を Playing シーン state から取得して処理する。
+        w.frame_events.push(FrameEvent::SpecialEntityDefeated { entity_kind: 0, x: eff.kill_x, y: eff.kill_y });
         w.particles.emit(eff.kill_x, eff.kill_y, 40, [1.0, 0.5, 0.0, 1.0]);
         w.boss = None;
     }

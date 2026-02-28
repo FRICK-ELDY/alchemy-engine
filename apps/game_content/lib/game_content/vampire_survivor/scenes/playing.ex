@@ -146,6 +146,23 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
     %{state | boss_hp: nil, boss_max_hp: nil, boss_kind_id: nil}
   end
 
+  # ── weapon_slots 変換（I-2: set_weapon_slots NIF 用）──────────────
+
+  @doc """
+  weapon_levels マップを set_weapon_slots NIF に渡す [{kind_id, level}] リストに変換する。
+  Elixir 側 Rule state が武器の SSoT であり、毎フレーム Rust に注入するために使用する。
+  """
+  def weapon_slots_for_nif(weapon_levels) do
+    registry = GameEngine.Config.current().entity_registry().weapons
+    weapon_levels
+    |> Enum.flat_map(fn {weapon_name, level} ->
+      case Map.get(registry, weapon_name) do
+        nil -> []
+        kind_id -> [{kind_id, level}]
+      end
+    end)
+  end
+
   # ── プライベート ──────────────────────────────────────────────
 
   defp maybe_level_up(state) do

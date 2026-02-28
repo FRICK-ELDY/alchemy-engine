@@ -15,7 +15,8 @@ defmodule GameEngine.NifBridge.Behaviour do
   @callback set_player_input(reference(), float(), float()) :: :ok
   @callback spawn_enemies(reference(), non_neg_integer(), non_neg_integer()) :: :ok
   @callback spawn_enemies_at(reference(), non_neg_integer(), list()) :: :ok
-  @callback add_weapon(reference(), non_neg_integer()) :: :ok
+  # I-2: add_weapon は廃止。set_weapon_slots で毎フレーム注入する。
+  @callback set_weapon_slots(reference(), list()) :: :ok
   @callback spawn_boss(reference(), non_neg_integer()) :: :ok
   @callback spawn_elite_enemy(reference(), non_neg_integer(), non_neg_integer(), float()) :: :ok
   @callback add_score_popup(reference(), float(), float(), non_neg_integer()) :: :ok
@@ -39,7 +40,8 @@ defmodule GameEngine.NifBridge.Behaviour do
   @callback get_hud_data(reference()) :: map()
   @callback get_frame_metadata(reference()) :: map()
   @callback get_magnet_timer(reference()) :: float()
-  @callback get_boss_state(reference()) :: {:alive, non_neg_integer(), float(), float(), float(), float(), float()} | :none
+  # I-2: kind_id を返り値から除去。ボス種別は Elixir 側 Rule state で管理する。
+  @callback get_boss_state(reference()) :: {:alive, float(), float(), float(), float(), float()} | :none
   @callback is_player_dead(reference()) :: boolean()
 
   # ── Elixir SSoT 注入 NIF ─────────────────────────────────────────

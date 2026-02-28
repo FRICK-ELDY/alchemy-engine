@@ -45,22 +45,30 @@ defmodule GameContent.VampireSurvivor.BossComponent do
 
   # ── ボスAI ────────────────────────────────────────────────────────
 
-  defp update_boss_ai(context, {:alive, kind_id, bx, by, _hp, _max_hp, phase_timer}) do
+  # I-2: get_boss_state の返り値から kind_id が除去されたため、
+  # ボス種別は Playing シーン state の boss_kind_id から取得する。
+  defp update_boss_ai(context, {:alive, bx, by, _hp, _max_hp, phase_timer}) do
     world_ref = context.world_ref
     dt = context.tick_ms / 1000.0
     {px, py} = GameEngine.NifBridge.get_player_pos(world_ref)
-    bp = GameContent.EntityParams.boss_params_by_id(kind_id)
 
-    {vx, vy} = chase_velocity(px, py, bx, by, bp.speed)
-    GameEngine.NifBridge.set_boss_velocity(world_ref, vx, vy)
+    playing_state = GameEngine.SceneManager.get_scene_state(GameContent.VampireSurvivor.Scenes.Playing)
+    kind_id = Map.get(playing_state, :boss_kind_id)
 
-    new_timer = if phase_timer - dt <= 0.0 do
-      handle_boss_special_action(world_ref, kind_id, px, py, bx, by, bp)
-      bp.special_interval
-    else
-      phase_timer - dt
+    if kind_id != nil do
+      bp = GameContent.EntityParams.boss_params_by_id(kind_id)
+
+      {vx, vy} = chase_velocity(px, py, bx, by, bp.speed)
+      GameEngine.NifBridge.set_boss_velocity(world_ref, vx, vy)
+
+      new_timer = if phase_timer - dt <= 0.0 do
+        handle_boss_special_action(world_ref, kind_id, px, py, bx, by, bp)
+        bp.special_interval
+      else
+        phase_timer - dt
+      end
+      GameEngine.NifBridge.set_boss_phase_timer(world_ref, new_timer)
     end
-    GameEngine.NifBridge.set_boss_phase_timer(world_ref, new_timer)
     :ok
   end
 

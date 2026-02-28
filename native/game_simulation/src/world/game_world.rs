@@ -24,6 +24,7 @@ use super::FrameEvent;
 /// - `map_width/height` → set_world_size NIF（Phase 3-A）
 /// - `hud_level`, `hud_exp`, `hud_exp_to_next`, `hud_level_up_pending`, `hud_weapon_choices`
 ///                      → set_hud_level_state NIF（Phase 3-B: 描画専用）
+/// - `weapon_slots`     → set_weapon_slots NIF（I-2: 毎フレーム Elixir から注入）
 pub struct GameWorldInner {
     pub frame_id:           u32,
     pub player:             PlayerState,
@@ -46,9 +47,10 @@ pub struct GameWorldInner {
     pub elapsed_seconds:    f32,
     /// プレイヤーの最大 HP（HP バー計算用）
     pub player_max_hp:      f32,
-    /// 装備中の武器スロット（クールダウン管理のみ）
+    /// I-2: 装備中の武器スロット（クールダウン管理のみ）- Elixir から毎フレーム set_weapon_slots NIF で注入
     pub weapon_slots:       Vec<WeaponSlot>,
-    /// 1.2.9: ボスエネミー（boss.hp は Elixir から毎フレーム注入）
+    /// I-2: ボスエネミー物理状態（boss.hp は Elixir から毎フレーム注入）
+    /// ボス種別の概念は Elixir 側 Rule state で管理する。
     pub boss:               Option<BossState>,
     /// 1.3.1: このフレームで発生したイベント（毎フレーム drain される）
     pub frame_events:       Vec<FrameEvent>,

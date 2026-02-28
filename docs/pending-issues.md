@@ -165,7 +165,7 @@ config :game_engine, :save_storage, GameEngine.SaveStorage.Local
 
 ### 課題10: Elixir の真価（OTP・並行性・分散）が活かされていない
 
-**優先度**: 中（I-2・I-5 完了後に着手推奨）
+**優先度**: 中（I-2 完了済み・I-5 完了後に着手推奨）
 
 **背景**
 

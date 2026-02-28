@@ -88,22 +88,22 @@ pub fn get_magnet_timer(world: ResourceArc<GameWorld>) -> NifResult<f64> {
     Ok(w.magnet_timer as f64)
 }
 
-/// Phase 3-B: Elixir 側の update_boss_ai コールバックに渡すボス状態を返す NIF。
-/// 戻り値: {:alive, kind_id, x, y, hp, max_hp, phase_timer} または :none
+/// I-2: Elixir 側の update_boss_ai コールバックに渡すボス物理状態を返す NIF。
+/// ボス種別（kind_id）は Elixir 側 Rule state で管理するため、物理状態のみを返す。
+/// 戻り値: {:alive, x, y, hp, max_hp, phase_timer} または :none
 #[rustler::nif]
-pub fn get_boss_state(world: ResourceArc<GameWorld>) -> NifResult<(Atom, u8, f64, f64, f64, f64, f64)> {
+pub fn get_boss_state(world: ResourceArc<GameWorld>) -> NifResult<(Atom, f64, f64, f64, f64, f64)> {
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;
     Ok(match &w.boss {
         Some(boss) => (
             alive(),
-            boss.kind_id,
             boss.x as f64,
             boss.y as f64,
             boss.hp as f64,
             boss.max_hp as f64,
             boss.phase_timer as f64,
         ),
-        None => (none(), 0, 0.0, 0.0, 0.0, 0.0, 0.0),
+        None => (none(), 0.0, 0.0, 0.0, 0.0, 0.0),
     })
 }
 
