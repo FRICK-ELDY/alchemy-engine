@@ -18,11 +18,6 @@ defmodule GameEngine.GameEvents do
 
   @tick_ms 16
 
-  # EXP テーブル（game_core/src/util.rs の exp_required_for_next と同値）
-  @exp_table [0, 10, 25, 45, 70, 100, 135, 175, 220, 270]
-  @exp_table_base 270
-  @exp_table_step 50
-
   def start_link(opts \\ []) do
     room_id = Keyword.get(opts, :room_id, :main)
     name = process_name(room_id)
@@ -334,6 +329,9 @@ defmodule GameEngine.GameEvents do
 
         # フェーズ1〜4: イベントを Elixir 側で処理して状態を更新
         state = apply_frame_events(events, state)
+
+        # フェーズ1: score・kill_count を毎フレーム Rust に注入
+        GameEngine.NifBridge.set_hud_state(state.world_ref, state.score, state.kill_count)
 
         # フェーズ2: HP を毎フレーム Rust に注入
         GameEngine.NifBridge.set_player_hp(state.world_ref, state.player_hp)
@@ -670,14 +668,10 @@ defmodule GameEngine.GameEvents do
     }
   end
 
-  # フェーズ3: EXP テーブル（game_core/src/util.rs の exp_required_for_next と同値）
+  # EXP テーブルの SSoT は game_simulation::util::exp_required_for_next（Rust 側）。
+  # Elixir 側はこの NIF を呼び出すことで、Rust と同一の値を参照する。
   defp exp_required_for_next(level) do
-    idx = level
-    if idx < length(@exp_table) do
-      Enum.at(@exp_table, idx)
-    else
-      @exp_table_base + (idx - 9) * @exp_table_step
-    end
+    GameEngine.NifBridge.exp_required_for_next_nif(level)
   end
 
   # フェーズ3: 武器選択肢を生成（game_content の LevelSystem に委譲）

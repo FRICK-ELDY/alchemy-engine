@@ -99,7 +99,7 @@ pub fn build_render_frame(w: &GameWorldInner) -> RenderFrame {
     let hud = HudData {
         hp:               w.player.hp,
         max_hp:           w.player_max_hp,
-        score:            0,
+        score:            w.score,
         elapsed_seconds:  w.elapsed_seconds,
         level:            w.level,
         exp:              w.exp,
@@ -118,7 +118,7 @@ pub fn build_render_frame(w: &GameWorldInner) -> RenderFrame {
         phase:            GamePhase::Playing,
         screen_flash_alpha,
         score_popups:     w.score_popups.clone(),
-        kill_count:       0,
+        kill_count:       w.kill_count,
     };
 
     RenderFrame {

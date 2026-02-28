@@ -48,12 +48,6 @@ impl SpatialHash {
         }
     }
 
-    /// 後方互換用（`query_nearby_into` への移行が完了したら削除可）
-    pub fn query_nearby(&self, x: f32, y: f32, radius: f32) -> Vec<usize> {
-        let mut buf = Vec::new();
-        self.query_nearby_into(x, y, radius, &mut buf);
-        buf
-    }
 }
 
 #[derive(Clone, Copy, Debug)]

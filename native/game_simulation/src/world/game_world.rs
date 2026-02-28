@@ -19,6 +19,7 @@ use super::FrameEvent;
 /// - `level`, `exp`     → set_player_level NIF（フェーズ3）
 /// - `elapsed_seconds`  → set_elapsed_seconds NIF（フェーズ3）
 /// - `boss.hp`          → set_boss_hp NIF（フェーズ4）
+/// - `score`, `kill_count` → set_hud_state NIF（フェーズ1）
 pub struct GameWorldInner {
     pub frame_id:           u32,
     pub player:             PlayerState,
@@ -53,6 +54,10 @@ pub struct GameWorldInner {
     pub weapon_choices:     Vec<String>,
     /// 1.7.5: スコアポップアップ [(world_x, world_y, value, lifetime)]（描画用）
     pub score_popups:       Vec<(f32, f32, u32, f32)>,
+    /// スコア - Elixir から毎フレーム注入（HUD 表示用）
+    pub score:              u32,
+    /// キル数 - Elixir から毎フレーム注入（HUD 表示用）
+    pub kill_count:         u32,
     /// 1.10.7: 補間用 - 前フレームのプレイヤー位置
     pub prev_player_x:      f32,
     pub prev_player_y:      f32,

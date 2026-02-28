@@ -8,6 +8,7 @@ use game_simulation::constants::{CELL_SIZE, PARTICLE_RNG_SEED, PLAYER_SIZE, SCRE
 use game_simulation::item::ItemWorld;
 use game_simulation::physics::rng::SimpleRng;
 use game_simulation::physics::spatial_hash::CollisionWorld;
+use game_simulation::util::exp_required_for_next;
 use game_simulation::weapon::WeaponSlot;
 use rustler::types::list::ListIterator;
 use rustler::{Atom, NifResult, ResourceArc, Term};
@@ -45,6 +46,8 @@ pub fn create_world() -> ResourceArc<GameWorld> {
         frame_events:       Vec::new(),
         weapon_choices:     Vec::new(),
         score_popups:       Vec::new(),
+        score:              0,
+        kill_count:         0,
         prev_player_x:      SCREEN_WIDTH  / 2.0 - PLAYER_SIZE / 2.0,
         prev_player_y:      SCREEN_HEIGHT / 2.0 - PLAYER_SIZE / 2.0,
         prev_tick_ms:       0,
@@ -96,6 +99,23 @@ pub fn set_boss_hp(world: ResourceArc<GameWorld>, hp: f64) -> NifResult<Atom> {
     if let Some(boss) = &mut w.boss {
         boss.hp = hp as f32;
     }
+    Ok(ok())
+}
+
+/// EXP テーブルの SSoT は game_simulation::util::exp_required_for_next。
+/// Elixir 側はこの NIF を呼び出すことで、Rust と同一の値を参照する。
+#[rustler::nif]
+pub fn exp_required_for_next_nif(level: u32) -> u32 {
+    exp_required_for_next(level)
+}
+
+/// score と kill_count を Elixir 側から注入する（フェーズ1 SSoT 完結）。
+/// render_snapshot がこれらの値を HUD に反映するため、毎フレーム呼び出す。
+#[rustler::nif]
+pub fn set_hud_state(world: ResourceArc<GameWorld>, score: u32, kill_count: u32) -> NifResult<Atom> {
+    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
+    w.score      = score;
+    w.kill_count = kill_count;
     Ok(ok())
 }
 
