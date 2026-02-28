@@ -120,12 +120,6 @@ pub fn set_hud_level_state(
     Ok(ok())
 }
 
-/// Phase 3-B 互換: 旧 set_player_level NIF（何もしない）
-#[rustler::nif]
-pub fn set_player_level(_world: ResourceArc<GameWorld>, _level: u32) -> NifResult<Atom> {
-    Ok(ok())
-}
-
 #[rustler::nif]
 pub fn set_elapsed_seconds(world: ResourceArc<GameWorld>, elapsed: f64) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;

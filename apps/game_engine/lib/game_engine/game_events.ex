@@ -401,14 +401,10 @@ defmodule GameEngine.GameEvents do
   # x_bits/y_bits は f32::to_bits() でエンコードされた撃破座標
   defp apply_event({:enemy_killed, enemy_kind, x_bits, y_bits, _}, state) do
     exp = GameContent.EntityParams.enemy_exp_reward(enemy_kind)
-    score_delta = GameContent.EntityParams.score_from_exp(exp)
     x = bits_to_f32(x_bits)
     y = bits_to_f32(y_bits)
     rule = current_rule()
-    state = state
-      |> Map.update!(:score, &(&1 + score_delta))
-      |> Map.update!(:kill_count, &(&1 + 1))
-      |> accumulate_exp(exp)
+    state = apply_kill_rewards(state, exp)
     if function_exported?(rule, :on_entity_removed, 4) do
       rule.on_entity_removed(state.world_ref, enemy_kind, x, y)
     end
@@ -418,14 +414,11 @@ defmodule GameEngine.GameEvents do
   # Phase 3-B: BossDefeated でスコア・kill_count を Elixir 側で積算し、アイテムドロップを処理する
   defp apply_event({:boss_defeated, boss_kind, x_bits, y_bits, _}, state) do
     exp = GameContent.EntityParams.boss_exp_reward(boss_kind)
-    score_delta = GameContent.EntityParams.score_from_exp(exp)
     x = bits_to_f32(x_bits)
     y = bits_to_f32(y_bits)
     rule = current_rule()
     state = state
-      |> Map.update!(:score, &(&1 + score_delta))
-      |> Map.update!(:kill_count, &(&1 + 1))
-      |> accumulate_exp(exp)
+      |> apply_kill_rewards(exp)
       |> Map.merge(%{boss_hp: nil, boss_max_hp: nil, boss_kind_id: nil})
     if function_exported?(rule, :on_boss_defeated, 4) do
       rule.on_boss_defeated(state.world_ref, boss_kind, x, y)
@@ -466,6 +459,15 @@ defmodule GameEngine.GameEvents do
   defp bits_to_f32(bits) do
     <<f::float-size(32)>> = <<bits::unsigned-size(32)>>
     f
+  end
+
+  # 撃破報酬（スコア・kill_count・EXP）を state に一括適用する共通関数
+  defp apply_kill_rewards(state, exp) do
+    score_delta = GameContent.EntityParams.score_from_exp(exp)
+    state
+    |> Map.update!(:score, &(&1 + score_delta))
+    |> Map.update!(:kill_count, &(&1 + 1))
+    |> accumulate_exp(exp)
   end
 
   # フェーズ3: EXP 積算とレベルアップ検知

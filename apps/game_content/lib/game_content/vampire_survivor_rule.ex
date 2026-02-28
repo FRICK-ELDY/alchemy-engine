@@ -70,12 +70,14 @@ defmodule GameContent.VampireSurvivorRule do
 
   # Phase 3-B: 敵撃破時のアイテムドロップ処理
   @impl GameEngine.RuleBehaviour
-  def on_entity_removed(world_ref, _kind_id, x, y) do
+  def on_entity_removed(world_ref, kind_id, x, y) do
     roll = :rand.uniform(100)
     cond do
-      roll <= 2  -> GameEngine.NifBridge.spawn_item(world_ref, x, y, 2, 0)    # Magnet
-      roll <= 7  -> GameEngine.NifBridge.spawn_item(world_ref, x, y, 1, 20)   # Potion（回復量20）
-      true       -> GameEngine.NifBridge.spawn_item(world_ref, x, y, 0, 0)    # Gem（value は Rust 側で exp_reward を設定済み）
+      roll <= 2  -> GameEngine.NifBridge.spawn_item(world_ref, x, y, 2, 0)
+      roll <= 7  -> GameEngine.NifBridge.spawn_item(world_ref, x, y, 1, 20)
+      true       ->
+        exp_reward = GameContent.EntityParams.enemy_exp_reward(kind_id)
+        GameEngine.NifBridge.spawn_item(world_ref, x, y, 0, exp_reward)
     end
     :ok
   end
