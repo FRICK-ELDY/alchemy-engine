@@ -10,13 +10,6 @@ defmodule GameContent.VampireSurvivor.SpawnSystemTest do
       assert count > 0
     end
 
-    test "経過時間が増えるにつれてスポーン間隔が短くなる（高難度化）" do
-      {interval_0, _}  = SpawnSystem.current_wave(0)
-      {interval_60, _} = SpawnSystem.current_wave(60)
-      assert interval_60 <= interval_0,
-             "後半ほどスポーン間隔が短くなるべき: #{interval_60} <= #{interval_0}"
-    end
-
     test "各ウェーブ開始時刻で正しいフェーズに切り替わる" do
       {i0, _}  = SpawnSystem.current_wave(0)
       {i10, _} = SpawnSystem.current_wave(10)

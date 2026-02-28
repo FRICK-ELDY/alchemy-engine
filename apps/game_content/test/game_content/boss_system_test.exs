@@ -38,12 +38,6 @@ defmodule GameContent.VampireSurvivor.BossSystemTest do
   end
 
   describe "alert_duration_ms/0" do
-    test "正の整数を返す" do
-      ms = BossSystem.alert_duration_ms()
-      assert is_integer(ms)
-      assert ms > 0
-    end
-
     test "3000 ms を返す" do
       assert BossSystem.alert_duration_ms() == 3_000
     end

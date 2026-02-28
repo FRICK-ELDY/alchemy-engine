@@ -52,16 +52,8 @@ defmodule GameContent.EntityParamsTest do
       end)
     end
 
-    test "EXP=0 のときスコアは 0" do
-      assert EntityParams.score_from_exp(0) == 0
-    end
-
-    test "EXP=10 のときスコアは 20（× 2 係数）" do
-      assert EntityParams.score_from_exp(10) == 20
-    end
-
     test "スコアは EXP × 2 の線形関係" do
-      for exp <- [1, 5, 10, 100] do
+      for exp <- [0, 1, 5, 10, 100] do
         assert EntityParams.score_from_exp(exp) == exp * 2
       end
     end
