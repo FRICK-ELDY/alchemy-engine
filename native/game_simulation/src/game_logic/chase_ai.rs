@@ -68,23 +68,7 @@ pub fn find_nearest_enemy_spatial(
     search_radius: f32,
     buf: &mut Vec<usize>,
 ) -> Option<usize> {
-    let mut radius = search_radius;
-    for _ in 0..4 {
-        buf.clear();
-        collision.dynamic.query_nearby_into(px, py, radius, buf);
-        let result = buf
-            .iter()
-            .filter(|&&i| i < enemies.len() && enemies.alive[i])
-            .map(|&i| (i, dist_sq(enemies.positions_x[i], enemies.positions_y[i], px, py)))
-            .min_by(|(_, da), (_, db)| da.partial_cmp(db).unwrap_or(std::cmp::Ordering::Equal))
-            .map(|(i, _)| i);
-        if result.is_some() {
-            return result;
-        }
-        radius *= 2.0;
-    }
-    // 全敵が Spatial Hash の範囲外に散らばっている極稀なケース
-    find_nearest_enemy(enemies, px, py)
+    find_nearest_enemy_spatial_excluding(collision, enemies, px, py, search_radius, &[], buf)
 }
 
 /// Spatial Hash を使った高速最近接探索（除外セット付き・Lightning チェーン用）
