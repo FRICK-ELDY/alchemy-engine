@@ -1,6 +1,6 @@
 use crate::game_logic::{find_nearest_enemy_spatial, find_nearest_enemy_spatial_excluding};
 use crate::world::{FrameEvent, GameWorldInner, BULLET_KIND_LIGHTNING, BULLET_KIND_WHIP};
-use crate::constants::{BULLET_LIFETIME, BULLET_SPEED, WEAPON_SEARCH_RADIUS};
+use crate::constants::{BULLET_LIFETIME, BULLET_SPEED, MAX_ENEMIES, WEAPON_SEARCH_RADIUS};
 use crate::entity_params::FirePattern;
 
 pub(crate) fn update_weapon_attacks(w: &mut GameWorldInner, dt: f32, px: f32, py: f32) {
@@ -204,7 +204,8 @@ fn fire_chain(
     cd: f32,
 ) {
     let chain_count = w.params.get_weapon(kind_id).chain_count_for_level(level);
-    let mut hit_vec: Vec<usize> = Vec::with_capacity(chain_count);
+    // 命中済み敵インデックスを O(1) で検索するためビットマスク配列を使用（300 バイト）
+    let mut hit_set = [false; MAX_ENEMIES];
     let mut current = find_nearest_enemy_spatial(&w.collision, &w.enemies, px, py, WEAPON_SEARCH_RADIUS, &mut w.spatial_query_buf);
     #[allow(unused_assignments)]
     let mut next_search_x = px;
@@ -223,12 +224,14 @@ fn fire_chain(
                 w.enemies.kill(ei);
                 w.frame_events.push(FrameEvent::EnemyKilled { enemy_kind: kind_e, x: hit_x, y: hit_y });
             }
-            hit_vec.push(ei);
+            if ei < MAX_ENEMIES {
+                hit_set[ei] = true;
+            }
             next_search_x = hit_x;
             next_search_y = hit_y;
             current = find_nearest_enemy_spatial_excluding(
                 &w.collision, &w.enemies, next_search_x, next_search_y,
-                WEAPON_SEARCH_RADIUS, &hit_vec, &mut w.spatial_query_buf,
+                WEAPON_SEARCH_RADIUS, &hit_set, &mut w.spatial_query_buf,
             );
         } else {
             break;

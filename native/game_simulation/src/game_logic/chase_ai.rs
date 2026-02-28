@@ -24,17 +24,18 @@ pub fn find_nearest_enemy(enemies: &EnemyWorld, px: f32, py: f32) -> Option<usiz
     nearest
 }
 
-/// 指定インデックスを除外した最近接の生存敵インデックスを返す（Lightning チェーン用）
-pub fn find_nearest_enemy_excluding(
+/// 指定インデックスを除外した最近接の生存敵インデックスを返す（Lightning チェーン用・最終フォールバック）
+/// exclude: &[bool] — インデックス i が true なら除外（O(1) 検索）
+fn find_nearest_enemy_excluding_set(
     enemies: &EnemyWorld,
     px: f32,
     py: f32,
-    exclude: &[usize],
+    exclude: &[bool],
 ) -> Option<usize> {
     let mut min_dist = f32::MAX;
     let mut nearest  = None;
     for i in 0..enemies.len() {
-        if !enemies.alive[i] || exclude.contains(&i) {
+        if !enemies.alive[i] || exclude.get(i).copied().unwrap_or(false) {
             continue;
         }
         let dx   = enemies.positions_x[i] - px;
@@ -57,7 +58,8 @@ fn dist_sq(x1: f32, y1: f32, x2: f32, y2: f32) -> f32 {
 }
 
 /// Spatial Hash を使った高速最近接探索
-/// search_radius 内に候補がいなければ全探索にフォールバック
+/// 候補が見つからない場合は半径を 2 倍ずつ最大 4 回拡大して再試行し、
+/// それでも見つからない場合のみ O(n) 全探索にフォールバックする（稀なケース）
 pub fn find_nearest_enemy_spatial(
     collision: &CollisionWorld,
     enemies: &EnemyWorld,
@@ -66,42 +68,58 @@ pub fn find_nearest_enemy_spatial(
     search_radius: f32,
     buf: &mut Vec<usize>,
 ) -> Option<usize> {
-    collision.dynamic.query_nearby_into(px, py, search_radius, buf);
-
-    let result = buf
-        .iter()
-        .filter(|&&i| i < enemies.len() && enemies.alive[i])
-        .map(|&i| (i, dist_sq(enemies.positions_x[i], enemies.positions_y[i], px, py)))
-        .min_by(|(_, da), (_, db)| da.partial_cmp(db).unwrap_or(std::cmp::Ordering::Equal))
-        .map(|(i, _)| i);
-
-    result.or_else(|| find_nearest_enemy(enemies, px, py))
+    let mut radius = search_radius;
+    for _ in 0..4 {
+        buf.clear();
+        collision.dynamic.query_nearby_into(px, py, radius, buf);
+        let result = buf
+            .iter()
+            .filter(|&&i| i < enemies.len() && enemies.alive[i])
+            .map(|&i| (i, dist_sq(enemies.positions_x[i], enemies.positions_y[i], px, py)))
+            .min_by(|(_, da), (_, db)| da.partial_cmp(db).unwrap_or(std::cmp::Ordering::Equal))
+            .map(|(i, _)| i);
+        if result.is_some() {
+            return result;
+        }
+        radius *= 2.0;
+    }
+    // 全敵が Spatial Hash の範囲外に散らばっている極稀なケース
+    find_nearest_enemy(enemies, px, py)
 }
 
-/// Spatial Hash を使った高速最近接探索（除外リスト付き・Lightning チェーン用）
+/// Spatial Hash を使った高速最近接探索（除外セット付き・Lightning チェーン用）
+/// exclude: &[bool] — インデックス i が true なら除外（O(1) 検索）
+/// 候補が見つからない場合は半径を 2 倍ずつ最大 4 回拡大して再試行する
 pub fn find_nearest_enemy_spatial_excluding(
     collision: &CollisionWorld,
     enemies: &EnemyWorld,
     px: f32,
     py: f32,
     search_radius: f32,
-    exclude: &[usize],
+    exclude: &[bool],
     buf: &mut Vec<usize>,
 ) -> Option<usize> {
-    collision.dynamic.query_nearby_into(px, py, search_radius, buf);
-
-    let result = buf
-        .iter()
-        .filter(|&&i| {
-            i < enemies.len()
-                && enemies.alive[i]
-                && !exclude.contains(&i)
-        })
-        .map(|&i| (i, dist_sq(enemies.positions_x[i], enemies.positions_y[i], px, py)))
-        .min_by(|(_, da), (_, db)| da.partial_cmp(db).unwrap_or(std::cmp::Ordering::Equal))
-        .map(|(i, _)| i);
-
-    result.or_else(|| find_nearest_enemy_excluding(enemies, px, py, exclude))
+    let mut radius = search_radius;
+    for _ in 0..4 {
+        buf.clear();
+        collision.dynamic.query_nearby_into(px, py, radius, buf);
+        let result = buf
+            .iter()
+            .filter(|&&i| {
+                i < enemies.len()
+                    && enemies.alive[i]
+                    && !exclude.get(i).copied().unwrap_or(false)
+            })
+            .map(|&i| (i, dist_sq(enemies.positions_x[i], enemies.positions_y[i], px, py)))
+            .min_by(|(_, da), (_, db)| da.partial_cmp(db).unwrap_or(std::cmp::Ordering::Equal))
+            .map(|(i, _)| i);
+        if result.is_some() {
+            return result;
+        }
+        radius *= 2.0;
+    }
+    // 全敵が Spatial Hash の範囲外に散らばっている極稀なケース
+    find_nearest_enemy_excluding_set(enemies, px, py, exclude)
 }
 
 /// 1 体分の Chase AI（スカラー版・SIMD フォールバック用）
