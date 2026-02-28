@@ -86,13 +86,18 @@ pub fn fire_boss_projectile(world: ResourceArc<GameWorld>, dx: f64, dy: f64, spe
     Ok(ok())
 }
 
+/// スコアポップアップのY軸オフセット（エンティティ中心より上に表示）
+const POPUP_Y_OFFSET: f32 = -20.0;
+/// スコアポップアップの表示時間（秒）
+const POPUP_LIFETIME: f32 = 0.8;
+
 /// Phase 3-C: Elixir 側がスコアポップアップを描画用バッファに追加する NIF。
 /// EnemyKilled / BossDefeated イベント受信時に Elixir 側から呼び出す。
 /// value: 表示するスコア値
 #[rustler::nif]
 pub fn add_score_popup(world: ResourceArc<GameWorld>, x: f64, y: f64, value: u32) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
-    w.score_popups.push((x as f32, y as f32 - 20.0, value, 0.8));
+    w.score_popups.push((x as f32, y as f32 + POPUP_Y_OFFSET, value, POPUP_LIFETIME));
     Ok(ok())
 }
 
