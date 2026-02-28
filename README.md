@@ -13,7 +13,7 @@ AlchemyEngine は「無限の3D空間」と「そこに存在するユーザー�
 
 詳細は [ビジョンと設計思想](./docs/vision.md) を参照。
 
-## Core Concepts
+## アーキテクチャのハイライト
 
 - **Elixir as SSoT (Single Source of Truth)**
 
