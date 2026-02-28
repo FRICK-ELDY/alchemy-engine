@@ -129,7 +129,7 @@ mod tests {
 
 | フィールド | 現状 | 目標 | 対応方針 |
 |:---|:---|:---|:---|
-| `weapon_slots: Vec<WeaponSlot>` | `GameWorldInner` に保持 | Elixir 側 Rule state で管理 | Rust からフィールドを削除。`add_weapon` NIF は引き続き存在させ、Elixir から毎フレーム武器状態を注入する |
+| `weapon_slots: Vec<WeaponSlot>` | `GameWorldInner` に保持 | Elixir 側 Rule state で管理 | Rust からフィールドを削除。`add_weapon` NIF を廃止し、`set_weapon_slots(world, slots)` NIF を新設して毎フレーム Elixir から注入する |
 | `boss: Option<BossState>` | `GameWorldInner` に保持 | Elixir 側 Rule state で管理 | Rust からフィールドを削除。`spawn_boss` NIF は引き続き存在させ、ボス物理状態のみ Rust が管理する |
 | `hud_level`, `hud_exp` 等 | `set_hud_level_state` NIF で毎フレーム注入（描画専用） | 現状維持（対応済み） | 変更不要 |
 
@@ -284,9 +284,11 @@ Phoenix Channels を使わずに、Elixir の `Registry` と `PubSub` を使っ�
 
 #### 分離設計
 
+`vision.md` の「エンジンはボスを知らない」原則に従い、ボス固有のコールバックは `RuleBehaviour` から完全に除去する。代わりに `BossRuleBehaviour` として切り出し、ボスの概念を持つルールだけが実装する。
+
 ```elixir
+# ─── GameEngine.RuleBehaviour（エンジンコア・全ルール共通） ───────────
 defmodule GameEngine.RuleBehaviour do
-  # ─── コア（全ルール必須） ───────────────────────────────────
   @callback render_type()          :: atom()
   @callback initial_scenes()       :: [scene_spec()]
   @callback physics_scenes()       :: [module()]
@@ -297,33 +299,37 @@ defmodule GameEngine.RuleBehaviour do
   @callback game_over_scene()      :: module()
   @callback wave_label(elapsed_sec :: number()) :: String.t()
 
-  # ─── オプション（デフォルト実装あり） ──────────────────────
+  # エンティティ消滅はボス固有ではなく汎用イベントのためオプションとして残す
+  @optional_callbacks on_entity_removed: 4
   @callback on_entity_removed(world_ref, kind_id, x, y) :: :ok
+end
+
+# ─── GameEngine.BossRuleBehaviour（ボスの概念を持つルール向け拡張） ───
+defmodule GameEngine.BossRuleBehaviour do
   @callback on_boss_defeated(world_ref, boss_kind, x, y) :: :ok
   @callback update_boss_ai(context, boss_state)          :: :ok
 end
 ```
 
-武器・ボス・レベルアップに関するコールバックは `GameEngine.WeaponRuleBehaviour` または `GameContent.VampireSurvivorRule` 内部に移動する。
+```elixir
+# VampireSurvivorRule は両方を実装する
+defmodule GameContent.VampireSurvivorRule do
+  @behaviour GameEngine.RuleBehaviour
+  @behaviour GameEngine.BossRuleBehaviour
+  # ...
+end
+```
+
+武器・レベルアップに関するコールバック（`generate_weapon_choices`・`apply_level_up` 等）は `VampireSurvivorRule` の内部関数に移動し、エンジンコアからは完全に除去する。
 
 #### 移行手順
 
-1. `RuleBehaviour` からコアコールバックのみを残す（`@optional_callbacks` を活用）
-2. 武器・レベルアップ関連コールバックを `VampireSurvivorRule` の内部関数に移動する
-3. `GameEvents` が `RuleBehaviour` コールバックを呼び出す箇所を、コア/オプションで分岐させる
-4. 2つ目のコンテンツを追加する際に、この設計が正しく機能することを確認する
-
-#### `@optional_callbacks` の活用
-
-Elixir の `@optional_callbacks` を使うことで、実装しなくてもコンパイルエラーにならないコールバックを定義できる：
-
-```elixir
-defmodule GameEngine.RuleBehaviour do
-  @optional_callbacks on_entity_removed: 4,
-                      on_boss_defeated: 4,
-                      update_boss_ai: 2
-end
-```
+1. `GameEngine.BossRuleBehaviour` モジュールを新規作成し、`on_boss_defeated/4` と `update_boss_ai/2` を定義する
+2. `RuleBehaviour` から `on_boss_defeated`・`update_boss_ai` を削除し、`on_entity_removed` を `@optional_callbacks` に変更する
+3. `VampireSurvivorRule` に `@behaviour GameEngine.BossRuleBehaviour` を追加する
+4. `GameEvents` のコールバック呼び出し箇所を、`BossRuleBehaviour` の実装有無で分岐させる（`function_exported?/3` で確認）
+5. 武器・レベルアップ関連コールバックを `VampireSurvivorRule` の内部関数に移動する
+6. 2つ目のコンテンツを追加する際に、ボスなしルールが `BossRuleBehaviour` を実装せずに動作することを確認する
 
 #### 注意点
 
@@ -521,26 +527,52 @@ pub fn find_nearest_enemy_spatial(
 
 #### Lightning チェーン除外リストの改善
 
-`exclude: &[usize]` を `exclude: &[bool; MAX_CHAIN]` のスタックアロケーションビットマスクに変更する。チェーン数は最大 `chain_count`（`WeaponParams` で定義）であり、スタック上の固定サイズ配列で十分。
+現在の `fire_chain` は `hit_vec: Vec<usize>` に命中済みの**敵インデックス**を蓄積し、`find_nearest_enemy_spatial_excluding` に渡している。`exclude.contains(&i)` は敵インデックス `i` に対して線形探索するため O(chain_count × 候補数) になる。
+
+修正方針は **`[bool; MAX_ENEMIES]` のスタック配列をビットマスクとして使う** ことで O(1) 検索を実現する。`MAX_ENEMIES = 300` は `constants.rs` で定義済みであり、300 バイトのスタック消費は許容範囲内である。
+
+> **なぜ `[bool; MAX_CHAIN]` ではないか**
+> 除外判定は「チェーン番号」ではなく「敵インデックス（0〜MAX_ENEMIES-1）」で行う。
+> `MAX_CHAIN`（チェーン数の上限）と `MAX_ENEMIES`（敵インデックスの上限）は別物であり、
+> `[bool; MAX_CHAIN]` でインデックス `i` にアクセスすると範囲外アクセスになる。
 
 ```rust
-// 変更前
-exclude.contains(&i)  // O(n)
+// 変更前（fire_chain 内）
+let mut hit_vec: Vec<usize> = Vec::with_capacity(chain_count);
+// ...
+find_nearest_enemy_spatial_excluding(
+    &w.collision, &w.enemies, nx, ny,
+    WEAPON_SEARCH_RADIUS, &hit_vec,  // ← &[usize] を渡す
+    &mut w.spatial_query_buf,
+);
 
 // 変更後
-exclude_set[i]  // O(1)（ただし i < MAX_ENEMIES が前提）
+use crate::constants::MAX_ENEMIES;
+let mut hit_set = [false; MAX_ENEMIES];  // スタック上に 300 バイト
+// ...
+hit_set[ei] = true;  // 命中時にフラグを立てる
+find_nearest_enemy_spatial_excluding(
+    &w.collision, &w.enemies, nx, ny,
+    WEAPON_SEARCH_RADIUS, &hit_set,  // ← &[bool; MAX_ENEMIES] を渡す
+    &mut w.spatial_query_buf,
+);
+
+// find_nearest_enemy_spatial_excluding 側の変更
+// exclude: &[usize] → exclude: &[bool]
+.filter(|&&i| i < enemies.len() && enemies.alive[i] && !exclude[i])  // O(1)
 ```
 
 ### 影響ファイル
 
-- `native/game_simulation/src/game_logic/chase_ai.rs` — フォールバック戦略の変更
-- `native/game_simulation/src/game_logic/systems/projectiles.rs` — Lightning チェーン呼び出し箇所
+- `native/game_simulation/src/game_logic/chase_ai.rs` — `find_nearest_enemy_spatial_excluding` のシグネチャ変更（`exclude: &[usize]` → `exclude: &[bool]`）
+- `native/game_simulation/src/game_logic/systems/weapons.rs` — `fire_chain` の `hit_vec` を `hit_set` に変更
 
 ### 作業ステップ
 
 1. `find_nearest_enemy_spatial` に段階的半径拡大ロジックを追加する（2〜3時間）
-2. Lightning チェーンの除外リストをビットマスクに変更する（1〜2時間）
-3. `cargo test` でリグレッションがないことを確認する
+2. `find_nearest_enemy_spatial_excluding` のシグネチャを `exclude: &[bool]` に変更する（30分）
+3. `fire_chain` 内の `hit_vec: Vec<usize>` を `hit_set: [bool; MAX_ENEMIES]` に置き換える（30分）
+4. `cargo test` でリグレッションがないことを確認する
 
 ---
 
