@@ -25,15 +25,14 @@ graph TB
     GE <-->|Rustler NIF| GNATIVE
 
     subgraph Rust["Rust Workspace"]
-        GNATIVE[game_native<br/>NIF インターフェース / ゲームループ]
-        GCORE[game_core<br/>物理 / ECS]
+        GNIF[game_nif<br/>NIF インターフェース / ゲームループ / レンダーブリッジ]
+        GSIM[game_simulation<br/>物理 / ECS]
         GRENDER[game_render<br/>wgpu 描画]
-        GWINDOW[game_window<br/>winit ウィンドウ]
-        GNATIVE -->|依存| GCORE
-        GNATIVE -->|依存| GRENDER
-        GNATIVE -->|依存| GWINDOW
-        GRENDER -->|依存| GCORE
-        GWINDOW -->|依存| GRENDER
+        GAUDIO[game_audio<br/>rodio オーディオ]
+        GNIF -->|依存| GSIM
+        GNIF -->|依存| GRENDER
+        GNIF -->|依存| GAUDIO
+        GRENDER -->|依存| GSIM
     end
 ```
 
@@ -96,7 +95,7 @@ alchemy-engine/
 │   ├── Cargo.toml                   # Rust ワークスペース定義
 │   ├── Cargo.lock
 │   │
-│   ├── game_core/                   # 共通ロジック（依存: rustc-hash のみ）
+│   ├── game_simulation/             # 物理演算・ECS（依存: rustc-hash のみ）
 │   │   └── src/
 │   │       ├── lib.rs
 │   │       ├── constants.rs         # 画面・マップ・速度定数
@@ -106,13 +105,33 @@ alchemy-engine/
 │   │       ├── boss.rs              # BossKind enum
 │   │       ├── item.rs              # ItemKind / ItemWorld SoA
 │   │       ├── util.rs              # EXP 計算・ウェーブ設定
-│   │       └── physics/
-│   │           ├── rng.rs           # LCG 乱数（決定論的）
-│   │           ├── spatial_hash.rs  # FxHashMap ベース空間ハッシュ
-│   │           ├── separation.rs    # 敵分離アルゴリズム
-│   │           └── obstacle_resolve.rs # 障害物押し出し
+│   │       ├── physics/
+│   │       │   ├── rng.rs           # LCG 乱数（決定論的）
+│   │       │   ├── spatial_hash.rs  # FxHashMap ベース空間ハッシュ
+│   │       │   ├── separation.rs    # 敵分離アルゴリズム
+│   │       │   └── obstacle_resolve.rs # 障害物押し出し
+│   │       ├── world/
+│   │       │   ├── mod.rs           # GameWorld / GameWorldInner
+│   │       │   ├── enemy.rs         # EnemyWorld SoA
+│   │       │   ├── bullet.rs        # BulletWorld SoA
+│   │       │   ├── particle.rs      # ParticleWorld SoA
+│   │       │   ├── boss.rs          # BossState
+│   │       │   ├── game_loop_control.rs # AtomicBool pause/resume
+│   │       │   └── frame_event.rs   # FrameEvent enum
+│   │       └── game_logic/
+│   │           ├── physics_step.rs  # 1 フレーム物理ステップ
+│   │           ├── chase_ai.rs      # SSE2 SIMD / rayon 並列 AI
+│   │           └── systems/
+│   │               ├── weapons.rs   # 7 武器発射ロジック
+│   │               ├── projectiles.rs # 弾丸移動・衝突・ドロップ
+│   │               ├── boss.rs      # ボス AI・特殊行動
+│   │               ├── effects.rs   # パーティクル更新
+│   │               ├── items.rs     # アイテム収集
+│   │               ├── leveling.rs  # 武器選択肢生成
+│   │               ├── collision.rs # 敵 vs 障害物押し出し
+│   │               └── spawn.rs     # スポーン位置生成
 │   │
-│   ├── game_native/                 # NIF 通信インターフェース
+│   ├── game_nif/                    # NIF 通信インターフェース・ゲームループ
 │   │   └── src/
 │   │       ├── lib.rs               # Rustler エントリポイント・アトム定義
 │   │       ├── nif/
@@ -123,46 +142,28 @@ alchemy-engine/
 │   │       │   ├── game_loop_nif.rs # ゲームループ制御
 │   │       │   ├── push_tick_nif.rs # Elixir プッシュ型同期
 │   │       │   ├── render_nif.rs    # レンダースレッド起動
-│   │       │   └── save_nif.rs      # セーブ/ロードスナップショット
-│   │       ├── world/
-│   │       │   ├── mod.rs           # GameWorld / GameWorldInner
-│   │       │   ├── enemy_world.rs   # EnemyWorld SoA
-│   │       │   ├── bullet_world.rs  # BulletWorld SoA
-│   │       │   ├── particle_world.rs# ParticleWorld SoA
-│   │       │   ├── boss_state.rs    # BossState
-│   │       │   ├── game_loop_control.rs # AtomicBool pause/resume
-│   │       │   └── frame_event.rs   # FrameEvent enum
-│   │       ├── game_logic/
-│   │       │   ├── physics_step.rs  # 1 フレーム物理ステップ
-│   │       │   ├── chase_ai.rs      # SSE2 SIMD / rayon 並列 AI
+│   │       │   ├── save_nif.rs      # セーブ/ロードスナップショット
 │   │       │   ├── events.rs        # FrameEvent → Elixir アトム変換
-│   │       │   └── systems/
-│   │       │       ├── weapons.rs   # 7 武器発射ロジック
-│   │       │       ├── projectiles.rs # 弾丸移動・衝突・ドロップ
-│   │       │       ├── boss.rs      # ボス AI・特殊行動
-│   │       │       ├── effects.rs   # パーティクル更新
-│   │       │       ├── items.rs     # アイテム収集
-│   │       │       ├── leveling.rs  # 武器選択肢生成
-│   │       │       ├── collision.rs # 敵 vs 障害物押し出し
-│   │       │       └── spawn.rs     # スポーン位置生成
+│   │       │   └── util.rs          # 共通ユーティリティ
 │   │       ├── render_bridge.rs     # RenderBridge 実装
 │   │       ├── render_snapshot.rs   # RenderFrame 構築・補間
-│   │       ├── audio.rs             # rodio オーディオ管理
-│   │       ├── lock_metrics.rs      # RwLock 待機時間メトリクス
+│   │       └── lock_metrics.rs      # RwLock 待機時間メトリクス
+│   │
+│   ├── game_audio/                  # rodio オーディオ管理
+│   │   └── src/
+│   │       ├── lib.rs
+│   │       ├── audio.rs             # AudioManager・コマンドループ
 │   │       └── asset/mod.rs         # アセット管理
 │   │
-│   ├── game_render/                 # wgpu 描画パイプライン
-│   │   └── src/
-│   │       ├── lib.rs               # 公開型（RenderFrame / HudData）
-│   │       └── renderer/
-│   │           ├── mod.rs           # Renderer 構造体（wgpu 初期化・描画）
-│   │           ├── ui.rs            # egui HUD
-│   │           └── shaders/
-│   │               └── sprite.wgsl  # WGSL スプライトシェーダー
-│   │
-│   └── game_window/                 # winit ウィンドウ管理
+│   └── game_render/                 # wgpu 描画パイプライン
 │       └── src/
-│           └── lib.rs               # RenderBridge トレイト・イベントループ
+│           ├── lib.rs               # 公開型（RenderFrame / HudData）
+│           ├── window.rs            # winit ウィンドウ管理・イベントループ
+│           └── renderer/
+│               ├── mod.rs           # Renderer 構造体（wgpu 初期化・描画）
+│               ├── ui.rs            # egui HUD
+│               └── shaders/
+│                   └── sprite.wgsl  # WGSL スプライトシェーダー
 │
 ├── assets/                          # スプライト・音声アセット
 └── saves/                           # セーブデータ
@@ -179,10 +180,10 @@ alchemy-engine/
 | `game_server` | OTP Application 起動・Supervisor ツリー構築 | Elixir / OTP |
 | `game_engine` | ゲームループ制御・シーン管理・イベント配信・セーブ | Elixir GenServer / ETS |
 | `game_content` | ゲーム固有ロジック（VampireSurvivor のルール） | Elixir |
-| `game_native` | Elixir-Rust 間 NIF ブリッジ・ゲームワールド状態 | Rust / Rustler |
-| `game_core` | 物理演算・空間ハッシュ・エンティティ定義 | Rust（no_std 互換） |
-| `game_render` | GPU 描画パイプライン・HUD | Rust / wgpu / egui |
-| `game_window` | ウィンドウ管理・キー入力受付 | Rust / winit |
+| `game_nif` | Elixir-Rust 間 NIF ブリッジ・ゲームループ・レンダーブリッジ | Rust / Rustler |
+| `game_simulation` | 物理演算・空間ハッシュ・エンティティ定義・ECS | Rust（no_std 互換） |
+| `game_render` | GPU 描画パイプライン・HUD・winit ウィンドウ管理 | Rust / wgpu / egui / winit |
+| `game_audio` | オーディオ管理・アセット読み込み | Rust / rodio |
 
 ---
 
