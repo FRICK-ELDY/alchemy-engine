@@ -10,7 +10,6 @@
 | # | 課題 | 優先度 | 難易度 |
 |:---|:---|:---|:---|
 | I-2 | `GameWorldInner` にルール固有フィールドが残存 | 中 | 中 |
-| I-5 | `RuleBehaviour` に VampireSurvivor 固有コールバックが混在 | 中 | 中 |
 
 ---
 
@@ -26,7 +25,7 @@
 
 ### 方針
 
-2つ目のコンテンツを作り始めるタイミングで実施する（優先度：中）。ただし、作業の複雑さを事前に把握するため、影響範囲の調査を先行して行う。
+AsteroidArena（2つ目のコンテンツ）が追加されたため、着手可能な状態になった（優先度：中）。
 
 #### フィールド別の対応方針
 
@@ -61,106 +60,26 @@
 
 ---
 
-## I-5: `RuleBehaviour` に VampireSurvivor 固有コールバックが混在
-
-### 現状
-
-以下のコールバックが汎用インターフェース `RuleBehaviour` に含まれており、VampireSurvivor に特化した概念が混在している：
-
-```elixir
-@callback generate_weapon_choices(weapon_levels) :: [atom()]
-@callback apply_level_up(scene_state, choices)   :: map()
-@callback apply_weapon_selected(scene_state, weapon) :: map()
-@callback apply_level_up_skipped(scene_state)    :: map()
-@callback initial_weapons()                      :: [atom()]
-@callback level_up_scene()                       :: module()
-@callback boss_alert_scene()                     :: module()
-```
-
-2つ目のコンテンツが「武器」や「ボス」の概念を持たない場合、これらのコールバックは無意味になる。
-
-### 方針
-
-`RuleBehaviour` を **コアコールバック** と **オプション拡張** に分離する。
-
-#### 分離設計
-
-`vision.md` の「エンジンはボスを知らない」原則に従い、ボス固有のコールバックは `RuleBehaviour` から完全に除去する。代わりに `BossRuleBehaviour` として切り出し、ボスの概念を持つルールだけが実装する。
-
-```elixir
-# ─── GameEngine.RuleBehaviour（エンジンコア・全ルール共通） ───────────
-defmodule GameEngine.RuleBehaviour do
-  @callback render_type()          :: atom()
-  @callback initial_scenes()       :: [scene_spec()]
-  @callback physics_scenes()       :: [module()]
-  @callback title()                :: String.t()
-  @callback version()              :: String.t()
-  @callback context_defaults()     :: map()
-  @callback playing_scene()        :: module()
-  @callback game_over_scene()      :: module()
-  @callback wave_label(elapsed_sec :: number()) :: String.t()
-
-  # エンティティ消滅はボス固有ではなく汎用イベントのためオプションとして残す
-  @optional_callbacks on_entity_removed: 4
-  @callback on_entity_removed(world_ref, kind_id, x, y) :: :ok
-end
-
-# ─── GameEngine.BossRuleBehaviour（ボスの概念を持つルール向け拡張） ───
-defmodule GameEngine.BossRuleBehaviour do
-  @callback on_boss_defeated(world_ref, boss_kind, x, y) :: :ok
-  @callback update_boss_ai(context, boss_state)          :: :ok
-end
-```
-
-```elixir
-# VampireSurvivorRule は両方を実装する
-defmodule GameContent.VampireSurvivorRule do
-  @behaviour GameEngine.RuleBehaviour
-  @behaviour GameEngine.BossRuleBehaviour
-  # ...
-end
-```
-
-武器・レベルアップに関するコールバック（`generate_weapon_choices`・`apply_level_up` 等）は `VampireSurvivorRule` の内部関数に移動し、エンジンコアからは完全に除去する。
-
-#### 移行手順
-
-1. `GameEngine.BossRuleBehaviour` モジュールを新規作成し、`on_boss_defeated/4` と `update_boss_ai/2` を定義する
-2. `RuleBehaviour` から `on_boss_defeated`・`update_boss_ai` を削除し、`on_entity_removed` を `@optional_callbacks` に変更する
-3. `VampireSurvivorRule` に `@behaviour GameEngine.BossRuleBehaviour` を追加する
-4. `GameEvents` のコールバック呼び出し箇所を、`BossRuleBehaviour` の実装有無で分岐させる（`function_exported?/3` で確認）
-5. 武器・レベルアップ関連コールバックを `VampireSurvivorRule` の内部関数に移動する
-6. 2つ目のコンテンツを追加する際に、ボスなしルールが `BossRuleBehaviour` を実装せずに動作することを確認する
-
-#### 注意点
-
-この変更は `VampireSurvivorRule` の実装に影響するため、I-2（`GameWorldInner` フィールド除去）と同時に実施することを推奨する。2つ目のコンテンツを追加するタイミングが最適な実施時期である。
-
----
-
 ## 改善の優先順位と推奨実施順序
 
 ```mermaid
 graph TD
-    I2["I-2: GameWorldInner フィールド除去\n（2つ目のコンテンツ追加時）"]
-    I5["I-5: RuleBehaviour 分離\n（2つ目のコンテンツ追加時）"]
+    I2["I-2: GameWorldInner フィールド除去\n（着手可能）"]
     P10["課題10: Elixir 真価（NIF 安全性・並行性・分散）\n（中長期・pending-issues.md 参照）"]
     P11["課題11: game_network 実装\n（長期・大規模・pending-issues.md 参照）"]
 
-    I2 --> I5
-    I5 --> P10
+    I2 --> P10
     P10 --> P11
 ```
 
-### フェーズ1（2つ目のコンテンツ追加時）
+### フェーズ1（着手可能）
 
 1. **I-2**: `GameWorldInner` からルール固有フィールドを除去する
-2. **I-5**: `RuleBehaviour` をコアとオプションに分離する
-3. **課題10（問題1〜2）**: NIF 安全性強化・複数ルーム同時稼働テスト
+2. **課題10（問題1〜2）**: NIF 安全性強化・複数ルーム同時稼働テスト
 
 ### フェーズ2（長期）
 
-4. **課題10（問題3）** / **課題11**: `GameNetwork.Local` 実装 → ローカルマルチプレイヤー → ネットワーク対応
+3. **課題10（問題3）** / **課題11**: `GameNetwork.Local` 実装 → ローカルマルチプレイヤー → ネットワーク対応
 
 ---
 

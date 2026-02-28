@@ -1,5 +1,8 @@
 import Config
 
+# 使用するコンテンツを指定する。
+# GameContent.VampireSurvivor — ヴァンパイアサバイバークローン
+# GameContent.AsteroidArena   — 小惑星シューター（武器・ボスなし）
 config :game_server, :current, GameContent.VampireSurvivor
 config :game_server, :map, :plain
 
