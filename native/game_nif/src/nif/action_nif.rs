@@ -1,7 +1,7 @@
 //! Path: native/game_nif/src/nif/action_nif.rs
 //! Summary: アクション NIF（add_weapon, skip_level_up, spawn_boss, spawn_elite_enemy, spawn_item 等）
 
-use super::util::lock_poisoned_err;
+use super::util::{lock_poisoned_err, params_not_loaded_err};
 use game_simulation::game_logic::systems::spawn::get_spawn_positions_around_player;
 use game_simulation::world::{BossState, FrameEvent, GameWorld};
 use game_simulation::constants::{PLAYER_RADIUS, POPUP_Y_OFFSET, POPUP_LIFETIME};
@@ -33,7 +33,7 @@ pub fn spawn_boss(world: ResourceArc<GameWorld>, kind_id: u8) -> NifResult<Atom>
         let bx = (px + 600.0).min(w.map_width  - bp.radius);
         let by = py.clamp(bp.radius, w.map_height - bp.radius);
         w.boss = Some(BossState::new(kind_id, bx, by, &bp));
-        w.frame_events.push(FrameEvent::BossSpawn { boss_kind: kind_id });
+        w.frame_events.push(FrameEvent::SpecialEntitySpawned { entity_kind: kind_id });
     }
     Ok(ok())
 }
@@ -114,12 +114,12 @@ pub fn spawn_item(world: ResourceArc<GameWorld>, x: f64, y: f64, kind: u8, value
 #[rustler::nif]
 pub fn spawn_elite_enemy(world: ResourceArc<GameWorld>, kind_id: u8, count: usize, hp_multiplier: f64) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
-    let base_max_hp = w.params.get_enemy(kind_id).max_hp;
+    let ep = w.params.enemies.get(kind_id as usize)
+        .ok_or_else(params_not_loaded_err)?
+        .clone();
+    let base_max_hp = ep.max_hp;
     let positions = get_spawn_positions_around_player(&mut w, count);
     let before_len = w.enemies.positions_x.len();
-    // w.enemies（可変借用）と w.params（不変借用）の同時借用を避けるため
-    // 必要なパラメータのみ先にコピーする
-    let ep = w.params.get_enemy(kind_id).clone();
     w.enemies.spawn(&positions, kind_id, &ep);
     let after_len = w.enemies.positions_x.len();
     let base_hp = base_max_hp * hp_multiplier as f32;

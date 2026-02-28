@@ -8,9 +8,9 @@ defmodule GameEngine.GameEvents do
   ## Elixir as SSoT 移行状況
   - フェーズ1完了: score, kill_count, elapsed_ms を Elixir 側で管理
   - フェーズ2完了: player_hp, player_max_hp を Elixir 側で管理
-  - フェーズ3完了: level, exp, exp_to_next を Elixir 側で管理
+  - フェーズ3完了: level, exp, exp_to_next を Playing シーン state で管理（エンジン state から除去）
                weapon_levels, level_up_pending, weapon_choices は Playing シーン state で管理
-  - フェーズ4完了: boss_hp, boss_max_hp, boss_kind_id を Elixir 側で管理
+  - フェーズ4完了: boss_hp, boss_max_hp, boss_kind_id を Playing シーン state で管理（エンジン state から除去）
   - フェーズ5完了: render_started フラグを Elixir 側で管理、UI アクションを直接受信
   """
 
@@ -44,9 +44,28 @@ defmodule GameEngine.GameEvents do
 
     # Phase 3-A: WorldBehaviour が setup_world_params/1 を実装していれば呼び出す
     world = GameEngine.Config.current_world()
+    Code.ensure_loaded(world)
     if function_exported?(world, :setup_world_params, 1) do
-      world.setup_world_params(world_ref)
+      result = world.setup_world_params(world_ref)
+      if result != :ok do
+        require Logger
+        Logger.error("[GameEvents] setup_world_params failed: #{inspect(result)}")
+      end
+    else
+      require Logger
+      Logger.warning("[GameEvents] #{inspect(world)}.setup_world_params/1 is not exported, skipping.")
     end
+
+    # Playing シーンの初期 weapon_levels に基づいて Rust 側に初期武器を追加する
+    rule = GameEngine.Config.current_rule()
+    {:ok, initial_scene_state} = rule.playing_scene().init(nil)
+    initial_weapon_levels = Map.get(initial_scene_state, :weapon_levels, %{})
+    weapon_registry = world.entity_registry().weapons
+    Enum.each(initial_weapon_levels, fn {weapon_name, _level} ->
+      if weapon_id = weapon_registry[weapon_name] do
+        GameEngine.NifBridge.add_weapon(world_ref, weapon_id)
+      end
+    end)
 
     map_id = Application.get_env(:game_server, :map, :plain)
     obstacles = GameEngine.MapLoader.obstacles_for_map(map_id)
@@ -83,14 +102,6 @@ defmodule GameEngine.GameEvents do
       # フェーズ2: プレイヤー HP を Elixir 側で管理
       player_hp:        100.0,
       player_max_hp:    100.0,
-      # フェーズ3: レベル・EXP を Elixir 側で管理
-      level:            1,
-      exp:              0,
-      exp_to_next:      exp_required_for_next(1),
-      # フェーズ4: ボス状態を Elixir 側で管理
-      boss_hp:          nil,
-      boss_max_hp:      nil,
-      boss_kind_id:     nil,
       # フェーズ5: 描画スレッド起動済みフラグ
       render_started:   render_started,
     }}
@@ -347,29 +358,34 @@ defmodule GameEngine.GameEvents do
         GameEngine.NifBridge.set_player_hp(state.world_ref, state.player_hp)
         GameEngine.NifBridge.set_elapsed_seconds(state.world_ref, state.elapsed_ms / 1000.0)
 
-        # Phase 3-B: HUD 描画用レベル・EXP 状態を Rust に注入する
-        playing_state = get_playing_scene_state(rule)
+        # HUD 描画用レベル・EXP 状態を Rust に注入する（Playing シーン state から取得）
+        playing_state    = get_playing_scene_state(rule)
         level_up_pending = Map.get(playing_state, :level_up_pending, false)
         weapon_choices   = Map.get(playing_state, :weapon_choices, []) |> Enum.map(&to_string/1)
+        scene_level      = Map.get(playing_state, :level, 1)
+        scene_exp        = Map.get(playing_state, :exp, 0)
+        scene_exp_to_next = Map.get(playing_state, :exp_to_next, 10)
         GameEngine.NifBridge.set_hud_level_state(
           state.world_ref,
-          state.level,
-          state.exp,
-          state.exp_to_next,
+          scene_level,
+          scene_exp,
+          scene_exp_to_next,
           level_up_pending,
           weapon_choices
         )
 
-        if state.boss_hp != nil do
-          GameEngine.NifBridge.set_boss_hp(state.world_ref, state.boss_hp)
+        scene_boss_hp = Map.get(playing_state, :boss_hp)
+        if scene_boss_hp != nil do
+          GameEngine.NifBridge.set_boss_hp(state.world_ref, scene_boss_hp)
         end
 
         state = maybe_set_input_and_broadcast(state, mod, physics_scenes, events)
 
         context = build_context(state, now, elapsed)
 
-        # Phase 3-B: ボスAI制御（ボスが存在する場合のみ）
-        if state.boss_kind_id != nil do
+        # ボスAI制御（ボスが存在する場合のみ）
+        scene_boss_kind_id = Map.get(playing_state, :boss_kind_id)
+        if scene_boss_kind_id != nil do
           boss_state = GameEngine.NifBridge.get_boss_state(state.world_ref)
           if function_exported?(rule, :update_boss_ai, 2) do
             rule.update_boss_ai(context, boss_state)
@@ -394,14 +410,16 @@ defmodule GameEngine.GameEvents do
     Enum.reduce(events, state, &apply_event/2)
   end
 
-  # Phase 3-B/3-C: EnemyKilled でスコア・kill_count を積算し、ポップアップ表示・アイテムドロップを処理する
+  # EnemyKilled でスコア・kill_count を積算し、ポップアップ表示・アイテムドロップを処理する
   # x_bits/y_bits は f32::to_bits() でエンコードされた撃破座標
   defp apply_event({:enemy_killed, enemy_kind, x_bits, y_bits, _}, state) do
     exp = GameContent.EntityParams.enemy_exp_reward(enemy_kind)
     x = bits_to_f32(x_bits)
     y = bits_to_f32(y_bits)
     rule = current_rule()
-    {state, score_delta} = apply_kill_rewards(state, exp)
+    scene = rule.playing_scene()
+    {state, score_delta} = apply_kill_score(state, exp)
+    update_playing_scene_state(rule, &scene.accumulate_exp(&1, exp))
     GameEngine.NifBridge.add_score_popup(state.world_ref, x, y, score_delta)
     if function_exported?(rule, :on_entity_removed, 4) do
       rule.on_entity_removed(state.world_ref, enemy_kind, x, y)
@@ -409,14 +427,19 @@ defmodule GameEngine.GameEvents do
     state
   end
 
-  # Phase 3-B/3-C: BossDefeated でスコア・kill_count を積算し、ポップアップ表示・アイテムドロップを処理する
+  # BossDefeated でスコア・kill_count を積算し、ポップアップ表示・アイテムドロップを処理する
   defp apply_event({:boss_defeated, boss_kind, x_bits, y_bits, _}, state) do
     exp = GameContent.EntityParams.boss_exp_reward(boss_kind)
     x = bits_to_f32(x_bits)
     y = bits_to_f32(y_bits)
     rule = current_rule()
-    {state, score_delta} = apply_kill_rewards(state, exp)
-    state = Map.merge(state, %{boss_hp: nil, boss_max_hp: nil, boss_kind_id: nil})
+    scene = rule.playing_scene()
+    {state, score_delta} = apply_kill_score(state, exp)
+    update_playing_scene_state(rule, fn s ->
+      s
+      |> scene.accumulate_exp(exp)
+      |> scene.apply_boss_defeated()
+    end)
     GameEngine.NifBridge.add_score_popup(state.world_ref, x, y, score_delta)
     if function_exported?(rule, :on_boss_defeated, 4) do
       rule.on_boss_defeated(state.world_ref, boss_kind, x, y)
@@ -424,31 +447,28 @@ defmodule GameEngine.GameEvents do
     state
   end
 
-  # フェーズ2: PlayerDamaged で Elixir 側 HP を減算
+  # PlayerDamaged で Elixir 側 HP を減算
   defp apply_event({:player_damaged, damage_x1000, _, _, _}, state) do
     damage = damage_x1000 / 1000.0
     new_hp = max(0.0, state.player_hp - damage)
     %{state | player_hp: new_hp}
   end
 
-  # フェーズ4: BossSpawn でボス状態を Elixir 側に設定
+  # BossSpawn でボス状態を Playing シーン state に設定
   defp apply_event({:boss_spawn, boss_kind, _, _, _}, state) do
-    max_hp = GameContent.EntityParams.boss_max_hp(boss_kind)
-    %{state | boss_hp: max_hp, boss_max_hp: max_hp, boss_kind_id: boss_kind}
+    rule = current_rule()
+    update_playing_scene_state(rule, &rule.playing_scene().apply_boss_spawn(&1, boss_kind))
+    state
   end
 
-  # フェーズ4: BossDamaged でボス HP を Elixir 側で減算
+  # BossDamaged でボス HP を Playing シーン state で減算
   defp apply_event({:boss_damaged, damage_x1000, _, _, _}, state) do
-    if state.boss_hp != nil do
-      damage = damage_x1000 / 1000.0
-      new_hp = max(0.0, state.boss_hp - damage)
-      %{state | boss_hp: new_hp}
-    else
-      state
-    end
+    damage = damage_x1000 / 1000.0
+    rule = current_rule()
+    update_playing_scene_state(rule, &rule.playing_scene().apply_boss_damaged(&1, damage))
+    state
   end
 
-  # その他のイベント（LevelUp は Elixir 側で検知するため無視）
   defp apply_event({:level_up_event, _, _, _, _}, state), do: state
   defp apply_event({:item_pickup, _, _, _, _}, state), do: state
   defp apply_event(_, state), do: state
@@ -459,43 +479,15 @@ defmodule GameEngine.GameEvents do
     f
   end
 
-  # 撃破報酬（スコア・kill_count・EXP）を state に一括適用する共通関数
+  # スコア・kill_count を state に適用する共通関数
   # 戻り値: {新 state, score_delta}（score_delta はポップアップ表示に使用）
-  defp apply_kill_rewards(state, exp) do
+  defp apply_kill_score(state, exp) do
     score_delta = GameContent.EntityParams.score_from_exp(exp)
     new_state =
       state
       |> Map.update!(:score, &(&1 + score_delta))
       |> Map.update!(:kill_count, &(&1 + 1))
-      |> accumulate_exp(exp)
     {new_state, score_delta}
-  end
-
-  # フェーズ3: EXP 積算とレベルアップ検知
-  defp accumulate_exp(state, exp) do
-    new_exp = state.exp + exp
-    maybe_level_up(%{state | exp: new_exp})
-  end
-
-  defp maybe_level_up(state) do
-    required = exp_required_for_next(state.level)
-
-    if state.exp >= required and required > 0 do
-      rule = current_rule()
-      playing_state = get_playing_scene_state(rule)
-      already_pending = Map.get(playing_state, :level_up_pending, false)
-
-      unless already_pending do
-        weapon_levels = Map.get(playing_state, :weapon_levels, %{})
-        choices = rule.generate_weapon_choices(weapon_levels)
-        update_playing_scene_state(rule, &rule.apply_level_up(&1, choices))
-      end
-
-      %{state | exp_to_next: exp_required_for_next(state.level + 1) - state.exp}
-    else
-      remaining = max(0, exp_required_for_next(state.level) - state.exp)
-      %{state | exp_to_next: remaining}
-    end
   end
 
   # ── 入力・ブロードキャスト ────────────────────────────────────────
@@ -522,18 +514,11 @@ defmodule GameEngine.GameEvents do
       last_spawn_ms: state.last_spawn_ms,
       frame_count:   state.frame_count,
       start_ms:      state.start_ms,
-      # フェーズ1〜4: Elixir 側の権威ある値をコンテキストに含める
       score:         state.score,
       kill_count:    state.kill_count,
       elapsed_ms:    state.elapsed_ms,
       player_hp:     state.player_hp,
       player_max_hp: state.player_max_hp,
-      level:         state.level,
-      exp:           state.exp,
-      exp_to_next:   state.exp_to_next,
-      boss_hp:       state.boss_hp,
-      boss_max_hp:   state.boss_max_hp,
-      boss_kind_id:  state.boss_kind_id,
     }
     Map.merge(current_rule().context_defaults(), base)
   end
@@ -632,9 +617,15 @@ defmodule GameEngine.GameEvents do
         get_playing_scene_weapon_levels(rule)
         |> Enum.map_join(", ", fn {w, lv} -> "#{w}:Lv#{lv}" end)
 
+      log_playing_state = get_playing_scene_state(rule)
+      log_level = Map.get(log_playing_state, :level, 1)
+      log_exp   = Map.get(log_playing_state, :exp, 0)
+      log_boss_hp     = Map.get(log_playing_state, :boss_hp)
+      log_boss_max_hp = Map.get(log_playing_state, :boss_max_hp)
+
       boss_info =
-        if state.boss_hp != nil and state.boss_max_hp != nil and state.boss_max_hp > 0 do
-          " | boss=#{Float.round(state.boss_hp / state.boss_max_hp * 100, 1)}%HP"
+        if log_boss_hp != nil and log_boss_max_hp != nil and log_boss_max_hp > 0 do
+          " | boss=#{Float.round(log_boss_hp / log_boss_max_hp * 100, 1)}%HP"
         else
           ""
         end
@@ -642,7 +633,7 @@ defmodule GameEngine.GameEvents do
       Logger.info(
         "[LOOP] #{wave} | scene=#{render_type} | enemies=#{enemy_count} | " <>
           "physics=#{Float.round(physics_ms, 2)}ms#{budget_warn} | " <>
-          "lv=#{state.level} exp=#{state.exp} | weapons=[#{weapon_info}]" <> boss_info
+          "lv=#{log_level} exp=#{log_exp} | weapons=[#{weapon_info}]" <> boss_info
       )
 
       :telemetry.execute(
@@ -657,10 +648,10 @@ defmodule GameEngine.GameEvents do
     state
   end
 
-  # フェーズ0-3: Rust 側の状態と Elixir 側の状態を比較して乖離を検出
+  # Rust 側の状態と Elixir 側の状態を比較して乖離を検出
   defp maybe_snapshot_check(state) do
     try do
-      {rust_score, _rust_level, _rust_exp, _rust_hp, _rust_elapsed, rust_kill_count} =
+      {rust_score, _rust_hp, _rust_elapsed, rust_kill_count} =
         GameEngine.NifBridge.get_full_game_state(state.world_ref)
 
       if rust_score != state.score do
@@ -710,23 +701,7 @@ defmodule GameEngine.GameEvents do
       elapsed_ms:    0,
       player_hp:     100.0,
       player_max_hp: 100.0,
-      level:         1,
-      exp:           0,
-      exp_to_next:   exp_required_for_next(1),
-      boss_hp:       nil,
-      boss_max_hp:   nil,
-      boss_kind_id:  nil,
     }
-  end
-
-  # Phase 3-B: EXP テーブルを Elixir 純粋実装に移管。
-  # Rust 側の game_simulation::util::exp_required_for_next と同一の値を返す。
-  @exp_table [0, 10, 25, 45, 70, 100, 135, 175, 220, 270]
-  defp exp_required_for_next(level) when level < 10 do
-    Enum.at(@exp_table, level)
-  end
-  defp exp_required_for_next(level) do
-    270 + (level - 9) * 50
   end
 
 end

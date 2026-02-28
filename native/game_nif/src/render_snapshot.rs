@@ -4,6 +4,7 @@
 use game_simulation::world::GameWorldInner;
 use game_render::{BossHudInfo, GamePhase, HudData, RenderFrame};
 use game_simulation::constants::{INVINCIBLE_DURATION, PLAYER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
+use game_simulation::weapon::weapon_upgrade_desc;
 
 /// `GameWorldInner` から `RenderFrame` を構築する。
 /// `get_render_data` / `get_particle_data` / `get_item_data` / `get_frame_metadata` 相当のロジックを集約。
@@ -16,19 +17,23 @@ pub fn build_render_frame(w: &GameWorldInner) -> RenderFrame {
     render_data.push((w.player.x, w.player.y, 0, anim_frame));
 
     if let Some(ref boss) = w.boss {
-        let bp = w.params.get_boss(boss.kind_id);
-        let boss_sprite_size = bp.radius * 2.0;
-        render_data.push((
-            boss.x - boss_sprite_size / 2.0,
-            boss.y - boss_sprite_size / 2.0,
-            bp.render_kind,
-            0,
-        ));
+        if let Some(bp) = w.params.bosses.get(boss.kind_id as usize) {
+            let boss_sprite_size = bp.radius * 2.0;
+            render_data.push((
+                boss.x - boss_sprite_size / 2.0,
+                boss.y - boss_sprite_size / 2.0,
+                bp.render_kind,
+                0,
+            ));
+        }
     }
 
     for i in 0..w.enemies.len() {
         if w.enemies.alive[i] {
-            let base_kind = w.params.get_enemy(w.enemies.kind_ids[i]).render_kind;
+            let base_kind = w.params.enemies
+                .get(w.enemies.kind_ids[i] as usize)
+                .map(|ep| ep.render_kind)
+                .unwrap_or(1);
             render_data.push((
                 w.enemies.positions_x[i],
                 w.enemies.positions_y[i],
@@ -77,14 +82,38 @@ pub fn build_render_frame(w: &GameWorldInner) -> RenderFrame {
     let camera_offset = (cam_x, cam_y);
 
     let boss_info = w.boss.as_ref().map(|b| BossHudInfo {
-        name:   w.params.get_boss(b.kind_id).name.clone(),
+        name:   format!("Boss {}", b.kind_id),
         hp:     b.hp,
         max_hp: b.max_hp,
     });
 
     let weapon_levels: Vec<(String, u32)> = w.weapon_slots
         .iter()
-        .map(|s| (w.params.get_weapon(s.kind_id).name.clone(), s.level))
+        .map(|s| (format!("weapon_{}", s.kind_id), s.level))
+        .collect();
+
+    // weapon_choices の各武器名に対応する weapon_id を weapon_slots から逆引きし、
+    // EntityParamTables を使ってアップグレード説明文を事前生成する。
+    // weapon_slots に存在しない武器（新規取得候補）は current_lv = 0 として扱う。
+    let weapon_upgrade_descs: Vec<Vec<String>> = w.hud_weapon_choices
+        .iter()
+        .map(|choice| {
+            // "weapon_N" 形式から kind_id を取得
+            let kind_id_opt = choice
+                .strip_prefix("weapon_")
+                .and_then(|s| s.parse::<u8>().ok());
+            match kind_id_opt {
+                Some(kind_id) => {
+                    let current_lv = w.weapon_slots
+                        .iter()
+                        .find(|s| s.kind_id == kind_id)
+                        .map(|s| s.level)
+                        .unwrap_or(0);
+                    weapon_upgrade_desc(kind_id, current_lv, &w.params)
+                }
+                None => vec!["Upgrade weapon".to_string()],
+            }
+        })
         .collect();
 
     let screen_flash_alpha = if w.player.invincible_timer > 0.0 && INVINCIBLE_DURATION > 0.0 {
@@ -106,6 +135,7 @@ pub fn build_render_frame(w: &GameWorldInner) -> RenderFrame {
         fps:              0.0,
         level_up_pending: w.hud_level_up_pending,
         weapon_choices:   w.hud_weapon_choices.clone(),
+        weapon_upgrade_descs,
         weapon_levels,
         magnet_timer:     w.magnet_timer,
         item_count:       w.items.count,
