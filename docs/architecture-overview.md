@@ -22,7 +22,7 @@ graph TB
         GC -->|依存| GE
     end
 
-    GE <-->|Rustler NIF| GNATIVE
+    GE <-->|Rustler NIF| GNIF
 
     subgraph Rust["Rust Workspace"]
         GNIF[game_nif<br/>NIF インターフェース / ゲームループ / レンダーブリッジ]

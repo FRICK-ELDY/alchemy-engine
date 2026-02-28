@@ -89,7 +89,7 @@ config :game_server, :map, :plain
 
 ### `nif_bridge.ex` — Rustler NIF ラッパー
 
-Rust NIF 関数の Elixir スタブ定義。`use Rustler` で `game_native` クレートをロードします。
+Rust NIF 関数の Elixir スタブ定義。`use Rustler` で `game_nif` クレートをロードします。
 
 ```elixir
 use Rustler, otp_app: :game_engine, crate: :game_nif, path: "../../native/game_nif"
