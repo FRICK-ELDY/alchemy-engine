@@ -127,9 +127,9 @@ defmodule GameContent.EntityParams do
 
   # Phase 3-B: ボスAI 制御用パラメータ（速度・特殊行動インターバル等）
   @boss_params %{
-    0 => %{speed: 60.0, special_interval: 5.0},
-    1 => %{speed: 200.0, special_interval: 4.0, dash_speed: 500.0, dash_duration_ms: 600},
-    2 => %{speed: 30.0, special_interval: 6.0, projectile_speed: 200.0, ...},
+    @boss_slime_king  => %{speed: 60.0, special_interval: 5.0},
+    @boss_bat_lord    => %{speed: 200.0, special_interval: 4.0, dash_speed: 500.0, dash_duration_ms: 600},
+    @boss_stone_golem => %{speed: 30.0, special_interval: 6.0, projectile_speed: 200.0, projectile_damage: 50, projectile_lifetime: 3.0},
   }
 end
 ```
@@ -207,12 +207,13 @@ graph TD
 
 ```elixir
 @impl true
-def update(context, %{timer: timer, boss_kind: boss_kind} = state) do
-  if timer <= 0.0 do
-    GameEngine.NifBridge.spawn_boss(context.world_ref, boss_kind_id)
+def update(context, %{boss_kind: boss_kind, alert_ms: alert_ms} = state) do
+  if context.now - alert_ms >= BossSystem.alert_duration_ms() do
+    kind_id = VampireSurvivorWorld.entity_registry().bosses[boss_kind]
+    GameEngine.NifBridge.spawn_boss(context.world_ref, kind_id)
     {:transition, :pop, state}
   else
-    {:continue, %{state | timer: timer - context.dt}}
+    {:continue, state}
   end
 end
 ```
