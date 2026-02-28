@@ -22,6 +22,8 @@ use super::FrameEvent;
 /// - `score`, `kill_count` → set_hud_state NIF（フェーズ1）
 /// - `params`           → set_entity_params NIF（Phase 3-A）
 /// - `map_width/height` → set_world_size NIF（Phase 3-A）
+/// - `hud_level`, `hud_exp`, `hud_exp_to_next`, `hud_level_up_pending`, `hud_weapon_choices`
+///                      → set_hud_level_state NIF（Phase 3-B: 描画専用）
 pub struct GameWorldInner {
     pub frame_id:           u32,
     pub player:             PlayerState,
@@ -68,6 +70,13 @@ pub struct GameWorldInner {
     /// Phase 3-A: マップサイズ（set_world_size NIF で注入）
     pub map_width:          f32,
     pub map_height:         f32,
+    /// Phase 3-B: HUD 描画専用フィールド（Elixir SSoT から毎フレーム注入）
+    /// ゲームロジックには使用しない。レンダリングパイプラインのみが参照する。
+    pub hud_level:              u32,
+    pub hud_exp:                u32,
+    pub hud_exp_to_next:        u32,
+    pub hud_level_up_pending:   bool,
+    pub hud_weapon_choices:     Vec<String>,
 }
 
 impl GameWorldInner {

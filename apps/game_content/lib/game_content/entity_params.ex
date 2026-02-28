@@ -19,11 +19,28 @@ defmodule GameContent.EntityParams do
   @boss_max_hp %{0 => 1000.0, 1 => 2000.0, 2 => 5000.0}
 
   # ── ボスパラメータ（Phase 3-B: ボスAI制御用）──────────────────────
-  # {boss_kind_id => %{speed, special_interval}}
+  # {boss_kind_id => %{speed, special_interval, ...}}
   @boss_params %{
-    0 => %{speed: 60.0,  special_interval: 5.0},  # Slime King
-    1 => %{speed: 200.0, special_interval: 4.0},  # Bat Lord
-    2 => %{speed: 30.0,  special_interval: 6.0},  # Stone Golem
+    # Slime King: 直進してスライムをスポーン
+    0 => %{
+      speed:            60.0,
+      special_interval: 5.0,
+    },
+    # Bat Lord: 通常直進 + 特殊行動でダッシュ（無敵）
+    1 => %{
+      speed:              200.0,
+      special_interval:   4.0,
+      dash_speed:         500.0,  # ダッシュ時の速度
+      dash_duration_ms:   600,    # ダッシュ継続時間（ms）
+    },
+    # Stone Golem: 低速直進 + 特殊行動で4方向に岩弾を発射
+    2 => %{
+      speed:                30.0,
+      special_interval:     6.0,
+      projectile_speed:     200.0,  # 岩弾の速度
+      projectile_damage:    50,     # 岩弾のダメージ
+      projectile_lifetime:  3.0,    # 岩弾の寿命（秒）
+    },
   }
 
   # スコア = EXP × この係数（physics_step.rs の score 加算ロジックと同値）

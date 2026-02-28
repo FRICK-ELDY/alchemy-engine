@@ -52,9 +52,14 @@ pub fn create_world() -> ResourceArc<GameWorld> {
         prev_player_y:      SCREEN_HEIGHT / 2.0 - PLAYER_SIZE / 2.0,
         prev_tick_ms:       0,
         curr_tick_ms:       0,
-        params:             EntityParamTables::default(),
-        map_width:          MAP_WIDTH,
-        map_height:         MAP_HEIGHT,
+        params:                 EntityParamTables::default(),
+        map_width:              MAP_WIDTH,
+        map_height:             MAP_HEIGHT,
+        hud_level:              1,
+        hud_exp:                0,
+        hud_exp_to_next:        10,
+        hud_level_up_pending:   false,
+        hud_weapon_choices:     Vec::new(),
     })))
 }
 
@@ -94,8 +99,28 @@ pub fn set_player_hp(world: ResourceArc<GameWorld>, hp: f64) -> NifResult<Atom> 
     Ok(ok())
 }
 
-/// Phase 3-B: exp/level は Elixir 側 GenServer state で管理するため、Rust 側では何もしない。
-/// 将来の拡張用に NIF インターフェースは残す。
+/// Phase 3-B: HUD 描画用のレベル・EXP 状態を Elixir 側から注入する NIF。
+/// ゲームロジックには使用しない。レンダリングパイプラインのみが参照する。
+/// weapon_choices: レベルアップ選択肢の武器名リスト（空なら選択肢なし）
+#[rustler::nif]
+pub fn set_hud_level_state(
+    world: ResourceArc<GameWorld>,
+    level: u32,
+    exp: u32,
+    exp_to_next: u32,
+    level_up_pending: bool,
+    weapon_choices: Vec<String>,
+) -> NifResult<Atom> {
+    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
+    w.hud_level            = level;
+    w.hud_exp              = exp;
+    w.hud_exp_to_next      = exp_to_next;
+    w.hud_level_up_pending = level_up_pending;
+    w.hud_weapon_choices   = weapon_choices;
+    Ok(ok())
+}
+
+/// Phase 3-B 互換: 旧 set_player_level NIF（何もしない）
 #[rustler::nif]
 pub fn set_player_level(_world: ResourceArc<GameWorld>, _level: u32) -> NifResult<Atom> {
     Ok(ok())

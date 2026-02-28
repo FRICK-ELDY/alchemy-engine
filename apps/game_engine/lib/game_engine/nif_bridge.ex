@@ -56,8 +56,10 @@ defmodule GameEngine.NifBridge do
 
   # ── Elixir SSoT 注入 NIF（毎フレーム呼ばれる）──────────────────────
   def set_player_hp(_world, _hp), do: :erlang.nif_error(:nif_not_loaded)
-  # Phase 3-B: exp は Elixir 側で管理するため引数から除外
-  def set_player_level(_world, _level), do: :erlang.nif_error(:nif_not_loaded)
+  # Phase 3-B: HUD 描画用レベル・EXP 状態を Rust に注入する NIF
+  # weapon_choices: レベルアップ選択肢の武器名リスト（空リストなら選択肢なし）
+  def set_hud_level_state(_world, _level, _exp, _exp_to_next, _level_up_pending, _weapon_choices),
+    do: :erlang.nif_error(:nif_not_loaded)
   def set_elapsed_seconds(_world, _elapsed), do: :erlang.nif_error(:nif_not_loaded)
   def set_boss_hp(_world, _hp), do: :erlang.nif_error(:nif_not_loaded)
   def set_hud_state(_world, _score, _kill_count), do: :erlang.nif_error(:nif_not_loaded)

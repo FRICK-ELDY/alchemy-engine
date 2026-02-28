@@ -70,9 +70,12 @@ defmodule GameEngine.RuleBehaviour do
   @doc """
   Phase 3-B: ボスAIをElixir側で制御するコールバック。
   フレームごとに呼び出され、ボスの移動・特殊行動を NIF 経由で指示する。
-  boss_state は %{kind_id, x, y, hp, max_hp, phase_timer} のマップ。
+
+  `boss_state` は `get_boss_state` NIF の返り値そのもの:
+  - `{:alive, kind_id, x, y, hp, max_hp, phase_timer}` — ボスが生存中
+  - `{:none, 0, 0.0, 0.0, 0.0, 0.0, 0.0}` — ボスが存在しない
   """
-  @callback update_boss_ai(context :: map(), boss_state :: map()) :: :ok
+  @callback update_boss_ai(context :: map(), boss_state :: tuple()) :: :ok
 
   @optional_callbacks on_entity_removed: 4, on_boss_defeated: 4, update_boss_ai: 2
 end

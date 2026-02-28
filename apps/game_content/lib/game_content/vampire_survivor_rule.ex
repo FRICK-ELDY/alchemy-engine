@@ -108,39 +108,45 @@ defmodule GameContent.VampireSurvivorRule do
       0 ->
         {vx, vy} = chase_velocity(px, py, bx, by, bp.speed)
         GameEngine.NifBridge.set_boss_velocity(world_ref, vx, vy)
-        if phase_timer - dt <= 0.0 do
+        new_timer = if phase_timer - dt <= 0.0 do
           spawn_slimes_around(world_ref, bx, by)
-          GameEngine.NifBridge.set_boss_phase_timer(world_ref, bp.special_interval)
+          bp.special_interval
         else
-          GameEngine.NifBridge.set_boss_phase_timer(world_ref, phase_timer - dt)
+          phase_timer - dt
         end
+        GameEngine.NifBridge.set_boss_phase_timer(world_ref, new_timer)
 
       # BatLord: 通常時はプレイヤーに向かって直進、特殊行動でダッシュ（無敵）
       1 ->
         {vx, vy} = chase_velocity(px, py, bx, by, bp.speed)
         GameEngine.NifBridge.set_boss_velocity(world_ref, vx, vy)
-        if phase_timer - dt <= 0.0 do
-          {dvx, dvy} = chase_velocity(px, py, bx, by, 500.0)
+        new_timer = if phase_timer - dt <= 0.0 do
+          {dvx, dvy} = chase_velocity(px, py, bx, by, bp.dash_speed)
           GameEngine.NifBridge.set_boss_velocity(world_ref, dvx, dvy)
           GameEngine.NifBridge.set_boss_invincible(world_ref, true)
-          GameEngine.NifBridge.set_boss_phase_timer(world_ref, bp.special_interval)
-          Process.send_after(self(), {:boss_dash_end, world_ref}, 600)
+          Process.send_after(self(), {:boss_dash_end, world_ref}, bp.dash_duration_ms)
+          bp.special_interval
         else
-          GameEngine.NifBridge.set_boss_phase_timer(world_ref, phase_timer - dt)
+          phase_timer - dt
         end
+        GameEngine.NifBridge.set_boss_phase_timer(world_ref, new_timer)
 
       # StoneGolem: プレイヤーに向かって直進、特殊行動で4方向に岩弾を発射
       2 ->
         {vx, vy} = chase_velocity(px, py, bx, by, bp.speed)
         GameEngine.NifBridge.set_boss_velocity(world_ref, vx, vy)
-        if phase_timer - dt <= 0.0 do
+        new_timer = if phase_timer - dt <= 0.0 do
           for {dx, dy} <- [{1.0, 0.0}, {-1.0, 0.0}, {0.0, 1.0}, {0.0, -1.0}] do
-            GameEngine.NifBridge.fire_boss_projectile(world_ref, dx, dy, 200.0, 50, 3.0)
+            GameEngine.NifBridge.fire_boss_projectile(
+              world_ref, dx, dy,
+              bp.projectile_speed, bp.projectile_damage, bp.projectile_lifetime
+            )
           end
-          GameEngine.NifBridge.set_boss_phase_timer(world_ref, bp.special_interval)
+          bp.special_interval
         else
-          GameEngine.NifBridge.set_boss_phase_timer(world_ref, phase_timer - dt)
+          phase_timer - dt
         end
+        GameEngine.NifBridge.set_boss_phase_timer(world_ref, new_timer)
 
       _ -> :ok
     end

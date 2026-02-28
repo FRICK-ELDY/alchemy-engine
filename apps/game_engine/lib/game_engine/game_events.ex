@@ -348,8 +348,20 @@ defmodule GameEngine.GameEvents do
 
         GameEngine.NifBridge.set_hud_state(state.world_ref, state.score, state.kill_count)
         GameEngine.NifBridge.set_player_hp(state.world_ref, state.player_hp)
-        GameEngine.NifBridge.set_player_level(state.world_ref, state.level)
         GameEngine.NifBridge.set_elapsed_seconds(state.world_ref, state.elapsed_ms / 1000.0)
+
+        # Phase 3-B: HUD 描画用レベル・EXP 状態を Rust に注入する
+        playing_state = get_playing_scene_state(rule)
+        level_up_pending = Map.get(playing_state, :level_up_pending, false)
+        weapon_choices   = Map.get(playing_state, :weapon_choices, []) |> Enum.map(&to_string/1)
+        GameEngine.NifBridge.set_hud_level_state(
+          state.world_ref,
+          state.level,
+          state.exp,
+          state.exp_to_next,
+          level_up_pending,
+          weapon_choices
+        )
 
         if state.boss_hp != nil do
           GameEngine.NifBridge.set_boss_hp(state.world_ref, state.boss_hp)
