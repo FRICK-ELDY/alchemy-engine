@@ -4,7 +4,6 @@
 use game_simulation::world::GameWorldInner;
 use game_render::{BossHudInfo, GamePhase, HudData, RenderFrame};
 use game_simulation::constants::{INVINCIBLE_DURATION, PLAYER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
-use game_simulation::entity_params::{BossParams, EnemyParams, WeaponParams};
 use game_simulation::util::exp_required_for_next;
 
 /// `GameWorldInner` から `RenderFrame` を構築する。
@@ -18,7 +17,7 @@ pub fn build_render_frame(w: &GameWorldInner) -> RenderFrame {
     render_data.push((w.player.x, w.player.y, 0, anim_frame));
 
     if let Some(ref boss) = w.boss {
-        let bp = BossParams::get(boss.kind_id);
+        let bp = w.params.get_boss(boss.kind_id);
         let boss_sprite_size = bp.radius * 2.0;
         render_data.push((
             boss.x - boss_sprite_size / 2.0,
@@ -30,7 +29,7 @@ pub fn build_render_frame(w: &GameWorldInner) -> RenderFrame {
 
     for i in 0..w.enemies.len() {
         if w.enemies.alive[i] {
-            let base_kind = EnemyParams::get(w.enemies.kind_ids[i]).render_kind;
+            let base_kind = w.params.get_enemy(w.enemies.kind_ids[i]).render_kind;
             render_data.push((
                 w.enemies.positions_x[i],
                 w.enemies.positions_y[i],
@@ -80,14 +79,14 @@ pub fn build_render_frame(w: &GameWorldInner) -> RenderFrame {
 
     let exp_to_next = exp_required_for_next(w.level).saturating_sub(w.exp);
     let boss_info = w.boss.as_ref().map(|b| BossHudInfo {
-        name:   BossParams::get(b.kind_id).name.to_string(),
+        name:   w.params.get_boss(b.kind_id).name.clone(),
         hp:     b.hp,
         max_hp: b.max_hp,
     });
 
     let weapon_levels: Vec<(String, u32)> = w.weapon_slots
         .iter()
-        .map(|s| (WeaponParams::get(s.kind_id).name.to_string(), s.level))
+        .map(|s| (w.params.get_weapon(s.kind_id).name.clone(), s.level))
         .collect();
 
     let screen_flash_alpha = if w.player.invincible_timer > 0.0 && INVINCIBLE_DURATION > 0.0 {

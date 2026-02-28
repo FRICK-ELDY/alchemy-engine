@@ -1,9 +1,9 @@
 //! Path: native/game_simulation/src/world/boss.rs
 //! Summary: ボス状態（BossState）
 
-use crate::entity_params::BossParams;
+use crate::entity_params::EntityParamTables;
 
-/// ボス状態（1.4.7: kind_id で参照。0=SlimeKing, 1=BatLord, 2=StoneGolem）
+/// ボス状態（kind_id: u8 で参照）
 pub struct BossState {
     pub kind_id:          u8,
     pub x:                f32,
@@ -20,20 +20,21 @@ pub struct BossState {
 }
 
 impl BossState {
-    pub fn new(kind_id: u8, x: f32, y: f32) -> Self {
-        let params = BossParams::get(kind_id);
+    /// `params` は `GameWorldInner::params` を渡す。
+    pub fn new(kind_id: u8, x: f32, y: f32, params: &EntityParamTables) -> Self {
+        let bp = params.get_boss(kind_id);
         Self {
             kind_id,
             x, y,
-            hp: params.max_hp,
-            max_hp: params.max_hp,
-            phase_timer: params.special_interval,
-            invincible: false,
+            hp:               bp.max_hp,
+            max_hp:           bp.max_hp,
+            phase_timer:      bp.special_interval,
+            invincible:       false,
             invincible_timer: 0.0,
-            is_dashing: false,
-            dash_timer: 0.0,
-            dash_vx: 0.0,
-            dash_vy: 0.0,
+            is_dashing:       false,
+            dash_timer:       0.0,
+            dash_vx:          0.0,
+            dash_vy:          0.0,
         }
     }
 }

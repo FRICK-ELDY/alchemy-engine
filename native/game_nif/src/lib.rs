@@ -1,9 +1,6 @@
 //! Path: native/game_nif/src/lib.rs
 //! Summary: NIF エントリ・モジュール宣言・rustler::init のみ
 
-pub use game_simulation::boss::BossKind;
-pub use game_simulation::enemy::EnemyKind;
-
 rustler::atoms! {
     ok,
     slime,

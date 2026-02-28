@@ -3,7 +3,6 @@
 
 use super::util::lock_poisoned_err;
 use game_simulation::world::GameWorld;
-use game_simulation::entity_params::WeaponParams;
 use game_simulation::util::exp_required_for_next;
 use rustler::{Atom, NifResult, ResourceArc};
 
@@ -98,7 +97,7 @@ pub fn get_level_up_data(world: ResourceArc<GameWorld>) -> NifResult<(u32, u32, 
 pub fn get_weapon_levels(world: ResourceArc<GameWorld>) -> NifResult<Vec<(String, u32)>> {
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;
     Ok(w.weapon_slots.iter()
-        .map(|s| (WeaponParams::get(s.kind_id).name.to_string(), s.level))
+        .map(|s| (w.params.get_weapon(s.kind_id).name.clone(), s.level))
         .collect())
 }
 

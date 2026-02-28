@@ -1,15 +1,14 @@
 use crate::world::GameWorldInner;
-use crate::entity_params::EnemyParams;
 
 /// 1.5.2: 敵が障害物と重なっている場合に押し出す（Ghost はスキップ）
 pub(crate) fn resolve_obstacles_enemy(w: &mut GameWorldInner) {
     let collision = &w.collision;
     let buf = &mut w.obstacle_query_buf;
     for i in 0..w.enemies.len() {
-        if !w.enemies.alive[i] || EnemyParams::passes_through_obstacles(w.enemies.kind_ids[i]) {
+        if !w.enemies.alive[i] || w.params.enemy_passes_obstacles(w.enemies.kind_ids[i]) {
             continue;
         }
-        let r = EnemyParams::get(w.enemies.kind_ids[i]).radius;
+        let r = w.params.get_enemy(w.enemies.kind_ids[i]).radius;
         let cx = w.enemies.positions_x[i] + r;
         let cy = w.enemies.positions_y[i] + r;
         collision.query_static_nearby_into(cx, cy, r, buf);

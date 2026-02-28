@@ -4,8 +4,7 @@
 use super::util::lock_poisoned_err;
 use game_simulation::game_logic::systems::spawn::get_spawn_positions_around_player;
 use game_simulation::world::{BossState, FrameEvent, GameWorld};
-use game_simulation::constants::{PLAYER_RADIUS, SCREEN_HEIGHT, SCREEN_WIDTH};
-use game_simulation::entity_params::{BossParams, EnemyParams};
+use game_simulation::constants::PLAYER_RADIUS;
 use game_simulation::weapon::{WeaponSlot, MAX_WEAPON_LEVEL, MAX_WEAPON_SLOTS};
 use rustler::{Atom, NifResult, ResourceArc};
 
@@ -34,13 +33,14 @@ pub fn skip_level_up(world: ResourceArc<GameWorld>) -> NifResult<Atom> {
 pub fn spawn_boss(world: ResourceArc<GameWorld>, kind_id: u8) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
     if w.boss.is_some() { return Ok(ok()); }
-    if kind_id <= 2 {
-        let bp = BossParams::get(kind_id);
+    if (kind_id as usize) < w.params.bosses.len() {
+        let bp = w.params.get_boss(kind_id).clone();
         let px = w.player.x + PLAYER_RADIUS;
         let py = w.player.y + PLAYER_RADIUS;
-        let bx = (px + 600.0).min(SCREEN_WIDTH  - bp.radius);
-        let by = py.clamp(bp.radius, SCREEN_HEIGHT - bp.radius);
-        w.boss = Some(BossState::new(kind_id, bx, by));
+        let bx = (px + 600.0).min(w.map_width  - bp.radius);
+        let by = py.clamp(bp.radius, w.map_height - bp.radius);
+        let params_clone = w.params.clone();
+        w.boss = Some(BossState::new(kind_id, bx, by, &params_clone));
         w.frame_events.push(FrameEvent::BossSpawn { boss_kind: kind_id });
     }
     Ok(ok())
@@ -49,17 +49,18 @@ pub fn spawn_boss(world: ResourceArc<GameWorld>, kind_id: u8) -> NifResult<Atom>
 #[rustler::nif]
 pub fn spawn_elite_enemy(world: ResourceArc<GameWorld>, kind_id: u8, count: usize, hp_multiplier: f64) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
-    let ep = EnemyParams::get(kind_id);
+    let base_max_hp = w.params.get_enemy(kind_id).max_hp;
     let positions = get_spawn_positions_around_player(&mut w, count);
     let before_len = w.enemies.positions_x.len();
-    w.enemies.spawn(&positions, kind_id);
+    let params_clone = w.params.clone();
+    w.enemies.spawn(&positions, kind_id, &params_clone);
     let after_len = w.enemies.positions_x.len();
-    let base_hp = ep.max_hp * hp_multiplier as f32;
+    let base_hp = base_max_hp * hp_multiplier as f32;
     let mut applied = 0;
     for i in (0..after_len).rev() {
         if applied >= count { break; }
         if w.enemies.alive[i] && w.enemies.kind_ids[i] == kind_id {
-            if i >= before_len || (w.enemies.hp[i] - ep.max_hp).abs() < 0.01 {
+            if i >= before_len || (w.enemies.hp[i] - base_max_hp).abs() < 0.01 {
                 w.enemies.hp[i] = base_hp;
                 applied += 1;
             }

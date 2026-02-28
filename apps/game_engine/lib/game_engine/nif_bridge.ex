@@ -50,6 +50,14 @@ defmodule GameEngine.NifBridge do
   def set_boss_hp(_world, _hp), do: :erlang.nif_error(:nif_not_loaded)
   def set_hud_state(_world, _score, _kill_count), do: :erlang.nif_error(:nif_not_loaded)
 
+  # ── Phase 3-A: World パラメータ注入 NIF ──────────────────────────
+  # ワールド生成後に一度だけ呼び出す。
+  def set_world_size(_world, _width, _height), do: :erlang.nif_error(:nif_not_loaded)
+  # enemies: [{max_hp, speed, radius, exp_reward, damage_per_sec, render_kind, passes_obstacles}]
+  # weapons: [{cooldown, damage, as_u8, name, bullet_table_or_nil}]
+  # bosses:  [{max_hp, speed, radius, exp_reward, damage_per_sec, render_kind, special_interval}]
+  def set_entity_params(_world, _enemies, _weapons, _bosses), do: :erlang.nif_error(:nif_not_loaded)
+
   # ── EXP テーブル（SSoT: game_simulation::util::exp_required_for_next）──
   def exp_required_for_next_nif(_level), do: :erlang.nif_error(:nif_not_loaded)
 

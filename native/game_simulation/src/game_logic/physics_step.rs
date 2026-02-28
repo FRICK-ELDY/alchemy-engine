@@ -14,9 +14,8 @@ use super::systems::weapons::update_weapon_attacks;
 use crate::world::{FrameEvent, GameWorldInner};
 use crate::constants::{
     ENEMY_SEPARATION_FORCE, ENEMY_SEPARATION_RADIUS, FRAME_BUDGET_MS, INVINCIBLE_DURATION,
-    MAP_HEIGHT, MAP_WIDTH, PLAYER_RADIUS, PLAYER_SIZE, PLAYER_SPEED,
+    PLAYER_RADIUS, PLAYER_SIZE, PLAYER_SPEED,
 };
-use crate::entity_params::EnemyParams;
 use crate::physics::obstacle_resolve;
 use crate::physics::separation::apply_separation;
 
@@ -53,8 +52,8 @@ pub fn physics_step_inner(w: &mut GameWorldInner, delta_ms: f64) {
         &mut w.obstacle_query_buf,
     );
 
-    w.player.x = w.player.x.clamp(0.0, MAP_WIDTH  - PLAYER_SIZE);
-    w.player.y = w.player.y.clamp(0.0, MAP_HEIGHT - PLAYER_SIZE);
+    w.player.x = w.player.x.clamp(0.0, w.map_width  - PLAYER_SIZE);
+    w.player.y = w.player.y.clamp(0.0, w.map_height - PLAYER_SIZE);
 
     // Chase AI（x86_64 では SIMD 版、それ以外は rayon 版）
     let px = w.player.x + PLAYER_RADIUS;
@@ -88,7 +87,7 @@ pub fn physics_step_inner(w: &mut GameWorldInner, delta_ms: f64) {
     for idx in w.spatial_query_buf.iter().copied() {
         if !w.enemies.alive[idx] { continue; }
         let kind_id = w.enemies.kind_ids[idx];
-        let params = EnemyParams::get(kind_id);
+        let params = w.params.get_enemy(kind_id);
         let enemy_r = params.radius;
         let hit_radius = PLAYER_RADIUS + enemy_r;
         let ex = w.enemies.positions_x[idx] + enemy_r;

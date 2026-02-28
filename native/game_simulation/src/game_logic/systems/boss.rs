@@ -1,6 +1,6 @@
 use crate::world::{FrameEvent, GameWorldInner, BULLET_KIND_ROCK};
-use crate::constants::{BULLET_RADIUS, INVINCIBLE_DURATION, PLAYER_RADIUS, SCREEN_HEIGHT, SCREEN_WIDTH};
-use crate::entity_params::{BossParams, BOSS_ID_BAT_LORD, BOSS_ID_SLIME_KING, BOSS_ID_STONE_GOLEM};
+use crate::constants::{BULLET_RADIUS, INVINCIBLE_DURATION, PLAYER_RADIUS};
+use crate::entity_params::{BOSS_ID_BAT_LORD, BOSS_ID_SLIME_KING, BOSS_ID_STONE_GOLEM};
 use crate::item::ItemKind;
 
 /// ボス更新（Elixir が spawn_boss で生成したボスを毎フレーム動かす）
@@ -38,10 +38,18 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
     };
 
     // フェーズ1: boss の移動・タイマー更新（boss のみを借用）
-    if let Some(boss) = w.boss.as_mut() {
+    if w.boss.is_some() {
         // プレイヤー座標をコピーして boss 借用前に取得
         let px = w.player.x + PLAYER_RADIUS;
         let py = w.player.y + PLAYER_RADIUS;
+
+        // boss.kind_id を先にコピーして借用競合を回避
+        let boss_kind_id = w.boss.as_ref().unwrap().kind_id;
+        let bp = w.params.get_boss(boss_kind_id).clone();
+        let map_w = w.map_width;
+        let map_h = w.map_height;
+
+        let boss = w.boss.as_mut().unwrap();
 
         // 無敵タイマー
         if boss.invincible_timer > 0.0 {
@@ -50,7 +58,6 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
         }
 
         // 移動 AI
-        let bp = BossParams::get(boss.kind_id);
         match boss.kind_id {
             BOSS_ID_SLIME_KING | BOSS_ID_STONE_GOLEM => {
                 let ddx = px - boss.x;
@@ -79,8 +86,8 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
             }
             _ => {}
         }
-        boss.x = boss.x.clamp(bp.radius, SCREEN_WIDTH - bp.radius);
-        boss.y = boss.y.clamp(bp.radius, SCREEN_HEIGHT - bp.radius);
+        boss.x = boss.x.clamp(bp.radius, map_w - bp.radius);
+        boss.y = boss.y.clamp(bp.radius, map_h - bp.radius);
 
         // 特殊行動タイマー
         boss.phase_timer -= dt;
@@ -196,7 +203,8 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
                 (eff.special_x + angle.cos() * 120.0, eff.special_y + angle.sin() * 120.0)
             })
             .collect();
-        w.enemies.spawn(&positions, 0); // Slime
+        let params_clone = w.params.clone();
+        w.enemies.spawn(&positions, 0, &params_clone); // Slime
         w.particles.emit(eff.special_x, eff.special_y, 16, [0.2, 1.0, 0.2, 1.0]);
     }
     if eff.spawn_rocks {
