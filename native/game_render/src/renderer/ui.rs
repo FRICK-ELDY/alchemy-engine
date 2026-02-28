@@ -1,5 +1,5 @@
 use super::{GamePhase, GameUiState, HudData};
-use game_core::weapon::weapon_upgrade_desc;
+use game_simulation::weapon::weapon_upgrade_desc;
 
 /// HUD を描画し、ボタン操作があった場合はアクション文字列を返す。
 /// - レベルアップ選択: 武器名

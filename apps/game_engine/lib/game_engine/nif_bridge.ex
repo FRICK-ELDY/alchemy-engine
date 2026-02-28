@@ -1,14 +1,14 @@
 defmodule GameEngine.NifBridge do
   @moduledoc """
   Rust NIF のラッパーモジュール。
-  `use Rustler` により、コンパイル時に `native/game_native` クレートが
+  `use Rustler` により、コンパイル時に `native/game_nif` クレートが
   自動的にビルドされ、`.dll` がロードされる。
   """
 
   use Rustler,
     otp_app: :game_engine,
-    crate: :game_native,
-    path: "../../native/game_native"
+    crate: :game_nif,
+    path: "../../native/game_nif"
 
   # ── control ───────────────────────────────────────────────────────
   def create_world() do
@@ -48,6 +48,9 @@ defmodule GameEngine.NifBridge do
   def set_player_level(_world, _level, _exp), do: :erlang.nif_error(:nif_not_loaded)
   def set_elapsed_seconds(_world, _elapsed), do: :erlang.nif_error(:nif_not_loaded)
   def set_boss_hp(_world, _hp), do: :erlang.nif_error(:nif_not_loaded)
+
+  # ── Push 型同期 NIF ────────────────────────────────────────────
+  def push_tick(_world, _dx, _dy, _delta_ms), do: :erlang.nif_error(:nif_not_loaded)
 
   # ── 移行検証用（フェーズ0）───────────────────────────────────────
   def get_full_game_state(_world), do: :erlang.nif_error(:nif_not_loaded)

@@ -2,9 +2,10 @@
 name = "game_render"
 version = "0.1.0"
 edition = "2021"
+description = "WGPU描画パイプライン・ウィンドウ管理・OS入力イベント処理"
 
 [dependencies]
-game_core = { path = "../game_core" }
+game_simulation = { path = "../game_simulation" }
 wgpu = "24"
 winit = "0.30.12"
 bytemuck = { version = "1", features = ["derive"] }
@@ -12,3 +13,5 @@ image = "0.25"
 egui = "0.31"
 egui-wgpu = "0.31"
 egui-winit = "0.31"
+pollster = "0.3"
+log = "0.4"
