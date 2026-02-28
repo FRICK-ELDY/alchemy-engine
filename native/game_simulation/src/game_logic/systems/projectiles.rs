@@ -53,8 +53,6 @@ pub(crate) fn update_projectiles_and_enemy_hits(w: &mut GameWorldInner, dt: f32)
                 w.enemies.hp[ei] -= dmg as f32;
                 if w.enemies.hp[ei] <= 0.0 {
                     w.enemies.kill(ei);
-                    // score_popups は描画用なので Rust 側で管理を継続する
-                    w.score_popups.push((ex, ey - 20.0, ep.exp_reward * 2, 0.8));
                     w.frame_events.push(FrameEvent::EnemyKilled { enemy_kind: kind_id, x: ex, y: ey });
                     w.particles.emit(ex, ey, 8, ep.particle_color);
                 } else {

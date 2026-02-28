@@ -115,7 +115,6 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
 
     if eff.boss_killed {
         let boss_k = w.boss.as_ref().map(|b| b.kind_id).unwrap_or(0);
-        w.score_popups.push((eff.kill_x, eff.kill_y - 20.0, eff.exp_reward * 2, 0.8));
         w.frame_events.push(FrameEvent::BossDefeated { boss_kind: boss_k, x: eff.kill_x, y: eff.kill_y });
         w.particles.emit(eff.kill_x, eff.kill_y, 40, [1.0, 0.5, 0.0, 1.0]);
         w.boss = None;

@@ -112,7 +112,6 @@ defmodule GameEngine.GameEvents do
 
     case GameEngine.SceneManager.current() do
       {:ok, %{module: ^level_up_scene}} ->
-        GameEngine.NifBridge.skip_level_up(state.world_ref)
         Logger.info("[LEVEL UP] Skipped weapon selection -> resuming")
         GameEngine.NifBridge.resume_physics(state.control_ref)
         GameEngine.SceneManager.pop_scene()
@@ -226,7 +225,6 @@ defmodule GameEngine.GameEvents do
     is_level_up_pending = Map.get(playing_state, :level_up_pending, false)
 
     if is_level_up_pending do
-      GameEngine.NifBridge.skip_level_up(state.world_ref)
       Logger.info("[LEVEL UP] Skipped from renderer UI")
       update_playing_scene_state(rule, &rule.apply_level_up_skipped/1)
       maybe_close_level_up_scene(state)
@@ -279,7 +277,6 @@ defmodule GameEngine.GameEvents do
 
       true ->
         Logger.warning("[LEVEL UP] Renderer weapon '#{weapon_name}' not available and no valid fallback. Skipping.")
-        GameEngine.NifBridge.skip_level_up(world_ref)
         update_playing_scene_state(rule, &rule.apply_level_up_skipped/1)
         :__skip__
     end
@@ -397,29 +394,30 @@ defmodule GameEngine.GameEvents do
     Enum.reduce(events, state, &apply_event/2)
   end
 
-  # Phase 3-B: EnemyKilled でスコア・kill_count を Elixir 側で積算し、アイテムドロップを処理する
+  # Phase 3-B/3-C: EnemyKilled でスコア・kill_count を積算し、ポップアップ表示・アイテムドロップを処理する
   # x_bits/y_bits は f32::to_bits() でエンコードされた撃破座標
   defp apply_event({:enemy_killed, enemy_kind, x_bits, y_bits, _}, state) do
     exp = GameContent.EntityParams.enemy_exp_reward(enemy_kind)
     x = bits_to_f32(x_bits)
     y = bits_to_f32(y_bits)
     rule = current_rule()
-    state = apply_kill_rewards(state, exp)
+    {state, score_delta} = apply_kill_rewards(state, exp)
+    GameEngine.NifBridge.add_score_popup(state.world_ref, x, y, score_delta)
     if function_exported?(rule, :on_entity_removed, 4) do
       rule.on_entity_removed(state.world_ref, enemy_kind, x, y)
     end
     state
   end
 
-  # Phase 3-B: BossDefeated でスコア・kill_count を Elixir 側で積算し、アイテムドロップを処理する
+  # Phase 3-B/3-C: BossDefeated でスコア・kill_count を積算し、ポップアップ表示・アイテムドロップを処理する
   defp apply_event({:boss_defeated, boss_kind, x_bits, y_bits, _}, state) do
     exp = GameContent.EntityParams.boss_exp_reward(boss_kind)
     x = bits_to_f32(x_bits)
     y = bits_to_f32(y_bits)
     rule = current_rule()
-    state = state
-      |> apply_kill_rewards(exp)
-      |> Map.merge(%{boss_hp: nil, boss_max_hp: nil, boss_kind_id: nil})
+    {state, score_delta} = apply_kill_rewards(state, exp)
+    state = Map.merge(state, %{boss_hp: nil, boss_max_hp: nil, boss_kind_id: nil})
+    GameEngine.NifBridge.add_score_popup(state.world_ref, x, y, score_delta)
     if function_exported?(rule, :on_boss_defeated, 4) do
       rule.on_boss_defeated(state.world_ref, boss_kind, x, y)
     end
@@ -462,12 +460,15 @@ defmodule GameEngine.GameEvents do
   end
 
   # 撃破報酬（スコア・kill_count・EXP）を state に一括適用する共通関数
+  # 戻り値: {新 state, score_delta}（score_delta はポップアップ表示に使用）
   defp apply_kill_rewards(state, exp) do
     score_delta = GameContent.EntityParams.score_from_exp(exp)
-    state
-    |> Map.update!(:score, &(&1 + score_delta))
-    |> Map.update!(:kill_count, &(&1 + 1))
-    |> accumulate_exp(exp)
+    new_state =
+      state
+      |> Map.update!(:score, &(&1 + score_delta))
+      |> Map.update!(:kill_count, &(&1 + 1))
+      |> accumulate_exp(exp)
+    {new_state, score_delta}
   end
 
   # フェーズ3: EXP 積算とレベルアップ検知
@@ -564,7 +565,6 @@ defmodule GameEngine.GameEvents do
           Logger.info("[LEVEL UP] Auto-selected: #{inspect(first)} -> resuming")
           update_playing_scene_state(rule, &rule.apply_weapon_selected(&1, first))
         _ ->
-          GameEngine.NifBridge.skip_level_up(state.world_ref)
           Logger.info("[LEVEL UP] Auto-skipped (no choices) -> resuming")
           update_playing_scene_state(rule, &rule.apply_level_up_skipped/1)
       end

@@ -64,7 +64,6 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
 
             if weapon_choices == [] do
               Logger.info("[LEVEL UP] All weapons at max level - skipping weapon selection")
-              GameEngine.NifBridge.skip_level_up(world_ref)
               {:continue, state}
             else
               choice_labels =
