@@ -36,8 +36,8 @@ defmodule GameEngine.StressMonitor do
 
       {:ok, %{enemy_count: enemy_count, bullet_count: bullet_count, physics_ms: physics_ms,
               hud_data: {hp, max_hp, score, elapsed_s}}} ->
-        rule_module = GameEngine.Config.current_rule()
-        wave = rule_module.wave_label(elapsed_s)
+        content_module = GameEngine.Config.current()
+        wave = content_module.wave_label(elapsed_s)
         overrun = physics_ms > @frame_budget_ms
 
         new_state = %{state |

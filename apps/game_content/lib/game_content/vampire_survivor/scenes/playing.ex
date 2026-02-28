@@ -152,12 +152,12 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
     required = exp_required_for_next(state.level)
 
     if state.exp >= required and required > 0 do
-      rule = GameEngine.Config.current_rule()
+      content = GameEngine.Config.current()
       already_pending = Map.get(state, :level_up_pending, false)
 
       state =
         unless already_pending do
-          choices = rule.generate_weapon_choices(state.weapon_levels)
+          choices = content.generate_weapon_choices(state.weapon_levels)
           apply_level_up(state, choices)
         else
           state

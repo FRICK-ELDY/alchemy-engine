@@ -1,19 +1,22 @@
-defmodule GameContent.VampireSurvivorWorld do
+defmodule GameContent.VampireSurvivor.SpawnComponent do
   @moduledoc """
-  ヴァンパイアサバイバーの WorldBehaviour 実装。
+  ワールド初期化・エンティティ登録を担うコンポーネント。
 
-  マップ・エンティティ種別・アセットパスを定義する。
-  同じ World に対して複数の Rule を適用できる。
+  旧 `GameContent.VampireSurvivorWorld` の責務を引き継ぐ。
   """
-  @behaviour GameEngine.WorldBehaviour
+  @behaviour GameEngine.Component
 
   @map_width  4096.0
   @map_height 4096.0
 
-  @impl GameEngine.WorldBehaviour
+  @doc "アセットファイルのベースパスを返す"
   def assets_path, do: "vampire_survivor"
 
-  @impl GameEngine.WorldBehaviour
+  @doc """
+  エンティティ種別の ID マッピングを返す。
+
+  エンジンは atom → u8 の変換にこのマッピングを使用する。
+  """
   def entity_registry do
     %{
       enemies: %{slime: 0, bat: 1, golem: 2, skeleton: 3, ghost: 4},
@@ -24,12 +27,11 @@ defmodule GameContent.VampireSurvivorWorld do
     }
   end
 
-  @doc """
-  Phase 3-A: ワールド生成後に一度だけ呼び出し、Rust 側にパラメータを注入する。
-  `world_ref` は `GameEngine.NifBridge.create_world/0` の戻り値。
-  """
-  @impl GameEngine.WorldBehaviour
-  def setup_world_params(world_ref) do
+  @doc "初期武器リストを返す"
+  def initial_weapons, do: [:magic_wand]
+
+  @impl GameEngine.Component
+  def on_ready(world_ref) do
     GameEngine.NifBridge.set_world_size(world_ref, @map_width, @map_height)
     GameEngine.NifBridge.set_entity_params(
       world_ref,
@@ -37,6 +39,15 @@ defmodule GameContent.VampireSurvivorWorld do
       weapon_params(),
       boss_params()
     )
+
+    weapon_registry = entity_registry().weapons
+    for weapon_name <- initial_weapons(),
+        weapon_id = Map.get(weapon_registry, weapon_name),
+        not is_nil(weapon_id) do
+      GameEngine.NifBridge.add_weapon(world_ref, weapon_id)
+    end
+
+    :ok
   end
 
   # ── エンティティパラメータ定義 ────────────────────────────────────

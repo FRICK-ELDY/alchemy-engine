@@ -2,19 +2,20 @@ defmodule GameEngine.Config do
   @moduledoc """
   ゲームエンジンの設定解決ヘルパー。
 
-  `:current_rule` / `:current_world` の設定キーを使用する。
+  `:current` の設定キーを使用する。
+  コンテンツモジュールは `components/0` を実装し、
+  使用する `GameEngine.Component` モジュールのリストを返す。
   """
 
-  @default_rule  GameContent.VampireSurvivorRule
-  @default_world GameContent.VampireSurvivorWorld
+  @default_content GameContent.VampireSurvivor
 
-  @doc "RuleBehaviour を実装したモジュールを返す"
-  def current_rule do
-    Application.get_env(:game_server, :current_rule, @default_rule)
+  @doc "コンテンツモジュールを返す（`components/0` を実装したモジュール）"
+  def current do
+    Application.get_env(:game_server, :current, @default_content)
   end
 
-  @doc "WorldBehaviour を実装したモジュールを返す"
-  def current_world do
-    Application.get_env(:game_server, :current_world, @default_world)
+  @doc "コンテンツが提供するコンポーネントモジュールのリストを返す"
+  def components do
+    current().components()
   end
 end
