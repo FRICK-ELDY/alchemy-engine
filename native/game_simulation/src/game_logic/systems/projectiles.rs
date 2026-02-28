@@ -1,6 +1,5 @@
 use crate::world::{FrameEvent, GameWorldInner};
 use crate::constants::BULLET_RADIUS;
-use crate::item::ItemKind;
 
 pub(crate) fn update_projectiles_and_enemy_hits(w: &mut GameWorldInner, dt: f32) {
     // ── 弾丸を移動・寿命更新 ─────────────────────────────────────
@@ -53,21 +52,11 @@ pub(crate) fn update_projectiles_and_enemy_hits(w: &mut GameWorldInner, dt: f32)
             if ddx * ddx + ddy * ddy < hit_r * hit_r {
                 w.enemies.hp[ei] -= dmg as f32;
                 if w.enemies.hp[ei] <= 0.0 {
-                    let weapon_k = w.bullets.weapon_kind[bi];
                     w.enemies.kill(ei);
                     // score_popups は描画用なので Rust 側で管理を継続する
                     w.score_popups.push((ex, ey - 20.0, ep.exp_reward * 2, 0.8));
-                    w.frame_events.push(FrameEvent::EnemyKilled { enemy_kind: kind_id, weapon_kind: weapon_k });
+                    w.frame_events.push(FrameEvent::EnemyKilled { enemy_kind: kind_id, x: ex, y: ey });
                     w.particles.emit(ex, ey, 8, ep.particle_color);
-                    let roll = w.rng.next_u32() % 100;
-                    let (item_kind, item_value) = if roll < 2 {
-                        (ItemKind::Magnet, 0)
-                    } else if roll < 7 {
-                        (ItemKind::Potion, 20)
-                    } else {
-                        (ItemKind::Gem, ep.exp_reward)
-                    };
-                    w.items.spawn(ex, ey, item_kind, item_value);
                 } else {
                     let hit_color = if piercing { [1.0, 0.4, 0.0, 1.0] } else { [1.0, 0.9, 0.3, 1.0] };
                     w.particles.emit(ex, ey, 3, hit_color);

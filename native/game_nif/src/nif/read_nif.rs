@@ -3,7 +3,6 @@
 
 use super::util::lock_poisoned_err;
 use game_simulation::world::GameWorld;
-use game_simulation::util::exp_required_for_next;
 use rustler::{Atom, NifResult, ResourceArc};
 
 use crate::{alive, none};
@@ -69,11 +68,9 @@ pub fn get_hud_data(world: ResourceArc<GameWorld>) -> NifResult<(f64, f64, u32, 
 pub fn get_frame_metadata(world: ResourceArc<GameWorld>) -> NifResult<(
     (f64, f64, u32, f64),
     (usize, usize, f64),
-    (u32, u32, bool, u32),
     (bool, f64, f64),
 )> {
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;
-    let exp_to_next = exp_required_for_next(w.level).saturating_sub(w.exp);
     let (boss_alive, boss_hp, boss_max_hp) = match &w.boss {
         Some(boss) => (true, boss.hp as f64, boss.max_hp as f64),
         None       => (false, 0.0, 0.0),
@@ -81,18 +78,11 @@ pub fn get_frame_metadata(world: ResourceArc<GameWorld>) -> NifResult<(
     Ok((
         (w.player.hp as f64, w.player_max_hp as f64, w.score, w.elapsed_seconds as f64),
         (w.enemies.count, w.bullets.count, w.last_frame_time_ms),
-        (w.exp, w.level, false, exp_to_next),
         (boss_alive, boss_hp, boss_max_hp),
     ))
 }
 
-#[rustler::nif]
-pub fn get_level_up_data(world: ResourceArc<GameWorld>) -> NifResult<(u32, u32, bool, u32)> {
-    let w = world.0.read().map_err(|_| lock_poisoned_err())?;
-    let exp_to_next = exp_required_for_next(w.level).saturating_sub(w.exp);
-    Ok((w.exp, w.level, false, exp_to_next))
-}
-
+/// Phase 3-B: 武器スロット情報を返す（weapon_name, level のリスト）
 #[rustler::nif]
 pub fn get_weapon_levels(world: ResourceArc<GameWorld>) -> NifResult<Vec<(String, u32)>> {
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;
@@ -116,6 +106,25 @@ pub fn get_boss_info(world: ResourceArc<GameWorld>) -> NifResult<(Atom, f64, f64
     })
 }
 
+/// Phase 3-B: Elixir 側の update_boss_ai コールバックに渡すボス状態を返す NIF。
+/// 戻り値: {:alive, kind_id, x, y, hp, max_hp, phase_timer} または :none
+#[rustler::nif]
+pub fn get_boss_state(world: ResourceArc<GameWorld>) -> NifResult<(Atom, u8, f64, f64, f64, f64, f64)> {
+    let w = world.0.read().map_err(|_| lock_poisoned_err())?;
+    Ok(match &w.boss {
+        Some(boss) => (
+            alive(),
+            boss.kind_id,
+            boss.x as f64,
+            boss.y as f64,
+            boss.hp as f64,
+            boss.max_hp as f64,
+            boss.phase_timer as f64,
+        ),
+        None => (none(), 0, 0.0, 0.0, 0.0, 0.0, 0.0),
+    })
+}
+
 #[rustler::nif]
 pub fn is_player_dead(world: ResourceArc<GameWorld>) -> NifResult<bool> {
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;
@@ -123,7 +132,7 @@ pub fn is_player_dead(world: ResourceArc<GameWorld>) -> NifResult<bool> {
 }
 
 #[rustler::nif]
-pub fn get_full_game_state(world: ResourceArc<GameWorld>) -> NifResult<(u32, u32, u32, f64, f64, u32)> {
+pub fn get_full_game_state(world: ResourceArc<GameWorld>) -> NifResult<(u32, f64, f64, u32)> {
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;
-    Ok((w.score, w.level, w.exp, w.player.hp as f64, w.elapsed_seconds as f64, w.kill_count))
+    Ok((w.score, w.player.hp as f64, w.elapsed_seconds as f64, w.kill_count))
 }

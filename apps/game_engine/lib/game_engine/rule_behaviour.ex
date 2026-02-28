@@ -53,4 +53,29 @@ defmodule GameEngine.RuleBehaviour do
 
   @doc "経過秒数からウェーブラベル文字列を返す（ログ用）"
   @callback wave_label(elapsed_sec :: float()) :: String.t()
+
+  @doc """
+  Phase 3-B: 敵が撃破された際に呼び出されるコールバック。
+  アイテムドロップなどのルール固有の処理を行う。
+  world_ref に対して spawn_item NIF を呼び出すことでアイテムをスポーンできる。
+  """
+  @callback on_entity_removed(world_ref :: reference(), kind_id :: non_neg_integer(), x :: float(), y :: float()) :: :ok
+
+  @doc """
+  Phase 3-B: ボスが撃破された際に呼び出されるコールバック。
+  アイテムドロップなどのルール固有の処理を行う。
+  """
+  @callback on_boss_defeated(world_ref :: reference(), boss_kind :: non_neg_integer(), x :: float(), y :: float()) :: :ok
+
+  @doc """
+  Phase 3-B: ボスAIをElixir側で制御するコールバック。
+  フレームごとに呼び出され、ボスの移動・特殊行動を NIF 経由で指示する。
+
+  `boss_state` は `get_boss_state` NIF の返り値そのもの:
+  - `{:alive, kind_id, x, y, hp, max_hp, phase_timer}` — ボスが生存中
+  - `{:none, 0, 0.0, 0.0, 0.0, 0.0, 0.0}` — ボスが存在しない
+  """
+  @callback update_boss_ai(context :: map(), boss_state :: tuple()) :: :ok
+
+  @optional_callbacks on_entity_removed: 4, on_boss_defeated: 4, update_boss_ai: 2
 end

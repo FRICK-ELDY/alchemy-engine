@@ -23,7 +23,7 @@ pub fn physics_step(world: ResourceArc<GameWorld>, delta_ms: f64) -> NifResult<u
 }
 
 #[rustler::nif]
-pub fn drain_frame_events(world: ResourceArc<GameWorld>) -> NifResult<Vec<(Atom, u32, u32)>> {
+pub fn drain_frame_events(world: ResourceArc<GameWorld>) -> NifResult<Vec<(Atom, u32, u32, u32, u32)>> {
     let wait_start = Instant::now();
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
     record_write_wait("nif.drain_frame_events", wait_start.elapsed());
@@ -60,7 +60,7 @@ fn run_rust_game_loop(
         let now = Instant::now();
         if next_tick > now { thread::sleep(next_tick - now); }
 
-        let events: Vec<(Atom, u32, u32)> = {
+        let events: Vec<(Atom, u32, u32, u32, u32)> = {
             let wait_start = Instant::now();
             let mut w = match world.0.write() {
                 Ok(guard) => guard,

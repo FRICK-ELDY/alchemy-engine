@@ -4,7 +4,6 @@
 use game_simulation::world::GameWorldInner;
 use game_render::{BossHudInfo, GamePhase, HudData, RenderFrame};
 use game_simulation::constants::{INVINCIBLE_DURATION, PLAYER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
-use game_simulation::util::exp_required_for_next;
 
 /// `GameWorldInner` から `RenderFrame` を構築する。
 /// `get_render_data` / `get_particle_data` / `get_item_data` / `get_frame_metadata` 相当のロジックを集約。
@@ -77,7 +76,6 @@ pub fn build_render_frame(w: &GameWorldInner) -> RenderFrame {
     let cam_y = w.player.y + PLAYER_SIZE / 2.0 - SCREEN_HEIGHT / 2.0;
     let camera_offset = (cam_x, cam_y);
 
-    let exp_to_next = exp_required_for_next(w.level).saturating_sub(w.exp);
     let boss_info = w.boss.as_ref().map(|b| BossHudInfo {
         name:   w.params.get_boss(b.kind_id).name.clone(),
         hp:     b.hp,
@@ -100,14 +98,14 @@ pub fn build_render_frame(w: &GameWorldInner) -> RenderFrame {
         max_hp:           w.player_max_hp,
         score:            w.score,
         elapsed_seconds:  w.elapsed_seconds,
-        level:            w.level,
-        exp:              w.exp,
-        exp_to_next,
+        level:            w.hud_level,
+        exp:              w.hud_exp,
+        exp_to_next:      w.hud_exp_to_next,
         enemy_count:      w.enemies.count,
         bullet_count:     w.bullets.count,
         fps:              0.0,
-        level_up_pending: false,
-        weapon_choices:   w.weapon_choices.clone(),
+        level_up_pending: w.hud_level_up_pending,
+        weapon_choices:   w.hud_weapon_choices.clone(),
         weapon_levels,
         magnet_timer:     w.magnet_timer,
         item_count:       w.items.count,
