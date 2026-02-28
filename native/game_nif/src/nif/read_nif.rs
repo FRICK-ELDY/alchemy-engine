@@ -82,28 +82,10 @@ pub fn get_frame_metadata(world: ResourceArc<GameWorld>) -> NifResult<(
     ))
 }
 
-/// Phase 3-B: 武器スロット情報を返す（weapon_name, level のリスト）
-#[rustler::nif]
-pub fn get_weapon_levels(world: ResourceArc<GameWorld>) -> NifResult<Vec<(String, u32)>> {
-    let w = world.0.read().map_err(|_| lock_poisoned_err())?;
-    Ok(w.weapon_slots.iter()
-        .map(|s| (w.params.get_weapon(s.kind_id).name.clone(), s.level))
-        .collect())
-}
-
 #[rustler::nif]
 pub fn get_magnet_timer(world: ResourceArc<GameWorld>) -> NifResult<f64> {
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;
     Ok(w.magnet_timer as f64)
-}
-
-#[rustler::nif]
-pub fn get_boss_info(world: ResourceArc<GameWorld>) -> NifResult<(Atom, f64, f64)> {
-    let w = world.0.read().map_err(|_| lock_poisoned_err())?;
-    Ok(match &w.boss {
-        Some(boss) => (alive(), boss.hp as f64, boss.max_hp as f64),
-        None       => (none(), 0.0, 0.0),
-    })
 }
 
 /// Phase 3-B: Elixir 側の update_boss_ai コールバックに渡すボス状態を返す NIF。

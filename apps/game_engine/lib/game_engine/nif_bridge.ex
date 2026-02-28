@@ -22,9 +22,10 @@ defmodule GameEngine.NifBridge do
   # Phase 3-B: 指定座標リストに敵をスポーンする NIF
   def spawn_enemies_at(_world, _kind, _positions), do: :erlang.nif_error(:nif_not_loaded)
   def add_weapon(_world, _weapon_name), do: :erlang.nif_error(:nif_not_loaded)
-  def skip_level_up(_world), do: :erlang.nif_error(:nif_not_loaded)
   def spawn_boss(_world, _kind), do: :erlang.nif_error(:nif_not_loaded)
   def spawn_elite_enemy(_world, _kind, _count, _hp_multiplier), do: :erlang.nif_error(:nif_not_loaded)
+  # Phase 3-C: スコアポップアップを描画用バッファに追加する NIF
+  def add_score_popup(_world, _x, _y, _value), do: :erlang.nif_error(:nif_not_loaded)
   # Phase 3-B: Elixir 側のルールがアイテムドロップを制御するための NIF
   # kind: 0=Gem, 1=Potion, 2=Magnet
   def spawn_item(_world, _x, _y, _kind, _value), do: :erlang.nif_error(:nif_not_loaded)
@@ -47,9 +48,7 @@ defmodule GameEngine.NifBridge do
   def get_enemy_count(_world), do: :erlang.nif_error(:nif_not_loaded)
   def get_hud_data(_world), do: :erlang.nif_error(:nif_not_loaded)
   def get_frame_metadata(_world), do: :erlang.nif_error(:nif_not_loaded)
-  def get_weapon_levels(_world), do: :erlang.nif_error(:nif_not_loaded)
   def get_magnet_timer(_world), do: :erlang.nif_error(:nif_not_loaded)
-  def get_boss_info(_world), do: :erlang.nif_error(:nif_not_loaded)
   # Phase 3-B: ボスAI制御用（{:alive, kind_id, x, y, hp, max_hp, phase_timer} または :none）
   def get_boss_state(_world), do: :erlang.nif_error(:nif_not_loaded)
   def is_player_dead(_world), do: :erlang.nif_error(:nif_not_loaded)

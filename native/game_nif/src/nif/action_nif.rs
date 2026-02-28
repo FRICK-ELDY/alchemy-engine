@@ -23,11 +23,6 @@ pub fn add_weapon(world: ResourceArc<GameWorld>, weapon_id: u8) -> NifResult<Ato
 }
 
 #[rustler::nif]
-pub fn skip_level_up(_world: ResourceArc<GameWorld>) -> NifResult<Atom> {
-    Ok(ok())
-}
-
-#[rustler::nif]
 pub fn spawn_boss(world: ResourceArc<GameWorld>, kind_id: u8) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
     if w.boss.is_some() { return Ok(ok()); }
@@ -88,6 +83,16 @@ pub fn fire_boss_projectile(world: ResourceArc<GameWorld>, dx: f64, dy: f64, spe
         use game_simulation::world::BULLET_KIND_ROCK;
         w.bullets.spawn_ex(bx, by, vx, vy, damage, lifetime as f32, false, BULLET_KIND_ROCK);
     }
+    Ok(ok())
+}
+
+/// Phase 3-C: Elixir 側がスコアポップアップを描画用バッファに追加する NIF。
+/// EnemyKilled / BossDefeated イベント受信時に Elixir 側から呼び出す。
+/// value: 表示するスコア値
+#[rustler::nif]
+pub fn add_score_popup(world: ResourceArc<GameWorld>, x: f64, y: f64, value: u32) -> NifResult<Atom> {
+    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
+    w.score_popups.push((x as f32, y as f32 - 20.0, value, 0.8));
     Ok(ok())
 }
 

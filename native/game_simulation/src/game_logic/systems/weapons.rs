@@ -159,8 +159,6 @@ fn fire_whip(
                 let kind_e = w.enemies.kind_ids[ei];
                 let ep_hit = w.params.get_enemy(kind_e).clone();
                 w.enemies.kill(ei);
-                // score_popups は描画用なので Rust 側で管理を継続する
-                w.score_popups.push((hit_x, hit_y - 20.0, ep_hit.exp_reward * 2, 0.8));
                 w.frame_events.push(FrameEvent::EnemyKilled { enemy_kind: kind_e, x: hit_x, y: hit_y });
                 w.particles.emit(hit_x, hit_y, 8, ep_hit.particle_color);
             } else {
@@ -245,8 +243,6 @@ fn fire_lightning(
                 let kind_e = w.enemies.kind_ids[ei];
                 let ep_chain = w.params.get_enemy(kind_e);
                 w.enemies.kill(ei);
-                // score_popups は描画用なので Rust 側で管理を継続する
-                w.score_popups.push((hit_x, hit_y - 20.0, ep_chain.exp_reward * 2, 0.8));
                 w.frame_events.push(FrameEvent::EnemyKilled { enemy_kind: kind_e, x: hit_x, y: hit_y });
             }
             hit_vec.push(ei);
@@ -306,8 +302,6 @@ fn fire_garlic(
         let hit_y = ey + ep.radius;
         if w.enemies.hp[ei] <= 0.0 {
             w.enemies.kill(ei);
-            // score_popups は描画用なので Rust 側で管理を継続する
-            w.score_popups.push((hit_x, hit_y - 20.0, ep.exp_reward * 2, 0.8));
             w.frame_events.push(FrameEvent::EnemyKilled { enemy_kind: kind_e, x: hit_x, y: hit_y });
             w.particles.emit(hit_x, hit_y, 8, ep.particle_color);
         } else {
