@@ -202,6 +202,104 @@ pub fn update_chase_ai_simd(
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::world::EnemyWorld;
+    use crate::entity_params::EnemyParams;
+
+    fn make_enemy_params() -> EnemyParams {
+        EnemyParams {
+            max_hp:           100.0,
+            speed:            100.0,
+            radius:           20.0,
+            damage_per_sec:   10.0,
+            render_kind:      1,
+            particle_color:   [1.0, 0.0, 0.0, 1.0],
+            passes_obstacles: false,
+        }
+    }
+
+    fn spawn_enemy_at(world: &mut EnemyWorld, x: f32, y: f32) {
+        let ep = make_enemy_params();
+        world.spawn(&[(x, y)], 0, &ep);
+    }
+
+    #[test]
+    fn update_chase_moves_enemy_toward_player() {
+        let mut enemies = EnemyWorld::new();
+        spawn_enemy_at(&mut enemies, 0.0, 0.0);
+
+        let player_x = 100.0_f32;
+        let player_y = 0.0_f32;
+        let dt = 0.016_f32;
+
+        update_chase_ai(&mut enemies, player_x, player_y, dt);
+
+        // 敵はプレイヤー方向（+x）に移動しているべき
+        assert!(
+            enemies.positions_x[0] > 0.0,
+            "敵は +x 方向に移動するべき: x={}",
+            enemies.positions_x[0]
+        );
+        assert!(
+            enemies.velocities_x[0] > 0.0,
+            "速度 x は正であるべき: vx={}",
+            enemies.velocities_x[0]
+        );
+    }
+
+    #[test]
+    fn update_chase_velocity_magnitude_equals_speed() {
+        let mut enemies = EnemyWorld::new();
+        spawn_enemy_at(&mut enemies, 0.0, 0.0);
+
+        let player_x = 100.0_f32;
+        let player_y = 100.0_f32;
+        let dt = 0.016_f32;
+
+        update_chase_ai(&mut enemies, player_x, player_y, dt);
+
+        let vx = enemies.velocities_x[0];
+        let vy = enemies.velocities_y[0];
+        let speed = (vx * vx + vy * vy).sqrt();
+
+        assert!(
+            (speed - 100.0).abs() < 0.1,
+            "速度の大きさは speed パラメータ (100.0) に等しいべき: {speed:.3}"
+        );
+    }
+
+    #[test]
+    fn find_nearest_enemy_returns_closest() {
+        let mut enemies = EnemyWorld::new();
+        let ep = make_enemy_params();
+        enemies.spawn(&[(10.0, 0.0)], 0, &ep);
+        enemies.spawn(&[(50.0, 0.0)], 0, &ep);
+
+        let nearest = find_nearest_enemy(&enemies, 0.0, 0.0);
+        assert_eq!(nearest, Some(0), "最近接の敵インデックスは 0 であるべき");
+    }
+
+    #[test]
+    fn find_nearest_enemy_ignores_dead() {
+        let mut enemies = EnemyWorld::new();
+        let ep = make_enemy_params();
+        enemies.spawn(&[(10.0, 0.0)], 0, &ep);
+        enemies.spawn(&[(50.0, 0.0)], 0, &ep);
+        enemies.kill(0);
+
+        let nearest = find_nearest_enemy(&enemies, 0.0, 0.0);
+        assert_eq!(nearest, Some(1), "死亡した敵は無視されるべき");
+    }
+
+    #[test]
+    fn find_nearest_enemy_empty_world_returns_none() {
+        let enemies = EnemyWorld::new();
+        assert_eq!(find_nearest_enemy(&enemies, 0.0, 0.0), None);
+    }
+}
+
 /// Chase AI: 全敵をプレイヤーに向けて移動（rayon で並列化）
 pub fn update_chase_ai(enemies: &mut EnemyWorld, player_x: f32, player_y: f32, dt: f32) {
     let len = enemies.len();

@@ -58,6 +58,70 @@ pub struct StaticObstacle {
     pub kind:   u8,
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn spatial_hash_cross_cell_query() {
+        let mut sh = SpatialHash::new(80.0);
+        sh.insert(0, 79.0, 79.0); // セル (0,0) の境界付近
+        sh.insert(1, 81.0, 81.0); // セル (1,1)
+        let mut buf = Vec::new();
+        sh.query_nearby_into(80.0, 80.0, 40.0, &mut buf);
+        assert!(buf.contains(&0), "セル境界付近のエンティティが検出されるべき");
+        assert!(buf.contains(&1), "隣接セルのエンティティが検出されるべき");
+    }
+
+    #[test]
+    fn spatial_hash_no_false_negatives_within_radius() {
+        let mut sh = SpatialHash::new(100.0);
+        sh.insert(0, 50.0, 50.0);
+        sh.insert(1, 200.0, 200.0); // 範囲外
+        let mut buf = Vec::new();
+        sh.query_nearby_into(50.0, 50.0, 10.0, &mut buf);
+        assert!(buf.contains(&0));
+        // id=1 は含まれない（範囲外）
+        assert!(!buf.contains(&1));
+    }
+
+    #[test]
+    fn spatial_hash_clear_removes_all_entries() {
+        let mut sh = SpatialHash::new(80.0);
+        sh.insert(0, 10.0, 10.0);
+        sh.insert(1, 20.0, 20.0);
+        sh.clear();
+        let mut buf = Vec::new();
+        sh.query_nearby_into(15.0, 15.0, 50.0, &mut buf);
+        assert!(buf.is_empty(), "clear 後はクエリ結果が空であるべき");
+    }
+
+    #[test]
+    fn spatial_hash_same_cell_multiple_entities() {
+        let mut sh = SpatialHash::new(100.0);
+        sh.insert(0, 10.0, 10.0);
+        sh.insert(1, 20.0, 20.0);
+        sh.insert(2, 30.0, 30.0);
+        let mut buf = Vec::new();
+        sh.query_nearby_into(20.0, 20.0, 50.0, &mut buf);
+        assert!(buf.contains(&0));
+        assert!(buf.contains(&1));
+        assert!(buf.contains(&2));
+    }
+
+    #[test]
+    fn collision_world_rebuild_static_and_query() {
+        let mut cw = CollisionWorld::new(80.0);
+        let obstacles = vec![(100.0_f32, 100.0_f32, 30.0_f32, 1_u8)];
+        cw.rebuild_static(&obstacles);
+        assert_eq!(cw.obstacles.len(), 1);
+        let mut buf = Vec::new();
+        // プレイヤー半径 20 で障害物に接触する位置
+        cw.query_static_nearby_into(100.0, 100.0, 20.0, &mut buf);
+        assert!(!buf.is_empty(), "障害物が近傍クエリで検出されるべき");
+    }
+}
+
 pub struct CollisionWorld {
     pub dynamic:     SpatialHash,
     pub static_hash: SpatialHash,
