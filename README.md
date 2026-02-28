@@ -9,12 +9,16 @@ AlchemyEngine は「無限の3D空間」と「そこに存在するユーザー�
 ## アーキテクチャのハイライト
 
 - **Elixir as SSoT (Single Source of Truth)**
+
   ゲームの権威ある状態とロジックはすべて Elixir 側で管理します。クライアント用のコードをそのままヘッドレスのマルチプレイサーバーとして転用可能です。1000人規模のプレイヤーが交差する大規模ネットワークも Elixir の並行処理能力で捌きます。
 - **Rust ECS for Physics & Rendering**
+
   Elixir から同期された状態をもとに、Rust の ECS が 60Hz 固定の物理演算・描画・オーディオ処理を行います。SoA（Structure of Arrays）と SIMD による CPU キャッシュ最適化で、広大なオープンワールドでも高フレームレートを維持します。
 - **SuperCollider-inspired Audio**
+
   Elixir が「指揮者」として非同期コマンドを発行し、Rust の専用スレッドが DSP 処理を行います。複雑な空間オーディオと動的ルーティングを低遅延で実現します。
 - **Hub — Publish Your World**
+
   クリエイターが作った Game（World + Rule）は Hub にパブリッシュされます。ユーザーは Hub から好きな世界を選んで遊びます。Hub 自体もエンジンが動かす一つの世界です。
 
 ## 🏗️ Architecture
