@@ -4,10 +4,6 @@ defmodule GameEngine.SaveManager do
   @save_version 1
   @high_scores_max 10
 
-  # HMAC 署名用の秘密鍵。
-  # 将来的にはビルド時環境変数や設定ファイルから注入することを推奨する。
-  @hmac_secret "alchemy-engine-save-secret-v1"
-
   # ── パス解決 ────────────────────────────────────────────────────────────
 
   defp save_dir do
@@ -117,9 +113,12 @@ defmodule GameEngine.SaveManager do
       "state" => data
     }
 
+    # HMAC はエンコード済み JSON 文字列に対して計算し、
+    # その文字列をそのままエンベロープに格納する。
+    # マップを再エンコードするとキー順序が変わり HMAC 不一致になるため。
     json = Jason.encode!(payload)
     hmac = compute_hmac(json)
-    envelope = Jason.encode!(%{"payload" => payload, "hmac" => hmac})
+    envelope = Jason.encode!(%{"payload" => json, "hmac" => hmac})
 
     File.mkdir_p!(Path.dirname(path))
     File.write!(path, envelope)
@@ -130,11 +129,12 @@ defmodule GameEngine.SaveManager do
     case File.read(path) do
       {:ok, raw} ->
         case Jason.decode(raw) do
-          {:ok, %{"payload" => payload, "hmac" => stored_hmac}} ->
-            json = Jason.encode!(payload)
-
+          {:ok, %{"payload" => json, "hmac" => stored_hmac}} when is_binary(json) ->
             if verify_hmac(json, stored_hmac) do
-              {:ok, payload}
+              case Jason.decode(json) do
+                {:ok, payload} -> {:ok, payload}
+                {:error, reason} -> {:error, reason}
+              end
             else
               Logger.warning("[SAVE] HMAC mismatch: #{path}")
               {:error, :tampered}
@@ -157,8 +157,12 @@ defmodule GameEngine.SaveManager do
 
   # ── HMAC 計算・検証 ──────────────────────────────────────────────────────
 
+  defp hmac_secret do
+    Application.get_env(:game_engine, :save_hmac_secret, "alchemy-engine-save-secret-v1")
+  end
+
   defp compute_hmac(json) do
-    :crypto.mac(:hmac, :sha256, @hmac_secret, json) |> Base.encode64()
+    :crypto.mac(:hmac, :sha256, hmac_secret(), json) |> Base.encode64()
   end
 
   defp verify_hmac(json, stored_hmac) do
