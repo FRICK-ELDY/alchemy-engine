@@ -2,70 +2,134 @@
 
 ## 概要
 
-`game_content` アプリケーションは `GameBehaviour` を実装したゲーム固有のコンテンツを提供します。現在は **Vampire Survivor クローン** が実装されています。
+`game_content` アプリケーションは `WorldBehaviour` と `RuleBehaviour` を実装したゲーム固有のコンテンツを提供します。現在は **Vampire Survivor クローン** が実装されています。
+
+World と Rule は分離されており、`config.exs` で組み合わせを指定します。
+
+```elixir
+config :game_server, :current_world, GameContent.VampireSurvivorWorld
+config :game_server, :current_rule,  GameContent.VampireSurvivorRule
+```
 
 ---
 
-## `vampire_survivor.ex` — GameBehaviour 実装
+## `vampire_survivor_world.ex` — WorldBehaviour 実装
 
-`GameBehaviour` の全コールバックを実装するメインモジュール。
+「舞台」の定義。マップサイズ・エンティティ種別・アセットパス・Rust へのパラメータ注入を担当する。
 
 ```elixir
-defmodule GameContent.VampireSurvivor do
-  @behaviour GameEngine.GameBehaviour
+defmodule GameContent.VampireSurvivorWorld do
+  @behaviour GameEngine.WorldBehaviour
 
   @impl true
-  def render_type(), do: :sprite_2d
+  def assets_path, do: "vampire_survivor"
 
   @impl true
-  def title(), do: "Vampire Survivor"
+  def entity_registry do
+    %{
+      enemies: %{slime: 0, bat: 1, golem: 2, skeleton: 3, ghost: 4},
+      weapons: %{magic_wand: 0, axe: 1, cross: 2, whip: 3, fireball: 4, lightning: 5, garlic: 6},
+      bosses:  %{slime_king: 0, bat_lord: 1, stone_golem: 2},
+    }
+  end
 
   @impl true
-  def version(), do: "0.1.0"
-
-  @impl true
-  def assets_path(), do: "assets/vampire_survivor"
-
-  @impl true
-  def initial_scenes(), do: [{Scenes.Playing, %{}}]
-
-  @impl true
-  def physics_scenes(), do: [Scenes.Playing]
-
-  @impl true
-  def context_defaults(), do: %{difficulty: :normal, map: :plain}
+  def setup_world_params(world_ref) do
+    GameEngine.NifBridge.set_world_size(world_ref, 4096.0, 4096.0)
+    GameEngine.NifBridge.set_entity_params(world_ref, enemy_params(), weapon_params(), boss_params())
+  end
 end
 ```
 
-### エンティティレジストリ
+### エンティティパラメータ（Elixir → Rust 注入）
 
-Elixir のアトムから Rust の ID（u8）へのマッピング。
+**敵パラメータ（`enemy_params/0`）:**
+
+| ID | 種別 | HP | 速度 | 半径 | ダメージ/秒 | 障害物すり抜け |
+|:---|:---|:---|:---|:---|:---|:---|
+| 0 | Slime | 30 | 80 | 20 | 20 | ✗ |
+| 1 | Bat | 15 | 160 | 12 | 10 | ✗ |
+| 2 | Golem | 150 | 40 | 32 | 40 | ✗ |
+| 3 | Skeleton | 60 | 60 | 22 | 15 | ✗ |
+| 4 | Ghost | 40 | 100 | 16 | 12 | ✅（壁すり抜け） |
+
+**武器パラメータ（`weapon_params/0`）:**
+
+| ID | 種別 | ダメージ | クールダウン | FirePattern |
+|:---|:---|:---|:---|:---|
+| 0 | magic_wand | 10 | 1.0s | Aimed（扇状） |
+| 1 | axe | 25 | 1.5s | FixedUp（上方向） |
+| 2 | cross | 15 | 2.0s | Radial（全方向） |
+| 3 | whip | 30 | 1.0s | Whip（扇形判定） |
+| 4 | fireball | 20 | 1.0s | Piercing（貫通） |
+| 5 | lightning | 15 | 1.0s | Chain（連鎖） |
+| 6 | garlic | 1 | 0.2s | Aura（オーラ） |
+
+**ボスパラメータ（`boss_params/0`）:**
+
+| ID | 種別 | HP | 速度 | 特殊行動インターバル |
+|:---|:---|:---|:---|:---|
+| 0 | Slime King | 1,000 | 60 | 5.0s |
+| 1 | Bat Lord | 2,000 | 200 | 4.0s |
+| 2 | Stone Golem | 5,000 | 30 | 6.0s |
+
+---
+
+## `vampire_survivor_rule.ex` — RuleBehaviour 実装
+
+「遊び方」の定義。シーン構成・スポーン/ボス/レベルアップ制御・ボスAI・アイテムドロップを担当する。
+
+### 主要コールバック
+
+| コールバック | 説明 |
+|:---|:---|
+| `initial_scenes/0` | `[{Playing, %{}}]` |
+| `initial_weapons/0` | `[:magic_wand]` |
+| `generate_weapon_choices/1` | `LevelSystem.generate_weapon_choices/1` に委譲 |
+| `on_entity_removed/4` | アイテムドロップ（Gem/Potion/Magnet）を `spawn_item` NIF で実行 |
+| `on_boss_defeated/4` | Gem を10個散布 |
+| `update_boss_ai/2` | SlimeKing/BatLord/StoneGolem の AI を Elixir 側で制御 |
+
+### アイテムドロップ確率
+
+| アイテム | 確率 | 効果 |
+|:---|:---|:---|
+| Magnet | 2% | 画面内全 Gem を自動吸引 |
+| Potion | 5%（累積 7%） | HP +20 回復 |
+| Gem | 残り 93% | EXP 取得（敵種別の報酬値） |
+
+### ボスAI（`update_boss_ai/2`）
+
+Elixir 側で毎フレーム呼び出され、`set_boss_velocity` / `set_boss_phase_timer` / `fire_boss_projectile` NIF を通じてボスを制御する。
+
+| ボス | 通常移動 | 特殊行動（インターバルごと） |
+|:---|:---|:---|
+| SlimeKing | プレイヤー追跡（速度 60） | 周囲8方向にスライムをスポーン |
+| BatLord | プレイヤー追跡（速度 200） | ダッシュ攻撃（速度 500、600ms 無敵） |
+| StoneGolem | プレイヤー追跡（速度 30） | 4方向に岩弾を発射 |
+
+---
+
+## `entity_params.ex` — Elixir 側パラメータテーブル
+
+Elixir 側が EXP・スコア・ボスパラメータの SSoT を持つモジュール。
 
 ```elixir
-@impl true
-def entity_registry() do
-  %{
-    enemies: %{
-      slime:    0,
-      bat:      1,
-      golem:    2,
-      skeleton: 3,
-      ghost:    4,
-    },
-    weapons: %{
-      magic_wand: 0,
-      axe:        1,
-      cross:      2,
-      whip:       3,
-      fireball:   4,
-      lightning:  5,
-      garlic:     6,
-    },
-    bosses: %{
-      slime_king:  0,
-      bat_lord:    1,
-      stone_golem: 2,
-    },
+defmodule GameContent.EntityParams do
+  # 敵 EXP 報酬
+  @enemy_exp_rewards %{0 => 5, 1 => 3, 2 => 8, 3 => 20, 4 => 10}
+
+  # ボス EXP 報酬
+  @boss_exp_rewards %{0 => 200, 1 => 400, 2 => 800}
+
+  # スコア = EXP × 2
+  @score_per_exp 2
+
+  # Phase 3-B: ボスAI 制御用パラメータ（速度・特殊行動インターバル等）
+  @boss_params %{
+    @boss_slime_king  => %{speed: 60.0, special_interval: 5.0},
+    @boss_bat_lord    => %{speed: 200.0, special_interval: 4.0, dash_speed: 500.0, dash_duration_ms: 600},
+    @boss_stone_golem => %{speed: 30.0, special_interval: 6.0, projectile_speed: 200.0, projectile_damage: 50, projectile_lifetime: 3.0},
   }
 end
 ```
@@ -95,14 +159,23 @@ graph TD
 
 メインゲームプレイを管理するシーン。`update/2` で毎フレーム処理を行います。
 
-**主な処理:**
+**Playing シーン state（Elixir SSoT）:**
 
-| 処理 | タイミング | 説明 |
-|:---|:---|:---|
-| 敵スポーン | SpawnSystem の判定 | ウェーブ定義に従って敵を生成 |
-| ボスチェック | BossSystem の判定 | 経過時間でボス出現を判断 |
-| レベルアップチェック | EXP 閾値超過 | LevelUp シーンに遷移 |
-| 死亡チェック | HP <= 0 | GameOver シーンに遷移 |
+| キー | 説明 |
+|:---|:---|
+| `level` | 現在レベル |
+| `exp` | 現在 EXP |
+| `exp_to_next` | 次レベルまでの必要 EXP |
+| `weapon_levels` | `%{weapon_atom => level}` |
+| `level_up_pending` | レベルアップ待ちフラグ |
+| `weapon_choices` | レベルアップ選択肢リスト |
+| `boss_kind_id` | 現在のボス種別 ID（`nil` = ボスなし） |
+| `boss_hp` | ボス HP（Elixir SSoT） |
+| `boss_max_hp` | ボス最大 HP |
+| `spawned_bosses` | 出現済みボス種別リスト |
+| `elapsed_sec` | 経過時間（秒） |
+| `score` | スコア |
+| `kill_count` | 撃破数 |
 
 **トランジション:**
 ```elixir
@@ -122,28 +195,9 @@ graph TD
 
 武器選択肢を表示し、プレイヤーの選択を待ちます。
 
-**特徴:**
 - `auto_select: true` — 3 秒タイムアウトで自動選択（最初の選択肢）
 - Esc / 1 / 2 / 3 キーで選択可能
 - 選択後は `:pop` で Playing シーンに戻る
-
-```elixir
-@impl true
-def init(%{choices: choices}) do
-  {:ok, %{choices: choices, timer: 3.0, auto_select: true}}
-end
-
-@impl true
-def update(%{input: input}, %{timer: timer} = state) do
-  cond do
-    input.key == :select_1 -> {:transition, :pop, apply_choice(state, 0)}
-    input.key == :select_2 -> {:transition, :pop, apply_choice(state, 1)}
-    input.key == :select_3 -> {:transition, :pop, apply_choice(state, 2)}
-    timer <= 0.0            -> {:transition, :pop, apply_choice(state, 0)}
-    true                    -> {:continue, %{state | timer: timer - context.dt}}
-  end
-end
-```
 
 ---
 
@@ -153,12 +207,13 @@ end
 
 ```elixir
 @impl true
-def update(context, %{timer: timer, boss_kind: boss_kind} = state) do
-  if timer <= 0.0 do
-    GameEngine.spawn_boss(context.world, boss_kind)
+def update(context, %{boss_kind: boss_kind, alert_ms: alert_ms} = state) do
+  if context.now - alert_ms >= BossSystem.alert_duration_ms() do
+    kind_id = VampireSurvivorWorld.entity_registry().bosses[boss_kind]
+    GameEngine.NifBridge.spawn_boss(context.world_ref, kind_id)
     {:transition, :pop, state}
   else
-    {:continue, %{state | timer: timer - context.dt}}
+    {:continue, state}
   end
 end
 ```
@@ -169,26 +224,9 @@ end
 
 スコア・生存時間・撃破数を表示し、リトライを待ちます。
 
-```elixir
-@impl true
-def init(%{score: score, elapsed: elapsed, kills: kills}) do
-  GameEngine.save_high_score(score)
-  {:ok, %{score: score, elapsed: elapsed, kills: kills}}
-end
-
-@impl true
-def update(%{input: input}, state) do
-  if input.key == :retry do
-    {:transition, {:replace, Scenes.Playing, %{}}, state}
-  else
-    {:continue, state}
-  end
-end
-```
-
 ---
 
-## `spawn_system.ex` — ウェーブスポーン
+## `vampire_survivor/spawn_system.ex` — ウェーブスポーン
 
 経過時間に応じてウェーブ定義から敵をスポーンします。
 
@@ -221,33 +259,9 @@ timeline
 
 - 最大同時存在数: **10,000 体**
 
-```elixir
-defmodule GameContent.SpawnSystem do
-  @waves [
-    {0,   3000, 3,  [:slime]},
-    {30,  2500, 5,  [:slime, :bat]},
-    {60,  2000, 7,  [:bat, :golem]},
-    {120, 1500, 10, [:slime, :bat, :golem, :skeleton, :ghost]},
-    {180, 1000, 15, [:slime, :bat, :golem, :skeleton, :ghost]},
-  ]
-
-  @max_enemies 10_000
-  @elite_threshold_sec 45
-  @elite_chance 0.30
-  @elite_hp_mult 3.0
-
-  def maybe_spawn(context, state) do
-    # 現在のウェーブを選択
-    # インターバルチェック
-    # エリート判定
-    # GameEngine.spawn_enemies / spawn_elite_enemy を呼び出し
-  end
-end
-```
-
 ---
 
-## `boss_system.ex` — ボス出現スケジュール
+## `vampire_survivor/boss_system.ex` — ボス出現スケジュール
 
 経過時間に応じてボスの出現を管理します。
 
@@ -259,62 +273,11 @@ timeline
     540秒（9分） : Stone Golem（HP 5,000）
 ```
 
-| 経過時間 | ボス | HP |
-|:---|:---|:---|
-| 180 秒（3 分） | Slime King | 1,000 |
-| 360 秒（6 分） | Bat Lord | 2,000 |
-| 540 秒（9 分） | Stone Golem | 5,000 |
-
-```elixir
-defmodule GameContent.BossSystem do
-  @boss_schedule [
-    {180, :slime_king},
-    {360, :bat_lord},
-    {540, :stone_golem},
-  ]
-
-  def check_boss_spawn(elapsed_sec, spawned_bosses) do
-    @boss_schedule
-    |> Enum.find(fn {time, kind} ->
-      elapsed_sec >= time and kind not in spawned_bosses
-    end)
-    |> case do
-      {_time, kind} -> {:spawn, kind}
-      nil           -> :no_spawn
-    end
-  end
-end
-```
-
 ---
 
-## `level_system.ex` — 武器選択肢生成
+## `vampire_survivor/level_system.ex` — 武器選択肢生成
 
 レベルアップ時に提示する武器選択肢を生成します。
-
-### 選択肢生成フロー
-
-```mermaid
-flowchart TD
-    START[generate_choices 呼び出し]
-    ALL[全武器リスト取得\nentity_registry.weapons]
-    UNOWNED[未所持武器を抽出]
-    UPGR[所持武器のうち\nLv8 未満を抽出\n低レベル順ソート]
-    MERGE[unowned ++ upgradable]
-    TAKE[Enum.take 3]
-    CHECK{空リスト?}
-    EMPTY[空リストを返す\n全武器 Lv8 の場合]
-    RET[最大 3 択を返す]
-
-    START --> ALL
-    ALL --> UNOWNED
-    ALL --> UPGR
-    UNOWNED --> MERGE
-    UPGR --> MERGE
-    MERGE --> TAKE --> CHECK
-    CHECK -->|Yes| EMPTY
-    CHECK -->|No| RET
-```
 
 ### ルール
 
@@ -327,66 +290,6 @@ flowchart TD
 
 - **最大スロット数**: 8
 - **各武器の最大レベル**: 8
-
-```elixir
-defmodule GameContent.LevelSystem do
-  @max_slots 8
-  @max_weapon_level 8
-
-  def generate_choices(weapon_slots) do
-    all_weapons = Map.keys(GameContent.VampireSurvivor.entity_registry().weapons)
-
-    unowned = all_weapons -- Enum.map(weapon_slots, & &1.kind)
-    upgradable = weapon_slots
-      |> Enum.filter(& &1.level < @max_weapon_level)
-      |> Enum.sort_by(& &1.level)
-
-    (unowned ++ Enum.map(upgradable, & &1.kind))
-    |> Enum.take(3)
-    |> Enum.map(&build_choice(&1, weapon_slots))
-  end
-end
-```
-
----
-
-## エンティティパラメータ詳細
-
-### 敵パラメータ（Elixir 視点）
-
-| アトム | Rust ID | HP | 速度 | ダメージ | EXP |
-|:---|:---|:---|:---|:---|:---|
-| `:slime` | 0 | 30 | 60 | 10 | 5 |
-| `:bat` | 1 | 20 | 90 | 8 | 4 |
-| `:golem` | 2 | 100 | 30 | 20 | 15 |
-| `:skeleton` | 3 | 50 | 70 | 12 | 8 |
-| `:ghost` | 4 | 40 | 80 | 15 | 10 |
-
-> Ghost は障害物を無視して移動します（`collision.rs` で除外）。
-
-### 武器パラメータ（Elixir 視点）
-
-| アトム | Rust ID | ダメージ | クールダウン | 特性 |
-|:---|:---|:---|:---|:---|
-| `:magic_wand` | 0 | 20 | 0.8s | 最近傍追尾 |
-| `:axe` | 1 | 40 | 1.5s | 放物線軌道 |
-| `:cross` | 2 | 15 | 0.5s | 4 方向同時 |
-| `:whip` | 3 | 30 | 1.0s | 左右範囲 |
-| `:fireball` | 4 | 35 | 1.2s | 貫通弾 |
-| `:lightning` | 5 | 50 | 2.0s | 即時ダメージ |
-| `:garlic` | 6 | 10 | 0.3s | 周囲継続 |
-
-**レベルアップ効果（Rust `weapon.rs` で計算）:**
-- クールダウン: レベルごとに 7% 短縮（最大 50%）
-- ダメージ: レベルごとに基礎ダメージの 25% 増加
-
-### ボスパラメータ（Elixir 視点）
-
-| アトム | Rust ID | HP | 速度 | 特殊行動 |
-|:---|:---|:---|:---|:---|
-| `:slime_king` | 0 | 1,000 | 40 | スライム召喚 |
-| `:bat_lord` | 1 | 2,000 | 120 | ダッシュ攻撃 |
-| `:stone_golem` | 2 | 5,000 | 20 | 岩弾放射 |
 
 ---
 
@@ -407,14 +310,6 @@ Level → 必要累積 EXP
  ...
 ```
 
-計算式（`game_core/src/util.rs`）:
-```rust
-fn exp_required_for_next(level: u32) -> u32 {
-    // 二次関数的増加
-    // level * (level + 1) * 5 の近似
-}
-```
-
 ---
 
 ## アイテムシステム
@@ -422,7 +317,7 @@ fn exp_required_for_next(level: u32) -> u32 {
 | アイテム | 効果 |
 |:---|:---|
 | Gem | EXP 取得（敵撃破時にドロップ） |
-| Potion | HP 回復 |
+| Potion | HP +20 回復 |
 | Magnet | 画面内全 Gem を自動吸引 |
 
 **自動収集範囲**: プレイヤー周囲 50px（Magnet 発動時は全画面）

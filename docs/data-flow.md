@@ -15,21 +15,25 @@ sequenceDiagram
     participant RS as RoomSupervisor
     participant GEV as GameEvents
     participant NIF as NifBridge (game_nif)
+    participant WB as WorldBehaviour
+    participant RB as RuleBehaviour
 
     MX->>APP: start/2
-    APP->>APP: Registry 起動
-    APP->>APP: SceneManager 起動
-    APP->>APP: InputHandler 起動
-    APP->>APP: EventBus 起動
+    APP->>APP: Registry / SceneManager / InputHandler / EventBus 起動
     APP->>RS: RoomSupervisor 起動
     APP->>APP: StressMonitor / Stats / Telemetry 起動
     APP->>RS: start_room(:main)
     RS->>GEV: GameEvents 起動（:main ルーム）
     GEV->>NIF: create_world()
     NIF-->>GEV: GameWorld リソース
-    GEV->>NIF: set_map_obstacles(...)
-    GEV->>NIF: start_render_thread()
-    GEV->>NIF: start_rust_game_loop()
+    GEV->>WB: setup_world_params(world_ref)
+    WB->>NIF: set_world_size(world_ref, 4096, 4096)
+    WB->>NIF: set_entity_params(world_ref, enemies, weapons, bosses)
+    GEV->>RB: initial_weapons()
+    GEV->>NIF: add_weapon(world_ref, weapon_id) × 初期武器数
+    GEV->>NIF: set_map_obstacles(world_ref, obstacles)
+    GEV->>NIF: start_rust_game_loop(world_ref, control_ref, self())
+    GEV->>NIF: start_render_thread(world_ref, self())
     Note over NIF: Rust 60Hz ループ開始
 ```
 
@@ -67,29 +71,29 @@ flowchart TD
 ```mermaid
 flowchart TD
     GEV[GameEvents GenServer\nhandle_info :frame_events]
-    EK[EnemyKilled]
+    ER[EntityRemoved]
     PD[PlayerDamaged]
     LU[LevelUp]
     BD[BossDefeated]
     IP[ItemPickup]
     PER[60フレームごと]
 
+    RULE[RuleBehaviour\non_entity_removed\non_boss_defeated\nupdate_boss_ai]
     EB[EventBus.broadcast]
     ST[Stats.record]
     HC{HP <= 0?}
     GO[SceneManager.replace_scene\nGameOver]
     LS[SceneManager.push_scene\nLevelUp]
-    LUD[get_level_up_data\n武器選択肢取得]
     LOG[Logger.debug\nFPS・敵数]
     TEL[:telemetry.execute]
     FC[FrameCache.put]
 
-    GEV --> EK --> EB --> ST
+    GEV --> ER --> RULE
     GEV --> PD --> HC
     HC -->|Yes| GO
-    GEV --> LU --> LS --> LUD
-    GEV --> BD --> EB
-    GEV --> IP --> EB
+    GEV --> LU --> LS
+    GEV --> BD --> RULE
+    GEV --> IP --> EB --> ST
     GEV --> PER --> LOG
     PER --> TEL
     PER --> FC
@@ -193,8 +197,9 @@ graph TD
 
 | カテゴリ | 代表関数 | ロック | 呼び出し頻度 |
 |:---|:---|:---|:---|
-| control | `create_world`, `spawn_enemies` | write | 低（イベント時） |
-| query_light | `get_player_hp`, `get_enemy_count` | read | 高（毎フレーム可） |
+| control | `create_world`, `spawn_enemies`, `set_entity_params` | write | 低（起動時・イベント時） |
+| inject | `set_hud_state`, `set_hud_level_state`, `set_boss_velocity` | write | 高（毎フレーム） |
+| query_light | `get_player_hp`, `get_enemy_count`, `get_boss_state` | read | 高（毎フレーム可） |
 | snapshot_heavy | `get_save_snapshot`, `load_save_snapshot` | write | 低（明示操作時） |
 | game_loop | `physics_step`, `drain_frame_events` | write | 高（60Hz） |
 

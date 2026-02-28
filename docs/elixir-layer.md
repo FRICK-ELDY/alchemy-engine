@@ -56,7 +56,8 @@ graph TD
 
 **設定（`config/config.exs`）:**
 ```elixir
-config :game_server, :current_game, GameContent.VampireSurvivor
+config :game_server, :current_world, GameContent.VampireSurvivorWorld
+config :game_server, :current_rule,  GameContent.VampireSurvivorRule
 config :game_server, :map, :plain
 ```
 
@@ -66,24 +67,37 @@ config :game_server, :map, :plain
 
 ### `game_engine.ex` — 公開 API
 
-外部から呼び出す全操作の窓口。エンティティ ID は `game_module.entity_registry()` から解決します。
+外部から呼び出す全操作の窓口。エンティティ ID は `Config.current_world().entity_registry()` から解決します。
+
+**ゲームコンテンツ向け:**
 
 | 関数 | 説明 |
 |:---|:---|
-| `spawn_enemies/3` | 敵をスポーン |
-| `spawn_boss/2` | ボスをスポーン |
+| `spawn_enemies/3` | 敵をスポーン（atom → ID 自動解決） |
 | `spawn_elite_enemy/4` | エリート敵をスポーン（HP 倍率付き） |
-| `get_level_up_data/1` | レベルアップ選択肢を取得 |
-| `add_weapon/2` | 武器を追加/アップグレード |
-| `skip_level_up/1` | レベルアップをスキップ |
+| `get_enemy_count/1` | 生存敵数を取得 |
+| `is_player_dead?/1` | 死亡判定 |
+| `get_frame_metadata/1` | フレームメタデータを取得 |
 | `save_session/1` | セッションをセーブ |
 | `load_session/1` | セッションをロード |
+| `has_save?/0` | セーブデータ存在確認 |
 | `save_high_score/1` | ハイスコアを保存 |
 | `load_high_scores/0` | ハイスコア一覧を取得 |
+
+**エンジン内部向け（GameEvents が使用）:**
+
+| 関数 | 説明 |
+|:---|:---|
+| `create_world/0` | GameWorld リソースを生成 |
+| `set_map_obstacles/2` | 障害物リストを設定 |
+| `create_game_loop_control/0` | GameLoopControl リソースを生成 |
 | `start_rust_game_loop/3` | Rust 60Hz ゲームループを開始 |
-| `start_render_thread/1` | レンダースレッドを起動 |
+| `start_render_thread/2` | レンダースレッドを起動 |
 | `pause_physics/1` | 物理演算を一時停止 |
 | `resume_physics/1` | 物理演算を再開 |
+| `physics_step/2` | 1 フレーム物理ステップ |
+| `set_player_input/3` | 移動ベクトルを設定 |
+| `drain_frame_events/1` | フレームイベントを取り出す |
 
 ---
 
@@ -105,19 +119,59 @@ NIF 関数は 3 カテゴリに分類されます：
 
 ---
 
-### `game_behaviour.ex` — ゲーム実装インターフェース
+### `world_behaviour.ex` — World 定義インターフェース
 
-ゲームコンテンツが実装すべきコールバック定義。
+World（舞台）が提供すべきコールバック定義。同じ World に複数の Rule を適用できる。
 
 ```elixir
-@callback render_type()      :: atom()
-@callback initial_scenes()   :: [scene_spec()]
-@callback entity_registry()  :: map()
-@callback physics_scenes()   :: [module()]
-@callback title()            :: String.t()
-@callback version()          :: String.t()
-@callback context_defaults() :: map()
-@callback assets_path()      :: String.t()
+@callback assets_path()                              :: String.t()
+@callback entity_registry()                          :: map()
+@callback setup_world_params(world_ref :: reference()) :: :ok  # optional
+```
+
+`setup_world_params/1` はワールド生成後に一度だけ呼ばれ、`set_entity_params` / `set_world_size` NIF で Rust 側にパラメータを注入する。
+
+---
+
+### `rule_behaviour.ex` — Rule 定義インターフェース
+
+Rule（遊び方）が提供すべきコールバック定義。
+
+```elixir
+@callback render_type()                              :: atom()
+@callback initial_scenes()                           :: [scene_spec()]
+@callback physics_scenes()                           :: [module()]
+@callback title()                                    :: String.t()
+@callback version()                                  :: String.t()
+@callback context_defaults()                         :: map()
+@callback playing_scene()                            :: module()
+@callback generate_weapon_choices(weapon_levels)     :: [atom()]
+@callback apply_level_up(scene_state, choices)       :: map()
+@callback apply_weapon_selected(scene_state, weapon) :: map()
+@callback apply_level_up_skipped(scene_state)        :: map()
+@callback game_over_scene()                          :: module()
+@callback level_up_scene()                           :: module()
+@callback boss_alert_scene()                         :: module()
+@callback initial_weapons()                          :: [atom()]
+@callback enemy_exp_reward(enemy_kind)               :: non_neg_integer()
+@callback boss_exp_reward(boss_kind)                 :: non_neg_integer()
+@callback score_from_exp(exp)                        :: non_neg_integer()
+@callback wave_label(elapsed_sec)                    :: String.t()
+# optional
+@callback on_entity_removed(world_ref, kind_id, x, y) :: :ok
+@callback on_boss_defeated(world_ref, boss_kind, x, y) :: :ok
+@callback update_boss_ai(context, boss_state)          :: :ok
+```
+
+---
+
+### `config.ex` — 設定解決ヘルパー
+
+`current_world` / `current_rule` の Application 設定を解決する。
+
+```elixir
+GameEngine.Config.current_world()  # WorldBehaviour 実装モジュールを返す
+GameEngine.Config.current_rule()   # RuleBehaviour 実装モジュールを返す
 ```
 
 ---
@@ -160,30 +214,37 @@ NIF 関数は 3 カテゴリに分類されます：
 
 Rust の 60Hz ゲームループから `{:frame_events, events}` を受信し、シーン遷移・UI アクションを処理するコアコンポーネント。
 
+**Elixir as SSoT 移行完了状況:**
+- フェーズ1: `score`, `kill_count`, `elapsed_ms` を Elixir 側で管理
+- フェーズ2: `player_hp`, `player_max_hp` を Elixir 側で管理
+- フェーズ3: `level`, `exp`, `weapon_levels` 等を Playing シーン state で管理
+- フェーズ4: `boss_hp`, `boss_kind_id` を Playing シーン state で管理
+- フェーズ5: `render_started` フラグ管理・UI アクションを描画スレッドから直接受信
+
 **フレーム処理フロー:**
 
 ```mermaid
 flowchart TD
     R["Rust\n{:frame_events, events}"]
-    EK[EnemyKilled]
+    ER[EntityRemoved]
     PD[PlayerDamaged]
     LU[LevelUp]
     BD[BossDefeated]
     IP[ItemPickup]
     PER[60フレームごと]
 
+    RULE[RuleBehaviour\non_entity_removed\non_boss_defeated\nupdate_boss_ai]
     SR[Stats.record]
     HC{HP チェック}
     GO[GameOver 遷移]
     LS[LevelUp シーン遷移]
-    BP[ボス撃破処理]
     LOG[ログ出力<br/>Telemetry 計測<br/>FrameCache 更新]
 
-    R --> EK --> SR
+    R --> ER --> RULE
     R --> PD --> HC
     HC -->|HP <= 0| GO
     R --> LU --> LS
-    R --> BD --> BP
+    R --> BD --> RULE
     R --> IP --> SR
     R --> PER --> LOG
 ```

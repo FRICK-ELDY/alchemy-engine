@@ -45,7 +45,7 @@ alchemy-engine/
 ├── mix.exs                          # Umbrella ルートプロジェクト定義
 ├── mix.lock                         # Elixir 依存ロックファイル
 ├── config/
-│   └── config.exs                   # 起動ゲーム・マップ設定
+│   └── config.exs                   # current_world / current_rule / map 設定
 │
 ├── apps/                            # Elixir アプリケーション群
 │   ├── game_engine/                 # SSoT コアエンジン
@@ -53,7 +53,9 @@ alchemy-engine/
 │   │   └── lib/game_engine/
 │   │       ├── game_engine.ex       # 公開 API（エントリポイント）
 │   │       ├── nif_bridge.ex        # Rustler NIF ラッパー
-│   │       ├── game_behaviour.ex    # ゲーム実装インターフェース
+│   │       ├── world_behaviour.ex   # World 定義インターフェース
+│   │       ├── rule_behaviour.ex    # Rule 定義インターフェース
+│   │       ├── config.ex            # current_world / current_rule 解決
 │   │       ├── scene_behaviour.ex   # シーンコールバック定義
 │   │       ├── scene_manager.ex     # シーンスタック管理 GenServer
 │   │       ├── game_events.ex       # メインゲームループ GenServer
@@ -77,15 +79,18 @@ alchemy-engine/
 │   ├── game_content/                # ゲームコンテンツ（VampireSurvivor）
 │   │   ├── mix.exs
 │   │   └── lib/game_content/
-│   │       ├── vampire_survivor.ex  # GameBehaviour 実装
-│   │       ├── spawn_system.ex      # ウェーブスポーン
-│   │       ├── boss_system.ex       # ボス出現スケジュール
-│   │       ├── level_system.ex      # 武器選択生成
-│   │       └── scenes/
-│   │           ├── playing.ex       # プレイ中シーン
-│   │           ├── level_up.ex      # レベルアップ選択シーン
-│   │           ├── boss_alert.ex    # ボス出現アラートシーン
-│   │           └── game_over.ex     # ゲームオーバーシーン
+│   │       ├── vampire_survivor_world.ex  # WorldBehaviour 実装
+│   │       ├── vampire_survivor_rule.ex   # RuleBehaviour 実装
+│   │       ├── entity_params.ex           # EXP・スコア・ボスパラメータ（Elixir SSoT）
+│   │       └── vampire_survivor/
+│   │           ├── spawn_system.ex        # ウェーブスポーン
+│   │           ├── boss_system.ex         # ボス出現スケジュール
+│   │           ├── level_system.ex        # 武器選択肢生成
+│   │           └── scenes/
+│   │               ├── playing.ex         # プレイ中シーン
+│   │               ├── level_up.ex        # レベルアップ選択シーン
+│   │               ├── boss_alert.ex      # ボス出現アラートシーン
+│   │               └── game_over.ex       # ゲームオーバーシーン
 │   │
 │   └── game_network/                # 通信（スタブ・将来実装）
 │       ├── mix.exs
@@ -98,20 +103,22 @@ alchemy-engine/
 │   ├── game_simulation/             # 物理演算・ECS（依存: rustc-hash のみ）
 │   │   └── src/
 │   │       ├── lib.rs
-│   │       ├── constants.rs         # 画面・マップ・速度定数
-│   │       ├── entity_params.rs     # ID ベースパラメータテーブル
+│   │       ├── constants.rs         # 画面定数（スクリーンサイズ等）
+│   │       ├── entity_params.rs     # EntityParamTables（NIF で外部注入）
 │   │       ├── enemy.rs             # EnemyKind enum
-│   │       ├── weapon.rs            # WeaponKind / WeaponSlot
-│   │       ├── boss.rs              # BossKind enum
+│   │       ├── weapon.rs            # WeaponSlot（クールダウン管理）
+│   │       ├── boss.rs              # BossState
 │   │       ├── item.rs              # ItemKind / ItemWorld SoA
-│   │       ├── util.rs              # EXP 計算・ウェーブ設定
+│   │       ├── util.rs              # ユーティリティ
 │   │       ├── physics/
 │   │       │   ├── rng.rs           # LCG 乱数（決定論的）
 │   │       │   ├── spatial_hash.rs  # FxHashMap ベース空間ハッシュ
 │   │       │   ├── separation.rs    # 敵分離アルゴリズム
 │   │       │   └── obstacle_resolve.rs # 障害物押し出し
 │   │       ├── world/
-│   │       │   ├── mod.rs           # GameWorld / GameWorldInner
+│   │       │   ├── mod.rs           # world モジュール再エクスポート
+│   │       │   ├── game_world.rs    # GameWorld / GameWorldInner
+│   │       │   ├── player.rs        # PlayerState
 │   │       │   ├── enemy.rs         # EnemyWorld SoA
 │   │       │   ├── bullet.rs        # BulletWorld SoA
 │   │       │   ├── particle.rs      # ParticleWorld SoA
@@ -119,15 +126,16 @@ alchemy-engine/
 │   │       │   ├── game_loop_control.rs # AtomicBool pause/resume
 │   │       │   └── frame_event.rs   # FrameEvent enum
 │   │       └── game_logic/
+│   │           ├── mod.rs
 │   │           ├── physics_step.rs  # 1 フレーム物理ステップ
 │   │           ├── chase_ai.rs      # SSE2 SIMD / rayon 並列 AI
 │   │           └── systems/
-│   │               ├── weapons.rs   # 7 武器発射ロジック
+│   │               ├── mod.rs
+│   │               ├── weapons.rs   # 武器発射ロジック（FirePattern 対応）
 │   │               ├── projectiles.rs # 弾丸移動・衝突・ドロップ
-│   │               ├── boss.rs      # ボス AI・特殊行動
+│   │               ├── boss.rs      # ボス物理（AI は Elixir 側）
 │   │               ├── effects.rs   # パーティクル更新
 │   │               ├── items.rs     # アイテム収集
-│   │               ├── leveling.rs  # 武器選択肢生成
 │   │               ├── collision.rs # 敵 vs 障害物押し出し
 │   │               └── spawn.rs     # スポーン位置生成
 │   │
@@ -135,9 +143,10 @@ alchemy-engine/
 │   │   └── src/
 │   │       ├── lib.rs               # Rustler エントリポイント・アトム定義
 │   │       ├── nif/
+│   │       │   ├── mod.rs
 │   │       │   ├── load.rs          # パニックフック・リソース登録
-│   │       │   ├── world_nif.rs     # ワールド生成・入力・スポーン
-│   │       │   ├── action_nif.rs    # 武器追加・レベルアップ・ボス操作
+│   │       │   ├── world_nif.rs     # ワールド生成・入力・スポーン・パラメータ注入
+│   │       │   ├── action_nif.rs    # 武器追加・ボス操作・HUD 状態注入
 │   │       │   ├── read_nif.rs      # 状態読み取り（軽量クエリ）
 │   │       │   ├── game_loop_nif.rs # ゲームループ制御
 │   │       │   ├── push_tick_nif.rs # Elixir プッシュ型同期
@@ -178,10 +187,10 @@ alchemy-engine/
 | レイヤー | 責務 | 技術 |
 |:---|:---|:---|
 | `game_server` | OTP Application 起動・Supervisor ツリー構築 | Elixir / OTP |
-| `game_engine` | ゲームループ制御・シーン管理・イベント配信・セーブ | Elixir GenServer / ETS |
-| `game_content` | ゲーム固有ロジック（VampireSurvivor のルール） | Elixir |
+| `game_engine` | ゲームループ制御・シーン管理・イベント配信・セーブ・World/Rule インターフェース定義 | Elixir GenServer / ETS |
+| `game_content` | World/Rule 実装（VampireSurvivor）・エンティティパラメータ・ボスAI | Elixir |
 | `game_nif` | Elixir-Rust 間 NIF ブリッジ・ゲームループ・レンダーブリッジ | Rust / Rustler |
-| `game_simulation` | 物理演算・空間ハッシュ・エンティティ定義・ECS | Rust（no_std 互換） |
+| `game_simulation` | 物理演算・空間ハッシュ・ECS・外部注入パラメータテーブル | Rust（no_std 互換） |
 | `game_render` | GPU 描画パイプライン・HUD・winit ウィンドウ管理 | Rust / wgpu / egui / winit |
 | `game_audio` | オーディオ管理・アセット読み込み | Rust / rodio |
 
@@ -222,17 +231,38 @@ EnemyWorld {
 sequenceDiagram
     participant R as Rust 60Hz ループ
     participant GE as GameEvents GenServer
+    participant RULE as RuleBehaviour
     participant SM as SceneManager
     participant S as Scene.update()
 
     loop 毎フレーム（60Hz）
         R->>R: physics_step()
         R->>R: drain_frame_events()
-        R-->>GE: {:frame_events, [enemy_killed, level_up, ...]}
+        R-->>GE: {:frame_events, [entity_removed, level_up, ...]}
+        GE->>RULE: on_entity_removed / update_boss_ai
         GE->>GE: シーン遷移・セーブ・UI アクション処理
         GE->>SM: push / pop / replace
         SM->>S: update(context, state)
     end
+```
+
+### 4. World / Rule 分離
+
+```mermaid
+graph LR
+    CFG["config.exs\ncurrent_world / current_rule"]
+    WB["WorldBehaviour\nassets_path / entity_registry\nsetup_world_params"]
+    RB["RuleBehaviour\ninitial_scenes / physics_scenes\nboss_ai / item_drop"]
+    GE["GameEvents\n（エンジンコア）"]
+    VS_W["VampireSurvivorWorld"]
+    VS_R["VampireSurvivorRule"]
+
+    CFG -->|解決| WB
+    CFG -->|解決| RB
+    WB -->|実装| VS_W
+    RB -->|実装| VS_R
+    GE -->|参照| WB
+    GE -->|参照| RB
 ```
 
 ---
