@@ -44,7 +44,7 @@ defmodule GameEngine.SceneManager do
 
   @impl true
   def init(_opts) do
-    rule_module = current_rule()
+    rule_module = current_content()
     specs = rule_module.initial_scenes()
 
     stack =
@@ -72,7 +72,7 @@ defmodule GameEngine.SceneManager do
   end
 
   def handle_call(:render_type, _from, %{stack: []} = state) do
-    {:reply, current_rule().render_type(), state}
+    {:reply, current_content().render_type(), state}
   end
 
   def handle_call(:render_type, _from, %{stack: [%{module: mod} | _]} = state) do
@@ -135,5 +135,5 @@ defmodule GameEngine.SceneManager do
     {:ok, %{module: module, state: scene_state}}
   end
 
-  defp current_rule, do: GameEngine.Config.current_rule()
+  defp current_content, do: GameEngine.Config.current()
 end

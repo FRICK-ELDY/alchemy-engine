@@ -3,8 +3,12 @@ defmodule GameServer.Application do
 
   @impl true
   def start(_type, _args) do
-    world = Application.get_env(:game_server, :current_world, GameContent.VampireSurvivorWorld)
-    assets_path = if function_exported?(world, :assets_path, 0), do: world.assets_path(), else: ""
+    content = Application.get_env(:game_server, :current, GameContent.VampireSurvivor)
+    assets_path =
+      content.components()
+      |> Enum.find_value("", fn comp ->
+        if function_exported?(comp, :assets_path, 0), do: comp.assets_path()
+      end)
     System.put_env("GAME_ASSETS_ID", assets_path)
 
     children = [
