@@ -53,7 +53,7 @@ defmodule GameContent.VampireSurvivor.BossComponent do
     {px, py} = GameEngine.NifBridge.get_player_pos(world_ref)
 
     playing_state = GameEngine.SceneManager.get_scene_state(GameContent.VampireSurvivor.Scenes.Playing)
-    kind_id = Map.get(playing_state, :boss_kind_id)
+    kind_id = Map.get(playing_state || %{}, :boss_kind_id)
 
     if kind_id != nil do
       bp = GameContent.EntityParams.boss_params_by_id(kind_id)

@@ -729,7 +729,7 @@ defmodule GameEngine.GameEvents do
 
   # Playing シーンの state を取得する
   defp get_playing_scene_state(content) do
-    GameEngine.SceneManager.get_scene_state(content.playing_scene())
+    GameEngine.SceneManager.get_scene_state(content.playing_scene()) || %{}
   end
 
   # セーブロード後に Elixir 側の状態をリセット

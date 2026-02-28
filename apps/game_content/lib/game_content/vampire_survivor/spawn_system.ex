@@ -49,6 +49,9 @@ defmodule GameContent.VampireSurvivor.SpawnSystem do
   end
 
   def current_wave(elapsed_sec) do
+    # Enum.find_last/2 は Elixir 1.12 以降で追加されているが、
+    # 使用環境（Elixir 1.19.5 + OTP 28）で undefined エラーが発生するため
+    # Enum.filter/2 + List.last/1 で代替している。
     @waves
     |> Enum.filter(fn {start, _i, _c} -> elapsed_sec >= start end)
     |> List.last()
