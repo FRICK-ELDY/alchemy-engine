@@ -11,13 +11,10 @@
 |:---|:---|:---|:---|
 | I-1 | テストが皆無 | 高 | 中 |
 | I-2 | `GameWorldInner` にルール固有フィールドが残存 | 中 | 中 |
-| I-3 | `config.exs` の設定キー不一致 | 高 | 低 |
 | I-4 | `game_network` が完全スタブ | 低 | 高 |
 | I-5 | `RuleBehaviour` に VampireSurvivor 固有コールバックが混在 | 中 | 中 |
 | I-6 | セーブデータ形式の移植性 | 中 | 低 |
 | I-7 | Elixir の真価（OTP・並行性・分散）が活かされていない | 中 | 高 |
-| I-8 | Rust の最近接探索が O(n) 全探索にフォールバックする | 低 | 低 |
-| I-9 | `WorldBehaviour` / `RuleBehaviour` を `Component` に統合する | 高 | 中 |
 
 ---
 
@@ -156,20 +153,6 @@ mod tests {
 - `native/game_nif/src/render_snapshot.rs` — HUD データ取得方法の変更
 - `apps/game_engine/lib/game_engine/game_events.ex` — 毎フレームの状態注入ロジック
 - `apps/game_content/lib/game_content/vampire_survivor/scenes/playing.ex` — state 拡張
-
----
-
-## ~~I-3: `config.exs` の設定キー不一致~~ ✅ 対応済み
-
-`config.exs` の `:current_game` キーを `:current_world` / `:current_rule` の2キー形式に修正し、
-`vision.md` の記述もコードと一致する形式に統一した。
-
-```elixir
-# config/config.exs（現在）
-config :game_server, :current_world, GameContent.VampireSurvivorWorld
-config :game_server, :current_rule,  GameContent.VampireSurvivorRule
-config :game_server, :map,           :plain
-```
 
 ---
 
@@ -443,117 +426,18 @@ Elixir + Phoenix Channels の組み合わせは、リアルタイムマルチプ
 
 ---
 
-## I-8: Rust の最近接探索が O(n) 全探索にフォールバックする
-
-### 現状
-
-`chase_ai.rs` の `find_nearest_enemy_spatial` は、Spatial Hash の検索半径内に候補がいない場合に O(n) 全探索にフォールバックする。また、Lightning チェーンの除外リスト検索が `Vec<usize>` の線形探索（`exclude.contains(&i)`）になっており、チェーン数が増えると二乗オーダーになる。
-
-```rust
-// 半径内に候補がいなければ全探索（敵が散らばっているときに毎フレーム発動）
-result.or_else(|| find_nearest_enemy(enemies, px, py))
-
-// Lightning チェーン: O(n) 線形探索
-if !enemies.alive[i] || exclude.contains(&i) {
-```
-
-### 方針
-
-#### `find_nearest_enemy_spatial` のフォールバック改善
-
-検索半径を段階的に拡大する方式（`search_radius` を 2 倍ずつ増やして再試行）に変更し、全探索を避ける。
-
-```rust
-pub fn find_nearest_enemy_spatial(
-    collision: &CollisionWorld,
-    enemies: &EnemyWorld,
-    px: f32, py: f32,
-    initial_radius: f32,
-    buf: &mut Vec<usize>,
-) -> Option<usize> {
-    let mut radius = initial_radius;
-    for _ in 0..4 {  // 最大 4 回拡大（初期半径 × 16 まで）
-        collision.dynamic.query_nearby_into(px, py, radius, buf);
-        if let Some(i) = buf.iter()
-            .filter(|&&i| i < enemies.len() && enemies.alive[i])
-            .min_by(/* 距離比較 */)
-        {
-            return Some(*i);
-        }
-        buf.clear();
-        radius *= 2.0;
-    }
-    find_nearest_enemy(enemies, px, py)  // 最終フォールバック（稀）
-}
-```
-
-#### Lightning チェーン除外リストの改善
-
-現在の `fire_chain` は `hit_vec: Vec<usize>` に命中済みの**敵インデックス**を蓄積し、`find_nearest_enemy_spatial_excluding` に渡している。`exclude.contains(&i)` は敵インデックス `i` に対して線形探索するため O(chain_count × 候補数) になる。
-
-修正方針は **`[bool; MAX_ENEMIES]` のスタック配列をビットマスクとして使う** ことで O(1) 検索を実現する。`MAX_ENEMIES = 300` は `constants.rs` で定義済みであり、300 バイトのスタック消費は許容範囲内である。
-
-> **なぜ `[bool; MAX_CHAIN]` ではないか**
-> 除外判定は「チェーン番号」ではなく「敵インデックス（0〜MAX_ENEMIES-1）」で行う。
-> `MAX_CHAIN`（チェーン数の上限）と `MAX_ENEMIES`（敵インデックスの上限）は別物であり、
-> `[bool; MAX_CHAIN]` でインデックス `i` にアクセスすると範囲外アクセスになる。
-
-```rust
-// 変更前（fire_chain 内）
-let mut hit_vec: Vec<usize> = Vec::with_capacity(chain_count);
-// ...
-find_nearest_enemy_spatial_excluding(
-    &w.collision, &w.enemies, nx, ny,
-    WEAPON_SEARCH_RADIUS, &hit_vec,  // ← &[usize] を渡す
-    &mut w.spatial_query_buf,
-);
-
-// 変更後
-use crate::constants::MAX_ENEMIES;
-let mut hit_set = [false; MAX_ENEMIES];  // スタック上に 300 バイト
-// ...
-hit_set[ei] = true;  // 命中時にフラグを立てる
-find_nearest_enemy_spatial_excluding(
-    &w.collision, &w.enemies, nx, ny,
-    WEAPON_SEARCH_RADIUS, &hit_set,  // ← &[bool; MAX_ENEMIES] を渡す
-    &mut w.spatial_query_buf,
-);
-
-// find_nearest_enemy_spatial_excluding 側の変更
-// exclude: &[usize] → exclude: &[bool]
-.filter(|&&i| i < enemies.len() && enemies.alive[i] && !exclude[i])  // O(1)
-```
-
-### 影響ファイル
-
-- `native/game_simulation/src/game_logic/chase_ai.rs` — `find_nearest_enemy_spatial_excluding` のシグネチャ変更（`exclude: &[usize]` → `exclude: &[bool]`）
-- `native/game_simulation/src/game_logic/systems/weapons.rs` — `fire_chain` の `hit_vec` を `hit_set` に変更
-
-### 作業ステップ
-
-1. `find_nearest_enemy_spatial` に段階的半径拡大ロジックを追加する（2〜3時間）
-2. `find_nearest_enemy_spatial_excluding` のシグネチャを `exclude: &[bool]` に変更する（30分）
-3. `fire_chain` 内の `hit_vec: Vec<usize>` を `hit_set: [bool; MAX_ENEMIES]` に置き換える（30分）
-4. `cargo test` でリグレッションがないことを確認する
-
----
-
 ## 改善の優先順位と推奨実施順序
 
 ```mermaid
 graph TD
-    I3["I-3: config.exs 不一致\n（即着手・低コスト）"]
     I1["I-1: テスト導入\n（即着手・中コスト）"]
     I6["I-6: セーブデータ形式\n（短期対応は即着手可能）"]
-    I8["I-8: Rust 最近接探索 O(n) フォールバック\n（即着手・低コスト）"]
     I2["I-2: GameWorldInner フィールド除去\n（2つ目のコンテンツ追加時）"]
     I5["I-5: RuleBehaviour 分離\n（2つ目のコンテンツ追加時）"]
     I7["I-7: Elixir 真価（NIF 安全性・並行性・分散）\n（中長期）"]
     I4["I-4: game_network 実装\n（長期・大規模）"]
 
-    I3 --> I1
     I1 --> I6
-    I8 --> I1
     I2 --> I5
     I5 --> I7
     I7 --> I4
@@ -561,118 +445,26 @@ graph TD
 
 ### フェーズ1（今すぐ着手）
 
-1. **I-3**: `config.exs` の設定キーをコードとドキュメントで統一する（1〜2時間）
-2. **I-8**: `find_nearest_enemy_spatial` の段階的半径拡大・Lightning 除外リストのビットマスク化（半日）
-3. **I-6（短期）**: セーブデータにバージョン番号を付与し、マイグレーション機構を追加する（半日）
-4. **I-1（Elixir 層）**: `game_content` の純粋関数テストを追加する（1〜2日）
+1. **I-6（短期）**: セーブデータにバージョン番号を付与し、マイグレーション機構を追加する（半日）
+2. **I-1（Elixir 層）**: `game_content` の純粋関数テストを追加する（1〜2日）
 
 ### フェーズ2（安定化）
 
-5. **I-1（Rust 層）**: `game_simulation` のユニットテストを追加する（1〜2日）
-6. **I-6（中期）**: JSON 形式への移行（半日〜1日）
-7. **I-1（統合テスト）**: シーン遷移の統合テストを追加する（1〜2日）
-8. **I-7（問題1）**: `game_nif` の全 NIF 関数の戻り値を `NifResult<T>` に統一する（1〜2日）
+3. **I-1（Rust 層）**: `game_simulation` のユニットテストを追加する（1〜2日）
+4. **I-6（中期）**: JSON 形式への移行（半日〜1日）
+5. **I-1（統合テスト）**: シーン遷移の統合テストを追加する（1〜2日）
+6. **I-7（問題1）**: `game_nif` の全 NIF 関数の戻り値を `NifResult<T>` に統一する（1〜2日）
 
 ### フェーズ3（2つ目のコンテンツ追加時）
 
-9. **I-9**: `WorldBehaviour` / `RuleBehaviour` を `Component` に統合する
-10. **I-2**: `GameWorldInner` からルール固有フィールドを除去する
-11. **I-5**: `RuleBehaviour` をコアとオプションに分離する（I-9 完了後は不要になる可能性あり）
-12. **I-7（問題2）**: 複数ルーム同時稼働の統合テストを書く（半日）
-13. **I-4（フェーズ1）**: `GameNetwork.Behaviour` インターフェースを定義する
+7. **I-2**: `GameWorldInner` からルール固有フィールドを除去する
+8. **I-5**: `RuleBehaviour` をコアとオプションに分離する
+9. **I-7（問題2）**: 複数ルーム同時稼働の統合テストを書く（半日）
+10. **I-4（フェーズ1）**: `GameNetwork.Behaviour` インターフェースを定義する
 
 ### フェーズ4（長期）
 
-14. **I-7（問題3）** / **I-4（フェーズ2〜3）**: `GameNetwork.Local` 実装 → ローカルマルチプレイヤー → ネットワーク対応
-
----
-
-## I-9: `WorldBehaviour` / `RuleBehaviour` を `Component` に統合する
-
-### 背景
-
-`vision.md` の思想整理により、「ワールド」と「ルール」の区別はエンジンの責務ではないことが明確になった。
-エンジンの上に乗るものはすべて「コンテンツ」であり、コンテンツは**コンポーネントの集合**として表現される。
-これは Unity の `MonoBehaviour`、Unreal の `ActorComponent`、Godot の `Node` と同じ思想だ。
-
-### 現状
-
-```elixir
-# 2つのビヘイビアが分離して存在する
-GameEngine.WorldBehaviour  # assets_path / entity_registry / setup_world_params
-GameEngine.RuleBehaviour   # initial_scenes / on_entity_removed / update_boss_ai / ...
-
-# config.exs も2キー
-config :game_server, :current_world, GameContent.VampireSurvivorWorld
-config :game_server, :current_rule,  GameContent.VampireSurvivorRule
-```
-
-### 目標
-
-```elixir
-# 1つのビヘイビアに統合
-GameEngine.Component  # on_ready / on_process / on_physics_process / on_event
-
-# コンテンツはコンポーネント群を返す
-defmodule GameContent.VampireSurvivor do
-  def components do
-    [
-      GameContent.VampireSurvivor.SpawnComponent,
-      GameContent.VampireSurvivor.LevelComponent,
-      GameContent.VampireSurvivor.BossComponent,
-      # ...
-    ]
-  end
-end
-
-# config.exs は1キー
-config :game_server, :current, GameContent.VampireSurvivor
-```
-
-### `GameEngine.Component` ビヘイビア定義
-
-```elixir
-defmodule GameEngine.Component do
-  @optional_callbacks [on_ready: 1, on_process: 1, on_physics_process: 1, on_event: 2]
-
-  @callback on_ready(world_ref)          :: :ok  # 初期化時（1回）
-  @callback on_process(context)          :: :ok  # 毎フレーム（Elixir側）
-  @callback on_physics_process(context)  :: :ok  # 物理フレーム（60Hz）
-  @callback on_event(event, context)     :: :ok  # イベント発生時
-end
-```
-
-### 現在のコールバックとコンポーネントの対応
-
-| 現在 | 移行先コンポーネント | 使用するコールバック |
-|---|---|---|
-| `WorldBehaviour.setup_world_params/1` | `SpawnComponent` | `on_ready/1` |
-| `WorldBehaviour.entity_registry/0` | `SpawnComponent` | （データ定義） |
-| `RuleBehaviour.initial_scenes/0` | `SceneComponent` | （データ定義） |
-| `RuleBehaviour.update_boss_ai/2` | `BossComponent` | `on_physics_process/1` |
-| `RuleBehaviour.on_entity_removed/4` | `LevelComponent` | `on_event/2` |
-| `RuleBehaviour.on_boss_defeated/4` | `BossComponent` | `on_event/2` |
-
-### 修正手順
-
-1. `GameEngine.Component` ビヘイビアを新設する
-2. `GameEngine.Config` を `:current` キー一本に変更する
-3. `GameEngine.GameEvents` のコンポーネント呼び出しを実装する
-4. `GameContent.VampireSurvivor` モジュールを新設し、`components/0` を定義する
-5. 既存の `VampireSurvivorWorld` / `VampireSurvivorRule` をコンポーネントに分解する
-6. `config.exs` を `:current` キーに変更する
-7. `WorldBehaviour` / `RuleBehaviour` を削除する
-
-### 影響範囲
-
-- `apps/game_engine/lib/game_engine/config.ex`
-- `apps/game_engine/lib/game_engine/game_events.ex`
-- `apps/game_engine/lib/game_engine/scene_manager.ex`
-- `apps/game_engine/lib/game_engine/world_behaviour.ex`（削除）
-- `apps/game_engine/lib/game_engine/rule_behaviour.ex`（削除）
-- `apps/game_content/lib/game_content/vampire_survivor_world.ex`（分解）
-- `apps/game_content/lib/game_content/vampire_survivor_rule.ex`（分解）
-- `config/config.exs`
+11. **I-7（問題3）** / **I-4（フェーズ2〜3）**: `GameNetwork.Local` 実装 → ローカルマルチプレイヤー → ネットワーク対応
 
 ---
 

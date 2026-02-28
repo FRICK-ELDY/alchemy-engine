@@ -47,7 +47,7 @@ mod render_snapshot;
 
 pub use game_audio::{AssetId, AssetLoader, AudioCommand, AudioCommandSender, AudioManager, start_audio_thread};
 pub use game_simulation::game_logic::{
-    find_nearest_enemy, find_nearest_enemy_excluding, find_nearest_enemy_spatial,
+    find_nearest_enemy, find_nearest_enemy_spatial,
     find_nearest_enemy_spatial_excluding,
 };
 pub use game_render::{BossHudInfo, GamePhase, HudData, RenderFrame};
