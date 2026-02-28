@@ -477,7 +477,10 @@ defmodule GameEngine.GameEvents do
       player_hp:     state.player_hp,
       player_max_hp: state.player_max_hp,
       push_scene:    fn mod, init_arg ->
-        GameEngine.NifBridge.pause_physics(control_ref)
+        content = current_content()
+        if function_exported?(content, :pause_on_push?, 1) and content.pause_on_push?(mod) do
+          GameEngine.NifBridge.pause_physics(control_ref)
+        end
         GameEngine.SceneManager.push_scene(mod, init_arg)
       end,
       pop_scene:     fn ->

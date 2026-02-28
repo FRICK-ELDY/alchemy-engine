@@ -56,10 +56,14 @@ defmodule GameContent.VampireSurvivor.LevelComponent do
 
     if Map.get(playing_state, :level_up_pending, false) do
       weapon_levels = Map.get(playing_state, :weapon_levels, %{})
-      selected = resolve_weapon(weapon_name, weapon_levels, content)
+      {action, weapon} = resolve_weapon(weapon_name, weapon_levels, content)
 
-      if selected != :__skip__ do
-        Logger.info("[LEVEL UP] Weapon selected from renderer: #{inspect(selected)}")
+      case action do
+        :apply ->
+          Logger.info("[LEVEL UP] Weapon selected from renderer: #{inspect(weapon)}")
+          GameEngine.SceneManager.update_by_module(content.playing_scene(), &content.apply_weapon_selected(&1, weapon))
+        :skip ->
+          GameEngine.SceneManager.update_by_module(content.playing_scene(), &content.apply_level_up_skipped/1)
       end
 
       close_level_up_scene_if_active(content, context)
@@ -100,28 +104,18 @@ defmodule GameContent.VampireSurvivor.LevelComponent do
     allowed = weapons_registry |> Map.keys() |> MapSet.new()
     fallback = Map.keys(weapon_levels) |> List.first() || :magic_wand
 
-    {action, weapon} =
-      cond do
-        is_atom(requested) and MapSet.member?(allowed, requested) ->
-          {:apply, requested}
+    cond do
+      is_atom(requested) and MapSet.member?(allowed, requested) ->
+        {:apply, requested}
 
-        MapSet.member?(allowed, fallback) ->
-          Logger.warning("[LEVEL UP] Renderer weapon '#{weapon_name}' not available. Falling back to #{inspect(fallback)}.")
-          {:apply, fallback}
+      MapSet.member?(allowed, fallback) ->
+        Logger.warning("[LEVEL UP] Renderer weapon '#{weapon_name}' not available. Falling back to #{inspect(fallback)}.")
+        {:apply, fallback}
 
-        true ->
-          Logger.warning("[LEVEL UP] Renderer weapon '#{weapon_name}' not available and no valid fallback. Skipping.")
-          {:skip, :__skip__}
-      end
-
-    case action do
-      :apply ->
-        GameEngine.SceneManager.update_by_module(content.playing_scene(), &content.apply_weapon_selected(&1, weapon))
-      :skip ->
-        GameEngine.SceneManager.update_by_module(content.playing_scene(), &content.apply_level_up_skipped/1)
+      true ->
+        Logger.warning("[LEVEL UP] Renderer weapon '#{weapon_name}' not available and no valid fallback. Skipping.")
+        {:skip, :__skip__}
     end
-
-    weapon
   end
 
   defp close_level_up_scene_if_active(content, context) do
