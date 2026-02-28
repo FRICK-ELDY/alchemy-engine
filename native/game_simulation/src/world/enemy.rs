@@ -92,6 +92,84 @@ impl EnemyWorld {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::entity_params::EnemyParams;
+
+    fn default_params() -> EnemyParams {
+        EnemyParams {
+            max_hp:           50.0,
+            speed:            80.0,
+            radius:           20.0,
+            damage_per_sec:   10.0,
+            render_kind:      1,
+            particle_color:   [1.0, 0.5, 0.0, 1.0],
+            passes_obstacles: false,
+        }
+    }
+
+    #[test]
+    fn spawn_increases_count() {
+        let mut world = EnemyWorld::new();
+        let ep = default_params();
+        world.spawn(&[(0.0, 0.0), (10.0, 10.0)], 0, &ep);
+        assert_eq!(world.count, 2);
+        assert_eq!(world.len(), 2);
+    }
+
+    #[test]
+    fn kill_decreases_count_and_adds_to_free_list() {
+        let mut world = EnemyWorld::new();
+        let ep = default_params();
+        world.spawn(&[(0.0, 0.0), (10.0, 10.0)], 0, &ep);
+
+        world.kill(0);
+
+        assert_eq!(world.count, 1, "kill 後の count は 1 であるべき");
+        assert!(!world.alive[0], "kill 後は alive=false であるべき");
+    }
+
+    #[test]
+    fn spawn_reuses_free_list_slot() {
+        let mut world = EnemyWorld::new();
+        let ep = default_params();
+        world.spawn(&[(0.0, 0.0)], 0, &ep);
+        world.kill(0);
+
+        let len_before = world.len();
+        world.spawn(&[(99.0, 99.0)], 0, &ep);
+
+        // free_list のスロットを再利用するため配列長は変わらない
+        assert_eq!(
+            world.len(),
+            len_before,
+            "free_list 再利用時は配列が伸長しないべき"
+        );
+        assert_eq!(world.count, 1);
+        assert!(world.alive[0]);
+        assert!((world.positions_x[0] - 99.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn kill_idempotent() {
+        let mut world = EnemyWorld::new();
+        let ep = default_params();
+        world.spawn(&[(0.0, 0.0)], 0, &ep);
+        world.kill(0);
+        world.kill(0); // 2 回 kill しても count が負にならない
+        assert_eq!(world.count, 0);
+    }
+
+    #[test]
+    fn spawn_sets_correct_kind_id() {
+        let mut world = EnemyWorld::new();
+        let ep = default_params();
+        world.spawn(&[(0.0, 0.0)], 3, &ep);
+        assert_eq!(world.kind_ids[0], 3);
+    }
+}
+
 impl EnemySeparation for EnemyWorld {
     fn enemy_count(&self) -> usize          { self.positions_x.len() }
     fn is_alive(&self, i: usize) -> bool    { self.alive[i] }

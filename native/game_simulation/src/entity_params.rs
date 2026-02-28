@@ -136,3 +136,96 @@ impl EntityParamTables {
         self.enemies.get(id as usize).map(|e| e.passes_obstacles).unwrap_or(false)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_tables() -> EntityParamTables {
+        EntityParamTables {
+            enemies: vec![
+                EnemyParams {
+                    max_hp: 30.0, speed: 80.0, radius: 20.0,
+                    damage_per_sec: 20.0, render_kind: 1,
+                    particle_color: [1.0, 0.5, 0.1, 1.0],
+                    passes_obstacles: false,
+                },
+                EnemyParams {
+                    max_hp: 15.0, speed: 160.0, radius: 12.0,
+                    damage_per_sec: 10.0, render_kind: 2,
+                    particle_color: [0.7, 0.2, 0.9, 1.0],
+                    passes_obstacles: false,
+                },
+            ],
+            weapons: vec![
+                WeaponParams {
+                    cooldown: 1.0, damage: 10, as_u8: 0,
+                    bullet_table: Some(vec![0, 1, 1, 2, 2, 3, 3, 4, 4]),
+                    fire_pattern: FirePattern::Aimed,
+                    range: 0.0, chain_count: 0,
+                },
+            ],
+            bosses: vec![
+                BossParams {
+                    max_hp: 1000.0, speed: 60.0, radius: 48.0,
+                    damage_per_sec: 30.0, render_kind: 11,
+                    special_interval: 5.0,
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn get_enemy_returns_correct_params() {
+        let tables = make_tables();
+        let ep = tables.get_enemy(0);
+        assert!((ep.max_hp - 30.0).abs() < 0.001);
+        assert!((ep.speed - 80.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn get_weapon_returns_correct_params() {
+        let tables = make_tables();
+        let wp = tables.get_weapon(0);
+        assert_eq!(wp.damage, 10);
+        assert_eq!(wp.fire_pattern, FirePattern::Aimed);
+    }
+
+    #[test]
+    fn get_boss_returns_correct_params() {
+        let tables = make_tables();
+        let bp = tables.get_boss(0);
+        assert!((bp.max_hp - 1000.0).abs() < 0.001);
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid enemy ID")]
+    fn get_enemy_panics_on_invalid_id() {
+        let tables = make_tables();
+        tables.get_enemy(99);
+    }
+
+    #[test]
+    fn weapon_bullet_count_by_level() {
+        let tables = make_tables();
+        let wp = tables.get_weapon(0);
+        // bullet_table = [0, 1, 1, 2, 2, 3, 3, 4, 4] (index 0 は未使用、1-based)
+        assert_eq!(wp.bullet_count(1), 1);
+        assert_eq!(wp.bullet_count(4), 2);
+        assert_eq!(wp.bullet_count(8), 4);
+    }
+
+    #[test]
+    fn default_tables_are_empty() {
+        let tables = EntityParamTables::default();
+        assert!(tables.enemies.is_empty());
+        assert!(tables.weapons.is_empty());
+        assert!(tables.bosses.is_empty());
+    }
+
+    #[test]
+    fn enemy_passes_obstacles_false_for_unknown_id() {
+        let tables = EntityParamTables::default();
+        assert!(!tables.enemy_passes_obstacles(0));
+    }
+}

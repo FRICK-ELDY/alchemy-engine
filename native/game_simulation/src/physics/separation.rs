@@ -101,3 +101,102 @@ pub fn apply_separation<W: EnemySeparation>(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// テスト用の最小限 EnemySeparation 実装
+    struct TestWorld {
+        positions_x:  Vec<f32>,
+        positions_y:  Vec<f32>,
+        alive:        Vec<bool>,
+        sep_x:        Vec<f32>,
+        sep_y:        Vec<f32>,
+        neighbor_buf: Vec<usize>,
+    }
+
+    impl TestWorld {
+        fn new(positions: Vec<(f32, f32)>) -> Self {
+            let n = positions.len();
+            Self {
+                positions_x:  positions.iter().map(|p| p.0).collect(),
+                positions_y:  positions.iter().map(|p| p.1).collect(),
+                alive:        vec![true; n],
+                sep_x:        vec![0.0; n],
+                sep_y:        vec![0.0; n],
+                neighbor_buf: Vec::new(),
+            }
+        }
+    }
+
+    impl EnemySeparation for TestWorld {
+        fn enemy_count(&self) -> usize            { self.positions_x.len() }
+        fn is_alive(&self, i: usize) -> bool      { self.alive[i] }
+        fn pos_x(&self, i: usize) -> f32          { self.positions_x[i] }
+        fn pos_y(&self, i: usize) -> f32          { self.positions_y[i] }
+        fn add_pos_x(&mut self, i: usize, v: f32) { self.positions_x[i] += v; }
+        fn add_pos_y(&mut self, i: usize, v: f32) { self.positions_y[i] += v; }
+        fn sep_buf_x(&mut self) -> &mut Vec<f32>  { &mut self.sep_x }
+        fn sep_buf_y(&mut self) -> &mut Vec<f32>  { &mut self.sep_y }
+        fn neighbor_buf(&mut self) -> &mut Vec<usize> { &mut self.neighbor_buf }
+    }
+
+    #[test]
+    fn overlapping_enemies_are_separated() {
+        // 2 体が完全に同じ位置に重なっている
+        let mut world = TestWorld::new(vec![(100.0, 100.0), (100.5, 100.5)]);
+        let before_dist = {
+            let dx = world.positions_x[0] - world.positions_x[1];
+            let dy = world.positions_y[0] - world.positions_y[1];
+            (dx * dx + dy * dy).sqrt()
+        };
+
+        apply_separation(&mut world, 30.0, 1.0, 0.016);
+
+        let after_dist = {
+            let dx = world.positions_x[0] - world.positions_x[1];
+            let dy = world.positions_y[0] - world.positions_y[1];
+            (dx * dx + dy * dy).sqrt()
+        };
+
+        assert!(
+            after_dist > before_dist,
+            "分離後の距離 ({after_dist:.3}) は分離前 ({before_dist:.3}) より大きいべき"
+        );
+    }
+
+    #[test]
+    fn well_separated_enemies_are_not_moved() {
+        // 2 体が十分離れている（分離半径 30 より遠い）
+        let mut world = TestWorld::new(vec![(0.0, 0.0), (100.0, 100.0)]);
+        let before_x0 = world.positions_x[0];
+        let before_y0 = world.positions_y[0];
+
+        apply_separation(&mut world, 30.0, 1.0, 0.016);
+
+        assert_eq!(world.positions_x[0], before_x0, "十分離れた敵は移動しないべき");
+        assert_eq!(world.positions_y[0], before_y0, "十分離れた敵は移動しないべき");
+    }
+
+    #[test]
+    fn dead_enemies_are_not_separated() {
+        let mut world = TestWorld::new(vec![(100.0, 100.0), (100.5, 100.5)]);
+        world.alive[1] = false;
+        let before_x0 = world.positions_x[0];
+
+        apply_separation(&mut world, 30.0, 1.0, 0.016);
+
+        assert_eq!(
+            world.positions_x[0], before_x0,
+            "死亡した敵との分離は発生しないべき"
+        );
+    }
+
+    #[test]
+    fn single_enemy_no_panic() {
+        let mut world = TestWorld::new(vec![(50.0, 50.0)]);
+        // 1 体のみのとき apply_separation はパニックせず早期リターンするべき
+        apply_separation(&mut world, 30.0, 1.0, 0.016);
+    }
+}
