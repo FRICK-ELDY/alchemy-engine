@@ -47,14 +47,7 @@ defmodule GameContent.VampireSurvivorRule do
   def version, do: "0.1.0"
 
   @impl GameEngine.RuleBehaviour
-  def context_defaults, do: %{
-    level:        1,
-    exp:          0,
-    exp_to_next:  10,
-    boss_hp:      nil,
-    boss_max_hp:  nil,
-    boss_kind_id: nil,
-  }
+  def context_defaults, do: %{}
 
   @impl GameEngine.RuleBehaviour
   def playing_scene, do: GameContent.VampireSurvivor.Scenes.Playing

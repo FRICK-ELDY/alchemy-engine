@@ -17,6 +17,8 @@ use std::sync::RwLock;
 
 use crate::{ok, BulletWorld, EnemyWorld, ParticleWorld};
 
+const DEFAULT_PARTICLE_COLOR: [f32; 4] = [1.0, 0.5, 0.1, 1.0];
+
 #[rustler::nif]
 pub fn create_world() -> ResourceArc<GameWorld> {
     ResourceArc::new(GameWorld(RwLock::new(GameWorldInner {
@@ -225,7 +227,7 @@ fn decode_particle_color(item: Term) -> [f32; 4] {
             return [v[0] as f32, v[1] as f32, v[2] as f32, v[3] as f32];
         }
     }
-    [1.0, 0.5, 0.1, 1.0]
+    DEFAULT_PARTICLE_COLOR
 }
 
 fn decode_fire_pattern(s: &str) -> FirePattern {

@@ -417,8 +417,9 @@ defmodule GameEngine.GameEvents do
     x = bits_to_f32(x_bits)
     y = bits_to_f32(y_bits)
     rule = current_rule()
+    scene = rule.playing_scene()
     {state, score_delta} = apply_kill_score(state, exp)
-    update_playing_scene_state(rule, &GameContent.VampireSurvivor.Scenes.Playing.accumulate_exp(&1, exp))
+    update_playing_scene_state(rule, &scene.accumulate_exp(&1, exp))
     GameEngine.NifBridge.add_score_popup(state.world_ref, x, y, score_delta)
     if function_exported?(rule, :on_entity_removed, 4) do
       rule.on_entity_removed(state.world_ref, enemy_kind, x, y)
@@ -432,11 +433,12 @@ defmodule GameEngine.GameEvents do
     x = bits_to_f32(x_bits)
     y = bits_to_f32(y_bits)
     rule = current_rule()
+    scene = rule.playing_scene()
     {state, score_delta} = apply_kill_score(state, exp)
     update_playing_scene_state(rule, fn s ->
       s
-      |> GameContent.VampireSurvivor.Scenes.Playing.accumulate_exp(exp)
-      |> GameContent.VampireSurvivor.Scenes.Playing.apply_boss_defeated()
+      |> scene.accumulate_exp(exp)
+      |> scene.apply_boss_defeated()
     end)
     GameEngine.NifBridge.add_score_popup(state.world_ref, x, y, score_delta)
     if function_exported?(rule, :on_boss_defeated, 4) do
@@ -455,7 +457,7 @@ defmodule GameEngine.GameEvents do
   # BossSpawn でボス状態を Playing シーン state に設定
   defp apply_event({:boss_spawn, boss_kind, _, _, _}, state) do
     rule = current_rule()
-    update_playing_scene_state(rule, &GameContent.VampireSurvivor.Scenes.Playing.apply_boss_spawn(&1, boss_kind))
+    update_playing_scene_state(rule, &rule.playing_scene().apply_boss_spawn(&1, boss_kind))
     state
   end
 
@@ -463,7 +465,7 @@ defmodule GameEngine.GameEvents do
   defp apply_event({:boss_damaged, damage_x1000, _, _, _}, state) do
     damage = damage_x1000 / 1000.0
     rule = current_rule()
-    update_playing_scene_state(rule, &GameContent.VampireSurvivor.Scenes.Playing.apply_boss_damaged(&1, damage))
+    update_playing_scene_state(rule, &rule.playing_scene().apply_boss_damaged(&1, damage))
     state
   end
 
