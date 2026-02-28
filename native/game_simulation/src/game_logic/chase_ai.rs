@@ -324,19 +324,10 @@ pub fn update_chase_ai(enemies: &mut EnemyWorld, player_x: f32, player_y: f32, d
     let len = enemies.len();
 
     if len < RAYON_THRESHOLD {
-        // シングルスレッド版（少数敵では rayon オーバーヘッドを回避）
         for i in 0..len {
-            if enemies.alive[i] == 0 {
-                continue;
+            if enemies.alive[i] != 0 {
+                scalar_chase_one(enemies, i, player_x, player_y, dt);
             }
-            let dx   = player_x - enemies.positions_x[i];
-            let dy   = player_y - enemies.positions_y[i];
-            let dist = (dx * dx + dy * dy).sqrt().max(0.001);
-            let speed = enemies.speeds[i];
-            enemies.velocities_x[i] = (dx / dist) * speed;
-            enemies.velocities_y[i] = (dy / dist) * speed;
-            enemies.positions_x[i] += enemies.velocities_x[i] * dt;
-            enemies.positions_y[i] += enemies.velocities_y[i] * dt;
         }
         return;
     }
