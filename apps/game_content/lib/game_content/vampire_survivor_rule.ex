@@ -82,6 +82,18 @@ defmodule GameContent.VampireSurvivorRule do
   def boss_alert_scene, do: GameContent.VampireSurvivor.Scenes.BossAlert
 
   @impl GameEngine.RuleBehaviour
+  def initial_weapons, do: [:magic_wand]
+
+  @impl GameEngine.RuleBehaviour
+  def enemy_exp_reward(enemy_kind), do: GameContent.EntityParams.enemy_exp_reward(enemy_kind)
+
+  @impl GameEngine.RuleBehaviour
+  def boss_exp_reward(boss_kind), do: GameContent.EntityParams.boss_exp_reward(boss_kind)
+
+  @impl GameEngine.RuleBehaviour
+  def score_from_exp(exp), do: GameContent.EntityParams.score_from_exp(exp)
+
+  @impl GameEngine.RuleBehaviour
   def wave_label(elapsed_sec) do
     GameContent.VampireSurvivor.SpawnSystem.wave_label(elapsed_sec)
   end

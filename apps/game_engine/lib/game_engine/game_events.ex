@@ -56,12 +56,10 @@ defmodule GameEngine.GameEvents do
       Logger.warning("[GameEvents] #{inspect(world)}.setup_world_params/1 is not exported, skipping.")
     end
 
-    # Playing シーンの初期 weapon_levels に基づいて Rust 側に初期武器を追加する
+    # RuleBehaviour.initial_weapons/0 を通じて Rust 側に初期武器を追加する
     rule = GameEngine.Config.current_rule()
-    {:ok, initial_scene_state} = rule.playing_scene().init(nil)
-    initial_weapon_levels = Map.get(initial_scene_state, :weapon_levels, %{})
     weapon_registry = world.entity_registry().weapons
-    Enum.each(initial_weapon_levels, fn {weapon_name, _level} ->
+    Enum.each(rule.initial_weapons(), fn weapon_name ->
       if weapon_id = weapon_registry[weapon_name] do
         GameEngine.NifBridge.add_weapon(world_ref, weapon_id)
       end
@@ -413,12 +411,12 @@ defmodule GameEngine.GameEvents do
   # EnemyKilled でスコア・kill_count を積算し、ポップアップ表示・アイテムドロップを処理する
   # x_bits/y_bits は f32::to_bits() でエンコードされた撃破座標
   defp apply_event({:enemy_killed, enemy_kind, x_bits, y_bits, _}, state) do
-    exp = GameContent.EntityParams.enemy_exp_reward(enemy_kind)
+    rule = current_rule()
+    exp = rule.enemy_exp_reward(enemy_kind)
     x = bits_to_f32(x_bits)
     y = bits_to_f32(y_bits)
-    rule = current_rule()
     scene = rule.playing_scene()
-    {state, score_delta} = apply_kill_score(state, exp)
+    {state, score_delta} = apply_kill_score(state, exp, rule)
     update_playing_scene_state(rule, &scene.accumulate_exp(&1, exp))
     GameEngine.NifBridge.add_score_popup(state.world_ref, x, y, score_delta)
     if function_exported?(rule, :on_entity_removed, 4) do
@@ -429,12 +427,12 @@ defmodule GameEngine.GameEvents do
 
   # BossDefeated でスコア・kill_count を積算し、ポップアップ表示・アイテムドロップを処理する
   defp apply_event({:boss_defeated, boss_kind, x_bits, y_bits, _}, state) do
-    exp = GameContent.EntityParams.boss_exp_reward(boss_kind)
+    rule = current_rule()
+    exp = rule.boss_exp_reward(boss_kind)
     x = bits_to_f32(x_bits)
     y = bits_to_f32(y_bits)
-    rule = current_rule()
     scene = rule.playing_scene()
-    {state, score_delta} = apply_kill_score(state, exp)
+    {state, score_delta} = apply_kill_score(state, exp, rule)
     update_playing_scene_state(rule, fn s ->
       s
       |> scene.accumulate_exp(exp)
@@ -481,8 +479,8 @@ defmodule GameEngine.GameEvents do
 
   # スコア・kill_count を state に適用する共通関数
   # 戻り値: {新 state, score_delta}（score_delta はポップアップ表示に使用）
-  defp apply_kill_score(state, exp) do
-    score_delta = GameContent.EntityParams.score_from_exp(exp)
+  defp apply_kill_score(state, exp, rule) do
+    score_delta = rule.score_from_exp(exp)
     new_state =
       state
       |> Map.update!(:score, &(&1 + score_delta))
