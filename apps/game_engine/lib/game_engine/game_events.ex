@@ -90,6 +90,8 @@ defmodule GameEngine.GameEvents do
       player_max_hp:    100.0,
       # フェーズ5: 描画スレッド起動済みフラグ
       render_started:   render_started,
+      # I-3: 前フレームの weapon_levels（差分チェック用）
+      last_weapon_levels: nil,
     }}
   end
 
@@ -387,15 +389,23 @@ defmodule GameEngine.GameEvents do
           GameEngine.NifBridge.set_boss_hp(state.world_ref, scene_boss_hp)
         end
 
-        # I-2: 武器スロットを Elixir 側 Rule state から毎フレーム注入する
-        if function_exported?(content, :level_up_scene, 0) do
-          weapon_levels = Map.get(playing_state, :weapon_levels, %{})
-          playing_scene = content.playing_scene()
-          if function_exported?(playing_scene, :weapon_slots_for_nif, 1) do
-            slots = playing_scene.weapon_slots_for_nif(weapon_levels)
-            GameEngine.NifBridge.set_weapon_slots(state.world_ref, slots)
+        # I-3: weapon_levels が変化したフレームのみ set_weapon_slots を呼ぶ
+        state =
+          if function_exported?(content, :level_up_scene, 0) do
+            weapon_levels = Map.get(playing_state, :weapon_levels, %{})
+            if weapon_levels != state.last_weapon_levels do
+              playing_scene = content.playing_scene()
+              if function_exported?(playing_scene, :weapon_slots_for_nif, 1) do
+                slots = playing_scene.weapon_slots_for_nif(weapon_levels)
+                GameEngine.NifBridge.set_weapon_slots(state.world_ref, slots)
+              end
+              %{state | last_weapon_levels: weapon_levels}
+            else
+              state
+            end
+          else
+            state
           end
-        end
 
         state = maybe_set_input_and_broadcast(state, mod, physics_scenes, events)
 
@@ -445,8 +455,8 @@ defmodule GameEngine.GameEvents do
 
   # BossDefeated でスコア・kill_count を積算し、ポップアップ表示・アイテムドロップを処理する
   # boss_exp_reward/1 を持つコンテンツ（ボスの概念があるコンテンツ）のみ処理する
-  # I-2: Rust 側の entity_kind は 0 固定のため、ボス種別は Playing シーン state から取得する
-  defp apply_event({:boss_defeated, _boss_kind_from_rust, x_bits, y_bits, _}, state) do
+  # I-4: ボス種別は Playing シーン state の boss_kind_id から取得する（Rust 側は種別を持たない）
+  defp apply_event({:boss_defeated, _, x_bits, y_bits, _}, state) do
     content = current_content()
     playing_state = get_playing_scene_state(content)
     boss_kind = Map.get(playing_state, :boss_kind_id)
@@ -739,11 +749,12 @@ defmodule GameEngine.GameEvents do
   # replace_scene が Playing.init/1 を呼ぶためシーン state は自動的にリセットされる
   defp reset_elixir_state(state) do
     %{state |
-      score:         0,
-      kill_count:    0,
-      elapsed_ms:    0,
-      player_hp:     100.0,
-      player_max_hp: 100.0,
+      score:               0,
+      kill_count:          0,
+      elapsed_ms:          0,
+      player_hp:           100.0,
+      player_max_hp:       100.0,
+      last_weapon_levels:  nil,
     }
   end
 
