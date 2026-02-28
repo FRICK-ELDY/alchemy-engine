@@ -72,7 +72,7 @@ defmodule GameContent.VampireSurvivor.LevelComponent do
     :ok
   end
 
-  def on_event({:ui_action, "__auto_pop__", scene_state}, context) do
+  def on_event({:ui_action, "__auto_pop__", scene_state}, _context) do
     content = GameEngine.Config.current()
 
     case scene_state do
@@ -84,7 +84,6 @@ defmodule GameContent.VampireSurvivor.LevelComponent do
         GameEngine.SceneManager.update_by_module(content.playing_scene(), &content.apply_level_up_skipped/1)
     end
 
-    _ = context
     :ok
   end
 
