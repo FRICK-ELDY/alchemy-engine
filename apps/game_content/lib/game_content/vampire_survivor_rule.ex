@@ -7,6 +7,19 @@ defmodule GameContent.VampireSurvivorRule do
   """
   @behaviour GameEngine.RuleBehaviour
 
+  # ── アイテムドロップ確率（累積、1〜100 の乱数と比較）──────────────
+  # Magnet: 2%、Potion: 5%（累積 7%）、Gem: 残り 93%
+  @drop_magnet_threshold 2
+  @drop_potion_threshold 7
+
+  # ── アイテム種別 ID（Rust の ItemKind と対応）──────────────────────
+  @item_gem    0
+  @item_potion 1
+  @item_magnet 2
+
+  # ── Potion の回復量 ────────────────────────────────────────────────
+  @potion_heal_value 20
+
   @impl GameEngine.RuleBehaviour
   def render_type, do: :playing
 
@@ -73,11 +86,13 @@ defmodule GameContent.VampireSurvivorRule do
   def on_entity_removed(world_ref, kind_id, x, y) do
     roll = :rand.uniform(100)
     cond do
-      roll <= 2  -> GameEngine.NifBridge.spawn_item(world_ref, x, y, 2, 0)
-      roll <= 7  -> GameEngine.NifBridge.spawn_item(world_ref, x, y, 1, 20)
-      true       ->
+      roll <= @drop_magnet_threshold ->
+        GameEngine.NifBridge.spawn_item(world_ref, x, y, @item_magnet, 0)
+      roll <= @drop_potion_threshold ->
+        GameEngine.NifBridge.spawn_item(world_ref, x, y, @item_potion, @potion_heal_value)
+      true ->
         exp_reward = GameContent.EntityParams.enemy_exp_reward(kind_id)
-        GameEngine.NifBridge.spawn_item(world_ref, x, y, 0, exp_reward)
+        GameEngine.NifBridge.spawn_item(world_ref, x, y, @item_gem, exp_reward)
     end
     :ok
   end
@@ -102,60 +117,47 @@ defmodule GameContent.VampireSurvivorRule do
     world_ref = context.world_ref
     dt = context.tick_ms / 1000.0
     {px, py} = GameEngine.NifBridge.get_player_pos(world_ref)
-
     bp = GameContent.EntityParams.boss_params_by_id(kind_id)
 
-    case kind_id do
-      # SlimeKing: プレイヤーに向かって直進、特殊行動でスライムをスポーン
-      0 ->
-        {vx, vy} = chase_velocity(px, py, bx, by, bp.speed)
-        GameEngine.NifBridge.set_boss_velocity(world_ref, vx, vy)
-        new_timer = if phase_timer - dt <= 0.0 do
-          spawn_slimes_around(world_ref, bx, by)
-          bp.special_interval
-        else
-          phase_timer - dt
-        end
-        GameEngine.NifBridge.set_boss_phase_timer(world_ref, new_timer)
+    {vx, vy} = chase_velocity(px, py, bx, by, bp.speed)
+    GameEngine.NifBridge.set_boss_velocity(world_ref, vx, vy)
 
-      # BatLord: 通常時はプレイヤーに向かって直進、特殊行動でダッシュ（無敵）
-      1 ->
-        {vx, vy} = chase_velocity(px, py, bx, by, bp.speed)
-        GameEngine.NifBridge.set_boss_velocity(world_ref, vx, vy)
-        new_timer = if phase_timer - dt <= 0.0 do
-          {dvx, dvy} = chase_velocity(px, py, bx, by, bp.dash_speed)
-          GameEngine.NifBridge.set_boss_velocity(world_ref, dvx, dvy)
-          GameEngine.NifBridge.set_boss_invincible(world_ref, true)
-          Process.send_after(self(), {:boss_dash_end, world_ref}, bp.dash_duration_ms)
-          bp.special_interval
-        else
-          phase_timer - dt
-        end
-        GameEngine.NifBridge.set_boss_phase_timer(world_ref, new_timer)
-
-      # StoneGolem: プレイヤーに向かって直進、特殊行動で4方向に岩弾を発射
-      2 ->
-        {vx, vy} = chase_velocity(px, py, bx, by, bp.speed)
-        GameEngine.NifBridge.set_boss_velocity(world_ref, vx, vy)
-        new_timer = if phase_timer - dt <= 0.0 do
-          for {dx, dy} <- [{1.0, 0.0}, {-1.0, 0.0}, {0.0, 1.0}, {0.0, -1.0}] do
-            GameEngine.NifBridge.fire_boss_projectile(
-              world_ref, dx, dy,
-              bp.projectile_speed, bp.projectile_damage, bp.projectile_lifetime
-            )
-          end
-          bp.special_interval
-        else
-          phase_timer - dt
-        end
-        GameEngine.NifBridge.set_boss_phase_timer(world_ref, new_timer)
-
-      _ -> :ok
+    new_timer = if phase_timer - dt <= 0.0 do
+      handle_boss_special_action(world_ref, kind_id, px, py, bx, by, bp)
+      bp.special_interval
+    else
+      phase_timer - dt
     end
+    GameEngine.NifBridge.set_boss_phase_timer(world_ref, new_timer)
     :ok
   end
 
   def update_boss_ai(_context, _boss_state), do: :ok
+
+  # SlimeKing: スライムをスポーン
+  defp handle_boss_special_action(world_ref, 0, _px, _py, bx, by, _bp) do
+    spawn_slimes_around(world_ref, bx, by)
+  end
+
+  # BatLord: ダッシュ（速度上書き・無敵付与）
+  defp handle_boss_special_action(world_ref, 1, px, py, bx, by, bp) do
+    {dvx, dvy} = chase_velocity(px, py, bx, by, bp.dash_speed)
+    GameEngine.NifBridge.set_boss_velocity(world_ref, dvx, dvy)
+    GameEngine.NifBridge.set_boss_invincible(world_ref, true)
+    Process.send_after(self(), {:boss_dash_end, world_ref}, bp.dash_duration_ms)
+  end
+
+  # StoneGolem: 4方向に岩弾を発射
+  defp handle_boss_special_action(world_ref, 2, _px, _py, _bx, _by, bp) do
+    for {dx, dy} <- [{1.0, 0.0}, {-1.0, 0.0}, {0.0, 1.0}, {0.0, -1.0}] do
+      GameEngine.NifBridge.fire_boss_projectile(
+        world_ref, dx, dy,
+        bp.projectile_speed, bp.projectile_damage, bp.projectile_lifetime
+      )
+    end
+  end
+
+  defp handle_boss_special_action(_world_ref, _kind_id, _px, _py, _bx, _by, _bp), do: :ok
 
   defp chase_velocity(px, py, bx, by, speed) do
     ddx = px - bx
