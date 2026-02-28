@@ -4,7 +4,7 @@
 use super::util::lock_poisoned_err;
 use game_simulation::game_logic::systems::spawn::get_spawn_positions_around_player;
 use game_simulation::world::{BossState, FrameEvent, GameWorld};
-use game_simulation::constants::PLAYER_RADIUS;
+use game_simulation::constants::{PLAYER_RADIUS, POPUP_Y_OFFSET, POPUP_LIFETIME};
 use game_simulation::item::ItemKind;
 use game_simulation::weapon::{WeaponSlot, MAX_WEAPON_LEVEL, MAX_WEAPON_SLOTS};
 use rustler::{Atom, NifResult, ResourceArc};
@@ -85,11 +85,6 @@ pub fn fire_boss_projectile(world: ResourceArc<GameWorld>, dx: f64, dy: f64, spe
     }
     Ok(ok())
 }
-
-/// スコアポップアップのY軸オフセット（エンティティ中心より上に表示）
-const POPUP_Y_OFFSET: f32 = -20.0;
-/// スコアポップアップの表示時間（秒）
-const POPUP_LIFETIME: f32 = 0.8;
 
 /// Phase 3-C: Elixir 側がスコアポップアップを描画用バッファに追加する NIF。
 /// EnemyKilled / BossDefeated イベント受信時に Elixir 側から呼び出す。
