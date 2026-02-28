@@ -42,7 +42,9 @@ define_assets! {
 
 /// アセットのロードを行う。実行時ロード（ファイル存在時）＋埋め込みフォールバック。
 pub struct AssetLoader {
+    /// `GAME_ASSETS_PATH` 環境変数から設定されるベースディレクトリ
     base_path: Option<std::path::PathBuf>,
+    /// `GAME_ASSETS_ID` 環境変数から設定されるゲーム別サブディレクトリ名
     game_assets_id: Option<String>,
 }
 
@@ -100,15 +102,20 @@ impl AssetLoader {
         let default_path = id.default_path();
         let mut paths_to_try: Vec<std::path::PathBuf> = Vec::new();
 
+        // 1. ゲーム別パスを試行
         if let Some(game_path_str) = self.game_specific_path(default_path) {
             if let Some(base) = &self.base_path {
                 paths_to_try.push(base.join(&game_path_str));
             }
             paths_to_try.push(game_path_str.into());
         }
+
+        // 2. ベースパス + デフォルト相対パス
         if let Some(base) = &self.base_path {
             paths_to_try.push(base.join(default_path));
         }
+
+        // 3. カレントディレクトリからの相対パス
         paths_to_try.push(default_path.into());
 
         for path in paths_to_try {
@@ -116,6 +123,8 @@ impl AssetLoader {
                 return bytes;
             }
         }
+
+        // 4. 埋め込みフォールバック
         self.load_embedded(id)
     }
 
