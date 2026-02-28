@@ -19,6 +19,7 @@ use super::FrameEvent;
 /// - `level`, `exp`     → set_player_level NIF（フェーズ3）
 /// - `elapsed_seconds`  → set_elapsed_seconds NIF（フェーズ3）
 /// - `boss.hp`          → set_boss_hp NIF（フェーズ4）
+/// - `score`, `kill_count` → set_hud_state NIF（フェーズ1）
 pub struct GameWorldInner {
     pub frame_id:           u32,
     pub player:             PlayerState,
@@ -33,6 +34,8 @@ pub struct GameWorldInner {
     pub collision:          CollisionWorld,
     /// 1.5.2: 障害物クエリ用バッファ（毎フレーム再利用）
     pub obstacle_query_buf: Vec<usize>,
+    /// 動的エンティティ（敵・弾丸）クエリ用バッファ（毎フレーム再利用、アロケーション回避）
+    pub spatial_query_buf:  Vec<usize>,
     /// 直近フレームの物理ステップ処理時間（ミリ秒）
     pub last_frame_time_ms: f64,
     /// ゲーム開始からの経過時間（秒）- Elixir から毎フレーム注入（スポーン計算用）
@@ -53,6 +56,10 @@ pub struct GameWorldInner {
     pub weapon_choices:     Vec<String>,
     /// 1.7.5: スコアポップアップ [(world_x, world_y, value, lifetime)]（描画用）
     pub score_popups:       Vec<(f32, f32, u32, f32)>,
+    /// スコア - Elixir から毎フレーム注入（HUD 表示用）
+    pub score:              u32,
+    /// キル数 - Elixir から毎フレーム注入（HUD 表示用）
+    pub kill_count:         u32,
     /// 1.10.7: 補間用 - 前フレームのプレイヤー位置
     pub prev_player_x:      f32,
     pub prev_player_y:      f32,

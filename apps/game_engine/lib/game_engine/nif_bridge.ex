@@ -48,6 +48,10 @@ defmodule GameEngine.NifBridge do
   def set_player_level(_world, _level, _exp), do: :erlang.nif_error(:nif_not_loaded)
   def set_elapsed_seconds(_world, _elapsed), do: :erlang.nif_error(:nif_not_loaded)
   def set_boss_hp(_world, _hp), do: :erlang.nif_error(:nif_not_loaded)
+  def set_hud_state(_world, _score, _kill_count), do: :erlang.nif_error(:nif_not_loaded)
+
+  # ── EXP テーブル（SSoT: game_simulation::util::exp_required_for_next）──
+  def exp_required_for_next_nif(_level), do: :erlang.nif_error(:nif_not_loaded)
 
   # ── Push 型同期 NIF ────────────────────────────────────────────
   def push_tick(_world, _dx, _dy, _delta_ms), do: :erlang.nif_error(:nif_not_loaded)

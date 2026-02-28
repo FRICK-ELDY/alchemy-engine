@@ -64,10 +64,11 @@ pub fn find_nearest_enemy_spatial(
     px: f32,
     py: f32,
     search_radius: f32,
+    buf: &mut Vec<usize>,
 ) -> Option<usize> {
-    let candidates = collision.dynamic.query_nearby(px, py, search_radius);
+    collision.dynamic.query_nearby_into(px, py, search_radius, buf);
 
-    let result = candidates
+    let result = buf
         .iter()
         .filter(|&&i| i < enemies.len() && enemies.alive[i])
         .map(|&i| (i, dist_sq(enemies.positions_x[i], enemies.positions_y[i], px, py)))
@@ -85,10 +86,11 @@ pub fn find_nearest_enemy_spatial_excluding(
     py: f32,
     search_radius: f32,
     exclude: &[usize],
+    buf: &mut Vec<usize>,
 ) -> Option<usize> {
-    let candidates = collision.dynamic.query_nearby(px, py, search_radius);
+    collision.dynamic.query_nearby_into(px, py, search_radius, buf);
 
-    let result = candidates
+    let result = buf
         .iter()
         .filter(|&&i| {
             i < enemies.len()

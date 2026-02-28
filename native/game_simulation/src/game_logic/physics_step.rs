@@ -83,9 +83,9 @@ pub fn physics_step_inner(w: &mut GameWorldInner, delta_ms: f64) {
     // 最大の敵半径（Golem: 32px）を考慮してクエリ半径を広げる
     let max_enemy_radius = 32.0_f32;
     let query_radius = PLAYER_RADIUS + max_enemy_radius;
-    let candidates = w.collision.dynamic.query_nearby(px, py, query_radius);
+    w.collision.dynamic.query_nearby_into(px, py, query_radius, &mut w.spatial_query_buf);
 
-    for idx in candidates {
+    for idx in w.spatial_query_buf.iter().copied() {
         if !w.enemies.alive[idx] { continue; }
         let kind_id = w.enemies.kind_ids[idx];
         let params = EnemyParams::get(kind_id);

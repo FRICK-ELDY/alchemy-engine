@@ -80,6 +80,8 @@ pub fn load_save_snapshot(world: ResourceArc<GameWorld>, snapshot: SaveSnapshot)
     w.score_popups.clear();
     w.weapon_choices.clear();
     w.collision.dynamic.clear();
+    w.score      = 0;
+    w.kill_count = 0;
 
     Ok(ok())
 }
