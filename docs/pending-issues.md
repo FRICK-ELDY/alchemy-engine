@@ -50,4 +50,7 @@
 
 ---
 
+---
+
 *このドキュメントは `vision.md` の思想に基づいて管理すること。*
+*各課題の詳細な改善方針・作業ステップは [`improvement-plan.md`](./improvement-plan.md) を参照すること。*
