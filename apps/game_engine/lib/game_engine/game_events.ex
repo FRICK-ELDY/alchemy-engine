@@ -8,7 +8,8 @@ defmodule GameEngine.GameEvents do
   ## Elixir as SSoT 移行状況
   - フェーズ1完了: score, kill_count, elapsed_ms を Elixir 側で管理
   - フェーズ2完了: player_hp, player_max_hp を Elixir 側で管理
-  - フェーズ3完了: level, exp, exp_to_next, level_up_pending, weapon_choices を Elixir 側で管理
+  - フェーズ3完了: level, exp, exp_to_next を Elixir 側で管理
+               weapon_levels, level_up_pending, weapon_choices は Playing シーン state で管理
   - フェーズ4完了: boss_hp, boss_max_hp, boss_kind_id を Elixir 側で管理
   - フェーズ5完了: render_started フラグを Elixir 側で管理、UI アクションを直接受信
   """
@@ -61,8 +62,6 @@ defmodule GameEngine.GameEvents do
         false
       end
 
-    initial_weapon_levels = build_initial_weapon_levels()
-
     {:ok, %{
       room_id:          room_id,
       world_ref:        world_ref,
@@ -78,13 +77,10 @@ defmodule GameEngine.GameEvents do
       # フェーズ2: プレイヤー HP を Elixir 側で管理
       player_hp:        100.0,
       player_max_hp:    100.0,
-      # フェーズ3: レベル・EXP・武器を Elixir 側で管理
+      # フェーズ3: レベル・EXP を Elixir 側で管理
       level:            1,
       exp:              0,
       exp_to_next:      exp_required_for_next(1),
-      level_up_pending: false,
-      weapon_choices:   [],
-      weapon_levels:    initial_weapon_levels,
       # フェーズ4: ボス状態を Elixir 側で管理
       boss_hp:          nil,
       boss_max_hp:      nil,
@@ -114,8 +110,8 @@ defmodule GameEngine.GameEvents do
         Logger.info("[LEVEL UP] Skipped weapon selection -> resuming")
         GameEngine.NifBridge.resume_physics(state.control_ref)
         GameEngine.SceneManager.pop_scene()
-        # フェーズ3: level_up_pending を Elixir 側でクリア
-        {:noreply, %{state | level_up_pending: false, weapon_choices: []}}
+        update_playing_scene_state(&game.apply_level_up_skipped/1)
+        {:noreply, state}
 
       _ ->
         {:noreply, state}
@@ -128,14 +124,14 @@ defmodule GameEngine.GameEvents do
 
     case GameEngine.SceneManager.current() do
       {:ok, %{module: ^level_up_scene}} ->
-        GameEngine.NifBridge.add_weapon(state.world_ref, weapon)
-        # フェーズ3: weapon_levels を Elixir 側で直接更新
-        new_weapon_levels = update_weapon_levels(state.weapon_levels, weapon)
-        lv = Map.get(new_weapon_levels, weapon, 1)
-        Logger.info("[LEVEL UP] Weapon selected: #{game.weapon_label(weapon, lv)} -> resuming")
+        weapon_id = game.entity_registry().weapons[weapon] ||
+                      raise "Unknown weapon: #{inspect(weapon)}"
+        GameEngine.NifBridge.add_weapon(state.world_ref, weapon_id)
+        Logger.info("[LEVEL UP] Weapon selected: #{inspect(weapon)} -> resuming")
         GameEngine.NifBridge.resume_physics(state.control_ref)
         GameEngine.SceneManager.pop_scene()
-        {:noreply, %{state | weapon_levels: new_weapon_levels, level_up_pending: false, weapon_choices: []}}
+        update_playing_scene_state(&game.apply_weapon_selected(&1, weapon))
+        {:noreply, state}
 
       _ ->
         {:noreply, state}
@@ -208,34 +204,38 @@ defmodule GameEngine.GameEvents do
   # ── UI アクションハンドラ ─────────────────────────────────────────
 
   defp handle_ui_action_skip(state) do
-    if state.level_up_pending do
+    game = current_game()
+    playing_state = get_playing_scene_state()
+    is_level_up_pending = Map.get(playing_state, :level_up_pending, false)
+
+    if is_level_up_pending do
       GameEngine.NifBridge.skip_level_up(state.world_ref)
       Logger.info("[LEVEL UP] Skipped from renderer UI")
-      state
-      |> maybe_close_level_up_scene()
-      |> Map.merge(%{level_up_pending: false, weapon_choices: []})
+      update_playing_scene_state(&game.apply_level_up_skipped/1)
+      maybe_close_level_up_scene(state)
     else
       state
     end
   end
 
-  defp handle_ui_action_weapon(state, weapon) do
-    if state.level_up_pending do
-      {selected_weapon, new_state} = apply_weapon_selection(state, weapon)
+  defp handle_ui_action_weapon(state, weapon_name) do
+    game = current_game()
+    playing_state = get_playing_scene_state()
+    is_level_up_pending = Map.get(playing_state, :level_up_pending, false)
+    current_weapon_levels = Map.get(playing_state, :weapon_levels, %{})
+
+    if is_level_up_pending do
+      selected_weapon = resolve_weapon_from_name(weapon_name, current_weapon_levels, game, state.world_ref)
       if selected_weapon != :__skip__ do
-        level = Map.get(new_state.weapon_levels, selected_weapon, 1)
-        game = current_game()
-        Logger.info("[LEVEL UP] Weapon selected from renderer: #{game.weapon_label(selected_weapon, level)}")
+        Logger.info("[LEVEL UP] Weapon selected from renderer: #{inspect(selected_weapon)}")
       end
-
-      new_state
-      |> maybe_close_level_up_scene()
+      maybe_close_level_up_scene(state)
     else
       state
     end
   end
 
-  defp apply_weapon_selection(state, weapon_name) when is_binary(weapon_name) do
+  defp resolve_weapon_from_name(weapon_name, weapon_levels, game, world_ref) when is_binary(weapon_name) do
     requested_weapon =
       try do
         String.to_existing_atom(weapon_name)
@@ -243,26 +243,27 @@ defmodule GameEngine.GameEvents do
         ArgumentError -> nil
       end
 
-    game = current_game()
-    allowed_weapons = game.entity_registry().weapons |> Map.keys() |> MapSet.new()
-    fallback_weapon = Map.keys(state.weapon_levels) |> List.first() || :magic_wand
+    weapons_registry = game.entity_registry().weapons
+    allowed_weapons = weapons_registry |> Map.keys() |> MapSet.new()
+    fallback_weapon = Map.keys(weapon_levels) |> List.first() || :magic_wand
 
     cond do
       is_atom(requested_weapon) and MapSet.member?(allowed_weapons, requested_weapon) ->
-        GameEngine.NifBridge.add_weapon(state.world_ref, requested_weapon)
-        new_levels = update_weapon_levels(state.weapon_levels, requested_weapon)
-        {requested_weapon, %{state | weapon_levels: new_levels, level_up_pending: false, weapon_choices: []}}
+        GameEngine.NifBridge.add_weapon(world_ref, weapons_registry[requested_weapon])
+        update_playing_scene_state(&game.apply_weapon_selected(&1, requested_weapon))
+        requested_weapon
 
       MapSet.member?(allowed_weapons, fallback_weapon) ->
         Logger.warning("[LEVEL UP] Renderer weapon '#{weapon_name}' not available. Falling back to #{inspect(fallback_weapon)}.")
-        GameEngine.NifBridge.add_weapon(state.world_ref, fallback_weapon)
-        new_levels = update_weapon_levels(state.weapon_levels, fallback_weapon)
-        {fallback_weapon, %{state | weapon_levels: new_levels, level_up_pending: false, weapon_choices: []}}
+        GameEngine.NifBridge.add_weapon(world_ref, weapons_registry[fallback_weapon])
+        update_playing_scene_state(&game.apply_weapon_selected(&1, fallback_weapon))
+        fallback_weapon
 
       true ->
         Logger.warning("[LEVEL UP] Renderer weapon '#{weapon_name}' not available and no valid fallback. Skipping.")
-        GameEngine.NifBridge.skip_level_up(state.world_ref)
-        {:__skip__, %{state | level_up_pending: false, weapon_choices: []}}
+        GameEngine.NifBridge.skip_level_up(world_ref)
+        update_playing_scene_state(&game.apply_level_up_skipped/1)
+        :__skip__
     end
   end
 
@@ -425,18 +426,21 @@ defmodule GameEngine.GameEvents do
     maybe_level_up(%{state | exp: new_exp})
   end
 
-  defp maybe_level_up(%{level_up_pending: true} = state), do: state
-
   defp maybe_level_up(state) do
     required = exp_required_for_next(state.level)
+
     if state.exp >= required and required > 0 do
       game = current_game()
-      choices = generate_weapon_choices(state.weapon_levels, game)
-      %{state |
-        level_up_pending: true,
-        weapon_choices:   choices,
-        exp_to_next:      exp_required_for_next(state.level + 1) - state.exp,
-      }
+      playing_state = get_playing_scene_state()
+      already_pending = Map.get(playing_state, :level_up_pending, false)
+
+      unless already_pending do
+        weapon_levels = Map.get(playing_state, :weapon_levels, %{})
+        choices = game.generate_weapon_choices(weapon_levels)
+        update_playing_scene_state(&game.apply_level_up(&1, choices))
+      end
+
+      %{state | exp_to_next: exp_required_for_next(state.level + 1) - state.exp}
     else
       remaining = max(0, exp_required_for_next(state.level) - state.exp)
       %{state | exp_to_next: remaining}
@@ -460,28 +464,25 @@ defmodule GameEngine.GameEvents do
 
   defp build_context(state, now, elapsed) do
     base = %{
-      tick_ms:          @tick_ms,
-      world_ref:        state.world_ref,
-      now:              now,
-      elapsed:          elapsed,
-      last_spawn_ms:    state.last_spawn_ms,
-      weapon_levels:    state.weapon_levels,
-      frame_count:      state.frame_count,
-      start_ms:         state.start_ms,
+      tick_ms:       @tick_ms,
+      world_ref:     state.world_ref,
+      now:           now,
+      elapsed:       elapsed,
+      last_spawn_ms: state.last_spawn_ms,
+      frame_count:   state.frame_count,
+      start_ms:      state.start_ms,
       # フェーズ1〜4: Elixir 側の権威ある値をコンテキストに含める
-      score:            state.score,
-      kill_count:       state.kill_count,
-      elapsed_ms:       state.elapsed_ms,
-      player_hp:        state.player_hp,
-      player_max_hp:    state.player_max_hp,
-      level:            state.level,
-      exp:              state.exp,
-      exp_to_next:      state.exp_to_next,
-      level_up_pending: state.level_up_pending,
-      weapon_choices:   state.weapon_choices,
-      boss_hp:          state.boss_hp,
-      boss_max_hp:      state.boss_max_hp,
-      boss_kind_id:     state.boss_kind_id,
+      score:         state.score,
+      kill_count:    state.kill_count,
+      elapsed_ms:    state.elapsed_ms,
+      player_hp:     state.player_hp,
+      player_max_hp: state.player_max_hp,
+      level:         state.level,
+      exp:           state.exp,
+      exp_to_next:   state.exp_to_next,
+      boss_hp:       state.boss_hp,
+      boss_max_hp:   state.boss_max_hp,
+      boss_kind_id:  state.boss_kind_id,
     }
     game = current_game()
     Map.merge(game.context_defaults(), base)
@@ -499,24 +500,25 @@ defmodule GameEngine.GameEvents do
 
   # ── シーン遷移処理 ────────────────────────────────────────────────
 
+  defp process_transition({:continue, _}, state, _now, _game), do: state
   defp process_transition({:continue, _, _}, state, _now, _game), do: state
 
   defp process_transition({:transition, :pop, scene_state}, state, _now, game) do
     auto_select = Map.get(scene_state, :auto_select, false)
 
     if auto_select do
-      state =
-        case scene_state do
-          %{choices: [first | _]} ->
-            GameEngine.NifBridge.add_weapon(state.world_ref, first)
-            new_levels = update_weapon_levels(state.weapon_levels, first)
-            Logger.info("[LEVEL UP] Auto-selected: #{game.weapon_label(first, Map.get(new_levels, first, 1))} -> resuming")
-            %{state | weapon_levels: new_levels, level_up_pending: false, weapon_choices: []}
-          _ ->
-            GameEngine.NifBridge.skip_level_up(state.world_ref)
-            Logger.info("[LEVEL UP] Auto-skipped (no choices) -> resuming")
-            %{state | level_up_pending: false, weapon_choices: []}
-        end
+      case scene_state do
+        %{choices: [first | _]} ->
+          weapon_id = game.entity_registry().weapons[first] ||
+                        raise "Unknown weapon: #{inspect(first)}"
+          GameEngine.NifBridge.add_weapon(state.world_ref, weapon_id)
+          Logger.info("[LEVEL UP] Auto-selected: #{inspect(first)} -> resuming")
+          update_playing_scene_state(&game.apply_weapon_selected(&1, first))
+        _ ->
+          GameEngine.NifBridge.skip_level_up(state.world_ref)
+          Logger.info("[LEVEL UP] Auto-skipped (no choices) -> resuming")
+          update_playing_scene_state(&game.apply_level_up_skipped/1)
+      end
       GameEngine.NifBridge.resume_physics(state.control_ref)
       GameEngine.SceneManager.pop_scene()
       state
@@ -580,7 +582,7 @@ defmodule GameEngine.GameEvents do
       budget_warn = if physics_ms > @tick_ms, do: " [OVER BUDGET]", else: ""
 
       weapon_info =
-        state.weapon_levels
+        get_playing_scene_weapon_levels()
         |> Enum.map_join(", ", fn {w, lv} -> "#{w}:Lv#{lv}" end)
 
       boss_info =
@@ -638,33 +640,40 @@ defmodule GameEngine.GameEvents do
     Application.get_env(:game_server, :current_game, GameContent.VampireSurvivor)
   end
 
-  # フェーズ3: weapon_levels を Elixir 側で直接更新（fetch_weapon_levels NIF 不要）
-  defp update_weapon_levels(weapon_levels, weapon) do
-    Map.update(weapon_levels, weapon, 1, &min(&1 + 1, 8))
+  # Playing シーンの state を SceneManager 経由で更新する（スタック内のどの位置にあっても更新）
+  defp update_playing_scene_state(fun) when is_function(fun, 1) do
+    game = current_game()
+    playing_scene = game.playing_scene()
+    GameEngine.SceneManager.update_by_module(playing_scene, fun)
   end
 
-  # 初期武器レベルは MagicWand Lv1 のみ（create_world の初期状態と一致）
-  defp build_initial_weapon_levels do
-    %{magic_wand: 1}
+  # Playing シーンの weapon_levels を取得する（ログ用）
+  defp get_playing_scene_weapon_levels do
+    Map.get(get_playing_scene_state(), :weapon_levels, %{})
+  end
+
+  # Playing シーンの state を取得する
+  defp get_playing_scene_state do
+    game = current_game()
+    playing_scene = game.playing_scene()
+    GameEngine.SceneManager.get_scene_state(playing_scene)
   end
 
   # セーブロード後に Elixir 側の状態をリセット
+  # replace_scene が Playing.init/1 を呼ぶためシーン state は自動的にリセットされる
   defp reset_elixir_state(state) do
     %{state |
-      score:            0,
-      kill_count:       0,
-      elapsed_ms:       0,
-      player_hp:        100.0,
-      player_max_hp:    100.0,
-      level:            1,
-      exp:              0,
-      exp_to_next:      exp_required_for_next(1),
-      level_up_pending: false,
-      weapon_choices:   [],
-      weapon_levels:    build_initial_weapon_levels(),
-      boss_hp:          nil,
-      boss_max_hp:      nil,
-      boss_kind_id:     nil,
+      score:         0,
+      kill_count:    0,
+      elapsed_ms:    0,
+      player_hp:     100.0,
+      player_max_hp: 100.0,
+      level:         1,
+      exp:           0,
+      exp_to_next:   exp_required_for_next(1),
+      boss_hp:       nil,
+      boss_max_hp:   nil,
+      boss_kind_id:  nil,
     }
   end
 
@@ -674,8 +683,4 @@ defmodule GameEngine.GameEvents do
     GameEngine.NifBridge.exp_required_for_next_nif(level)
   end
 
-  # フェーズ3: 武器選択肢を生成（game_content の LevelSystem に委譲）
-  defp generate_weapon_choices(weapon_levels, game) do
-    game.generate_weapon_choices(weapon_levels)
-  end
 end

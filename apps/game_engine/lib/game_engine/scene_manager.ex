@@ -34,6 +34,14 @@ defmodule GameEngine.SceneManager do
     GenServer.call(__MODULE__, {:update_current, fun})
   end
 
+  def update_by_module(module, fun) when is_function(fun, 1) do
+    GenServer.call(__MODULE__, {:update_by_module, module, fun})
+  end
+
+  def get_scene_state(module) do
+    GenServer.call(__MODULE__, {:get_scene_state, module})
+  end
+
   @impl true
   def init(_opts) do
     game_module = Application.get_env(:game_server, :current_game, GameContent.VampireSurvivor)
@@ -99,6 +107,28 @@ defmodule GameEngine.SceneManager do
     new_state = fun.(top.state)
     new_top = %{top | state: new_state}
     {:reply, :ok, %{state | stack: [new_top | rest]}}
+  end
+
+  def handle_call({:update_by_module, module, fun}, _from, %{stack: stack} = state) do
+    case Enum.find_index(stack, &(&1.module == module)) do
+      nil ->
+        {:reply, :ok, state}
+
+      index ->
+        scene = Enum.at(stack, index)
+        new_scene = %{scene | state: fun.(scene.state)}
+        new_stack = List.replace_at(stack, index, new_scene)
+        {:reply, :ok, %{state | stack: new_stack}}
+    end
+  end
+
+  def handle_call({:get_scene_state, module}, _from, %{stack: stack} = state) do
+    scene_state =
+      case Enum.find(stack, fn scene -> scene.module == module end) do
+        %{state: s} -> s
+        nil -> %{}
+      end
+    {:reply, scene_state, state}
   end
 
   defp init_scene(module, init_arg) do

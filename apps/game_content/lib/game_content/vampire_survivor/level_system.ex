@@ -7,6 +7,8 @@ defmodule GameContent.VampireSurvivor.LevelSystem do
   @max_weapon_level 8
   @max_weapon_slots 6
 
+  def max_weapon_level, do: @max_weapon_level
+
   def generate_weapon_choices(weapon_levels) when is_map(weapon_levels) do
     slots_full? = map_size(weapon_levels) >= @max_weapon_slots
 

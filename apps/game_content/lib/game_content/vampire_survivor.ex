@@ -43,6 +43,29 @@ defmodule GameContent.VampireSurvivor do
   @impl GameEngine.GameBehaviour
   def assets_path, do: "vampire_survivor"
 
+  @impl GameEngine.GameBehaviour
+  def playing_scene, do: GameContent.VampireSurvivor.Scenes.Playing
+
+  @impl GameEngine.GameBehaviour
+  def generate_weapon_choices(weapon_levels) do
+    GameContent.VampireSurvivor.LevelSystem.generate_weapon_choices(weapon_levels)
+  end
+
+  @impl GameEngine.GameBehaviour
+  def apply_level_up(scene_state, choices) do
+    GameContent.VampireSurvivor.Scenes.Playing.apply_level_up(scene_state, choices)
+  end
+
+  @impl GameEngine.GameBehaviour
+  def apply_weapon_selected(scene_state, weapon) do
+    GameContent.VampireSurvivor.Scenes.Playing.apply_weapon_selected(scene_state, weapon)
+  end
+
+  @impl GameEngine.GameBehaviour
+  def apply_level_up_skipped(scene_state) do
+    GameContent.VampireSurvivor.Scenes.Playing.apply_level_up_skipped(scene_state)
+  end
+
   # ── Vampire Survivor 固有 ──────────────────────────────────────────
 
   def level_up_scene, do: GameContent.VampireSurvivor.Scenes.LevelUp
@@ -55,10 +78,5 @@ defmodule GameContent.VampireSurvivor do
 
   def weapon_label(weapon, level) do
     GameContent.VampireSurvivor.LevelSystem.weapon_label(weapon, level)
-  end
-
-  @impl GameEngine.GameBehaviour
-  def generate_weapon_choices(weapon_levels) do
-    GameContent.VampireSurvivor.LevelSystem.generate_weapon_choices(weapon_levels)
   end
 end
