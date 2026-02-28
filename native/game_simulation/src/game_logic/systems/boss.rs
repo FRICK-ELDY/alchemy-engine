@@ -110,9 +110,7 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
     }
 
     if eff.boss_killed {
-        // I-2: ボス種別は Elixir 側 Rule state で管理するため entity_kind は 0 を送出する。
-        // Elixir 側は boss_kind_id を Playing シーン state から取得して処理する。
-        w.frame_events.push(FrameEvent::SpecialEntityDefeated { entity_kind: 0, x: eff.kill_x, y: eff.kill_y });
+        w.frame_events.push(FrameEvent::SpecialEntityDefeated { x: eff.kill_x, y: eff.kill_y });
         w.particles.emit(eff.kill_x, eff.kill_y, 40, [1.0, 0.5, 0.0, 1.0]);
         w.boss = None;
     }
