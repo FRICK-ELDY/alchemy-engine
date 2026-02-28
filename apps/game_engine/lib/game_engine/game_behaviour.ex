@@ -16,5 +16,20 @@ defmodule GameEngine.GameBehaviour do
   @callback version() :: String.t()
   @callback context_defaults() :: map()
   @callback assets_path() :: String.t()
+
+  @doc "メインのプレイシーンモジュールを返す（Playing シーンの state 操作に使用）"
+  @callback playing_scene() :: module()
+
+  @doc "武器選択肢を生成する（Playing シーンの state を受け取り、選択肢リストを返す）"
   @callback generate_weapon_choices(weapon_levels :: map()) :: [atom()]
+
+  @doc "レベルアップ時に Playing シーンの state を更新する"
+  @callback apply_level_up(scene_state :: map(), choices :: [atom()]) :: map()
+
+  @doc "武器選択時に Playing シーンの state を更新する"
+  @callback apply_weapon_selected(scene_state :: map(), weapon :: atom()) :: map()
+
+  @doc "レベルアップスキップ時に Playing シーンの state を更新する"
+  @callback apply_level_up_skipped(scene_state :: map()) :: map()
+
 end

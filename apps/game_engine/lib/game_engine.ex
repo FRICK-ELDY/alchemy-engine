@@ -19,39 +19,12 @@ defmodule GameEngine do
     NifBridge.spawn_elite_enemy(world_ref, kind_id, count, hp_multiplier)
   end
 
-  def spawn_boss(world_ref, kind) do
-    kind_id = resolve_boss_id(kind)
-    NifBridge.spawn_boss(world_ref, kind_id)
-  end
-
   def get_enemy_count(world_ref) do
     NifBridge.get_enemy_count(world_ref)
   end
 
   def is_player_dead?(world_ref) do
     NifBridge.is_player_dead(world_ref)
-  end
-
-  def get_level_up_data(world_ref) do
-    NifBridge.get_level_up_data(world_ref)
-  end
-
-  def skip_level_up(world_ref) do
-    NifBridge.skip_level_up(world_ref)
-  end
-
-  def get_weapon_levels(world_ref) do
-    NifBridge.get_weapon_levels(world_ref)
-  end
-
-  def add_weapon(world_ref, weapon_name) when is_binary(weapon_name) do
-    weapon_id = resolve_weapon_id(String.to_atom(weapon_name))
-    NifBridge.add_weapon(world_ref, weapon_id)
-  end
-
-  def add_weapon(world_ref, weapon) when is_atom(weapon) do
-    weapon_id = resolve_weapon_id(weapon)
-    NifBridge.add_weapon(world_ref, weapon_id)
   end
 
   def get_frame_metadata(world_ref) do
@@ -82,15 +55,5 @@ defmodule GameEngine do
   defp resolve_enemy_id(kind) when is_atom(kind) do
     game = Application.get_env(:game_server, :current_game, GameContent.VampireSurvivor)
     game.entity_registry().enemies[kind] || raise "Unknown enemy kind: #{inspect(kind)}"
-  end
-
-  defp resolve_boss_id(kind) when is_atom(kind) do
-    game = Application.get_env(:game_server, :current_game, GameContent.VampireSurvivor)
-    game.entity_registry().bosses[kind] || raise "Unknown boss kind: #{inspect(kind)}"
-  end
-
-  defp resolve_weapon_id(weapon) when is_atom(weapon) do
-    game = Application.get_env(:game_server, :current_game, GameContent.VampireSurvivor)
-    game.entity_registry().weapons[weapon] || raise "Unknown weapon: #{inspect(weapon)}"
   end
 end
