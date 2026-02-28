@@ -31,7 +31,6 @@ pub(crate) fn update_projectiles_and_enemy_hits(w: &mut GameWorldInner, dt: f32)
 
     // ── 弾丸 vs 敵 衝突判定 ──────────────────────────────────────
     let bullet_query_r = BULLET_RADIUS + 32.0_f32;
-    let mut nearby_buf: Vec<usize> = Vec::new();
     for bi in 0..bullet_len {
         if !w.bullets.alive[bi] { continue; }
         let dmg = w.bullets.damage[bi];
@@ -41,8 +40,8 @@ pub(crate) fn update_projectiles_and_enemy_hits(w: &mut GameWorldInner, dt: f32)
         let by = w.bullets.positions_y[bi];
         let piercing = w.bullets.piercing[bi];
 
-        w.collision.dynamic.query_nearby_into(bx, by, bullet_query_r, &mut nearby_buf);
-        for ei in nearby_buf.iter().copied() {
+        w.collision.dynamic.query_nearby_into(bx, by, bullet_query_r, &mut w.spatial_query_buf);
+        for ei in w.spatial_query_buf.iter().copied() {
             if !w.enemies.alive[ei] { continue; }
             let kind_id = w.enemies.kind_ids[ei];
             let ep = EnemyParams::get(kind_id);

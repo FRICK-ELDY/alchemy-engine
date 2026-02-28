@@ -36,6 +36,7 @@ pub fn create_world() -> ResourceArc<GameWorld> {
         rng:                SimpleRng::new(12345),
         collision:          CollisionWorld::new(CELL_SIZE),
         obstacle_query_buf: Vec::new(),
+        spatial_query_buf:  Vec::new(),
         last_frame_time_ms: 0.0,
         elapsed_seconds:    0.0,
         player_max_hp:      100.0,

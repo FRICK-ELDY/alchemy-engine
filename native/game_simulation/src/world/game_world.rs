@@ -34,6 +34,8 @@ pub struct GameWorldInner {
     pub collision:          CollisionWorld,
     /// 1.5.2: 障害物クエリ用バッファ（毎フレーム再利用）
     pub obstacle_query_buf: Vec<usize>,
+    /// 動的エンティティ（敵・弾丸）クエリ用バッファ（毎フレーム再利用、アロケーション回避）
+    pub spatial_query_buf:  Vec<usize>,
     /// 直近フレームの物理ステップ処理時間（ミリ秒）
     pub last_frame_time_ms: f64,
     /// ゲーム開始からの経過時間（秒）- Elixir から毎フレーム注入（スポーン計算用）

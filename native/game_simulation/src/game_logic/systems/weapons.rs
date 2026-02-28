@@ -61,8 +61,7 @@ fn fire_magic_wand(
     weapon_kind: u8,
     cd: f32,
 ) {
-    let mut buf: Vec<usize> = Vec::new();
-    if let Some(ti) = find_nearest_enemy_spatial(&w.collision, &w.enemies, px, py, WEAPON_SEARCH_RADIUS, &mut buf) {
+    if let Some(ti) = find_nearest_enemy_spatial(&w.collision, &w.enemies, px, py, WEAPON_SEARCH_RADIUS, &mut w.spatial_query_buf) {
         let target_r = EnemyParams::get(w.enemies.kind_ids[ti]).radius;
         let tx = w.enemies.positions_x[ti] + target_r;
         let ty = w.enemies.positions_y[ti] + target_r;
@@ -142,9 +141,8 @@ fn fire_whip(
     w.bullets.spawn_effect(eff_x, eff_y, 0.12, BULLET_KIND_WHIP);
     // 空間ハッシュで範囲内の候補のみ取得し、全敵ループを回避
     let whip_range_sq = range * range;
-    let mut whip_buf: Vec<usize> = Vec::new();
-    w.collision.dynamic.query_nearby_into(px, py, range, &mut whip_buf);
-    for ei in whip_buf {
+    w.collision.dynamic.query_nearby_into(px, py, range, &mut w.spatial_query_buf);
+    for ei in w.spatial_query_buf.iter().copied() {
         if !w.enemies.alive[ei] {
             continue;
         }
@@ -216,9 +214,8 @@ fn fire_fireball(
     weapon_kind: u8,
     cd: f32,
 ) {
-    let mut buf: Vec<usize> = Vec::new();
     // 最近接敵に向かって貫通弾を発射
-    if let Some(ti) = find_nearest_enemy_spatial(&w.collision, &w.enemies, px, py, WEAPON_SEARCH_RADIUS, &mut buf) {
+    if let Some(ti) = find_nearest_enemy_spatial(&w.collision, &w.enemies, px, py, WEAPON_SEARCH_RADIUS, &mut w.spatial_query_buf) {
         let target_r = EnemyParams::get(w.enemies.kind_ids[ti]).radius;
         let tx = w.enemies.positions_x[ti] + target_r;
         let ty = w.enemies.positions_y[ti] + target_r;
@@ -248,8 +245,7 @@ fn fire_lightning(
     // chain_count は最大 6 程度と小さいため Vec で十分（HashSet 不要）
     let mut hit_vec: Vec<usize> = Vec::with_capacity(chain_count);
     // 最初はプレイヤー位置から最近接敵を探す（空間ハッシュで候補を絞る）
-    let mut spatial_buf: Vec<usize> = Vec::new();
-    let mut current = find_nearest_enemy_spatial(&w.collision, &w.enemies, px, py, WEAPON_SEARCH_RADIUS, &mut spatial_buf);
+    let mut current = find_nearest_enemy_spatial(&w.collision, &w.enemies, px, py, WEAPON_SEARCH_RADIUS, &mut w.spatial_query_buf);
     #[allow(unused_assignments)]
     let mut next_search_x = px;
     #[allow(unused_assignments)]
@@ -285,7 +281,7 @@ fn fire_lightning(
             next_search_y = hit_y;
             current = find_nearest_enemy_spatial_excluding(
                 &w.collision, &w.enemies, next_search_x, next_search_y,
-                WEAPON_SEARCH_RADIUS, &hit_vec, &mut spatial_buf,
+                WEAPON_SEARCH_RADIUS, &hit_vec, &mut w.spatial_query_buf,
             );
         } else {
             break;
@@ -323,9 +319,8 @@ fn fire_garlic(
     // プレイヤー周囲オーラで一定間隔ダメージ（5 dmg/sec 想定: 0.2s 毎に 1）
     let radius = garlic_radius(kind_id, level);
     let radius_sq = radius * radius;
-    let mut garlic_buf: Vec<usize> = Vec::new();
-    w.collision.dynamic.query_nearby_into(px, py, radius, &mut garlic_buf);
-    for ei in garlic_buf {
+    w.collision.dynamic.query_nearby_into(px, py, radius, &mut w.spatial_query_buf);
+    for ei in w.spatial_query_buf.iter().copied() {
         if !w.enemies.alive[ei] { continue; }
         let ex = w.enemies.positions_x[ei];
         let ey = w.enemies.positions_y[ei];
