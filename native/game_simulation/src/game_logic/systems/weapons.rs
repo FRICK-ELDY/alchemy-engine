@@ -6,7 +6,6 @@ use crate::entity_params::{
     WEAPON_ID_CROSS, WEAPON_ID_FIREBALL, WEAPON_ID_GARLIC, WEAPON_ID_LIGHTNING,
     WEAPON_ID_MAGIC_WAND, WEAPON_ID_WHIP,
 };
-use crate::item::ItemKind;
 
 pub(crate) fn update_weapon_attacks(w: &mut GameWorldInner, dt: f32, px: f32, py: f32) {
     // プレイヤーの移動方向（Whip の向き計算用）
@@ -35,16 +34,15 @@ pub(crate) fn update_weapon_attacks(w: &mut GameWorldInner, dt: f32, px: f32, py
         let dmg    = w.weapon_slots[si].effective_damage(wp);
         let level  = w.weapon_slots[si].level;
         let bcount = w.weapon_slots[si].bullet_count(wp);
-        let as_u8  = wp.as_u8;
 
         match kind_id {
-            WEAPON_ID_MAGIC_WAND => fire_magic_wand(w, si, px, py, dmg, bcount, as_u8, cd),
-            WEAPON_ID_AXE        => fire_axe(w, si, px, py, dmg, as_u8, cd),
-            WEAPON_ID_CROSS      => fire_cross(w, si, px, py, dmg, bcount, as_u8, cd),
-            WEAPON_ID_WHIP       => fire_whip(w, si, px, py, dmg, level, kind_id, as_u8, cd, facing_angle),
-            WEAPON_ID_FIREBALL   => fire_fireball(w, si, px, py, dmg, as_u8, cd),
-            WEAPON_ID_LIGHTNING  => fire_lightning(w, si, px, py, dmg, level, kind_id, as_u8, cd),
-            WEAPON_ID_GARLIC     => fire_garlic(w, si, px, py, dmg, level, kind_id, as_u8, cd),
+            WEAPON_ID_MAGIC_WAND => fire_magic_wand(w, si, px, py, dmg, bcount, cd),
+            WEAPON_ID_AXE        => fire_axe(w, si, px, py, dmg, cd),
+            WEAPON_ID_CROSS      => fire_cross(w, si, px, py, dmg, bcount, cd),
+            WEAPON_ID_WHIP       => fire_whip(w, si, px, py, dmg, level, kind_id, cd, facing_angle),
+            WEAPON_ID_FIREBALL   => fire_fireball(w, si, px, py, dmg, cd),
+            WEAPON_ID_LIGHTNING  => fire_lightning(w, si, px, py, dmg, level, kind_id, cd),
+            WEAPON_ID_GARLIC     => fire_garlic(w, si, px, py, dmg, level, kind_id, cd),
             _ => {}
         }
     }
@@ -57,7 +55,6 @@ fn fire_magic_wand(
     py: f32,
     dmg: i32,
     bcount: usize,
-    weapon_kind: u8,
     cd: f32,
 ) {
     if let Some(ti) = find_nearest_enemy_spatial(&w.collision, &w.enemies, px, py, WEAPON_SEARCH_RADIUS, &mut w.spatial_query_buf) {
@@ -75,7 +72,7 @@ fn fire_magic_wand(
             let angle = base_angle + (bi as f32 - half) * spread;
             let vx = angle.cos() * BULLET_SPEED;
             let vy = angle.sin() * BULLET_SPEED;
-            w.bullets.spawn(px, py, vx, vy, dmg, BULLET_LIFETIME, weapon_kind);
+            w.bullets.spawn(px, py, vx, vy, dmg, BULLET_LIFETIME);
         }
         w.weapon_slots[si].cooldown_timer = cd;
     }
@@ -87,11 +84,10 @@ fn fire_axe(
     px: f32,
     py: f32,
     dmg: i32,
-    weapon_kind: u8,
     cd: f32,
 ) {
     // 上方向に直進（簡易実装）
-    w.bullets.spawn(px, py, 0.0, -BULLET_SPEED, dmg, BULLET_LIFETIME, weapon_kind);
+    w.bullets.spawn(px, py, 0.0, -BULLET_SPEED, dmg, BULLET_LIFETIME);
     w.weapon_slots[si].cooldown_timer = cd;
 }
 
@@ -102,7 +98,6 @@ fn fire_cross(
     py: f32,
     dmg: i32,
     bcount: usize,
-    weapon_kind: u8,
     cd: f32,
 ) {
     // Lv1〜3: 上下左右 4 方向、Lv4 以上: 斜め 4 方向も追加
@@ -114,7 +109,7 @@ fn fire_cross(
     ];
     let dirs: &[(f32, f32)] = if bcount >= 8 { &dirs_8 } else { &dirs_4 };
     for &(dx_dir, dy_dir) in dirs {
-        w.bullets.spawn(px, py, dx_dir * BULLET_SPEED, dy_dir * BULLET_SPEED, dmg, BULLET_LIFETIME, weapon_kind);
+        w.bullets.spawn(px, py, dx_dir * BULLET_SPEED, dy_dir * BULLET_SPEED, dmg, BULLET_LIFETIME);
     }
     w.weapon_slots[si].cooldown_timer = cd;
 }
@@ -127,7 +122,6 @@ fn fire_whip(
     dmg: i32,
     level: u32,
     kind_id: u8,
-    weapon_kind: u8,
     cd: f32,
     facing_angle: f32,
 ) {
@@ -167,17 +161,8 @@ fn fire_whip(
                 w.enemies.kill(ei);
                 // score_popups は描画用なので Rust 側で管理を継続する
                 w.score_popups.push((hit_x, hit_y - 20.0, ep_hit.exp_reward * 2, 0.8));
-                w.frame_events.push(FrameEvent::EnemyKilled { enemy_kind: kind_e, weapon_kind });
+                w.frame_events.push(FrameEvent::EnemyKilled { enemy_kind: kind_e, x: hit_x, y: hit_y });
                 w.particles.emit(hit_x, hit_y, 8, ep_hit.particle_color);
-                let roll = w.rng.next_u32() % 100;
-                let (item_kind, item_value) = if roll < 2 {
-                    (ItemKind::Magnet, 0)
-                } else if roll < 7 {
-                    (ItemKind::Potion, 20)
-                } else {
-                    (ItemKind::Gem, ep_hit.exp_reward)
-                };
-                w.items.spawn(hit_x, hit_y, item_kind, item_value);
             } else {
                 w.particles.emit(hit_x, hit_y, 3, [1.0, 0.6, 0.1, 1.0]);
             }
@@ -210,7 +195,6 @@ fn fire_fireball(
     px: f32,
     py: f32,
     dmg: i32,
-    weapon_kind: u8,
     cd: f32,
 ) {
     // 最近接敵に向かって貫通弾を発射
@@ -223,7 +207,7 @@ fn fire_fireball(
         let base_angle = bdy.atan2(bdx);
         let vx = base_angle.cos() * BULLET_SPEED;
         let vy = base_angle.sin() * BULLET_SPEED;
-        w.bullets.spawn_piercing(px, py, vx, vy, dmg, BULLET_LIFETIME, weapon_kind);
+        w.bullets.spawn_piercing(px, py, vx, vy, dmg, BULLET_LIFETIME);
         w.weapon_slots[si].cooldown_timer = cd;
     }
 }
@@ -236,7 +220,6 @@ fn fire_lightning(
     dmg: i32,
     level: u32,
     kind_id: u8,
-    weapon_kind: u8,
     cd: f32,
 ) {
     // 最近接敵から始まり、最大 chain_count 体に連鎖
@@ -264,16 +247,7 @@ fn fire_lightning(
                 w.enemies.kill(ei);
                 // score_popups は描画用なので Rust 側で管理を継続する
                 w.score_popups.push((hit_x, hit_y - 20.0, ep_chain.exp_reward * 2, 0.8));
-                w.frame_events.push(FrameEvent::EnemyKilled { enemy_kind: kind_e, weapon_kind });
-                let roll = w.rng.next_u32() % 100;
-                let (item_kind, item_value) = if roll < 2 {
-                    (ItemKind::Magnet, 0)
-                } else if roll < 7 {
-                    (ItemKind::Potion, 20)
-                } else {
-                    (ItemKind::Gem, ep_chain.exp_reward)
-                };
-                w.items.spawn(hit_x, hit_y, item_kind, item_value);
+                w.frame_events.push(FrameEvent::EnemyKilled { enemy_kind: kind_e, x: hit_x, y: hit_y });
             }
             hit_vec.push(ei);
             next_search_x = hit_x;
@@ -312,7 +286,6 @@ fn fire_garlic(
     dmg: i32,
     level: u32,
     kind_id: u8,
-    weapon_kind: u8,
     cd: f32,
 ) {
     // プレイヤー周囲オーラで一定間隔ダメージ（5 dmg/sec 想定: 0.2s 毎に 1）
@@ -335,17 +308,8 @@ fn fire_garlic(
             w.enemies.kill(ei);
             // score_popups は描画用なので Rust 側で管理を継続する
             w.score_popups.push((hit_x, hit_y - 20.0, ep.exp_reward * 2, 0.8));
-            w.frame_events.push(FrameEvent::EnemyKilled { enemy_kind: kind_e, weapon_kind });
+            w.frame_events.push(FrameEvent::EnemyKilled { enemy_kind: kind_e, x: hit_x, y: hit_y });
             w.particles.emit(hit_x, hit_y, 8, ep.particle_color);
-            let roll = w.rng.next_u32() % 100;
-            let (item_kind, item_value) = if roll < 2 {
-                (ItemKind::Magnet, 0)
-            } else if roll < 7 {
-                (ItemKind::Potion, 20)
-            } else {
-                (ItemKind::Gem, ep.exp_reward)
-            };
-            w.items.spawn(hit_x, hit_y, item_kind, item_value);
         } else {
             w.particles.emit(hit_x, hit_y, 2, [0.9, 0.9, 0.3, 0.6]);
         }

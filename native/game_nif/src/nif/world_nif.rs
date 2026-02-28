@@ -11,7 +11,6 @@ use game_simulation::constants::{CELL_SIZE, MAP_HEIGHT, MAP_WIDTH, PARTICLE_RNG_
 use game_simulation::item::ItemWorld;
 use game_simulation::physics::rng::SimpleRng;
 use game_simulation::physics::spatial_hash::CollisionWorld;
-use game_simulation::util::exp_required_for_next;
 use game_simulation::weapon::WeaponSlot;
 use rustler::types::list::ListIterator;
 use rustler::{Atom, NifResult, ResourceArc, Term};
@@ -43,12 +42,9 @@ pub fn create_world() -> ResourceArc<GameWorld> {
         last_frame_time_ms: 0.0,
         elapsed_seconds:    0.0,
         player_max_hp:      100.0,
-        exp:                0,
-        level:              1,
         weapon_slots:       vec![WeaponSlot::new(0)],
         boss:               None,
         frame_events:       Vec::new(),
-        weapon_choices:     Vec::new(),
         score_popups:       Vec::new(),
         score:              0,
         kill_count:         0,
@@ -79,6 +75,18 @@ pub fn spawn_enemies(world: ResourceArc<GameWorld>, kind_id: u8, count: usize) -
     Ok(ok())
 }
 
+/// Phase 3-B: 指定座標リストに敵をスポーンする NIF。
+/// positions: [{x, y}] のリスト
+#[rustler::nif]
+pub fn spawn_enemies_at(world: ResourceArc<GameWorld>, kind_id: u8, positions_term: Term) -> NifResult<Atom> {
+    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
+    let positions_list: Vec<(f64, f64)> = positions_term.decode()?;
+    let positions: Vec<(f32, f32)> = positions_list.iter().map(|&(x, y)| (x as f32, y as f32)).collect();
+    let ep = w.params.get_enemy(kind_id).clone();
+    w.enemies.spawn(&positions, kind_id, &ep);
+    Ok(ok())
+}
+
 #[rustler::nif]
 pub fn set_player_hp(world: ResourceArc<GameWorld>, hp: f64) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
@@ -86,11 +94,10 @@ pub fn set_player_hp(world: ResourceArc<GameWorld>, hp: f64) -> NifResult<Atom> 
     Ok(ok())
 }
 
+/// Phase 3-B: exp/level は Elixir 側 GenServer state で管理するため、Rust 側では何もしない。
+/// 将来の拡張用に NIF インターフェースは残す。
 #[rustler::nif]
-pub fn set_player_level(world: ResourceArc<GameWorld>, level: u32, exp: u32) -> NifResult<Atom> {
-    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
-    w.level = level;
-    w.exp = exp;
+pub fn set_player_level(_world: ResourceArc<GameWorld>, _level: u32) -> NifResult<Atom> {
     Ok(ok())
 }
 
@@ -108,13 +115,6 @@ pub fn set_boss_hp(world: ResourceArc<GameWorld>, hp: f64) -> NifResult<Atom> {
         boss.hp = hp as f32;
     }
     Ok(ok())
-}
-
-/// EXP テーブルの SSoT は game_simulation::util::exp_required_for_next。
-/// Elixir 側はこの NIF を呼び出すことで、Rust と同一の値を参照する。
-#[rustler::nif]
-pub fn exp_required_for_next_nif(level: u32) -> u32 {
-    exp_required_for_next(level)
 }
 
 /// score と kill_count を Elixir 側から注入する（フェーズ1 SSoT 完結）。

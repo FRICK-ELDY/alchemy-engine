@@ -4,18 +4,6 @@
 use crate::constants::WAVES;
 use crate::physics::rng::SimpleRng;
 
-/// 次のレベルに必要な累積経験値を返す。
-/// 現在の `level` から次のレベルに上がるために必要な累積 EXP を返す。
-pub fn exp_required_for_next(level: u32) -> u32 {
-    const EXP_TABLE: [u32; 10] = [0, 10, 25, 45, 70, 100, 135, 175, 220, 270];
-    let idx = level as usize;
-    if idx < EXP_TABLE.len() {
-        EXP_TABLE[idx]
-    } else {
-        270 + (idx as u32 - 9) * 50
-    }
-}
-
 /// 経過時間に応じた現在のウェーブ設定を返す (interval_secs, count_per_tick)
 #[allow(dead_code)] // main スタンドアロンのみで使用
 pub fn current_wave(elapsed_secs: f32) -> (f32, usize) {
@@ -35,15 +23,6 @@ pub fn is_elite_spawn(elapsed_secs: f32, rng: &mut SimpleRng) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_exp_required_for_next() {
-        assert_eq!(exp_required_for_next(0), 0);
-        assert_eq!(exp_required_for_next(1), 10);
-        assert_eq!(exp_required_for_next(2), 25);
-        assert_eq!(exp_required_for_next(9), 270);
-        assert_eq!(exp_required_for_next(10), 320);
-    }
 
     #[test]
     fn test_current_wave() {

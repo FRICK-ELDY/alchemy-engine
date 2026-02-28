@@ -22,8 +22,6 @@ pub struct BulletWorld {
     pub piercing:     Vec<bool>,
     /// 描画種別（BULLET_KIND_* 定数）
     pub render_kind:  Vec<u8>,
-    /// 1.3.1: 発射元武器（EnemyKilled イベント用、WeaponKind::as_u8()）
-    pub weapon_kind:  Vec<u8>,
     pub count:        usize,
     /// 空きスロットのインデックススタック — O(1) でスロットを取得・返却
     free_list:        Vec<usize>,
@@ -41,26 +39,25 @@ impl BulletWorld {
             alive:        Vec::new(),
             piercing:     Vec::new(),
             render_kind:  Vec::new(),
-            weapon_kind:  Vec::new(),
             count:        0,
             free_list:    Vec::new(),
         }
     }
 
-    pub fn spawn(&mut self, x: f32, y: f32, vx: f32, vy: f32, damage: i32, lifetime: f32, weapon_kind: u8) {
-        self.spawn_ex(x, y, vx, vy, damage, lifetime, false, BULLET_KIND_NORMAL, weapon_kind);
+    pub fn spawn(&mut self, x: f32, y: f32, vx: f32, vy: f32, damage: i32, lifetime: f32) {
+        self.spawn_ex(x, y, vx, vy, damage, lifetime, false, BULLET_KIND_NORMAL);
     }
 
-    pub fn spawn_piercing(&mut self, x: f32, y: f32, vx: f32, vy: f32, damage: i32, lifetime: f32, weapon_kind: u8) {
-        self.spawn_ex(x, y, vx, vy, damage, lifetime, true, BULLET_KIND_FIREBALL, weapon_kind);
+    pub fn spawn_piercing(&mut self, x: f32, y: f32, vx: f32, vy: f32, damage: i32, lifetime: f32) {
+        self.spawn_ex(x, y, vx, vy, damage, lifetime, true, BULLET_KIND_FIREBALL);
     }
 
     /// ダメージ 0・短命の表示専用エフェクト弾を生成する（Whip / Lightning 用）
     pub fn spawn_effect(&mut self, x: f32, y: f32, lifetime: f32, render_kind: u8) {
-        self.spawn_ex(x, y, 0.0, 0.0, 0, lifetime, false, render_kind, 0);
+        self.spawn_ex(x, y, 0.0, 0.0, 0, lifetime, false, render_kind);
     }
 
-    pub(crate) fn spawn_ex(&mut self, x: f32, y: f32, vx: f32, vy: f32, damage: i32, lifetime: f32, piercing: bool, render_kind: u8, weapon_kind: u8) {
+    pub fn spawn_ex(&mut self, x: f32, y: f32, vx: f32, vy: f32, damage: i32, lifetime: f32, piercing: bool, render_kind: u8) {
         if let Some(i) = self.free_list.pop() {
             self.positions_x[i]  = x;
             self.positions_y[i]  = y;
@@ -71,7 +68,6 @@ impl BulletWorld {
             self.alive[i]        = true;
             self.piercing[i]     = piercing;
             self.render_kind[i]  = render_kind;
-            self.weapon_kind[i]  = weapon_kind;
         } else {
             self.positions_x.push(x);
             self.positions_y.push(y);
@@ -82,7 +78,6 @@ impl BulletWorld {
             self.alive.push(true);
             self.piercing.push(piercing);
             self.render_kind.push(render_kind);
-            self.weapon_kind.push(weapon_kind);
         }
         self.count += 1;
     }

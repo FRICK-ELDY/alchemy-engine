@@ -16,14 +16,14 @@ pub struct WeaponSlotSave {
     pub level:   u32,
 }
 
+/// Phase 3-B: exp/level は Elixir 側 GenServer state で管理するため SaveSnapshot から除外。
+/// セーブ・ロード時は Elixir 側が exp/level を別途保存・復元する。
 #[derive(Debug, Clone, rustler::NifMap)]
 pub struct SaveSnapshot {
     pub player_hp:       f32,
     pub player_x:        f32,
     pub player_y:        f32,
     pub player_max_hp:   f32,
-    pub level:           u32,
-    pub exp:             u32,
     pub elapsed_seconds: f32,
     pub weapon_slots:    Vec<WeaponSlotSave>,
 }
@@ -40,8 +40,6 @@ pub fn get_save_snapshot(world: ResourceArc<GameWorld>) -> NifResult<SaveSnapsho
         player_x:        w.player.x,
         player_y:        w.player.y,
         player_max_hp:   w.player_max_hp,
-        level:           w.level,
-        exp:             w.exp,
         elapsed_seconds: w.elapsed_seconds,
         weapon_slots,
     })
@@ -60,8 +58,6 @@ pub fn load_save_snapshot(world: ResourceArc<GameWorld>, snapshot: SaveSnapshot)
 
     w.player_max_hp   = snapshot.player_max_hp;
     w.elapsed_seconds = snapshot.elapsed_seconds;
-    w.exp             = snapshot.exp;
-    w.level           = snapshot.level;
 
     let mut slots: Vec<WeaponSlot> = snapshot.weapon_slots
         .into_iter()
@@ -78,7 +74,6 @@ pub fn load_save_snapshot(world: ResourceArc<GameWorld>, snapshot: SaveSnapshot)
     w.frame_events.clear();
     w.magnet_timer = 0.0;
     w.score_popups.clear();
-    w.weapon_choices.clear();
     w.collision.dynamic.clear();
     w.score      = 0;
     w.kill_count = 0;

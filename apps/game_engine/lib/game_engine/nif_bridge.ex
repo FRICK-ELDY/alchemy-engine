@@ -19,10 +19,20 @@ defmodule GameEngine.NifBridge do
   def drain_frame_events(_world), do: :erlang.nif_error(:nif_not_loaded)
   def set_player_input(_world, _dx, _dy), do: :erlang.nif_error(:nif_not_loaded)
   def spawn_enemies(_world, _kind, _count), do: :erlang.nif_error(:nif_not_loaded)
+  # Phase 3-B: 指定座標リストに敵をスポーンする NIF
+  def spawn_enemies_at(_world, _kind, _positions), do: :erlang.nif_error(:nif_not_loaded)
   def add_weapon(_world, _weapon_name), do: :erlang.nif_error(:nif_not_loaded)
   def skip_level_up(_world), do: :erlang.nif_error(:nif_not_loaded)
   def spawn_boss(_world, _kind), do: :erlang.nif_error(:nif_not_loaded)
   def spawn_elite_enemy(_world, _kind, _count, _hp_multiplier), do: :erlang.nif_error(:nif_not_loaded)
+  # Phase 3-B: Elixir 側のルールがアイテムドロップを制御するための NIF
+  # kind: 0=Gem, 1=Potion, 2=Magnet
+  def spawn_item(_world, _x, _y, _kind, _value), do: :erlang.nif_error(:nif_not_loaded)
+  # Phase 3-B: ボスAI制御 NIF
+  def set_boss_velocity(_world, _vx, _vy), do: :erlang.nif_error(:nif_not_loaded)
+  def set_boss_invincible(_world, _invincible), do: :erlang.nif_error(:nif_not_loaded)
+  def set_boss_phase_timer(_world, _timer), do: :erlang.nif_error(:nif_not_loaded)
+  def fire_boss_projectile(_world, _dx, _dy, _speed, _damage, _lifetime), do: :erlang.nif_error(:nif_not_loaded)
   def create_game_loop_control(), do: :erlang.nif_error(:nif_not_loaded)
   def start_rust_game_loop(_world, _control, _pid), do: :erlang.nif_error(:nif_not_loaded)
   def start_render_thread(_world, _pid), do: :erlang.nif_error(:nif_not_loaded)
@@ -37,15 +47,17 @@ defmodule GameEngine.NifBridge do
   def get_enemy_count(_world), do: :erlang.nif_error(:nif_not_loaded)
   def get_hud_data(_world), do: :erlang.nif_error(:nif_not_loaded)
   def get_frame_metadata(_world), do: :erlang.nif_error(:nif_not_loaded)
-  def get_level_up_data(_world), do: :erlang.nif_error(:nif_not_loaded)
   def get_weapon_levels(_world), do: :erlang.nif_error(:nif_not_loaded)
   def get_magnet_timer(_world), do: :erlang.nif_error(:nif_not_loaded)
   def get_boss_info(_world), do: :erlang.nif_error(:nif_not_loaded)
+  # Phase 3-B: ボスAI制御用（{:alive, kind_id, x, y, hp, max_hp, phase_timer} または :none）
+  def get_boss_state(_world), do: :erlang.nif_error(:nif_not_loaded)
   def is_player_dead(_world), do: :erlang.nif_error(:nif_not_loaded)
 
   # ── Elixir SSoT 注入 NIF（毎フレーム呼ばれる）──────────────────────
   def set_player_hp(_world, _hp), do: :erlang.nif_error(:nif_not_loaded)
-  def set_player_level(_world, _level, _exp), do: :erlang.nif_error(:nif_not_loaded)
+  # Phase 3-B: exp は Elixir 側で管理するため引数から除外
+  def set_player_level(_world, _level), do: :erlang.nif_error(:nif_not_loaded)
   def set_elapsed_seconds(_world, _elapsed), do: :erlang.nif_error(:nif_not_loaded)
   def set_boss_hp(_world, _hp), do: :erlang.nif_error(:nif_not_loaded)
   def set_hud_state(_world, _score, _kill_count), do: :erlang.nif_error(:nif_not_loaded)
@@ -57,9 +69,6 @@ defmodule GameEngine.NifBridge do
   # weapons: [{cooldown, damage, as_u8, name, bullet_table_or_nil}]
   # bosses:  [{max_hp, speed, radius, exp_reward, damage_per_sec, render_kind, special_interval}]
   def set_entity_params(_world, _enemies, _weapons, _bosses), do: :erlang.nif_error(:nif_not_loaded)
-
-  # ── EXP テーブル（SSoT: game_simulation::util::exp_required_for_next）──
-  def exp_required_for_next_nif(_level), do: :erlang.nif_error(:nif_not_loaded)
 
   # ── Push 型同期 NIF ────────────────────────────────────────────
   def push_tick(_world, _dx, _dy, _delta_ms), do: :erlang.nif_error(:nif_not_loaded)

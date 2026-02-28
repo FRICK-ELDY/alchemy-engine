@@ -1,10 +1,11 @@
 //! Path: native/game_nif/src/nif/action_nif.rs
-//! Summary: アクション NIF（add_weapon, skip_level_up, spawn_boss, spawn_elite_enemy）
+//! Summary: アクション NIF（add_weapon, skip_level_up, spawn_boss, spawn_elite_enemy, spawn_item 等）
 
 use super::util::lock_poisoned_err;
 use game_simulation::game_logic::systems::spawn::get_spawn_positions_around_player;
 use game_simulation::world::{BossState, FrameEvent, GameWorld};
 use game_simulation::constants::PLAYER_RADIUS;
+use game_simulation::item::ItemKind;
 use game_simulation::weapon::{WeaponSlot, MAX_WEAPON_LEVEL, MAX_WEAPON_SLOTS};
 use rustler::{Atom, NifResult, ResourceArc};
 
@@ -18,14 +19,11 @@ pub fn add_weapon(world: ResourceArc<GameWorld>, weapon_id: u8) -> NifResult<Ato
     } else if w.weapon_slots.len() < MAX_WEAPON_SLOTS {
         w.weapon_slots.push(WeaponSlot::new(weapon_id));
     }
-    w.complete_level_up();
     Ok(ok())
 }
 
 #[rustler::nif]
-pub fn skip_level_up(world: ResourceArc<GameWorld>) -> NifResult<Atom> {
-    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
-    w.complete_level_up();
+pub fn skip_level_up(_world: ResourceArc<GameWorld>) -> NifResult<Atom> {
     Ok(ok())
 }
 
@@ -42,6 +40,69 @@ pub fn spawn_boss(world: ResourceArc<GameWorld>, kind_id: u8) -> NifResult<Atom>
         w.boss = Some(BossState::new(kind_id, bx, by, &bp));
         w.frame_events.push(FrameEvent::BossSpawn { boss_kind: kind_id });
     }
+    Ok(ok())
+}
+
+/// Phase 3-B: ボスの速度ベクトルを Elixir 側 AI から注入する NIF。
+#[rustler::nif]
+pub fn set_boss_velocity(world: ResourceArc<GameWorld>, vx: f64, vy: f64) -> NifResult<Atom> {
+    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
+    if let Some(ref mut boss) = w.boss {
+        boss.vx = vx as f32;
+        boss.vy = vy as f32;
+    }
+    Ok(ok())
+}
+
+/// Phase 3-B: ボスの無敵状態を Elixir 側 AI から設定する NIF。
+#[rustler::nif]
+pub fn set_boss_invincible(world: ResourceArc<GameWorld>, invincible: bool) -> NifResult<Atom> {
+    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
+    if let Some(ref mut boss) = w.boss {
+        boss.invincible = invincible;
+    }
+    Ok(ok())
+}
+
+/// Phase 3-B: ボスの phase_timer を Elixir 側 AI から更新する NIF。
+#[rustler::nif]
+pub fn set_boss_phase_timer(world: ResourceArc<GameWorld>, timer: f64) -> NifResult<Atom> {
+    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
+    if let Some(ref mut boss) = w.boss {
+        boss.phase_timer = timer as f32;
+    }
+    Ok(ok())
+}
+
+/// Phase 3-B: Elixir 側 AI がボスの弾丸を発射するための NIF。
+/// dx/dy は方向ベクトル（正規化不要）、speed は弾速、damage はダメージ、lifetime は寿命（秒）
+#[rustler::nif]
+pub fn fire_boss_projectile(world: ResourceArc<GameWorld>, dx: f64, dy: f64, speed: f64, damage: i32, lifetime: f64) -> NifResult<Atom> {
+    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
+    if let Some(ref boss) = w.boss {
+        let bx = boss.x;
+        let by = boss.y;
+        let len = ((dx * dx + dy * dy) as f32).sqrt().max(0.001);
+        let vx = (dx as f32 / len) * speed as f32;
+        let vy = (dy as f32 / len) * speed as f32;
+        use game_simulation::world::BULLET_KIND_ROCK;
+        w.bullets.spawn_ex(bx, by, vx, vy, damage, lifetime as f32, false, BULLET_KIND_ROCK);
+    }
+    Ok(ok())
+}
+
+/// Phase 3-B: Elixir 側のルールがアイテムドロップを制御するための NIF。
+/// kind: 0=Gem, 1=Potion, 2=Magnet
+#[rustler::nif]
+pub fn spawn_item(world: ResourceArc<GameWorld>, x: f64, y: f64, kind: u8, value: u32) -> NifResult<Atom> {
+    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
+    let item_kind = match kind {
+        0 => ItemKind::Gem,
+        1 => ItemKind::Potion,
+        2 => ItemKind::Magnet,
+        _ => ItemKind::Gem,
+    };
+    w.items.spawn(x as f32, y as f32, item_kind, value);
     Ok(ok())
 }
 

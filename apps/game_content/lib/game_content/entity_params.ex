@@ -18,6 +18,14 @@ defmodule GameContent.EntityParams do
   # {boss_kind_id => max_hp}
   @boss_max_hp %{0 => 1000.0, 1 => 2000.0, 2 => 5000.0}
 
+  # ── ボスパラメータ（Phase 3-B: ボスAI制御用）──────────────────────
+  # {boss_kind_id => %{speed, special_interval}}
+  @boss_params %{
+    0 => %{speed: 60.0,  special_interval: 5.0},  # Slime King
+    1 => %{speed: 200.0, special_interval: 4.0},  # Bat Lord
+    2 => %{speed: 30.0,  special_interval: 6.0},  # Stone Golem
+  }
+
   # スコア = EXP × この係数（physics_step.rs の score 加算ロジックと同値）
   @score_per_exp 2
 
@@ -36,4 +44,8 @@ defmodule GameContent.EntityParams do
   @doc "EXP からスコア加算値を計算する（EXP × @score_per_exp）"
   @spec score_from_exp(non_neg_integer()) :: non_neg_integer()
   def score_from_exp(exp), do: exp * @score_per_exp
+
+  @doc "Phase 3-B: ボス種別 ID のパラメータ（speed, special_interval）を返す"
+  @spec boss_params_by_id(non_neg_integer()) :: map()
+  def boss_params_by_id(kind_id), do: Map.fetch!(@boss_params, kind_id)
 end

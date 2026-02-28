@@ -17,7 +17,6 @@ use super::FrameEvent;
 /// 以下のフィールドは Elixir 側が権威を持ち、毎フレーム NIF で注入される:
 /// - `player.hp`        → set_player_hp NIF（フェーズ2）
 /// - `player.input_dx/dy` → set_player_input NIF（フェーズ5）
-/// - `level`, `exp`     → set_player_level NIF（フェーズ3）
 /// - `elapsed_seconds`  → set_elapsed_seconds NIF（フェーズ3）
 /// - `boss.hp`          → set_boss_hp NIF（フェーズ4）
 /// - `score`, `kill_count` → set_hud_state NIF（フェーズ1）
@@ -45,18 +44,12 @@ pub struct GameWorldInner {
     pub elapsed_seconds:    f32,
     /// プレイヤーの最大 HP（HP バー計算用）
     pub player_max_hp:      f32,
-    /// 現在の経験値 - Elixir から毎フレーム注入（武器ダメージ計算用）
-    pub exp:                u32,
-    /// 現在のレベル（1 始まり）- Elixir から毎フレーム注入（武器ダメージ計算用）
-    pub level:              u32,
     /// 装備中の武器スロット（クールダウン管理のみ）
     pub weapon_slots:       Vec<WeaponSlot>,
     /// 1.2.9: ボスエネミー（boss.hp は Elixir から毎フレーム注入）
     pub boss:               Option<BossState>,
     /// 1.3.1: このフレームで発生したイベント（毎フレーム drain される）
     pub frame_events:       Vec<FrameEvent>,
-    /// 1.7.5: レベルアップ時の武器選択肢（HUD 表示用）
-    pub weapon_choices:     Vec<String>,
     /// 1.7.5: スコアポップアップ [(world_x, world_y, value, lifetime)]（描画用）
     pub score_popups:       Vec<(f32, f32, u32, f32)>,
     /// スコア - Elixir から毎フレーム注入（HUD 表示用）
@@ -78,13 +71,6 @@ pub struct GameWorldInner {
 }
 
 impl GameWorldInner {
-    /// レベルアップ処理を完了する（武器選択・スキップ共通）
-    /// フェーズ3: level/level_up_pending の権威は Elixir 側に移行済み。
-    /// weapon_choices のクリアのみ行う。level は Elixir から次フレームで注入される。
-    pub fn complete_level_up(&mut self) {
-        self.weapon_choices.clear();
-    }
-
     /// 衝突判定用の Spatial Hash を再構築する（clone 不要）
     pub fn rebuild_collision(&mut self) {
         self.collision.dynamic.clear();
