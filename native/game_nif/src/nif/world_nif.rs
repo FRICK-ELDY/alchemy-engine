@@ -16,8 +16,7 @@ use rustler::{Atom, NifResult, ResourceArc, Term};
 use std::sync::RwLock;
 
 use crate::{ok, BulletWorld, EnemyWorld, ParticleWorld};
-
-const DEFAULT_PARTICLE_COLOR: [f32; 4] = [1.0, 0.5, 0.1, 1.0];
+use game_simulation::entity_params::DEFAULT_PARTICLE_COLOR;
 
 #[rustler::nif]
 pub fn create_world() -> ResourceArc<GameWorld> {

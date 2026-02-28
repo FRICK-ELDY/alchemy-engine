@@ -6,6 +6,26 @@
 //! `EntityParamTables::default()` は空テーブルを返す。
 //! `set_entity_params` NIF が呼ばれるまで動作しない設計。
 
+// ─── フォールバック定数 ──────────────────────────────────────────
+
+/// params テーブルに該当 ID が存在しない場合のデフォルト敵半径
+pub const DEFAULT_ENEMY_RADIUS: f32 = 16.0;
+
+/// params テーブルに該当 ID が存在しない場合のデフォルトパーティクル色
+pub const DEFAULT_PARTICLE_COLOR: [f32; 4] = [1.0, 0.5, 0.1, 1.0];
+
+/// params テーブルに該当 ID が存在しない場合のデフォルト whip 射程
+pub const DEFAULT_WHIP_RANGE: f32 = 200.0;
+
+/// params テーブルに該当 ID が存在しない場合のデフォルト aura 半径
+pub const DEFAULT_AURA_RADIUS: f32 = 150.0;
+
+/// params テーブルに該当 ID が存在しない場合のデフォルト chain 数
+pub const DEFAULT_CHAIN_COUNT: usize = 1;
+
+/// Chain 武器がボスに連鎖する最大距離
+pub const CHAIN_BOSS_RANGE: f32 = 600.0;
+
 // ─── EnemyParams ────────────────────────────────────────────────
 
 /// 敵のパラメータ（kind_id: u8 で参照）
