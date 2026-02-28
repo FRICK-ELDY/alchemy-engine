@@ -39,8 +39,8 @@ pub fn push_tick(
 
     w.curr_tick_ms = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_millis() as u64;
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
 
     let frame_id    = w.frame_id;
     let player_x    = w.player.x as f64;

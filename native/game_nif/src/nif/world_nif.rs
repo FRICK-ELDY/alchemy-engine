@@ -75,7 +75,7 @@ pub fn set_player_input(world: ResourceArc<GameWorld>, dx: f64, dy: f64) -> NifR
 #[rustler::nif]
 pub fn spawn_enemies(world: ResourceArc<GameWorld>, kind_id: u8, count: usize) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
-    let ep = w.params.enemies.get(kind_id as usize)
+    let ep = w.params.get_enemy(kind_id)
         .ok_or_else(params_not_loaded_err)?
         .clone();
     let positions = get_spawn_positions_around_player(&mut w, count);
@@ -88,7 +88,7 @@ pub fn spawn_enemies(world: ResourceArc<GameWorld>, kind_id: u8, count: usize) -
 #[rustler::nif]
 pub fn spawn_enemies_at(world: ResourceArc<GameWorld>, kind_id: u8, positions_term: Term) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
-    let ep = w.params.enemies.get(kind_id as usize)
+    let ep = w.params.get_enemy(kind_id)
         .ok_or_else(params_not_loaded_err)?
         .clone();
     let positions_list: Vec<(f64, f64)> = positions_term.decode()?;

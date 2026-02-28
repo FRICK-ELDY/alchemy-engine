@@ -213,11 +213,11 @@ graph TD
     IB --> IG
 ```
 
-### フェーズ1（着手可能・高優先）
+### フェーズ1（✅ 完了）
 
-1. **I-C**: NIF の `NifResult<T>` 統一（OTP 耐障害性の回復）
-2. **I-D**: `function_exported?/3` 除去（課題12 の実施）
-3. **I-A**: HUD 注入系の write lock 解消
+1. **I-C**: NIF の `NifResult<T>` 統一（OTP 耐障害性の回復）✅
+2. **I-D**: `function_exported?/3` 除去（課題12 の実施）✅
+3. **I-A**: HUD 注入系の write lock 解消 ✅
 
 ### フェーズ2（中期）
 

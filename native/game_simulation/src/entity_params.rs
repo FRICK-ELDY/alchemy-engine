@@ -120,16 +120,16 @@ impl Default for EntityParamTables {
 }
 
 impl EntityParamTables {
-    pub fn get_enemy(&self, id: u8) -> &EnemyParams {
-        self.enemies.get(id as usize).expect("Invalid enemy ID")
+    pub fn get_enemy(&self, id: u8) -> Option<&EnemyParams> {
+        self.enemies.get(id as usize)
     }
 
-    pub fn get_weapon(&self, id: u8) -> &WeaponParams {
-        self.weapons.get(id as usize).expect("Invalid weapon ID")
+    pub fn get_weapon(&self, id: u8) -> Option<&WeaponParams> {
+        self.weapons.get(id as usize)
     }
 
-    pub fn get_boss(&self, id: u8) -> &BossParams {
-        self.bosses.get(id as usize).expect("Invalid boss ID")
+    pub fn get_boss(&self, id: u8) -> Option<&BossParams> {
+        self.bosses.get(id as usize)
     }
 
     pub fn enemy_passes_obstacles(&self, id: u8) -> bool {
@@ -178,7 +178,7 @@ mod tests {
     #[test]
     fn get_enemy_returns_correct_params() {
         let tables = make_tables();
-        let ep = tables.get_enemy(0);
+        let ep = tables.get_enemy(0).expect("enemy 0 should exist");
         assert!((ep.max_hp - 30.0).abs() < 0.001);
         assert!((ep.speed - 80.0).abs() < 0.001);
     }
@@ -186,7 +186,7 @@ mod tests {
     #[test]
     fn get_weapon_returns_correct_params() {
         let tables = make_tables();
-        let wp = tables.get_weapon(0);
+        let wp = tables.get_weapon(0).expect("weapon 0 should exist");
         assert_eq!(wp.damage, 10);
         assert_eq!(wp.fire_pattern, FirePattern::Aimed);
     }
@@ -194,21 +194,20 @@ mod tests {
     #[test]
     fn get_boss_returns_correct_params() {
         let tables = make_tables();
-        let bp = tables.get_boss(0);
+        let bp = tables.get_boss(0).expect("boss 0 should exist");
         assert!((bp.max_hp - 1000.0).abs() < 0.001);
     }
 
     #[test]
-    #[should_panic(expected = "Invalid enemy ID")]
-    fn get_enemy_panics_on_invalid_id() {
+    fn get_enemy_returns_none_for_invalid_id() {
         let tables = make_tables();
-        tables.get_enemy(99);
+        assert!(tables.get_enemy(99).is_none());
     }
 
     #[test]
     fn weapon_bullet_count_by_level() {
         let tables = make_tables();
-        let wp = tables.get_weapon(0);
+        let wp = tables.get_weapon(0).expect("weapon 0 should exist");
         // bullet_table = [0, 1, 1, 2, 2, 3, 3, 4, 4] (index 0 は未使用、1-based)
         assert_eq!(wp.bullet_count(1), 1);
         assert_eq!(wp.bullet_count(4), 2);

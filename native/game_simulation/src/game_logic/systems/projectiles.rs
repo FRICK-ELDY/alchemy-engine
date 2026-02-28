@@ -42,7 +42,7 @@ pub(crate) fn update_projectiles_and_enemy_hits(w: &mut GameWorldInner, dt: f32)
         for ei in w.spatial_query_buf.iter().copied() {
             if !w.enemies.alive[ei] { continue; }
             let kind_id = w.enemies.kind_ids[ei];
-            let ep = w.params.get_enemy(kind_id).clone();
+            let Some(ep) = w.params.get_enemy(kind_id).cloned() else { continue; };
             let enemy_r = ep.radius;
             let hit_r = BULLET_RADIUS + enemy_r;
             let ex = w.enemies.positions_x[ei] + enemy_r;

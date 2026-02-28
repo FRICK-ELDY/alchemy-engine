@@ -158,7 +158,7 @@ mod tests {
     fn weapon_slot_bullet_count() {
         let tables = make_test_tables();
         let slot = WeaponSlot::new(0);
-        assert_eq!(slot.bullet_count(tables.get_weapon(0)), 1);
+        assert_eq!(slot.bullet_count(tables.get_weapon(0).expect("weapon 0 should exist")), 1);
     }
 
     #[test]
@@ -166,6 +166,6 @@ mod tests {
         let tables = make_test_tables();
         let mut slot = WeaponSlot::new(0);
         slot.level = 2;
-        assert_eq!(slot.effective_damage(tables.get_weapon(0)), 12);
+        assert_eq!(slot.effective_damage(tables.get_weapon(0).expect("weapon 0 should exist")), 12);
     }
 }

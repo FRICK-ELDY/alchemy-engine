@@ -42,8 +42,7 @@ pub fn set_weapon_slots(
 pub fn spawn_boss(world: ResourceArc<GameWorld>, kind_id: u8) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
     if w.boss.is_some() { return Ok(ok()); }
-    if (kind_id as usize) < w.params.bosses.len() {
-        let bp = w.params.get_boss(kind_id).clone();
+    if let Some(bp) = w.params.get_boss(kind_id).cloned() {
         let px = w.player.x + PLAYER_RADIUS;
         let py = w.player.y + PLAYER_RADIUS;
         let bx = (px + 600.0).min(w.map_width  - bp.radius);
@@ -130,7 +129,7 @@ pub fn spawn_item(world: ResourceArc<GameWorld>, x: f64, y: f64, kind: u8, value
 #[rustler::nif]
 pub fn spawn_elite_enemy(world: ResourceArc<GameWorld>, kind_id: u8, count: usize, hp_multiplier: f64) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
-    let ep = w.params.enemies.get(kind_id as usize)
+    let ep = w.params.get_enemy(kind_id)
         .ok_or_else(params_not_loaded_err)?
         .clone();
     let base_max_hp = ep.max_hp;

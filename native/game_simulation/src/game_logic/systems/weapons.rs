@@ -26,7 +26,7 @@ pub(crate) fn update_weapon_attacks(w: &mut GameWorldInner, dt: f32, px: f32, py
         }
 
         let kind_id = w.weapon_slots[si].kind_id;
-        let wp = w.params.get_weapon(kind_id);
+        let Some(wp) = w.params.get_weapon(kind_id) else { continue; };
         let cd     = w.weapon_slots[si].effective_cooldown(wp);
         let dmg    = w.weapon_slots[si].effective_damage(wp);
         let level  = w.weapon_slots[si].level;
@@ -55,7 +55,7 @@ fn fire_aimed(
     cd: f32,
 ) {
     if let Some(ti) = find_nearest_enemy_spatial(&w.collision, &w.enemies, px, py, WEAPON_SEARCH_RADIUS, &mut w.spatial_query_buf) {
-        let target_r = w.params.get_enemy(w.enemies.kind_ids[ti]).radius;
+        let target_r = w.params.get_enemy(w.enemies.kind_ids[ti]).map(|e| e.radius).unwrap_or(16.0);
         let tx = w.enemies.positions_x[ti] + target_r;
         let ty = w.enemies.positions_y[ti] + target_r;
         let base_angle = (ty - py).atan2(tx - px);
@@ -116,7 +116,7 @@ fn fire_whip(
     cd: f32,
     facing_angle: f32,
 ) {
-    let range = w.params.get_weapon(kind_id).whip_range(level);
+    let range = w.params.get_weapon(kind_id).map(|wp| wp.whip_range(level)).unwrap_or(200.0);
     let whip_half_angle = std::f32::consts::PI * 0.3;
     let eff_x = px + facing_angle.cos() * range * 0.5;
     let eff_y = py + facing_angle.sin() * range * 0.5;
@@ -137,16 +137,16 @@ fn fire_whip(
         let angle = ddy.atan2(ddx);
         let diff = (angle - facing_angle + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
         if diff.abs() < whip_half_angle {
-            let enemy_r = w.params.get_enemy(w.enemies.kind_ids[ei]).radius;
+            let enemy_r = w.params.get_enemy(w.enemies.kind_ids[ei]).map(|e| e.radius).unwrap_or(16.0);
             let hit_x = ex + enemy_r;
             let hit_y = ey + enemy_r;
             w.enemies.hp[ei] -= dmg as f32;
             if w.enemies.hp[ei] <= 0.0 {
                 let kind_e = w.enemies.kind_ids[ei];
-                let ep_hit = w.params.get_enemy(kind_e).clone();
+                let particle_color = w.params.get_enemy(kind_e).map(|e| e.particle_color).unwrap_or([1.0, 0.5, 0.1, 1.0]);
                 w.enemies.kill(ei);
                 w.frame_events.push(FrameEvent::EnemyKilled { enemy_kind: kind_e, x: hit_x, y: hit_y });
-                w.particles.emit(hit_x, hit_y, 8, ep_hit.particle_color);
+                w.particles.emit(hit_x, hit_y, 8, particle_color);
             } else {
                 w.particles.emit(hit_x, hit_y, 3, [1.0, 0.6, 0.1, 1.0]);
             }
@@ -182,7 +182,7 @@ fn fire_piercing(
     cd: f32,
 ) {
     if let Some(ti) = find_nearest_enemy_spatial(&w.collision, &w.enemies, px, py, WEAPON_SEARCH_RADIUS, &mut w.spatial_query_buf) {
-        let target_r = w.params.get_enemy(w.enemies.kind_ids[ti]).radius;
+        let target_r = w.params.get_enemy(w.enemies.kind_ids[ti]).map(|e| e.radius).unwrap_or(16.0);
         let tx = w.enemies.positions_x[ti] + target_r;
         let ty = w.enemies.positions_y[ti] + target_r;
         let base_angle = (ty - py).atan2(tx - px);
@@ -203,7 +203,7 @@ fn fire_chain(
     kind_id: u8,
     cd: f32,
 ) {
-    let chain_count = w.params.get_weapon(kind_id).chain_count_for_level(level);
+    let chain_count = w.params.get_weapon(kind_id).map(|wp| wp.chain_count_for_level(level)).unwrap_or(1);
     // 命中済み敵インデックスを O(1) で検索するためビットマスク配列を使用（300 バイト）
     let mut hit_set = [false; MAX_ENEMIES];
     let mut current = find_nearest_enemy_spatial(&w.collision, &w.enemies, px, py, WEAPON_SEARCH_RADIUS, &mut w.spatial_query_buf);
@@ -213,7 +213,7 @@ fn fire_chain(
     let mut next_search_y = py;
     for _ in 0..chain_count {
         if let Some(ei) = current {
-            let enemy_r = w.params.get_enemy(w.enemies.kind_ids[ei]).radius;
+            let enemy_r = w.params.get_enemy(w.enemies.kind_ids[ei]).map(|e| e.radius).unwrap_or(16.0);
             let hit_x = w.enemies.positions_x[ei] + enemy_r;
             let hit_y = w.enemies.positions_y[ei] + enemy_r;
             w.enemies.hp[ei] -= dmg as f32;
@@ -265,7 +265,7 @@ fn fire_aura(
     kind_id: u8,
     cd: f32,
 ) {
-    let radius = w.params.get_weapon(kind_id).aura_radius(level);
+    let radius = w.params.get_weapon(kind_id).map(|wp| wp.aura_radius(level)).unwrap_or(150.0);
     let radius_sq = radius * radius;
     w.collision.dynamic.query_nearby_into(px, py, radius, &mut w.spatial_query_buf);
     for ei in w.spatial_query_buf.iter().copied() {
@@ -277,13 +277,15 @@ fn fire_aura(
         if ddx * ddx + ddy * ddy > radius_sq { continue; }
         w.enemies.hp[ei] -= dmg as f32;
         let kind_e = w.enemies.kind_ids[ei];
-        let ep = w.params.get_enemy(kind_e).clone();
-        let hit_x = ex + ep.radius;
-        let hit_y = ey + ep.radius;
+        let (enemy_r, particle_color) = w.params.get_enemy(kind_e)
+            .map(|e| (e.radius, e.particle_color))
+            .unwrap_or((16.0, [1.0, 0.5, 0.1, 1.0]));
+        let hit_x = ex + enemy_r;
+        let hit_y = ey + enemy_r;
         if w.enemies.hp[ei] <= 0.0 {
             w.enemies.kill(ei);
             w.frame_events.push(FrameEvent::EnemyKilled { enemy_kind: kind_e, x: hit_x, y: hit_y });
-            w.particles.emit(hit_x, hit_y, 8, ep.particle_color);
+            w.particles.emit(hit_x, hit_y, 8, particle_color);
         } else {
             w.particles.emit(hit_x, hit_y, 2, [0.9, 0.9, 0.3, 0.6]);
         }

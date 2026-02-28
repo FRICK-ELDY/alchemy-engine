@@ -65,4 +65,11 @@ defmodule GameContent.VampireSurvivor do
   # ── ウェーブラベル（SpawnSystem に委譲）──────────────────────────
 
   defdelegate wave_label(elapsed_sec), to: GameContent.VampireSurvivor.SpawnSystem
+
+  # ── シーン push 時の物理一時停止判定 ─────────────────────────────
+
+  def pause_on_push?(mod) do
+    mod == GameContent.VampireSurvivor.Scenes.LevelUp or
+    mod == GameContent.VampireSurvivor.Scenes.BossAlert
+  end
 end

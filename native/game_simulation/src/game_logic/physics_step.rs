@@ -87,7 +87,7 @@ pub fn physics_step_inner(w: &mut GameWorldInner, delta_ms: f64) {
     for idx in w.spatial_query_buf.iter().copied() {
         if !w.enemies.alive[idx] { continue; }
         let kind_id = w.enemies.kind_ids[idx];
-        let params = w.params.get_enemy(kind_id);
+        let Some(params) = w.params.get_enemy(kind_id) else { continue; };
         let enemy_r = params.radius;
         let hit_radius = PLAYER_RADIUS + enemy_r;
         let ex = w.enemies.positions_x[idx] + enemy_r;
