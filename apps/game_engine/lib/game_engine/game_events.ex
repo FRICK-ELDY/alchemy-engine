@@ -445,10 +445,13 @@ defmodule GameEngine.GameEvents do
 
   # BossDefeated でスコア・kill_count を積算し、ポップアップ表示・アイテムドロップを処理する
   # boss_exp_reward/1 を持つコンテンツ（ボスの概念があるコンテンツ）のみ処理する
-  defp apply_event({:boss_defeated, boss_kind, x_bits, y_bits, _}, state) do
+  # I-2: Rust 側の entity_kind は 0 固定のため、ボス種別は Playing シーン state から取得する
+  defp apply_event({:boss_defeated, _boss_kind_from_rust, x_bits, y_bits, _}, state) do
     content = current_content()
+    playing_state = get_playing_scene_state(content)
+    boss_kind = Map.get(playing_state, :boss_kind_id)
 
-    if function_exported?(content, :boss_exp_reward, 1) do
+    if boss_kind != nil and function_exported?(content, :boss_exp_reward, 1) do
       exp = content.boss_exp_reward(boss_kind)
       x = bits_to_f32(x_bits)
       y = bits_to_f32(y_bits)
