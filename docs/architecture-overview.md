@@ -27,7 +27,7 @@ graph TB
     subgraph Rust["Rust Workspace"]
         GNIF[game_nif<br/>NIF インターフェース / ゲームループ / レンダーブリッジ]
         GSIM[game_simulation<br/>物理 / ECS]
-        GRENDER[game_render<br/>wgpu 描画]
+        GRENDER[game_render<br/>wgpu 描画 / winit ウィンドウ]
         GAUDIO[game_audio<br/>rodio オーディオ]
         GNIF -->|依存| GSIM
         GNIF -->|依存| GRENDER
