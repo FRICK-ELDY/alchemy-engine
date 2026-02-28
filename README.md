@@ -1,26 +1,35 @@
 # AlchemyEngine
 
-> A next-generation game engine fusing Elixir's robust state management with Rust's extreme performance.
+> A platform for infinite worlds. You bring the rules.
 
-AlchemyEngineは、ElixirをSingle Source of Truth（SSoT）としてゲームロジックとネットワークを統括し、RustのECS（Entity Component System）を用いてクライアント側の物理演算・描画・オーディオ処理を極限まで引き出す、ハイブリッドな次世代ゲームエンジンです。
+AlchemyEngine は「無限の3D空間」と「そこに存在するユーザー」だけを保証するゲームエンジン基盤です。
+世界（World）を作るのはクリエイター。ルール（Rule）を作るのもクリエイター。
+ゲームはその組み合わせであり、完成した世界は Hub にパブリッシュされます。
 
-## ✨ Core Concepts
+> Engine = 空間 + ユーザー + 物理基盤
+> World  = クリエイターが定義（地形・エンティティ・アセット）
+> Rule   = クリエイターが定義（勝敗・スコア・ゲームフロー）
+> Game   = World + Rule
 
-- **Elixir as SSoT (Single Source of Truth)** 
+詳細は [ビジョンと設計思想](./docs/vision.md) を参照。
 
-  ゲームの権威ある状態（State）やロジックは、すべてElixir側で管理します。これにより、クライアント用のコードをそのままマルチプレイ用の専用サーバー（ヘッドレス化）としてシームレスに転用可能です。1000人規模のプレイヤーが交差するような大規模なネットワークルーティングも、Elixirの並行処理能力で安全に捌きます。
+## アーキテクチャのハイライト
 
-- **Data-Driven with Rust ECS** 
+- **Elixir as SSoT (Single Source of Truth)**
 
-  Elixirから同期された状態をもとに、Rust側のECSが毎フレームの予測・補間（Dead Reckoning）と物理演算、描画を行います。機能ごとの固定スレッドではなく、タスクベースの並列処理を行うことで、広大なオープンワールドやVR環境でも高いフレームレートを死守します。
+  ゲームの権威ある状態とロジックはすべて Elixir 側で管理します。クライアント用のコードをそのままヘッドレスのマルチプレイサーバーとして転用可能です。1000人規模のプレイヤーが交差する大規模ネットワークも Elixir の並行処理能力で捌きます。
 
-- **SuperCollider-inspired Audio Architecture** 
+- **Rust ECS for Physics & Rendering**
 
-  クライアント（Elixir）が「指揮者」として非同期の制御メッセージを発行し、サーバー（Rust側の専用スレッド）がノードグラフを構築してDSP処理を行う、SuperColliderの思想を取り入れた強力な音響システムを搭載。複雑な空間オーディオ（3Dサウンド）や動的なルーティングを低遅延で実現します。
+  Elixir から同期された状態をもとに、Rust の ECS が 60Hz 固定の物理演算・描画・オーディオ処理を行います。SoA（Structure of Arrays）と SIMD による CPU キャッシュ最適化で、広大なオープンワールドでも高フレームレートを維持します。
 
-- **VR & Custom Hardware Ready** 
+- **SuperCollider-inspired Audio**
 
-  Elixir側の柔軟なネットワークインターフェースにより、標準的なコントローラーだけでなく、自作のIoTデバイスからのUDPストリームを直接エンジンに吸い上げ、超低遅延でアバターに反映させる基盤を持ち合わせています。
+  Elixir が「指揮者」として非同期コマンドを発行し、Rust の専用スレッドが DSP 処理を行います。複雑な空間オーディオと動的ルーティングを低遅延で実現します。
+
+- **Hub — Publish Your World**
+
+  クリエイターが作った Game（World + Rule）は Hub にパブリッシュされます。ユーザーは Hub から好きな世界を選んで遊びます。Hub 自体もエンジンが動かす一つの世界です。
 
 ## 🏗️ Architecture
 
