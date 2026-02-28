@@ -6,9 +6,22 @@ defmodule GameContent.EntityParams do
   Rust 側の値と乖離しないよう、フェーズ0 の比較ログで定期的に検証すること。
   """
 
+  # ── 敵種別 ID（entity_params.rs の ENEMY_TABLE インデックスと対応）──
+  @enemy_slime    0
+  @enemy_bat      1
+  @enemy_skeleton 2
+  @enemy_ghost    3
+  @enemy_golem    4
+
   # ── 敵 EXP 報酬（entity_params.rs の ENEMY_TABLE と同値）──────────
   # {kind_id => exp}
-  @enemy_exp_rewards %{0 => 5, 1 => 3, 2 => 20, 3 => 10, 4 => 8}
+  @enemy_exp_rewards %{
+    @enemy_slime    => 5,
+    @enemy_bat      => 3,
+    @enemy_skeleton => 20,
+    @enemy_ghost    => 10,
+    @enemy_golem    => 8,
+  }
 
   # ── ボス EXP 報酬（boss.rs の exp_reward と同値）──────────────────
   # {boss_kind_id => exp}
@@ -45,6 +58,10 @@ defmodule GameContent.EntityParams do
 
   # スコア = EXP × この係数（physics_step.rs の score 加算ロジックと同値）
   @score_per_exp 2
+
+  @doc "スライムの敵種別 ID を返す（SlimeKing の特殊行動スポーン等で使用）"
+  @spec enemy_kind_slime() :: non_neg_integer()
+  def enemy_kind_slime, do: @enemy_slime
 
   @doc "敵種別 ID の EXP 報酬を返す"
   @spec enemy_exp_reward(non_neg_integer()) :: non_neg_integer()

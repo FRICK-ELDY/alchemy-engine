@@ -82,6 +82,11 @@ defmodule GameContent.VampireSurvivorRule do
   end
 
   # Phase 3-B: 敵撃破時のアイテムドロップ処理
+  # 注意: :rand はプロセスローカルな非決定的 RNG を使用する。
+  # 以前の Rust 実装はシード付き SimpleRng で決定的だったが、Phase 3-B では
+  # リプレイ機能・テスト再現性は要件外のため意図的に非決定的な実装を採用している。
+  # 将来リプレイ機能が必要になった場合は、GameEvents の state 経由でシード付き
+  # RNG 状態を引き回し、context 経由でコールバックに渡す設計に変更すること。
   @impl GameEngine.RuleBehaviour
   def on_entity_removed(world_ref, kind_id, x, y) do
     roll = :rand.uniform(100)
@@ -98,6 +103,7 @@ defmodule GameContent.VampireSurvivorRule do
   end
 
   # Phase 3-B: ボス撃破時のアイテムドロップ処理（Gem を10個散布）
+  # on_entity_removed と同様に :rand による非決定的 RNG を使用（意図的）。
   @impl GameEngine.RuleBehaviour
   def on_boss_defeated(world_ref, boss_kind, x, y) do
     exp_reward = GameContent.EntityParams.boss_exp_reward(boss_kind)
@@ -105,7 +111,7 @@ defmodule GameContent.VampireSurvivorRule do
     for _ <- 1..10 do
       ox = (:rand.uniform() - 0.5) * 200.0
       oy = (:rand.uniform() - 0.5) * 200.0
-      GameEngine.NifBridge.spawn_item(world_ref, x + ox, y + oy, 0, gem_value)
+      GameEngine.NifBridge.spawn_item(world_ref, x + ox, y + oy, @item_gem, gem_value)
     end
     :ok
   end
@@ -175,6 +181,6 @@ defmodule GameContent.VampireSurvivorRule do
       angle = i * :math.pi() * 2.0 / 8.0
       {bx + :math.cos(angle) * 120.0, by + :math.sin(angle) * 120.0}
     end
-    GameEngine.NifBridge.spawn_enemies_at(world_ref, 0, positions)
+    GameEngine.NifBridge.spawn_enemies_at(world_ref, GameContent.EntityParams.enemy_kind_slime(), positions)
   end
 end
