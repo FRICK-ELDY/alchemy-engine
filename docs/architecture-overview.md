@@ -239,6 +239,7 @@ sequenceDiagram
 
 ## 関連ドキュメント
 
+- [**ビジョンと設計思想**](./vision.md) ← エンジン・ワールド・ルール・ゲームの定義
 - [Elixir レイヤー詳細](./elixir-layer.md)
 - [Rust レイヤー詳細](./rust-layer.md)
 - [データフロー・通信](./data-flow.md)
