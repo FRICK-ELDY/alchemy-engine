@@ -88,7 +88,7 @@ impl GameWorldInner {
         self.enemies.alive
             .iter()
             .enumerate()
-            .filter(|&(_, &is_alive)| is_alive)
+            .filter(|&(_, &is_alive)| is_alive != 0)
             .for_each(|(i, _)| {
                 self.collision.dynamic.insert(
                     i,

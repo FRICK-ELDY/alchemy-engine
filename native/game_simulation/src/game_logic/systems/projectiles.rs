@@ -41,7 +41,7 @@ pub(crate) fn update_projectiles_and_enemy_hits(w: &mut GameWorldInner, dt: f32)
 
         w.collision.dynamic.query_nearby_into(bx, by, bullet_query_r, &mut w.spatial_query_buf);
         for ei in w.spatial_query_buf.iter().copied() {
-            if !w.enemies.alive[ei] { continue; }
+            if w.enemies.alive[ei] == 0 { continue; }
             let kind_id = w.enemies.kind_ids[ei];
             let (enemy_r, particle_color) = w.params.get_enemy(kind_id)
                 .map(|e| (e.radius, e.particle_color))

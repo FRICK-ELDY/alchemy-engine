@@ -13,7 +13,8 @@ pub struct EnemyWorld {
     pub velocities_y: Vec<f32>,
     pub speeds:       Vec<f32>,
     pub hp:           Vec<f32>,
-    pub alive:        Vec<bool>,
+    /// 生存フラグ: 0xFF = 生存, 0x00 = 死亡（SIMD マスクとして直接ロード可能）
+    pub alive:        Vec<u8>,
     pub kind_ids:     Vec<u8>,
     pub count:        usize,
     /// 分離パス用の作業バッファ（毎フレーム再利用してアロケーションを回避）
@@ -49,8 +50,8 @@ impl EnemyWorld {
     }
 
     pub fn kill(&mut self, i: usize) {
-        if self.alive[i] {
-            self.alive[i] = false;
+        if self.alive[i] != 0 {
+            self.alive[i] = 0x00;
             self.count = self.count.saturating_sub(1);
             self.free_list.push(i);
         }
@@ -71,7 +72,7 @@ impl EnemyWorld {
                 self.velocities_y[i] = 0.0;
                 self.speeds[i]       = speed;
                 self.hp[i]           = max_hp;
-                self.alive[i]        = true;
+                self.alive[i]        = 0xFF;
                 self.kind_ids[i]     = kind_id;
                 self.sep_x[i]        = 0.0;
                 self.sep_y[i]        = 0.0;
@@ -82,7 +83,7 @@ impl EnemyWorld {
                 self.velocities_y.push(0.0);
                 self.speeds.push(speed);
                 self.hp.push(max_hp);
-                self.alive.push(true);
+                self.alive.push(0xFF);
                 self.kind_ids.push(kind_id);
                 self.sep_x.push(0.0);
                 self.sep_y.push(0.0);
@@ -127,7 +128,7 @@ mod tests {
         world.kill(0);
 
         assert_eq!(world.count, 1, "kill 後の count は 1 であるべき");
-        assert!(!world.alive[0], "kill 後は alive=false であるべき");
+        assert_eq!(world.alive[0], 0x00, "kill 後は alive=0x00 であるべき");
     }
 
     #[test]
@@ -147,7 +148,7 @@ mod tests {
             "free_list 再利用時は配列が伸長しないべき"
         );
         assert_eq!(world.count, 1);
-        assert!(world.alive[0]);
+        assert_ne!(world.alive[0], 0x00);
         assert!((world.positions_x[0] - 99.0).abs() < 0.001);
     }
 
@@ -172,7 +173,7 @@ mod tests {
 
 impl EnemySeparation for EnemyWorld {
     fn enemy_count(&self) -> usize          { self.positions_x.len() }
-    fn is_alive(&self, i: usize) -> bool    { self.alive[i] }
+    fn is_alive(&self, i: usize) -> bool    { self.alive[i] != 0 }
     fn pos_x(&self, i: usize) -> f32        { self.positions_x[i] }
     fn pos_y(&self, i: usize) -> f32        { self.positions_y[i] }
     fn add_pos_x(&mut self, i: usize, v: f32) { self.positions_x[i] += v; }

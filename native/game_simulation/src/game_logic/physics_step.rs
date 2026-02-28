@@ -85,7 +85,7 @@ pub fn physics_step_inner(w: &mut GameWorldInner, delta_ms: f64) {
     w.collision.dynamic.query_nearby_into(px, py, query_radius, &mut w.spatial_query_buf);
 
     for idx in w.spatial_query_buf.iter().copied() {
-        if !w.enemies.alive[idx] { continue; }
+        if w.enemies.alive[idx] == 0 { continue; }
         let kind_id = w.enemies.kind_ids[idx];
         let Some(params) = w.params.get_enemy(kind_id) else { continue; };
         let enemy_r = params.radius;

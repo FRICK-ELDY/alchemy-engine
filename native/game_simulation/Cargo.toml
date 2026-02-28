@@ -13,5 +13,12 @@ log = "0.4"
 version = "0.34"
 optional = true
 
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "chase_ai_bench"
+harness = false
+
 [features]
 nif = ["rustler"]
