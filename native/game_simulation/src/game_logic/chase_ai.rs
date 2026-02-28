@@ -10,7 +10,7 @@ pub fn find_nearest_enemy(enemies: &EnemyWorld, px: f32, py: f32) -> Option<usiz
     let mut min_dist = f32::MAX;
     let mut nearest  = None;
     for i in 0..enemies.len() {
-        if !enemies.alive[i] {
+        if enemies.alive[i] == 0 {
             continue;
         }
         let dx   = enemies.positions_x[i] - px;
@@ -35,7 +35,7 @@ fn find_nearest_enemy_excluding_set(
     let mut min_dist = f32::MAX;
     let mut nearest  = None;
     for i in 0..enemies.len() {
-        if !enemies.alive[i] || exclude.get(i).copied().unwrap_or(false) {
+        if enemies.alive[i] == 0 || exclude.get(i).copied().unwrap_or(false) {
             continue;
         }
         let dx   = enemies.positions_x[i] - px;
@@ -91,7 +91,7 @@ pub fn find_nearest_enemy_spatial_excluding(
             .iter()
             .filter(|&&i| {
                 i < enemies.len()
-                    && enemies.alive[i]
+                    && enemies.alive[i] != 0
                     && !exclude.get(i).copied().unwrap_or(false)
             })
             .map(|&i| (i, dist_sq(enemies.positions_x[i], enemies.positions_y[i], px, py)))
@@ -161,12 +161,24 @@ pub fn update_chase_ai_simd(
             let new_ex = _mm_add_ps(ex, _mm_mul_ps(vx, dt4));
             let new_ey = _mm_add_ps(ey, _mm_mul_ps(vy, dt4));
 
-            let alive_mask = _mm_castsi128_ps(_mm_set_epi32(
-                if enemies.alive[base + 3] { -1i32 } else { 0 },
-                if enemies.alive[base + 2] { -1i32 } else { 0 },
-                if enemies.alive[base + 1] { -1i32 } else { 0 },
-                if enemies.alive[base + 0] { -1i32 } else { 0 },
-            ));
+            // alive は Vec<u8>（0xFF=生存, 0x00=死亡）。
+            // 4 バイトを u32 として一括ロードし、各バイトレーンを 0xFF と比較して
+            // 32 ビット全ビット立ちマスクを生成する（スカラー分岐なし）。
+            let alive4_u32 = u32::from_ne_bytes([
+                enemies.alive[base],
+                enemies.alive[base + 1],
+                enemies.alive[base + 2],
+                enemies.alive[base + 3],
+            ]);
+            let alive_bytes = _mm_cvtsi32_si128(alive4_u32 as i32);
+            let ff4 = _mm_set1_epi8(-1i8);
+            // 各バイトレーンを 0xFF と比較 → 0xFF or 0x00 のバイトマスク
+            let byte_mask = _mm_cmpeq_epi8(alive_bytes, ff4);
+            // バイトマスクを 32 ビット単位に展開: 各 u8 マスクを i32 全ビットに広げる
+            // _mm_unpacklo_epi8 × 2 で byte → word → dword に符号拡張
+            let word_mask  = _mm_unpacklo_epi8(byte_mask, byte_mask);
+            let dword_mask = _mm_unpacklo_epi16(word_mask, word_mask);
+            let alive_mask = _mm_castsi128_ps(dword_mask);
 
             let old_vx = _mm_loadu_ps(enemies.velocities_x[base..].as_ptr());
             let old_vy = _mm_loadu_ps(enemies.velocities_y[base..].as_ptr());
@@ -195,7 +207,7 @@ pub fn update_chase_ai_simd(
         }
 
         for i in simd_len..len {
-            if enemies.alive[i] {
+            if enemies.alive[i] != 0 {
                 scalar_chase_one(enemies, i, player_x, player_y, dt);
             }
         }
@@ -300,9 +312,27 @@ mod tests {
     }
 }
 
-/// Chase AI: 全敵をプレイヤーに向けて移動（rayon で並列化）
+/// rayon 並列化を適用する最小敵数。
+/// これ未満ではスレッドプールのオーバーヘッドがコアロジックを上回るため
+/// シングルスレッド版にフォールバックする。
+/// ベンチマーク（`cargo bench --bench chase_ai_bench`）で実測して調整すること。
+const RAYON_THRESHOLD: usize = 500;
+
+/// Chase AI: 全敵をプレイヤーに向けて移動
+/// 敵数が RAYON_THRESHOLD 未満の場合はシングルスレッド版で処理する。
 pub fn update_chase_ai(enemies: &mut EnemyWorld, player_x: f32, player_y: f32, dt: f32) {
     let len = enemies.len();
+
+    if len < RAYON_THRESHOLD {
+        for i in 0..len {
+            if enemies.alive[i] != 0 {
+                scalar_chase_one(enemies, i, player_x, player_y, dt);
+            }
+        }
+        return;
+    }
+
+    // rayon 並列版（RAYON_THRESHOLD 以上の敵数）
     let positions_x  = &mut enemies.positions_x[..len];
     let positions_y  = &mut enemies.positions_y[..len];
     let velocities_x = &mut enemies.velocities_x[..len];
@@ -320,7 +350,7 @@ pub fn update_chase_ai(enemies: &mut EnemyWorld, player_x: f32, player_y: f32, d
     )
         .into_par_iter()
         .for_each(|(px, py, vx, vy, speed, is_alive)| {
-            if !*is_alive {
+            if *is_alive == 0 {
                 return;
             }
             let dx   = player_x - *px;

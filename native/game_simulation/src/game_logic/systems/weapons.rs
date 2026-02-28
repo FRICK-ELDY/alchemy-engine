@@ -128,7 +128,7 @@ fn fire_whip(
     let whip_range_sq = range * range;
     w.collision.dynamic.query_nearby_into(px, py, range, &mut w.spatial_query_buf);
     for ei in w.spatial_query_buf.iter().copied() {
-        if !w.enemies.alive[ei] {
+        if w.enemies.alive[ei] == 0 {
             continue;
         }
         let ex = w.enemies.positions_x[ei];
@@ -273,7 +273,7 @@ fn fire_aura(
     let radius_sq = radius * radius;
     w.collision.dynamic.query_nearby_into(px, py, radius, &mut w.spatial_query_buf);
     for ei in w.spatial_query_buf.iter().copied() {
-        if !w.enemies.alive[ei] { continue; }
+        if w.enemies.alive[ei] == 0 { continue; }
         let ex = w.enemies.positions_x[ei];
         let ey = w.enemies.positions_y[ei];
         let ddx = ex - px;
