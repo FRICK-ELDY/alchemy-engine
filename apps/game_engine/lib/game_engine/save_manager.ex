@@ -166,11 +166,16 @@ defmodule GameEngine.SaveManager do
   end
 
   defp verify_hmac(json, stored_hmac) do
-    expected = compute_hmac(json)
-    # タイミング攻撃対策として定数時間比較を使用
-    :crypto.hash_equals(Base.decode64!(expected), Base.decode64!(stored_hmac))
-  rescue
-    _ -> false
+    expected_binary = :crypto.mac(:hmac, :sha256, hmac_secret(), json)
+
+    case Base.decode64(stored_hmac) do
+      {:ok, stored_binary} ->
+        # タイミング攻撃対策として定数時間比較を使用
+        :crypto.hash_equals(expected_binary, stored_binary)
+
+      :error ->
+        false
+    end
   end
 
   # ── SaveSnapshot ↔ map 変換 ──────────────────────────────────────────────
