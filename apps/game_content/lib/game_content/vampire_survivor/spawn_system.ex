@@ -50,8 +50,7 @@ defmodule GameContent.VampireSurvivor.SpawnSystem do
 
   def current_wave(elapsed_sec) do
     @waves
-    |> Enum.filter(fn {start, _i, _c} -> elapsed_sec >= start end)
-    |> List.last({0, 800, 20})
+    |> Enum.find_last(fn {start, _i, _c} -> elapsed_sec >= start end)
     |> then(fn {_start, interval, count} -> {interval, count} end)
   end
 
