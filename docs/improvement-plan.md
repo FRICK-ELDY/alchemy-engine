@@ -17,6 +17,7 @@
 | I-6 | セーブデータ形式の移植性 | 中 | 低 |
 | I-7 | Elixir の真価（OTP・並行性・分散）が活かされていない | 中 | 高 |
 | I-8 | Rust の最近接探索が O(n) 全探索にフォールバックする | 低 | 低 |
+| I-9 | `WorldBehaviour` / `RuleBehaviour` を `Component` に統合する | 高 | 中 |
 
 ---
 
@@ -158,52 +159,13 @@ mod tests {
 
 ---
 
-## I-3: `config.exs` の設定キー不一致
+## ~~I-3: `config.exs` の設定キー不一致~~ ✅ 対応済み
 
-### 現状
-
-実際の `config.exs` は以下のように書かれているが：
-
-```elixir
-config :game_server, current_game: GameContent.VampireSurvivor
-```
-
-ドキュメント（`vision.md`・`architecture-overview.md`・`elixir-layer.md`）では以下の2キー形式で説明されている：
+`config.exs` の `:current_game` キーを `:current_world` / `:current_rule` の2キー形式に修正し、
+`vision.md` の記述もコードと一致する形式に統一した。
 
 ```elixir
-config :game_server, :current_world, GameContent.VampireSurvivorWorld
-config :game_server, :current_rule,  GameContent.VampireSurvivorRule
-```
-
-`GameEngine.Config` モジュールがどちらのキーを読んでいるかによって、実際の動作と設定の乖離が生じている。
-
-### 方針
-
-**コードを正とし、ドキュメントをコードに合わせる**のが最小コストだが、設計思想（World と Rule の分離）を考慮すると **2キー形式が正しい**。したがって、コードを修正してドキュメントと一致させることを推奨する。
-
-#### 修正手順
-
-1. `config/config.exs` を確認し、現在のキー名を特定する
-2. `GameEngine.Config` の実装を確認し、どのキーを参照しているかを確認する
-3. 以下のいずれかを実施する：
-   - **推奨**: `config.exs` を2キー形式に修正し、`GameEngine.Config` が `:current_world` / `:current_rule` を読むよう修正する
-   - **代替**: ドキュメントを現在のコードに合わせて修正する（設計思想との乖離が残る）
-4. 修正後、`elixir-layer.md`・`architecture-overview.md`・`vision.md`・`game-content.md` の設定例を統一する
-
-#### 確認コマンド
-
-```bash
-# 現在の config.exs の内容を確認
-cat config/config.exs
-
-# Config モジュールの実装を確認
-cat apps/game_engine/lib/game_engine/config.ex
-```
-
-#### 修正後の統一形式
-
-```elixir
-# config/config.exs
+# config/config.exs（現在）
 config :game_server, :current_world, GameContent.VampireSurvivorWorld
 config :game_server, :current_rule,  GameContent.VampireSurvivorRule
 config :game_server, :map,           :plain
@@ -613,14 +575,104 @@ graph TD
 
 ### フェーズ3（2つ目のコンテンツ追加時）
 
-9. **I-2**: `GameWorldInner` からルール固有フィールドを除去する
-10. **I-5**: `RuleBehaviour` をコアとオプションに分離する
-11. **I-7（問題2）**: 複数ルーム同時稼働の統合テストを書く（半日）
-12. **I-4（フェーズ1）**: `GameNetwork.Behaviour` インターフェースを定義する
+9. **I-9**: `WorldBehaviour` / `RuleBehaviour` を `Component` に統合する
+10. **I-2**: `GameWorldInner` からルール固有フィールドを除去する
+11. **I-5**: `RuleBehaviour` をコアとオプションに分離する（I-9 完了後は不要になる可能性あり）
+12. **I-7（問題2）**: 複数ルーム同時稼働の統合テストを書く（半日）
+13. **I-4（フェーズ1）**: `GameNetwork.Behaviour` インターフェースを定義する
 
 ### フェーズ4（長期）
 
-13. **I-7（問題3）** / **I-4（フェーズ2〜3）**: `GameNetwork.Local` 実装 → ローカルマルチプレイヤー → ネットワーク対応
+14. **I-7（問題3）** / **I-4（フェーズ2〜3）**: `GameNetwork.Local` 実装 → ローカルマルチプレイヤー → ネットワーク対応
+
+---
+
+## I-9: `WorldBehaviour` / `RuleBehaviour` を `Component` に統合する
+
+### 背景
+
+`vision.md` の思想整理により、「ワールド」と「ルール」の区別はエンジンの責務ではないことが明確になった。
+エンジンの上に乗るものはすべて「コンテンツ」であり、コンテンツは**コンポーネントの集合**として表現される。
+これは Unity の `MonoBehaviour`、Unreal の `ActorComponent`、Godot の `Node` と同じ思想だ。
+
+### 現状
+
+```elixir
+# 2つのビヘイビアが分離して存在する
+GameEngine.WorldBehaviour  # assets_path / entity_registry / setup_world_params
+GameEngine.RuleBehaviour   # initial_scenes / on_entity_removed / update_boss_ai / ...
+
+# config.exs も2キー
+config :game_server, :current_world, GameContent.VampireSurvivorWorld
+config :game_server, :current_rule,  GameContent.VampireSurvivorRule
+```
+
+### 目標
+
+```elixir
+# 1つのビヘイビアに統合
+GameEngine.Component  # on_ready / on_process / on_physics_process / on_event
+
+# コンテンツはコンポーネント群を返す
+defmodule GameContent.VampireSurvivor do
+  def components do
+    [
+      GameContent.VampireSurvivor.SpawnComponent,
+      GameContent.VampireSurvivor.LevelComponent,
+      GameContent.VampireSurvivor.BossComponent,
+      # ...
+    ]
+  end
+end
+
+# config.exs は1キー
+config :game_server, :current, GameContent.VampireSurvivor
+```
+
+### `GameEngine.Component` ビヘイビア定義
+
+```elixir
+defmodule GameEngine.Component do
+  @optional_callbacks [on_ready: 1, on_process: 1, on_physics_process: 1, on_event: 2]
+
+  @callback on_ready(world_ref)          :: :ok  # 初期化時（1回）
+  @callback on_process(context)          :: :ok  # 毎フレーム（Elixir側）
+  @callback on_physics_process(context)  :: :ok  # 物理フレーム（60Hz）
+  @callback on_event(event, context)     :: :ok  # イベント発生時
+end
+```
+
+### 現在のコールバックとコンポーネントの対応
+
+| 現在 | 移行先コンポーネント | 使用するコールバック |
+|---|---|---|
+| `WorldBehaviour.setup_world_params/1` | `SpawnComponent` | `on_ready/1` |
+| `WorldBehaviour.entity_registry/0` | `SpawnComponent` | （データ定義） |
+| `RuleBehaviour.initial_scenes/0` | `SceneComponent` | （データ定義） |
+| `RuleBehaviour.update_boss_ai/2` | `BossComponent` | `on_physics_process/1` |
+| `RuleBehaviour.on_entity_removed/4` | `LevelComponent` | `on_event/2` |
+| `RuleBehaviour.on_boss_defeated/4` | `BossComponent` | `on_event/2` |
+
+### 修正手順
+
+1. `GameEngine.Component` ビヘイビアを新設する
+2. `GameEngine.Config` を `:current` キー一本に変更する
+3. `GameEngine.GameEvents` のコンポーネント呼び出しを実装する
+4. `GameContent.VampireSurvivor` モジュールを新設し、`components/0` を定義する
+5. 既存の `VampireSurvivorWorld` / `VampireSurvivorRule` をコンポーネントに分解する
+6. `config.exs` を `:current` キーに変更する
+7. `WorldBehaviour` / `RuleBehaviour` を削除する
+
+### 影響範囲
+
+- `apps/game_engine/lib/game_engine/config.ex`
+- `apps/game_engine/lib/game_engine/game_events.ex`
+- `apps/game_engine/lib/game_engine/scene_manager.ex`
+- `apps/game_engine/lib/game_engine/world_behaviour.ex`（削除）
+- `apps/game_engine/lib/game_engine/rule_behaviour.ex`（削除）
+- `apps/game_content/lib/game_content/vampire_survivor_world.ex`（分解）
+- `apps/game_content/lib/game_content/vampire_survivor_rule.ex`（分解）
+- `config/config.exs`
 
 ---
 
