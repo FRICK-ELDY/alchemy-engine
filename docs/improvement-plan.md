@@ -11,53 +11,19 @@
 |:---|:---:|:---|
 | Rust 物理演算・SoA 設計 | 9/10 | — |
 | Rust SIMD 最適化 | 7/10 | `alive` チェックがスカラー分岐で SIMD 効果を半減 |
-| Rust 並行性設計 | 5/10 | 毎フレーム write lock 連打が RwLock 競合を生んでいる |
-| Rust 安全性（unsafe 管理） | 6/10 | NIF 側の `unwrap` / `expect` が散在 |
+| Rust 並行性設計 | 7/10 | — |
+| Rust 安全性（unsafe 管理） | 8/10 | — |
 | Elixir OTP 設計 | 8/10 | — |
-| Elixir 耐障害性 | 2/10 | NIF パニック = BEAM クラッシュ。OTP の最大の強みが無効化 |
+| Elixir 耐障害性 | 6/10 | NIF エラーは捕捉済みだが、ゲームループ再起動などの完全な回復ロジックが未実装 |
 | Elixir 並行性・分散 | 1/10 | シングルルームのみ。`game_network` は完全スタブ |
-| Elixir ビヘイビア活用 | 4/10 | `function_exported?/3` 汚染がエンジンコアに散在 |
-| アーキテクチャ（ビジョン一致度） | 4/10 | AsteroidArena 追加でエンジンコアが汚染された |
+| Elixir ビヘイビア活用 | 7/10 | — |
+| アーキテクチャ（ビジョン一致度） | 7/10 | — |
 | テスト | 5/10 | Rust 側に単体テストあり。Elixir 側はほぼ未テスト |
-| **総合** | **6/10** | |
+| **総合** | **7/10** | |
 
 ---
 
 ## 課題一覧
-
-### I-A: NIF の毎フレーム write lock 連打（Rust 並行性 5/10 の原因）
-
-**優先度**: 🔴 最高
-
-**問題**
-
-Elixir 側が「SSoT」を名乗りながら、毎フレーム以下の NIF を呼んでいる。
-これらはすべて `write lock` を取得するため、60Hz で動作する Rust ゲームループと毎フレームロックを奪い合っている。
-
-```
-set_hud_state          (score, kill_count)
-set_hud_level_state    (level, exp, weapon_choices)
-set_elapsed_seconds
-set_weapon_slots
-set_player_hp
-set_boss_hp
-```
-
-Rust の真価である「競合のない並行性」がこの設計で台無しになっている。
-
-**改善方針**
-
-- HUD 表示専用の値（score, kill_count, level, exp 等）はレンダースレッドが `read lock` で読める専用バッファ（ダブルバッファリング）に分離する
-- ゲームロジックに影響しない純粋な描画用データは `write lock` を使わずに渡せる構造にする
-- 変化があったフレームのみ注入する差分更新（既に `last_weapon_levels` で一部実施済み）をすべての注入系に適用する
-
-**影響ファイル**
-
-- `native/game_nif/src/nif/world_nif.rs` — HUD 注入系 NIF の lock 種別見直し
-- `native/game_simulation/src/world/game_world.rs` — HUD 専用バッファの分離
-- `apps/game_engine/lib/game_engine/game_events.ex` — 差分更新の徹底
-
----
 
 ### I-B: SIMD の `alive` チェックがスカラー分岐（Rust SIMD 7/10 の原因）
 
@@ -88,50 +54,6 @@ let alive_mask = _mm_castsi128_ps(_mm_set_epi32(
 
 - `native/game_simulation/src/world/enemy.rs` — `alive` フィールドの型変更
 - `native/game_simulation/src/game_logic/chase_ai.rs` — SIMD マスク生成の修正
-
----
-
-### I-C: NIF の `unwrap` / `expect` 散在（Rust 安全性 6/10 の原因）
-
-**優先度**: 🔴 最高（`pending-issues.md` 課題10 問題1 と同一）
-
-**問題**
-
-`game_nif` の NIF 関数内に `unwrap()` / `expect()` が残存しており、Rust パニックが発生すると BEAM VM ごとクラッシュする。
-OTP の Supervisor ツリーによる再起動が完全に無効化される。
-
-**改善方針**
-
-- 全 NIF 関数の戻り値を `NifResult<T>` に統一し、`unwrap()` / `expect()` を除去する
-- 配列アクセスは `get()` による境界チェックに置き換える
-- Elixir 側 `GameEvents` で `{:error, reason}` を受け取った場合の回復ロジックを追加する
-
-**影響ファイル**
-
-- `native/game_nif/src/nif/*.rs` — 全 NIF 関数の `NifResult<T>` 統一
-- `apps/game_engine/lib/game_engine/game_events.ex` — NIF エラー回復ロジック
-
----
-
-### I-D: `GameEvents` の `function_exported?/3` 汚染（Elixir ビヘイビア 4/10 の原因）
-
-**優先度**: 🔴 最高（`pending-issues.md` 課題12 と同一）
-
-**問題**
-
-エンジンコアである `GameEvents` に、コンテンツ固有の概念（武器選択・レベルアップ・ボスアラート）を判定する `function_exported?/3` が複数散在している。
-
-```elixir
-if function_exported?(content, :level_up_scene, 0) do ...
-if function_exported?(content, :boss_alert_scene, 0) do ...
-if function_exported?(content, :boss_exp_reward, 1) do ...
-```
-
-Elixir の強みである `@behaviour` によるポリモーフィズムを放棄した設計であり、コンテンツが増えるたびにエンジンコアが肥大化する。
-
-**改善方針**
-
-`pending-issues.md` 課題12 の作業ステップを参照。
 
 ---
 
@@ -197,37 +119,24 @@ Rust 側には `chase_ai.rs`・`spatial_hash.rs` 等に単体テストが存在�
 
 ```mermaid
 graph TD
-    IC["I-C: NIF unwrap 除去\n（安全性・耐障害性の回復）"]
-    ID["I-D: function_exported? 除去\n（課題12）"]
-    IA["I-A: write lock 連打の解消\n（Rust 並行性の回復）"]
     IE["I-E: game_network 実装\n（Elixir 真価の証明）"]
     IF["I-F: Elixir テスト整備"]
     IB["I-B: SIMD alive ビットフィールド化"]
     IG["I-G: rayon ベンチマーク"]
 
-    IC --> ID
-    IC --> IA
-    ID --> IE
-    IA --> IE
     IE --> IF
     IB --> IG
 ```
 
-### フェーズ1（✅ 完了）
-
-1. **I-C**: NIF の `NifResult<T>` 統一（OTP 耐障害性の回復）✅
-2. **I-D**: `function_exported?/3` 除去（課題12 の実施）✅
-3. **I-A**: HUD 注入系の write lock 解消 ✅
-
 ### フェーズ2（中期）
 
-4. **I-E**: `GameNetwork.Local` 実装 → ローカルマルチプレイヤー → ネットワーク対応
-5. **I-F**: Elixir 側テスト整備
+1. **I-E**: `GameNetwork.Local` 実装 → ローカルマルチプレイヤー → ネットワーク対応
+2. **I-F**: Elixir 側テスト整備
 
 ### フェーズ3（最適化）
 
-6. **I-B**: SIMD `alive` ビットフィールド化
-7. **I-G**: rayon ベンチマーク追加・閾値分岐
+3. **I-B**: SIMD `alive` ビットフィールド化
+4. **I-G**: rayon ベンチマーク追加・閾値分岐
 
 ---
 
