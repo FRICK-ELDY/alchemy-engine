@@ -53,7 +53,8 @@ defmodule GameEngine do
   # ── ID 解決（entity_registry 経由）──────────────────────────────────
 
   defp resolve_enemy_id(kind) when is_atom(kind) do
-    game = Application.get_env(:game_server, :current_game, GameContent.VampireSurvivor)
-    game.entity_registry().enemies[kind] || raise "Unknown enemy kind: #{inspect(kind)}"
+    world = Application.get_env(:game_server, :current_world) ||
+              Application.get_env(:game_server, :current_game, GameContent.VampireSurvivor)
+    world.entity_registry().enemies[kind] || raise "Unknown enemy kind: #{inspect(kind)}"
   end
 end

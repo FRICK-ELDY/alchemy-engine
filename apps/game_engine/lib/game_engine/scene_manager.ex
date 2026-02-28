@@ -44,8 +44,8 @@ defmodule GameEngine.SceneManager do
 
   @impl true
   def init(_opts) do
-    game_module = Application.get_env(:game_server, :current_game, GameContent.VampireSurvivor)
-    specs = game_module.initial_scenes()
+    rule_module = current_rule()
+    specs = rule_module.initial_scenes()
 
     stack =
       Enum.reduce(specs, [], fn spec, acc ->
@@ -72,8 +72,7 @@ defmodule GameEngine.SceneManager do
   end
 
   def handle_call(:render_type, _from, %{stack: []} = state) do
-    game = Application.get_env(:game_server, :current_game, GameContent.VampireSurvivor)
-    {:reply, game.render_type(), state}
+    {:reply, current_rule().render_type(), state}
   end
 
   def handle_call(:render_type, _from, %{stack: [%{module: mod} | _]} = state) do
@@ -134,5 +133,10 @@ defmodule GameEngine.SceneManager do
   defp init_scene(module, init_arg) do
     {:ok, scene_state} = module.init(init_arg)
     {:ok, %{module: module, state: scene_state}}
+  end
+
+  defp current_rule do
+    Application.get_env(:game_server, :current_rule) ||
+      Application.get_env(:game_server, :current_game, GameContent.VampireSurvivor)
   end
 end
