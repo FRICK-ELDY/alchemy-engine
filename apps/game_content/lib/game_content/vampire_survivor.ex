@@ -42,40 +42,27 @@ defmodule GameContent.VampireSurvivor do
 
   # ── アセット・エンティティ登録（SpawnComponent に委譲）──────────
 
-  def assets_path, do: GameContent.VampireSurvivor.SpawnComponent.assets_path()
-  def entity_registry, do: GameContent.VampireSurvivor.SpawnComponent.entity_registry()
+  defdelegate assets_path,    to: GameContent.VampireSurvivor.SpawnComponent
+  defdelegate entity_registry, to: GameContent.VampireSurvivor.SpawnComponent
 
   # ── コンテキストデフォルト ────────────────────────────────────────
 
   def context_defaults, do: %{}
 
-  # ── レベルアップ・武器選択（Playing シーンに委譲）────────────────
+  # ── レベルアップ・武器選択（LevelSystem / Playing シーンに委譲）──
 
-  def generate_weapon_choices(weapon_levels) do
-    GameContent.VampireSurvivor.LevelSystem.generate_weapon_choices(weapon_levels)
-  end
-
-  def apply_level_up(scene_state, choices) do
-    GameContent.VampireSurvivor.Scenes.Playing.apply_level_up(scene_state, choices)
-  end
-
-  def apply_weapon_selected(scene_state, weapon) do
-    GameContent.VampireSurvivor.Scenes.Playing.apply_weapon_selected(scene_state, weapon)
-  end
-
-  def apply_level_up_skipped(scene_state) do
-    GameContent.VampireSurvivor.Scenes.Playing.apply_level_up_skipped(scene_state)
-  end
+  defdelegate generate_weapon_choices(weapon_levels), to: GameContent.VampireSurvivor.LevelSystem
+  defdelegate apply_level_up(scene_state, choices),   to: GameContent.VampireSurvivor.Scenes.Playing
+  defdelegate apply_weapon_selected(scene_state, weapon), to: GameContent.VampireSurvivor.Scenes.Playing
+  defdelegate apply_level_up_skipped(scene_state),    to: GameContent.VampireSurvivor.Scenes.Playing
 
   # ── 報酬・スコア計算（EntityParams に委譲）──────────────────────
 
-  def enemy_exp_reward(enemy_kind), do: GameContent.EntityParams.enemy_exp_reward(enemy_kind)
-  def boss_exp_reward(boss_kind), do: GameContent.EntityParams.boss_exp_reward(boss_kind)
-  def score_from_exp(exp), do: GameContent.EntityParams.score_from_exp(exp)
+  defdelegate enemy_exp_reward(enemy_kind), to: GameContent.EntityParams
+  defdelegate boss_exp_reward(boss_kind),   to: GameContent.EntityParams
+  defdelegate score_from_exp(exp),          to: GameContent.EntityParams
 
   # ── ウェーブラベル（SpawnSystem に委譲）──────────────────────────
 
-  def wave_label(elapsed_sec) do
-    GameContent.VampireSurvivor.SpawnSystem.wave_label(elapsed_sec)
-  end
+  defdelegate wave_label(elapsed_sec), to: GameContent.VampireSurvivor.SpawnSystem
 end
