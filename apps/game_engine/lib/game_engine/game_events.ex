@@ -42,6 +42,12 @@ defmodule GameEngine.GameEvents do
 
     world_ref = GameEngine.NifBridge.create_world()
 
+    # Phase 3-A: WorldBehaviour が setup_world_params/1 を実装していれば呼び出す
+    world = GameEngine.Config.current_world()
+    if function_exported?(world, :setup_world_params, 1) do
+      world.setup_world_params(world_ref)
+    end
+
     map_id = Application.get_env(:game_server, :map, :plain)
     obstacles = GameEngine.MapLoader.obstacles_for_map(map_id)
     GameEngine.NifBridge.set_map_obstacles(world_ref, obstacles)

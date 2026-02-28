@@ -1,6 +1,5 @@
 use crate::world::{FrameEvent, GameWorldInner};
-use crate::constants::{BULLET_RADIUS, MAP_HEIGHT, MAP_WIDTH};
-use crate::entity_params::EnemyParams;
+use crate::constants::BULLET_RADIUS;
 use crate::item::ItemKind;
 
 pub(crate) fn update_projectiles_and_enemy_hits(w: &mut GameWorldInner, dt: f32) {
@@ -23,8 +22,8 @@ pub(crate) fn update_projectiles_and_enemy_hits(w: &mut GameWorldInner, dt: f32)
             w.bullets.kill(i);
             continue;
         }
-        // 画面外に出た弾丸も消す
-        if bx < -100.0 || bx > MAP_WIDTH + 100.0 || by < -100.0 || by > MAP_HEIGHT + 100.0 {
+        // マップ外に出た弾丸も消す（map_width / map_height は GameWorldInner から参照）
+        if bx < -100.0 || bx > w.map_width + 100.0 || by < -100.0 || by > w.map_height + 100.0 {
             w.bullets.kill(i);
         }
     }
@@ -44,7 +43,7 @@ pub(crate) fn update_projectiles_and_enemy_hits(w: &mut GameWorldInner, dt: f32)
         for ei in w.spatial_query_buf.iter().copied() {
             if !w.enemies.alive[ei] { continue; }
             let kind_id = w.enemies.kind_ids[ei];
-            let ep = EnemyParams::get(kind_id);
+            let ep = w.params.get_enemy(kind_id).clone();
             let enemy_r = ep.radius;
             let hit_r = BULLET_RADIUS + enemy_r;
             let ex = w.enemies.positions_x[ei] + enemy_r;

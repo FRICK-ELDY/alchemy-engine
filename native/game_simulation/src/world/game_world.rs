@@ -2,6 +2,7 @@
 //! Summary: ゲームワールド（GameWorldInner, GameWorld）
 
 use super::{BossState, BulletWorld, EnemyWorld, ParticleWorld, PlayerState};
+use crate::entity_params::EntityParamTables;
 use crate::item::ItemWorld;
 use crate::physics::rng::SimpleRng;
 use crate::physics::spatial_hash::CollisionWorld;
@@ -20,6 +21,8 @@ use super::FrameEvent;
 /// - `elapsed_seconds`  → set_elapsed_seconds NIF（フェーズ3）
 /// - `boss.hp`          → set_boss_hp NIF（フェーズ4）
 /// - `score`, `kill_count` → set_hud_state NIF（フェーズ1）
+/// - `params`           → set_entity_params NIF（Phase 3-A）
+/// - `map_width/height` → set_world_size NIF（Phase 3-A）
 pub struct GameWorldInner {
     pub frame_id:           u32,
     pub player:             PlayerState,
@@ -67,6 +70,11 @@ pub struct GameWorldInner {
     pub prev_tick_ms:       u64,
     /// 1.10.7: 補間用 - 現在フレームの更新タイムスタンプ（ms）
     pub curr_tick_ms:       u64,
+    /// Phase 3-A: エンティティパラメータテーブル（set_entity_params NIF で注入）
+    pub params:             EntityParamTables,
+    /// Phase 3-A: マップサイズ（set_world_size NIF で注入）
+    pub map_width:          f32,
+    pub map_height:         f32,
 }
 
 impl GameWorldInner {

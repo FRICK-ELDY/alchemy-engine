@@ -2,9 +2,12 @@
 //! Summary: ワールド作成・入力・スポーン・障害物設定 NIF
 
 use super::util::lock_poisoned_err;
+use game_simulation::entity_params::{
+    BossParams, EnemyParams, EntityParamTables, WeaponParams,
+};
 use game_simulation::game_logic::systems::spawn::get_spawn_positions_around_player;
 use game_simulation::world::{GameWorld, GameWorldInner, PlayerState};
-use game_simulation::constants::{CELL_SIZE, PARTICLE_RNG_SEED, PLAYER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
+use game_simulation::constants::{CELL_SIZE, MAP_HEIGHT, MAP_WIDTH, PARTICLE_RNG_SEED, PLAYER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use game_simulation::item::ItemWorld;
 use game_simulation::physics::rng::SimpleRng;
 use game_simulation::physics::spatial_hash::CollisionWorld;
@@ -53,6 +56,9 @@ pub fn create_world() -> ResourceArc<GameWorld> {
         prev_player_y:      SCREEN_HEIGHT / 2.0 - PLAYER_SIZE / 2.0,
         prev_tick_ms:       0,
         curr_tick_ms:       0,
+        params:             EntityParamTables::default(),
+        map_width:          MAP_WIDTH,
+        map_height:         MAP_HEIGHT,
     })))
 }
 
@@ -68,7 +74,8 @@ pub fn set_player_input(world: ResourceArc<GameWorld>, dx: f64, dy: f64) -> NifR
 pub fn spawn_enemies(world: ResourceArc<GameWorld>, kind_id: u8, count: usize) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
     let positions = get_spawn_positions_around_player(&mut w, count);
-    w.enemies.spawn(&positions, kind_id);
+    let ep = w.params.get_enemy(kind_id).clone();
+    w.enemies.spawn(&positions, kind_id, &ep);
     Ok(ok())
 }
 
@@ -131,4 +138,96 @@ pub fn set_map_obstacles(world: ResourceArc<GameWorld>, obstacles_term: Term) ->
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
     w.collision.rebuild_static(&obstacles);
     Ok(ok())
+}
+
+/// Phase 3-A: マップサイズを外部から注入する。
+/// WorldBehaviour.map_size/0 から呼び出す。
+#[rustler::nif]
+pub fn set_world_size(world: ResourceArc<GameWorld>, width: f64, height: f64) -> NifResult<Atom> {
+    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
+    w.map_width  = width as f32;
+    w.map_height = height as f32;
+    Ok(ok())
+}
+
+/// Phase 3-A: エンティティパラメータテーブルを外部から注入する。
+///
+/// 引数はいずれもアトムキーのマップのリスト。
+/// - `enemies`: `[%{max_hp, speed, radius, exp_reward, damage_per_sec, render_kind, passes_obstacles}]`
+/// - `weapons`: `[%{cooldown, damage, as_u8, name, bullet_table}]`  ※ `bullet_table` は `nil` または整数リスト
+/// - `bosses`:  `[%{max_hp, speed, radius, exp_reward, damage_per_sec, render_kind, special_interval}]`
+#[rustler::nif]
+pub fn set_entity_params(
+    world: ResourceArc<GameWorld>,
+    enemies_term: Term,
+    weapons_term: Term,
+    bosses_term:  Term,
+) -> NifResult<Atom> {
+    let enemies = decode_enemy_params(enemies_term)?;
+    let weapons = decode_weapon_params(weapons_term)?;
+    let bosses  = decode_boss_params(bosses_term)?;
+    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
+    w.params = EntityParamTables { enemies, weapons, bosses };
+    Ok(ok())
+}
+
+/// マップから指定キーの値を取得するヘルパー。
+/// キーは Elixir アトム（例: `max_hp`）。
+fn map_get<'a, T: rustler::Decoder<'a>>(map: Term<'a>, key: &str) -> NifResult<T> {
+    let env = map.get_env();
+    let key_term = rustler::types::atom::Atom::from_str(env, key)
+        .map_err(|_| rustler::Error::Atom("invalid_key"))?;
+    map.map_get(key_term.to_term(env))?.decode::<T>()
+}
+
+fn decode_enemy_params(term: Term) -> NifResult<Vec<EnemyParams>> {
+    let list: ListIterator = term.decode()?;
+    list.map(|item| {
+        Ok(EnemyParams {
+            max_hp:           map_get::<f64>(item, "max_hp")? as f32,
+            speed:            map_get::<f64>(item, "speed")? as f32,
+            radius:           map_get::<f64>(item, "radius")? as f32,
+            exp_reward:       map_get::<u32>(item, "exp_reward")?,
+            damage_per_sec:   map_get::<f64>(item, "damage_per_sec")? as f32,
+            render_kind:      map_get::<u32>(item, "render_kind")? as u8,
+            particle_color:   [1.0, 0.5, 0.1, 1.0], // デフォルト色（後で拡張可能）
+            passes_obstacles: map_get::<bool>(item, "passes_obstacles")?,
+        })
+    }).collect()
+}
+
+fn decode_weapon_params(term: Term) -> NifResult<Vec<WeaponParams>> {
+    let list: ListIterator = term.decode()?;
+    list.map(|item| {
+        let bt_term: Term = map_get(item, "bullet_table")?;
+        let bullet_table: Option<Vec<usize>> = if bt_term.is_atom() {
+            None
+        } else {
+            let bt_list: ListIterator = bt_term.decode()?;
+            Some(bt_list.map(|x| x.decode::<usize>()).collect::<rustler::NifResult<Vec<usize>>>()?)
+        };
+        Ok(WeaponParams {
+            cooldown:     map_get::<f64>(item, "cooldown")? as f32,
+            damage:       map_get::<i32>(item, "damage")?,
+            as_u8:        map_get::<u32>(item, "as_u8")? as u8,
+            name:         map_get::<String>(item, "name")?,
+            bullet_table,
+        })
+    }).collect()
+}
+
+fn decode_boss_params(term: Term) -> NifResult<Vec<BossParams>> {
+    let list: ListIterator = term.decode()?;
+    list.map(|item| {
+        Ok(BossParams {
+            max_hp:           map_get::<f64>(item, "max_hp")? as f32,
+            speed:            map_get::<f64>(item, "speed")? as f32,
+            radius:           map_get::<f64>(item, "radius")? as f32,
+            exp_reward:       map_get::<u32>(item, "exp_reward")?,
+            damage_per_sec:   map_get::<f64>(item, "damage_per_sec")? as f32,
+            render_kind:      map_get::<u32>(item, "render_kind")? as u8,
+            special_interval: map_get::<f64>(item, "special_interval")? as f32,
+            name:             String::new(),
+        })
+    }).collect()
 }

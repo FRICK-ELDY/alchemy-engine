@@ -2,7 +2,7 @@ use crate::game_logic::{find_nearest_enemy_spatial, find_nearest_enemy_spatial_e
 use crate::world::{FrameEvent, GameWorldInner, BULLET_KIND_LIGHTNING, BULLET_KIND_WHIP};
 use crate::constants::{BULLET_LIFETIME, BULLET_SPEED, WEAPON_SEARCH_RADIUS};
 use crate::entity_params::{
-    garlic_radius, lightning_chain_count, whip_range, EnemyParams, WeaponParams, WEAPON_ID_AXE,
+    garlic_radius, lightning_chain_count, whip_range, WEAPON_ID_AXE,
     WEAPON_ID_CROSS, WEAPON_ID_FIREBALL, WEAPON_ID_GARLIC, WEAPON_ID_LIGHTNING,
     WEAPON_ID_MAGIC_WAND, WEAPON_ID_WHIP,
 };
@@ -29,23 +29,22 @@ pub(crate) fn update_weapon_attacks(w: &mut GameWorldInner, dt: f32, px: f32, py
         }
 
         let kind_id = w.weapon_slots[si].kind_id;
-        let wp = WeaponParams::get(kind_id);
+        let wp = w.params.get_weapon(kind_id);
         // レベルに応じたクールダウン・ダメージ・弾数を使用
-        let cd = w.weapon_slots[si].effective_cooldown();
-        let dmg = w.weapon_slots[si].effective_damage();
-        let level = w.weapon_slots[si].level;
-        let bcount = w.weapon_slots[si].bullet_count();
+        let cd     = w.weapon_slots[si].effective_cooldown(wp);
+        let dmg    = w.weapon_slots[si].effective_damage(wp);
+        let level  = w.weapon_slots[si].level;
+        let bcount = w.weapon_slots[si].bullet_count(wp);
+        let as_u8  = wp.as_u8;
 
         match kind_id {
-            WEAPON_ID_MAGIC_WAND => fire_magic_wand(w, si, px, py, dmg, bcount, wp.as_u8, cd),
-            WEAPON_ID_AXE => fire_axe(w, si, px, py, dmg, wp.as_u8, cd),
-            WEAPON_ID_CROSS => fire_cross(w, si, px, py, dmg, bcount, wp.as_u8, cd),
-            WEAPON_ID_WHIP => fire_whip(w, si, px, py, dmg, level, kind_id, wp.as_u8, cd, facing_angle),
-            WEAPON_ID_FIREBALL => fire_fireball(w, si, px, py, dmg, wp.as_u8, cd),
-            WEAPON_ID_LIGHTNING => {
-                fire_lightning(w, si, px, py, dmg, level, kind_id, wp.as_u8, cd)
-            }
-            WEAPON_ID_GARLIC => fire_garlic(w, si, px, py, dmg, level, kind_id, wp.as_u8, cd),
+            WEAPON_ID_MAGIC_WAND => fire_magic_wand(w, si, px, py, dmg, bcount, as_u8, cd),
+            WEAPON_ID_AXE        => fire_axe(w, si, px, py, dmg, as_u8, cd),
+            WEAPON_ID_CROSS      => fire_cross(w, si, px, py, dmg, bcount, as_u8, cd),
+            WEAPON_ID_WHIP       => fire_whip(w, si, px, py, dmg, level, kind_id, as_u8, cd, facing_angle),
+            WEAPON_ID_FIREBALL   => fire_fireball(w, si, px, py, dmg, as_u8, cd),
+            WEAPON_ID_LIGHTNING  => fire_lightning(w, si, px, py, dmg, level, kind_id, as_u8, cd),
+            WEAPON_ID_GARLIC     => fire_garlic(w, si, px, py, dmg, level, kind_id, as_u8, cd),
             _ => {}
         }
     }
@@ -62,7 +61,7 @@ fn fire_magic_wand(
     cd: f32,
 ) {
     if let Some(ti) = find_nearest_enemy_spatial(&w.collision, &w.enemies, px, py, WEAPON_SEARCH_RADIUS, &mut w.spatial_query_buf) {
-        let target_r = EnemyParams::get(w.enemies.kind_ids[ti]).radius;
+        let target_r = w.params.get_enemy(w.enemies.kind_ids[ti]).radius;
         let tx = w.enemies.positions_x[ti] + target_r;
         let ty = w.enemies.positions_y[ti] + target_r;
         let bdx = tx - px;
@@ -158,13 +157,13 @@ fn fire_whip(
         // π/-π をまたぐ場合に正しく動作するよう -π〜π に正規化
         let diff = (angle - facing_angle + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
         if diff.abs() < whip_half_angle {
-            let enemy_r = EnemyParams::get(w.enemies.kind_ids[ei]).radius;
+            let enemy_r = w.params.get_enemy(w.enemies.kind_ids[ei]).radius;
             let hit_x = ex + enemy_r;
             let hit_y = ey + enemy_r;
             w.enemies.hp[ei] -= dmg as f32;
             if w.enemies.hp[ei] <= 0.0 {
                 let kind_e = w.enemies.kind_ids[ei];
-                let ep_hit = EnemyParams::get(kind_e);
+                let ep_hit = w.params.get_enemy(kind_e).clone();
                 w.enemies.kill(ei);
                 // score_popups は描画用なので Rust 側で管理を継続する
                 w.score_popups.push((hit_x, hit_y - 20.0, ep_hit.exp_reward * 2, 0.8));
@@ -216,7 +215,7 @@ fn fire_fireball(
 ) {
     // 最近接敵に向かって貫通弾を発射
     if let Some(ti) = find_nearest_enemy_spatial(&w.collision, &w.enemies, px, py, WEAPON_SEARCH_RADIUS, &mut w.spatial_query_buf) {
-        let target_r = EnemyParams::get(w.enemies.kind_ids[ti]).radius;
+        let target_r = w.params.get_enemy(w.enemies.kind_ids[ti]).radius;
         let tx = w.enemies.positions_x[ti] + target_r;
         let ty = w.enemies.positions_y[ti] + target_r;
         let bdx = tx - px;
@@ -252,7 +251,7 @@ fn fire_lightning(
     let mut next_search_y = py;
     for _ in 0..chain_count {
         if let Some(ei) = current {
-            let enemy_r = EnemyParams::get(w.enemies.kind_ids[ei]).radius;
+            let enemy_r = w.params.get_enemy(w.enemies.kind_ids[ei]).radius;
             let hit_x = w.enemies.positions_x[ei] + enemy_r;
             let hit_y = w.enemies.positions_y[ei] + enemy_r;
             w.enemies.hp[ei] -= dmg as f32;
@@ -261,7 +260,7 @@ fn fire_lightning(
             w.particles.emit(hit_x, hit_y, 5, [0.3, 0.8, 1.0, 1.0]);
             if w.enemies.hp[ei] <= 0.0 {
                 let kind_e = w.enemies.kind_ids[ei];
-                let ep_chain = EnemyParams::get(kind_e);
+                let ep_chain = w.params.get_enemy(kind_e);
                 w.enemies.kill(ei);
                 // score_popups は描画用なので Rust 側で管理を継続する
                 w.score_popups.push((hit_x, hit_y - 20.0, ep_chain.exp_reward * 2, 0.8));
@@ -329,7 +328,7 @@ fn fire_garlic(
         if ddx * ddx + ddy * ddy > radius_sq { continue; }
         w.enemies.hp[ei] -= dmg as f32;
         let kind_e = w.enemies.kind_ids[ei];
-        let ep = EnemyParams::get(kind_e);
+        let ep = w.params.get_enemy(kind_e).clone();
         let hit_x = ex + ep.radius;
         let hit_y = ey + ep.radius;
         if w.enemies.hp[ei] <= 0.0 {
