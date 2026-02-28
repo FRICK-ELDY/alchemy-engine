@@ -401,8 +401,7 @@ defmodule GameEngine.GameEvents do
     x = bits_to_f32(x_bits)
     y = bits_to_f32(y_bits)
     rule = current_rule()
-    state = apply_kill_rewards(state, exp)
-    score_delta = GameContent.EntityParams.score_from_exp(exp)
+    {state, score_delta} = apply_kill_rewards(state, exp)
     GameEngine.NifBridge.add_score_popup(state.world_ref, x, y, score_delta)
     if function_exported?(rule, :on_entity_removed, 4) do
       rule.on_entity_removed(state.world_ref, enemy_kind, x, y)
@@ -416,10 +415,8 @@ defmodule GameEngine.GameEvents do
     x = bits_to_f32(x_bits)
     y = bits_to_f32(y_bits)
     rule = current_rule()
-    state = state
-      |> apply_kill_rewards(exp)
-      |> Map.merge(%{boss_hp: nil, boss_max_hp: nil, boss_kind_id: nil})
-    score_delta = GameContent.EntityParams.score_from_exp(exp)
+    {state, score_delta} = apply_kill_rewards(state, exp)
+    state = Map.merge(state, %{boss_hp: nil, boss_max_hp: nil, boss_kind_id: nil})
     GameEngine.NifBridge.add_score_popup(state.world_ref, x, y, score_delta)
     if function_exported?(rule, :on_boss_defeated, 4) do
       rule.on_boss_defeated(state.world_ref, boss_kind, x, y)
@@ -463,12 +460,15 @@ defmodule GameEngine.GameEvents do
   end
 
   # 撃破報酬（スコア・kill_count・EXP）を state に一括適用する共通関数
+  # 戻り値: {新 state, score_delta}（score_delta はポップアップ表示に使用）
   defp apply_kill_rewards(state, exp) do
     score_delta = GameContent.EntityParams.score_from_exp(exp)
-    state
-    |> Map.update!(:score, &(&1 + score_delta))
-    |> Map.update!(:kill_count, &(&1 + 1))
-    |> accumulate_exp(exp)
+    new_state =
+      state
+      |> Map.update!(:score, &(&1 + score_delta))
+      |> Map.update!(:kill_count, &(&1 + 1))
+      |> accumulate_exp(exp)
+    {new_state, score_delta}
   end
 
   # フェーズ3: EXP 積算とレベルアップ検知
