@@ -137,6 +137,7 @@
 | ボスシステムをRule側に移動 | `game_simulation/game_logic/systems/boss.rs` | ボスAIをElixir側から設定可能な汎用「特殊エンティティシステム」に置き換える |
 | レベリングシステムをRule側に移動 | `game_simulation/game_logic/systems/leveling.rs` | EXP・レベルアップ計算をElixir側（`GameContent.LevelSystem`）に完全移管 |
 | `FrameEvent` からRule固有フィールドを除去 | `game_simulation/world/frame_event.rs` | `exp`, `level_up` を除去し、汎用的な `EntityRemoved { id, kind_id }` 等に変更 |
+| 射撃物・アイテム・衝突システムを汎用化 | `game_simulation/game_logic/systems/{projectiles,items,collision}.rs` | アイテムドロップ（Gem生成）・アイテム効果（Potion/Magnet）・特定エンティティの特殊ルール（Ghost の障害物無視）をElixir側のRuleに移管し、Rust側は汎用的な「エンティティ消滅イベント発火」「エンティティ属性フラグ参照」のみを担う形にする |
 
 #### Phase 3-C: NIF インターフェースの整理
 
