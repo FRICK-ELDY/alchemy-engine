@@ -99,7 +99,8 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
   end
 
   def apply_weapon_selected(state, weapon) do
-    new_levels = Map.update(state.weapon_levels, weapon, 1, &min(&1 + 1, 8))
+    max_lv = GameContent.VampireSurvivor.LevelSystem.max_weapon_level()
+    new_levels = Map.update(state.weapon_levels, weapon, 1, &min(&1 + 1, max_lv))
     %{state | weapon_levels: new_levels, level_up_pending: false, weapon_choices: []}
   end
 

@@ -110,15 +110,16 @@ defmodule GameEngine.SceneManager do
   end
 
   def handle_call({:update_by_module, module, fun}, _from, %{stack: stack} = state) do
-    new_stack =
-      Enum.map(stack, fn scene ->
-        if scene.module == module do
-          %{scene | state: fun.(scene.state)}
-        else
-          scene
-        end
-      end)
-    {:reply, :ok, %{state | stack: new_stack}}
+    case Enum.find_index(stack, &(&1.module == module)) do
+      nil ->
+        {:reply, :ok, state}
+
+      index ->
+        scene = Enum.at(stack, index)
+        new_scene = %{scene | state: fun.(scene.state)}
+        new_stack = List.replace_at(stack, index, new_scene)
+        {:reply, :ok, %{state | stack: new_stack}}
+    end
   end
 
   def handle_call({:get_scene_state, module}, _from, %{stack: stack} = state) do
