@@ -275,3 +275,4 @@ graph LR
 - [データフロー・通信](./data-flow.md)
 - [ゲームコンテンツ詳細](./game-content.md)
 - [ビジュアルエディタ アーキテクチャ](./visual-editor-architecture.md)
+- [改善計画](./improvement-plan.md) ← 既知の弱点と改善方針
