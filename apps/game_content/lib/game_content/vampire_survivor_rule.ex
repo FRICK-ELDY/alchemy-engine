@@ -20,6 +20,11 @@ defmodule GameContent.VampireSurvivorRule do
   # ── Potion の回復量 ────────────────────────────────────────────────
   @potion_heal_value 20
 
+  # ── ボス種別 ID（EntityParams の値と同値・パターンマッチ用）──────────
+  @boss_slime_king  0
+  @boss_bat_lord    1
+  @boss_stone_golem 2
+
   @impl GameEngine.RuleBehaviour
   def render_type, do: :playing
 
@@ -141,12 +146,12 @@ defmodule GameContent.VampireSurvivorRule do
   def update_boss_ai(_context, _boss_state), do: :ok
 
   # SlimeKing: スライムをスポーン
-  defp handle_boss_special_action(world_ref, 0, _px, _py, bx, by, _bp) do
+  defp handle_boss_special_action(world_ref, @boss_slime_king, _px, _py, bx, by, _bp) do
     spawn_slimes_around(world_ref, bx, by)
   end
 
   # BatLord: ダッシュ（速度上書き・無敵付与）
-  defp handle_boss_special_action(world_ref, 1, px, py, bx, by, bp) do
+  defp handle_boss_special_action(world_ref, @boss_bat_lord, px, py, bx, by, bp) do
     {dvx, dvy} = chase_velocity(px, py, bx, by, bp.dash_speed)
     GameEngine.NifBridge.set_boss_velocity(world_ref, dvx, dvy)
     GameEngine.NifBridge.set_boss_invincible(world_ref, true)
@@ -154,7 +159,7 @@ defmodule GameContent.VampireSurvivorRule do
   end
 
   # StoneGolem: 4方向に岩弾を発射
-  defp handle_boss_special_action(world_ref, 2, _px, _py, _bx, _by, bp) do
+  defp handle_boss_special_action(world_ref, @boss_stone_golem, _px, _py, _bx, _by, bp) do
     for {dx, dy} <- [{1.0, 0.0}, {-1.0, 0.0}, {0.0, 1.0}, {0.0, -1.0}] do
       GameEngine.NifBridge.fire_boss_projectile(
         world_ref, dx, dy,
