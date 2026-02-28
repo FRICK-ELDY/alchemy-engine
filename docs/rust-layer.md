@@ -10,21 +10,20 @@ Rust 側は **Cargo ワークスペース** として構成され、4 つのク�
 
 ```mermaid
 graph LR
-    GN[game_native<br/>NIF インターフェース<br/>ゲームループ]
-    GC[game_core<br/>物理 / ECS<br/>依存: rustc-hash のみ]
-    GR[game_render<br/>wgpu 描画]
-    GW[game_window<br/>winit ウィンドウ]
+    GN[game_nif<br/>NIF インターフェース<br/>ゲームループ / レンダーブリッジ]
+    GS[game_simulation<br/>物理 / ECS<br/>依存: rustc-hash のみ]
+    GR[game_render<br/>wgpu 描画 / winit ウィンドウ]
+    GA[game_audio<br/>rodio オーディオ]
 
-    GN -->|依存| GC
+    GN -->|依存| GS
     GN -->|依存| GR
-    GN -->|依存| GW
-    GR -->|依存| GC
-    GW -->|依存| GR
+    GN -->|依存| GA
+    GR -->|依存| GS
 ```
 
 ---
 
-## `game_core` — 共通ロジック
+## `game_simulation` — 物理演算・ECS
 
 依存クレートは `rustc-hash = "2"` のみ。no-std 互換を意識した設計。
 
@@ -111,94 +110,6 @@ struct CollisionWorld {
 
 セルサイズ 80px で `O(n)` の近傍検索を実現。
 
----
-
-## `game_native` — NIF インターフェース
-
-### `lib.rs` — エントリポイント
-
-```rust
-rustler::atoms! {
-    ok, error, nil,
-    enemy_killed, player_damaged, level_up, item_pickup, boss_defeated,
-    // ... ゲームアトム
-}
-
-#[cfg(feature = "umbrella")]
-rustler::init!("Elixir.GameEngine.NifBridge", load = nif::load::on_load);
-```
-
-### `nif/` — NIF 関数群
-
-```mermaid
-graph TD
-    NIF[nif/]
-    LOAD[load.rs<br/>パニックフック<br/>リソース登録]
-    WORLD[world_nif.rs<br/>ワールド生成・入力・スポーン]
-    ACTION[action_nif.rs<br/>武器追加・ボス操作]
-    READ[read_nif.rs<br/>状態読み取り 軽量]
-    LOOP[game_loop_nif.rs<br/>ゲームループ制御]
-    PUSH[push_tick_nif.rs<br/>Elixir プッシュ型同期]
-    RENDER[render_nif.rs<br/>レンダースレッド起動]
-    SAVE[save_nif.rs<br/>セーブ/ロード]
-
-    NIF --> LOAD
-    NIF --> WORLD
-    NIF --> ACTION
-    NIF --> READ
-    NIF --> LOOP
-    NIF --> PUSH
-    NIF --> RENDER
-    NIF --> SAVE
-```
-
-#### NIF 関数一覧
-
-**`world_nif.rs`:**
-
-| NIF 関数 | 説明 |
-|:---|:---|
-| `create_world()` | `GameWorld` リソースを生成して返す |
-| `set_player_input(world, dx, dy)` | 移動ベクトルを設定 |
-| `spawn_enemies(world, kind_id, count, hp_mult)` | 敵をスポーン |
-| `set_map_obstacles(world, obstacles)` | 障害物リストを設定 |
-
-**`action_nif.rs`:**
-
-| NIF 関数 | 説明 |
-|:---|:---|
-| `add_weapon(world, weapon_id)` | 武器を追加/アップグレード |
-| `skip_level_up(world)` | レベルアップをスキップ |
-| `spawn_boss(world, boss_id)` | ボスをスポーン |
-| `spawn_elite_enemy(world, kind_id, count, hp_mult)` | エリート敵をスポーン |
-
-**`read_nif.rs`（軽量・毎フレーム利用可）:**
-
-| NIF 関数 | 説明 |
-|:---|:---|
-| `get_player_pos(world)` | プレイヤー座標 `{x, y}` |
-| `get_player_hp(world)` | プレイヤー HP |
-| `get_enemy_count(world)` | 生存敵数 |
-| `get_hud_data(world)` | HUD 表示データ全体 |
-| `get_frame_metadata(world)` | フレームメタデータ |
-| `get_level_up_data(world)` | レベルアップ選択肢 |
-| `get_weapon_levels(world)` | 全武器レベル |
-| `get_boss_info(world)` | ボス情報 |
-| `is_player_dead(world)` | 死亡判定 |
-
-**`game_loop_nif.rs`:**
-
-| NIF 関数 | 説明 |
-|:---|:---|
-| `physics_step(world, dt)` | 1 フレーム物理ステップ（DirtyCpu） |
-| `drain_frame_events(world)` | フレームイベントを取り出す |
-| `create_game_loop_control()` | `GameLoopControl` リソース生成 |
-| `start_rust_game_loop(world, control, pid)` | 別スレッドで 60Hz 固定ループ開始 |
-| `pause_physics(control)` | 物理演算を一時停止 |
-| `resume_physics(control)` | 物理演算を再開 |
-
----
-
 ### `world/` — ゲームワールド型
 
 ```mermaid
@@ -246,8 +157,6 @@ enum FrameEvent {
     BossDefeated { kind_id: u8, score: u32 },
 }
 ```
-
----
 
 ### `game_logic/` — 物理・AI・システム
 
@@ -330,6 +239,94 @@ graph TD
 
 ---
 
+## `game_nif` — NIF インターフェース・ゲームループ
+
+### `lib.rs` — エントリポイント
+
+```rust
+rustler::atoms! {
+    ok, error, nil,
+    enemy_killed, player_damaged, level_up, item_pickup, boss_defeated,
+    // ... ゲームアトム
+}
+
+#[cfg(feature = "umbrella")]
+rustler::init!("Elixir.GameEngine.NifBridge", load = nif::load::on_load);
+```
+
+### `nif/` — NIF 関数群
+
+```mermaid
+graph TD
+    NIF[nif/]
+    LOAD[load.rs<br/>パニックフック<br/>リソース登録]
+    WORLD[world_nif.rs<br/>ワールド生成・入力・スポーン]
+    ACTION[action_nif.rs<br/>武器追加・ボス操作]
+    READ[read_nif.rs<br/>状態読み取り 軽量]
+    LOOP[game_loop_nif.rs<br/>ゲームループ制御]
+    PUSH[push_tick_nif.rs<br/>Elixir プッシュ型同期]
+    RENDER[render_nif.rs<br/>レンダースレッド起動]
+    SAVE[save_nif.rs<br/>セーブ/ロード]
+    EVENTS[events.rs<br/>FrameEvent → Elixir アトム変換]
+
+    NIF --> LOAD
+    NIF --> WORLD
+    NIF --> ACTION
+    NIF --> READ
+    NIF --> LOOP
+    NIF --> PUSH
+    NIF --> RENDER
+    NIF --> SAVE
+    NIF --> EVENTS
+```
+
+#### NIF 関数一覧
+
+**`world_nif.rs`:**
+
+| NIF 関数 | 説明 |
+|:---|:---|
+| `create_world()` | `GameWorld` リソースを生成して返す |
+| `set_player_input(world, dx, dy)` | 移動ベクトルを設定 |
+| `spawn_enemies(world, kind_id, count, hp_mult)` | 敵をスポーン |
+| `set_map_obstacles(world, obstacles)` | 障害物リストを設定 |
+
+**`action_nif.rs`:**
+
+| NIF 関数 | 説明 |
+|:---|:---|
+| `add_weapon(world, weapon_id)` | 武器を追加/アップグレード |
+| `skip_level_up(world)` | レベルアップをスキップ |
+| `spawn_boss(world, boss_id)` | ボスをスポーン |
+| `spawn_elite_enemy(world, kind_id, count, hp_mult)` | エリート敵をスポーン |
+
+**`read_nif.rs`（軽量・毎フレーム利用可）:**
+
+| NIF 関数 | 説明 |
+|:---|:---|
+| `get_player_pos(world)` | プレイヤー座標 `{x, y}` |
+| `get_player_hp(world)` | プレイヤー HP |
+| `get_enemy_count(world)` | 生存敵数 |
+| `get_hud_data(world)` | HUD 表示データ全体 |
+| `get_frame_metadata(world)` | フレームメタデータ |
+| `get_level_up_data(world)` | レベルアップ選択肢 |
+| `get_weapon_levels(world)` | 全武器レベル |
+| `get_boss_info(world)` | ボス情報 |
+| `is_player_dead(world)` | 死亡判定 |
+
+**`game_loop_nif.rs`:**
+
+| NIF 関数 | 説明 |
+|:---|:---|
+| `physics_step(world, dt)` | 1 フレーム物理ステップ（DirtyCpu） |
+| `drain_frame_events(world)` | フレームイベントを取り出す |
+| `create_game_loop_control()` | `GameLoopControl` リソース生成 |
+| `start_rust_game_loop(world, control, pid)` | 別スレッドで 60Hz 固定ループ開始 |
+| `pause_physics(control)` | 物理演算を一時停止 |
+| `resume_physics(control)` | 物理演算を再開 |
+
+---
+
 ### `render_bridge.rs` — RenderBridge 実装
 
 ロック競合を最小化するため、ロック内でのデータコピーを最小限に抑えます。
@@ -348,7 +345,19 @@ sequenceDiagram
     RB-->>RT: RenderFrame
 ```
 
-### `audio.rs` — rodio オーディオ管理
+### `lock_metrics.rs` — RwLock 待機時間メトリクス
+
+| 閾値 | アクション |
+|:---|:---|
+| read lock > 300μs | `log::warn!` |
+| write lock > 500μs | `log::warn!` |
+| 5 秒ごと | 平均待機時間をレポート |
+
+---
+
+## `game_audio` — rodio オーディオ管理
+
+### `audio.rs`
 
 ```mermaid
 graph LR
@@ -361,14 +370,6 @@ graph LR
     AT --> AM
     AC -->|経由| ACS
 ```
-
-### `lock_metrics.rs` — RwLock 待機時間メトリクス
-
-| 閾値 | アクション |
-|:---|:---|
-| read lock > 300μs | `log::warn!` |
-| write lock > 500μs | `log::warn!` |
-| 5 秒ごと | 平均待機時間をレポート |
 
 ### `asset/mod.rs` — アセット管理
 
@@ -390,7 +391,34 @@ flowchart LR
 
 ---
 
-## `game_render` — wgpu 描画パイプライン
+## `game_render` — wgpu 描画パイプライン・ウィンドウ管理
+
+### `window.rs` — winit ウィンドウ管理
+
+winit ウィンドウのイベントループと `RenderBridge` トレイトを定義します（旧 `game_window` クレートから統合）。
+
+#### キー入力マッピング
+
+| キー | 動作 |
+|:---|:---|
+| W / ↑ | 上移動 |
+| S / ↓ | 下移動 |
+| A / ← | 左移動 |
+| D / → | 右移動 |
+| 斜め入力 | 正規化（速度一定） |
+
+#### フレームループ
+
+```mermaid
+flowchart TD
+    RR[RedrawRequested]
+    NF["bridge.next_frame()\n→ RenderFrame"]
+    UI["renderer.update_instances(frame)"]
+    REN[renderer.render]
+    ACT["bridge.on_ui_action(pending_action)"]
+
+    RR --> NF --> UI --> REN --> ACT --> RR
+```
 
 ### `renderer/mod.rs` — 描画パス
 
@@ -439,33 +467,6 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     // テクスチャサンプリング × カラーティント
 }
-```
-
----
-
-## `game_window` — winit ウィンドウ管理
-
-### キー入力マッピング
-
-| キー | 動作 |
-|:---|:---|
-| W / ↑ | 上移動 |
-| S / ↓ | 下移動 |
-| A / ← | 左移動 |
-| D / → | 右移動 |
-| 斜め入力 | 正規化（速度一定） |
-
-### フレームループ
-
-```mermaid
-flowchart TD
-    RR[RedrawRequested]
-    NF["bridge.next_frame()\n→ RenderFrame"]
-    UI["renderer.update_instances(frame)"]
-    REN[renderer.render]
-    ACT["bridge.on_ui_action(pending_action)"]
-
-    RR --> NF --> UI --> REN --> ACT --> RR
 ```
 
 ---
