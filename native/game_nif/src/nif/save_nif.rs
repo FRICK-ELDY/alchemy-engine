@@ -8,7 +8,7 @@ use game_simulation::item::ItemWorld;
 use game_simulation::weapon::WeaponSlot;
 use rustler::{Atom, NifResult, ResourceArc};
 
-use crate::{ok, ParticleWorld};
+use crate::{ok, EnemyWorld, ParticleWorld};
 
 #[derive(Debug, Clone, rustler::NifMap)]
 pub struct WeaponSlotSave {
@@ -70,7 +70,6 @@ pub fn load_save_snapshot(world: ResourceArc<GameWorld>, snapshot: SaveSnapshot)
     if slots.is_empty() { slots.push(WeaponSlot::new(0)); }
     w.weapon_slots = slots;
 
-    use crate::EnemyWorld;
     w.enemies   = EnemyWorld::new();
     w.bullets   = BulletWorld::new();
     w.particles = ParticleWorld::new(PARTICLE_RNG_SEED);

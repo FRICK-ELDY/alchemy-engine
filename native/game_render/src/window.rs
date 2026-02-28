@@ -59,9 +59,15 @@ struct RenderApp<B: RenderBridge> {
 impl<B: RenderBridge> RenderApp<B> {
     fn new(bridge: B, config: WindowConfig) -> Self {
         Self {
-            bridge, config, window: None, renderer: None,
+            bridge,
+            config,
+            window: None,
+            renderer: None,
             ui_state: GameUiState::default(),
-            move_up: false, move_down: false, move_left: false, move_right: false,
+            move_up: false,
+            move_down: false,
+            move_left: false,
+            move_right: false,
         }
     }
 
