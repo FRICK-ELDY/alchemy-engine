@@ -19,11 +19,11 @@ defmodule GameContent.VampireSurvivor.BossComponent do
   def on_physics_process(context) do
     world_ref = context.world_ref
     playing_state = GameEngine.SceneManager.get_scene_state(GameContent.VampireSurvivor.Scenes.Playing)
-    scene_boss_kind_id = Map.get(playing_state, :boss_kind_id)
+    kind_id = Map.get(playing_state || %{}, :boss_kind_id)
 
-    if scene_boss_kind_id != nil do
+    if kind_id != nil do
       boss_state = GameEngine.NifBridge.get_boss_state(world_ref)
-      update_boss_ai(context, boss_state)
+      update_boss_ai(context, boss_state, kind_id)
     end
 
     :ok
@@ -45,7 +45,9 @@ defmodule GameContent.VampireSurvivor.BossComponent do
 
   # ── ボスAI ────────────────────────────────────────────────────────
 
-  defp update_boss_ai(context, {:alive, kind_id, bx, by, _hp, _max_hp, phase_timer}) do
+  # I-2: get_boss_state の返り値から kind_id が除去されたため、
+  # ボス種別は on_physics_process で取得済みの kind_id を引数として受け取る。
+  defp update_boss_ai(context, {:alive, bx, by, _hp, _max_hp, phase_timer}, kind_id) do
     world_ref = context.world_ref
     dt = context.tick_ms / 1000.0
     {px, py} = GameEngine.NifBridge.get_player_pos(world_ref)
@@ -64,7 +66,7 @@ defmodule GameContent.VampireSurvivor.BossComponent do
     :ok
   end
 
-  defp update_boss_ai(_context, _boss_state), do: :ok
+  defp update_boss_ai(_context, _boss_state, _kind_id), do: :ok
 
   # SlimeKing: スライムをスポーン
   defp handle_boss_special_action(world_ref, @boss_slime_king, _px, _py, bx, by, _bp) do

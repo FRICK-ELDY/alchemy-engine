@@ -132,12 +132,10 @@ defmodule GameEngine.GameEvents do
 
       case GameEngine.SceneManager.current() do
         {:ok, %{module: ^level_up_scene}} ->
-          weapon_id = content.entity_registry().weapons[weapon] ||
-                        raise "Unknown weapon: #{inspect(weapon)}"
-          GameEngine.NifBridge.add_weapon(state.world_ref, weapon_id)
           Logger.info("[LEVEL UP] Weapon selected: #{inspect(weapon)} -> resuming")
           GameEngine.NifBridge.resume_physics(state.control_ref)
           GameEngine.SceneManager.pop_scene()
+          # I-2: weapon_levels を更新し、次フレームの set_weapon_slots 注入で Rust に反映する
           update_playing_scene_state(content, &content.apply_weapon_selected(&1, weapon))
 
         _ ->
@@ -264,7 +262,7 @@ defmodule GameEngine.GameEvents do
     end
   end
 
-  defp resolve_weapon_from_name(weapon_name, weapon_levels, content, world_ref) when is_binary(weapon_name) do
+  defp resolve_weapon_from_name(weapon_name, weapon_levels, content, _world_ref) when is_binary(weapon_name) do
     requested_weapon =
       try do
         String.to_existing_atom(weapon_name)
@@ -278,13 +276,12 @@ defmodule GameEngine.GameEvents do
 
     cond do
       is_atom(requested_weapon) and MapSet.member?(allowed_weapons, requested_weapon) ->
-        GameEngine.NifBridge.add_weapon(world_ref, weapons_registry[requested_weapon])
+        # I-2: weapon_levels を更新し、次フレームの set_weapon_slots 注入で Rust に反映する
         update_playing_scene_state(content, &content.apply_weapon_selected(&1, requested_weapon))
         requested_weapon
 
       MapSet.member?(allowed_weapons, fallback_weapon) ->
         Logger.warning("[LEVEL UP] Renderer weapon '#{weapon_name}' not available. Falling back to #{inspect(fallback_weapon)}.")
-        GameEngine.NifBridge.add_weapon(world_ref, weapons_registry[fallback_weapon])
         update_playing_scene_state(content, &content.apply_weapon_selected(&1, fallback_weapon))
         fallback_weapon
 
@@ -390,6 +387,16 @@ defmodule GameEngine.GameEvents do
           GameEngine.NifBridge.set_boss_hp(state.world_ref, scene_boss_hp)
         end
 
+        # I-2: 武器スロットを Elixir 側 Rule state から毎フレーム注入する
+        if function_exported?(content, :level_up_scene, 0) do
+          weapon_levels = Map.get(playing_state, :weapon_levels, %{})
+          playing_scene = content.playing_scene()
+          if function_exported?(playing_scene, :weapon_slots_for_nif, 1) do
+            slots = playing_scene.weapon_slots_for_nif(weapon_levels)
+            GameEngine.NifBridge.set_weapon_slots(state.world_ref, slots)
+          end
+        end
+
         state = maybe_set_input_and_broadcast(state, mod, physics_scenes, events)
 
         context = build_context(state, now, elapsed)
@@ -438,10 +445,13 @@ defmodule GameEngine.GameEvents do
 
   # BossDefeated でスコア・kill_count を積算し、ポップアップ表示・アイテムドロップを処理する
   # boss_exp_reward/1 を持つコンテンツ（ボスの概念があるコンテンツ）のみ処理する
-  defp apply_event({:boss_defeated, boss_kind, x_bits, y_bits, _}, state) do
+  # I-2: Rust 側の entity_kind は 0 固定のため、ボス種別は Playing シーン state から取得する
+  defp apply_event({:boss_defeated, _boss_kind_from_rust, x_bits, y_bits, _}, state) do
     content = current_content()
+    playing_state = get_playing_scene_state(content)
+    boss_kind = Map.get(playing_state, :boss_kind_id)
 
-    if function_exported?(content, :boss_exp_reward, 1) do
+    if boss_kind != nil and function_exported?(content, :boss_exp_reward, 1) do
       exp = content.boss_exp_reward(boss_kind)
       x = bits_to_f32(x_bits)
       y = bits_to_f32(y_bits)
@@ -558,10 +568,8 @@ defmodule GameEngine.GameEvents do
     if auto_select and function_exported?(content, :level_up_scene, 0) do
       case scene_state do
         %{choices: [first | _]} ->
-          weapon_id = content.entity_registry().weapons[first] ||
-                        raise "Unknown weapon: #{inspect(first)}"
-          GameEngine.NifBridge.add_weapon(state.world_ref, weapon_id)
           Logger.info("[LEVEL UP] Auto-selected: #{inspect(first)} -> resuming")
+          # I-2: weapon_levels を更新し、次フレームの set_weapon_slots 注入で Rust に反映する
           update_playing_scene_state(content, &content.apply_weapon_selected(&1, first))
         _ ->
           Logger.info("[LEVEL UP] Auto-skipped (no choices) -> resuming")
@@ -724,7 +732,7 @@ defmodule GameEngine.GameEvents do
 
   # Playing シーンの state を取得する
   defp get_playing_scene_state(content) do
-    GameEngine.SceneManager.get_scene_state(content.playing_scene())
+    GameEngine.SceneManager.get_scene_state(content.playing_scene()) || %{}
   end
 
   # セーブロード後に Elixir 側の状態をリセット

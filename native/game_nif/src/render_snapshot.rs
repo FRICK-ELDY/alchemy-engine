@@ -17,15 +17,13 @@ pub fn build_render_frame(w: &GameWorldInner) -> RenderFrame {
     render_data.push((w.player.x, w.player.y, 0, anim_frame));
 
     if let Some(ref boss) = w.boss {
-        if let Some(bp) = w.params.bosses.get(boss.kind_id as usize) {
-            let boss_sprite_size = bp.radius * 2.0;
-            render_data.push((
-                boss.x - boss_sprite_size / 2.0,
-                boss.y - boss_sprite_size / 2.0,
-                bp.render_kind,
-                0,
-            ));
-        }
+        let boss_sprite_size = boss.radius * 2.0;
+        render_data.push((
+            boss.x - boss_sprite_size / 2.0,
+            boss.y - boss_sprite_size / 2.0,
+            boss.render_kind,
+            0,
+        ));
     }
 
     for i in 0..w.enemies.len() {
@@ -82,7 +80,7 @@ pub fn build_render_frame(w: &GameWorldInner) -> RenderFrame {
     let camera_offset = (cam_x, cam_y);
 
     let boss_info = w.boss.as_ref().map(|b| BossHudInfo {
-        name:   format!("Boss {}", b.kind_id),
+        name:   "Boss".to_string(),
         hp:     b.hp,
         max_hp: b.max_hp,
     });

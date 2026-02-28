@@ -39,14 +39,8 @@ defmodule GameContent.VampireSurvivor.SpawnComponent do
       weapon_params(),
       boss_params()
     )
-
-    weapon_registry = entity_registry().weapons
-    for weapon_name <- initial_weapons(),
-        weapon_id = Map.get(weapon_registry, weapon_name),
-        not is_nil(weapon_id) do
-      GameEngine.NifBridge.add_weapon(world_ref, weapon_id)
-    end
-
+    # I-2: 初期武器は Playing シーン state の weapon_levels から毎フレーム set_weapon_slots で注入する。
+    # on_ready での add_weapon 呼び出しは不要。
     :ok
   end
 

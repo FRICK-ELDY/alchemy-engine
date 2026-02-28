@@ -21,7 +21,9 @@ defmodule GameEngine.NifBridge do
   def spawn_enemies(_world, _kind, _count), do: :erlang.nif_error(:nif_not_loaded)
   # Phase 3-B: 指定座標リストに敵をスポーンする NIF
   def spawn_enemies_at(_world, _kind, _positions), do: :erlang.nif_error(:nif_not_loaded)
-  def add_weapon(_world, _weapon_name), do: :erlang.nif_error(:nif_not_loaded)
+  # I-2: 武器スロットを Elixir 側から毎フレーム注入する NIF（add_weapon の代替）
+  # slots: [{kind_id, level}] のリスト
+  def set_weapon_slots(_world, _slots), do: :erlang.nif_error(:nif_not_loaded)
   def spawn_boss(_world, _kind), do: :erlang.nif_error(:nif_not_loaded)
   def spawn_elite_enemy(_world, _kind, _count, _hp_multiplier), do: :erlang.nif_error(:nif_not_loaded)
   # Phase 3-C: スコアポップアップを描画用バッファに追加する NIF
@@ -49,7 +51,8 @@ defmodule GameEngine.NifBridge do
   def get_hud_data(_world), do: :erlang.nif_error(:nif_not_loaded)
   def get_frame_metadata(_world), do: :erlang.nif_error(:nif_not_loaded)
   def get_magnet_timer(_world), do: :erlang.nif_error(:nif_not_loaded)
-  # Phase 3-B: ボスAI制御用（{:alive, kind_id, x, y, hp, max_hp, phase_timer} または :none）
+  # I-2: ボスAI制御用（{:alive, x, y, hp, max_hp, phase_timer} または :none）
+  # ボス種別（kind_id）は Elixir 側 Rule state で管理するため返り値から除去
   def get_boss_state(_world), do: :erlang.nif_error(:nif_not_loaded)
   def is_player_dead(_world), do: :erlang.nif_error(:nif_not_loaded)
 

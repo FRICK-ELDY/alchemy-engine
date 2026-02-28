@@ -1,27 +1,43 @@
 //! Path: native/game_nif/src/nif/action_nif.rs
-//! Summary: アクション NIF（add_weapon, skip_level_up, spawn_boss, spawn_elite_enemy, spawn_item 等）
+//! Summary: アクション NIF（set_weapon_slots, spawn_boss, spawn_elite_enemy, spawn_item 等）
 
 use super::util::{lock_poisoned_err, params_not_loaded_err};
 use game_simulation::game_logic::systems::spawn::get_spawn_positions_around_player;
 use game_simulation::world::{BossState, FrameEvent, GameWorld};
 use game_simulation::constants::{PLAYER_RADIUS, POPUP_Y_OFFSET, POPUP_LIFETIME};
 use game_simulation::item::ItemKind;
-use game_simulation::weapon::{WeaponSlot, MAX_WEAPON_LEVEL, MAX_WEAPON_SLOTS};
+use game_simulation::weapon::WeaponSlot;
 use rustler::{Atom, NifResult, ResourceArc};
 
 use crate::ok;
 
+/// I-2: 武器スロットを Elixir 側から毎フレーム注入する NIF。
+/// Elixir 側 Rule state が武器の SSoT となり、毎フレームこの NIF で Rust に反映する。
+/// slots: [{kind_id: u8, level: u32}] のリスト
 #[rustler::nif]
-pub fn add_weapon(world: ResourceArc<GameWorld>, weapon_id: u8) -> NifResult<Atom> {
+pub fn set_weapon_slots(
+    world: ResourceArc<GameWorld>,
+    slots: Vec<(u8, u32)>,
+) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
-    if let Some(slot) = w.weapon_slots.iter_mut().find(|s| s.kind_id == weapon_id) {
-        slot.level = (slot.level + 1).min(MAX_WEAPON_LEVEL);
-    } else if w.weapon_slots.len() < MAX_WEAPON_SLOTS {
-        w.weapon_slots.push(WeaponSlot::new(weapon_id));
-    }
+    let new_slots: Vec<WeaponSlot> = slots
+        .into_iter()
+        .map(|(kind_id, level)| {
+            let existing_timer = w.weapon_slots
+                .iter()
+                .find(|s| s.kind_id == kind_id)
+                .map(|s| s.cooldown_timer)
+                .unwrap_or(0.0);
+            WeaponSlot { kind_id, level, cooldown_timer: existing_timer }
+        })
+        .collect();
+    w.weapon_slots = new_slots;
     Ok(ok())
 }
 
+/// I-2: ボスの物理エントリを生成する NIF。
+/// ボス種別の概念は Elixir 側 Rule state で管理する。
+/// kind_id は FrameEvent::SpecialEntitySpawned でのみ使用し、Rust 内部では保持しない。
 #[rustler::nif]
 pub fn spawn_boss(world: ResourceArc<GameWorld>, kind_id: u8) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
@@ -32,7 +48,7 @@ pub fn spawn_boss(world: ResourceArc<GameWorld>, kind_id: u8) -> NifResult<Atom>
         let py = w.player.y + PLAYER_RADIUS;
         let bx = (px + 600.0).min(w.map_width  - bp.radius);
         let by = py.clamp(bp.radius, w.map_height - bp.radius);
-        w.boss = Some(BossState::new(kind_id, bx, by, &bp));
+        w.boss = Some(BossState::new(bx, by, &bp));
         w.frame_events.push(FrameEvent::SpecialEntitySpawned { entity_kind: kind_id });
     }
     Ok(ok())
