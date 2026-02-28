@@ -30,6 +30,7 @@ defmodule GameEngine.MixProject do
       {:rustler, "0.34.0"},
       {:telemetry, "~> 1.3"},
       {:telemetry_metrics, "~> 1.0"},
+      {:jason, "~> 1.4"},
       {:mox, "~> 1.0", only: :test},
     ]
   end
