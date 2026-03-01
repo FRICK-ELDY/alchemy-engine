@@ -1,4 +1,4 @@
-use super::{GamePhase, GameUiState, HudData};
+use super::{GamePhase, GameUiState, HudData, LoadDialogKind};
 
 /// HUD を描画し、ボタン操作があった場合はアクション文字列を返す。
 /// - レベルアップ選択: 武器名
@@ -14,6 +14,36 @@ pub fn build_hud_ui(ctx: &egui::Context, hud: &HudData, fps: f32, ui_state: &mut
         }
     }
 
+    // pending_action（Save/Load ボタン）を最優先で確定させる。
+    // ロードダイアログ結果より先にチェックすることで、同一フレームでの上書きを防ぐ。
+    if let Some(action) = ui_state.pending_action.take() {
+        let chosen = Some(action);
+
+        // ロードダイアログが開いている場合は描画せずに閉じる。
+        // build_load_dialog を呼び出すと egui がクリック判定を行い、
+        // 同フレームでダイアログボタンが押された場合に load_dialog が
+        // 次フレームも残り続ける原因となるため、ここで直接 None にリセットする。
+        ui_state.load_dialog = None;
+
+        // 各フェーズの UI を描画する。戻り値（ボタンクリック結果）は意図的に捨てる。
+        // pending_action が Save/Load ボタン由来の場合、同フレームで
+        // レベルアップ選択等が押されても pending_action を優先するのが正しい挙動。
+        // また build_playing_hud_ui 内の Save/Load ボタンが再クリックされた場合、
+        // ui_state.pending_action が再セットされる可能性があるため、描画後に破棄する。
+        match hud.phase {
+            GamePhase::Title    => { let _ = build_title_ui(ctx); }
+            GamePhase::GameOver => { let _ = build_game_over_ui(ctx, hud); }
+            GamePhase::Playing  => { let _ = build_playing_ui(ctx, hud, fps, ui_state); }
+        }
+        ui_state.pending_action = None;
+
+        if let Some((ref msg, _)) = ui_state.save_toast {
+            build_save_toast(ctx, msg);
+        }
+
+        return chosen;
+    }
+
     let mut chosen = match hud.phase {
         GamePhase::Title    => build_title_ui(ctx),
         GamePhase::GameOver => build_game_over_ui(ctx, hud),
@@ -25,11 +55,6 @@ pub fn build_hud_ui(ctx: &egui::Context, hud: &HudData, fps: f32, ui_state: &mut
         if let Some(dialog_result) = build_load_dialog(ctx, ui_state) {
             chosen = Some(dialog_result);
         }
-    }
-
-    // pending_action（Save/Load ボタン）を優先
-    if let Some(action) = ui_state.pending_action.take() {
-        chosen = Some(action);
     }
 
     // セーブトースト表示
@@ -141,7 +166,7 @@ fn build_game_over_ui(ctx: &egui::Context, hud: &HudData) -> Option<String> {
 
 /// 1.5.3: ロード確認ダイアログ
 fn build_load_dialog(ctx: &egui::Context, ui_state: &mut GameUiState) -> Option<String> {
-    let dialog_type = ui_state.load_dialog?;
+    let dialog_kind = ui_state.load_dialog?;
     let mut result = None;
 
     egui::Area::new(egui::Id::new("load_dialog"))
@@ -156,49 +181,52 @@ fn build_load_dialog(ctx: &egui::Context, ui_state: &mut GameUiState) -> Option<
                 .stroke(egui::Stroke::new(2.0, egui::Color32::from_rgb(100, 180, 255)))
                 .show(ui, |ui| {
                     ui.vertical_centered(|ui| {
-                        if dialog_type {
-                            ui.label(
-                                egui::RichText::new("Load saved game?")
-                                    .color(egui::Color32::from_rgb(220, 220, 255))
-                                    .size(20.0)
-                                    .strong(),
-                            );
-                            ui.label(
-                                egui::RichText::new("Current progress will be lost.")
-                                    .color(egui::Color32::from_rgb(180, 180, 200))
-                                    .size(14.0),
-                            );
-                            ui.add_space(20.0);
-                            ui.horizontal(|ui| {
+                        match dialog_kind {
+                            LoadDialogKind::Confirm => {
+                                ui.label(
+                                    egui::RichText::new("Load saved game?")
+                                        .color(egui::Color32::from_rgb(220, 220, 255))
+                                        .size(20.0)
+                                        .strong(),
+                                );
+                                ui.label(
+                                    egui::RichText::new("Current progress will be lost.")
+                                        .color(egui::Color32::from_rgb(180, 180, 200))
+                                        .size(14.0),
+                                );
+                                ui.add_space(20.0);
+                                ui.horizontal(|ui| {
+                                    if ui.add(
+                                        egui::Button::new(egui::RichText::new("Load").color(egui::Color32::WHITE))
+                                            .fill(egui::Color32::from_rgb(60, 120, 200))
+                                            .min_size(egui::vec2(100.0, 36.0)),
+                                    ).clicked() {
+                                        result = Some("__load_confirm__".to_string());
+                                    }
+                                    if ui.add(
+                                        egui::Button::new(egui::RichText::new("Cancel").color(egui::Color32::WHITE))
+                                            .fill(egui::Color32::from_rgb(80, 80, 80))
+                                            .min_size(egui::vec2(100.0, 36.0)),
+                                    ).clicked() {
+                                        result = Some("__load_cancel__".to_string());
+                                    }
+                                });
+                            }
+                            LoadDialogKind::NoSaveData => {
+                                ui.label(
+                                    egui::RichText::new("No save data")
+                                        .color(egui::Color32::from_rgb(255, 200, 100))
+                                        .size(20.0)
+                                        .strong(),
+                                );
+                                ui.add_space(20.0);
                                 if ui.add(
-                                    egui::Button::new(egui::RichText::new("Load").color(egui::Color32::WHITE))
-                                        .fill(egui::Color32::from_rgb(60, 120, 200))
-                                        .min_size(egui::vec2(100.0, 36.0)),
-                                ).clicked() {
-                                    result = Some("__load_confirm__".to_string());
-                                }
-                                if ui.add(
-                                    egui::Button::new(egui::RichText::new("Cancel").color(egui::Color32::WHITE))
+                                    egui::Button::new(egui::RichText::new("OK").color(egui::Color32::WHITE))
                                         .fill(egui::Color32::from_rgb(80, 80, 80))
                                         .min_size(egui::vec2(100.0, 36.0)),
                                 ).clicked() {
                                     result = Some("__load_cancel__".to_string());
                                 }
-                            });
-                        } else {
-                            ui.label(
-                                egui::RichText::new("No save data")
-                                    .color(egui::Color32::from_rgb(255, 200, 100))
-                                    .size(20.0)
-                                    .strong(),
-                            );
-                            ui.add_space(20.0);
-                            if ui.add(
-                                egui::Button::new(egui::RichText::new("OK").color(egui::Color32::WHITE))
-                                    .fill(egui::Color32::from_rgb(80, 80, 80))
-                                    .min_size(egui::vec2(100.0, 36.0)),
-                            ).clicked() {
-                                result = Some("__load_cancel__".to_string());
                             }
                         }
                     });
@@ -283,7 +311,7 @@ fn build_score_popups_ui(ctx: &egui::Context, hud: &HudData) {
 }
 
 /// 上部ステータスバー（HP・EXP・スコア・タイマー・武器）と右上デバッグ情報
-fn build_playing_hud_ui(ctx: &egui::Context, hud: &HudData, fps: f32, ui_state: &mut GameUiState) -> Option<String> {
+fn build_playing_hud_ui(ctx: &egui::Context, hud: &HudData, fps: f32, ui_state: &mut GameUiState) {
     // 上部 HUD バー
     egui::Area::new(egui::Id::new("hud_top"))
         .anchor(egui::Align2::LEFT_TOP, egui::vec2(8.0, 8.0))
@@ -333,6 +361,7 @@ fn build_playing_hud_ui(ctx: &egui::Context, hud: &HudData, fps: f32, ui_state: 
                         ui.separator();
 
                         // EXP バー
+                        // exp_to_next は「残り EXP」なので exp + exp_to_next = 次レベル必要総 EXP
                         let exp_total = hud.exp + hud.exp_to_next;
                         let exp_ratio = if exp_total > 0 {
                             (hud.exp as f32 / exp_total as f32).clamp(0.0, 1.0)
@@ -444,8 +473,6 @@ fn build_playing_hud_ui(ctx: &egui::Context, hud: &HudData, fps: f32, ui_state: 
                     }
                 });
         });
-
-    None
 }
 
 /// ボス HP バー（画面上部中央）

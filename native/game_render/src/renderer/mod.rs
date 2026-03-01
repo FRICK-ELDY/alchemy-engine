@@ -184,8 +184,12 @@ impl CameraUniform {
 }
 
 // ─── インスタンスバッファの最大容量 ────────────────────────────
-// Player 1 + Boss 1 + Enemies 10000 + Bullets 2000 + Particles 2000 + Items 500 = 14502
-const MAX_INSTANCES: usize = 14502;
+// Player 1 + Boss 1 + Enemies 10000 + Bullets 2000 + Particles 2000 + Items 500 + Obstacles 8
+// = 14510
+// Enemies 内訳: うちエリート敵は最大 30% = 3000 体（kind: 21/22/23）。
+//               エリート敵は通常敵スロットを共有するため Enemies 合計は変わらない。
+// Obstacles: MapLoader の最大マップ（:forest）で 8 体。
+const MAX_INSTANCES: usize = 14510;
 
 // 敵タイプ別のスプライトサイズ（px）
 // kind: 1=slime(40px), 2=bat(24px), 3=golem(64px), 4=ghost(32px), 5=skeleton(40px)
@@ -204,10 +208,12 @@ fn enemy_sprite_size(kind: u8) -> f32 {
 }
 
 /// Skeleton 用 UV（Golem と同スロットでプレースホルダー）
+/// TODO: 専用スプライトスロットを確保するまでの暫定措置。Golem の UV を流用中。
 fn skeleton_anim_uv(frame: u8) -> ([f32; 2], [f32; 2]) {
     golem_anim_uv(frame)
 }
 /// Ghost 用 UV（Bat と同スロットでプレースホルダー）
+/// TODO: 専用スプライトスロットを確保するまでの暫定措置。Bat の UV を流用中。
 fn ghost_anim_uv(frame: u8) -> ([f32; 2], [f32; 2]) {
     bat_anim_uv(frame)
 }
@@ -236,6 +242,8 @@ pub struct HudData {
     pub elapsed_seconds:  f32,
     pub level:            u32,
     pub exp:              u32,
+    /// 次レベルまでの残り EXP（= 次レベル必要総 EXP − 現在 EXP）。
+    /// EXP バーの計算では `exp + exp_to_next` が「次レベル必要総 EXP」になる。
     pub exp_to_next:      u32,
     pub enemy_count:      usize,
     pub bullet_count:     usize,
@@ -285,13 +293,22 @@ impl Default for HudData {
     }
 }
 
+/// ロードダイアログの種別
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum LoadDialogKind {
+    /// セーブデータが存在する場合の「ロードしますか？」確認ダイアログ
+    Confirm,
+    /// セーブデータが存在しない場合の「セーブデータなし」通知ダイアログ
+    NoSaveData,
+}
+
 /// 1.5.3: セーブ・ロード用 UI 状態
 #[derive(Default)]
 pub struct GameUiState {
     /// トースト表示 (メッセージ, 残り秒数)
     pub save_toast:     Option<(String, f32)>,
-    /// ロードダイアログ: None=閉, Some(true)=確認待ち, Some(false)=「セーブデータなし」
-    pub load_dialog:    Option<bool>,
+    /// ロードダイアログ: None=閉, Some(Confirm)=確認待ち, Some(NoSaveData)=「セーブデータなし」
+    pub load_dialog:    Option<LoadDialogKind>,
     pub has_save:       bool,
     /// ボタンクリックでセットするアクション（毎フレーム消費）
     pub pending_action: Option<String>,
