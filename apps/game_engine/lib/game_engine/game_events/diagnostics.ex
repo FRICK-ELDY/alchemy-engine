@@ -42,6 +42,7 @@ defmodule GameEngine.GameEvents.Diagnostics do
 
     render_type = GameEngine.SceneManager.render_type()
     hud_data = {player_hp, player_max_hp, score, elapsed_s}
+
     high_scores =
       if render_type == :game_over, do: GameEngine.SaveManager.load_high_scores(), else: nil
 
