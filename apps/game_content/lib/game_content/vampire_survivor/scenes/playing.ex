@@ -35,7 +35,9 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
        kill_count: 0,
        player_hp: 100.0,
        player_max_hp: 100.0,
-       elapsed_ms: 0,
+       # nil の場合は sync_elapsed/3 内で context.elapsed にフォールバックする
+       # （init 時点では start_ms が不明なため nil で初期化）
+       elapsed_ms: nil,
        # nil の場合は handle_no_boss 内で context.start_ms にフォールバックする
        # （init 時点では start_ms が不明なため nil で初期化）
        last_spawn_ms: nil
