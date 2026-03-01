@@ -5,6 +5,8 @@ defmodule GameEngine.NifBridge do
   自動的にビルドされ、`.dll` がロードされる。
   """
 
+  @behaviour GameEngine.NifBridge.Behaviour
+
   use Rustler,
     otp_app: :game_engine,
     crate: :game_nif,
