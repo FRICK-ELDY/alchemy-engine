@@ -128,6 +128,7 @@ fn fire_radial(
     w.weapon_slots[si].cooldown_timer = cd;
 }
 
+#[allow(clippy::too_many_arguments)]
 fn fire_whip(
     w: &mut GameWorldInner,
     si: usize,
@@ -254,6 +255,7 @@ fn fire_piercing(w: &mut GameWorldInner, si: usize, px: f32, py: f32, dmg: i32, 
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn fire_chain(
     w: &mut GameWorldInner,
     si: usize,
@@ -351,6 +353,7 @@ fn fire_chain(
     w.weapon_slots[si].cooldown_timer = cd;
 }
 
+#[allow(clippy::too_many_arguments)]
 fn fire_aura(
     w: &mut GameWorldInner,
     si: usize,

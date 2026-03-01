@@ -6,6 +6,12 @@ pub struct GameLoopControl {
     paused: std::sync::atomic::AtomicBool,
 }
 
+impl Default for GameLoopControl {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GameLoopControl {
     pub fn new() -> Self {
         Self {

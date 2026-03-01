@@ -108,15 +108,13 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
         }
     }
 
-    if eff.hurt_player {
-        if w.player.invincible_timer <= 0.0 && w.player.hp > 0.0 {
-            let dmg = eff.boss_damage * dt;
-            w.player.invincible_timer = INVINCIBLE_DURATION;
-            w.frame_events
-                .push(FrameEvent::PlayerDamaged { damage: dmg });
-            w.particles
-                .emit(eff.hurt_x, eff.hurt_y, 8, [1.0, 0.15, 0.15, 1.0]);
-        }
+    if eff.hurt_player && w.player.invincible_timer <= 0.0 && w.player.hp > 0.0 {
+        let dmg = eff.boss_damage * dt;
+        w.player.invincible_timer = INVINCIBLE_DURATION;
+        w.frame_events
+            .push(FrameEvent::PlayerDamaged { damage: dmg });
+        w.particles
+            .emit(eff.hurt_x, eff.hurt_y, 8, [1.0, 0.15, 0.15, 1.0]);
     }
 
     if !eff.bullet_hits.is_empty() {

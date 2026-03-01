@@ -41,6 +41,12 @@ pub struct ItemWorld {
     free_list: Vec<usize>,
 }
 
+impl Default for ItemWorld {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ItemWorld {
     pub fn new() -> Self {
         Self {
@@ -56,6 +62,10 @@ impl ItemWorld {
 
     pub fn len(&self) -> usize {
         self.positions_x.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.positions_x.is_empty()
     }
 
     /// アイテムをスポーンする。空きスロットがあれば O(1) で再利用する。

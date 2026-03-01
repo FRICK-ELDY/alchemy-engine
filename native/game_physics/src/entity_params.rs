@@ -122,21 +122,11 @@ pub struct BossParams {
 /// NIF 経由で外部注入可能なエンティティパラメータテーブル。
 /// `GameWorldInner` に保持し、`set_entity_params` NIF で上書きする。
 /// デフォルトは空テーブル。`set_entity_params` が呼ばれるまで動作しない。
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct EntityParamTables {
     pub enemies: Vec<EnemyParams>,
     pub weapons: Vec<WeaponParams>,
     pub bosses: Vec<BossParams>,
-}
-
-impl Default for EntityParamTables {
-    fn default() -> Self {
-        Self {
-            enemies: vec![],
-            weapons: vec![],
-            bosses: vec![],
-        }
-    }
 }
 
 impl EntityParamTables {
