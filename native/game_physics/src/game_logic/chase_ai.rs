@@ -1,11 +1,11 @@
 //! Path: native/game_physics/src/game_logic/chase_ai.rs
-//! Summary: 謨ｵ Chase AI 縺ｨ譛霑第磁謗｢邏｢・・ind_nearest_*・・
+//! Summary: Chase AI (find_nearest_* / update_chase_ai / update_chase_ai_simd)
 
 use crate::world::EnemyWorld;
 use crate::physics::spatial_hash::CollisionWorld;
 use rayon::prelude::*;
 
-/// 譛霑第磁縺ｮ逕溷ｭ俶雰繧､繝ｳ繝・ャ繧ｯ繧ｹ繧定ｿ斐☆
+/// ????????????????
 pub fn find_nearest_enemy(enemies: &EnemyWorld, px: f32, py: f32) -> Option<usize> {
     let mut min_dist = f32::MAX;
     let mut nearest  = None;
@@ -24,8 +24,7 @@ pub fn find_nearest_enemy(enemies: &EnemyWorld, px: f32, py: f32) -> Option<usiz
     nearest
 }
 
-/// 謖・ｮ壹う繝ｳ繝・ャ繧ｯ繧ｹ繧帝勁螟悶＠縺滓怙霑第磁縺ｮ逕溷ｭ俶雰繧､繝ｳ繝・ャ繧ｯ繧ｹ繧定ｿ斐☆・・ightning 繝√ぉ繝ｼ繝ｳ逕ｨ繝ｻ譛邨ゅヵ繧ｩ繝ｼ繝ｫ繝舌ャ繧ｯ・・
-/// exclude: &[bool] 窶・繧､繝ｳ繝・ャ繧ｯ繧ｹ i 縺・true 縺ｪ繧蛾勁螟厄ｼ・(1) 讀懃ｴ｢・・
+/// ??????????????????????????????Lightning ????????????????
 fn find_nearest_enemy_excluding_set(
     enemies: &EnemyWorld,
     px: f32,
@@ -49,7 +48,7 @@ fn find_nearest_enemy_excluding_set(
     nearest
 }
 
-/// 莠御ｹ苓ｷ晞屬・・qrt 繧帝∩縺代※鬮倬溷喧・・
+/// ?????sqrt ????????
 #[inline]
 fn dist_sq(x1: f32, y1: f32, x2: f32, y2: f32) -> f32 {
     let dx = x1 - x2;
@@ -57,9 +56,9 @@ fn dist_sq(x1: f32, y1: f32, x2: f32, y2: f32) -> f32 {
     dx * dx + dy * dy
 }
 
-/// Spatial Hash 繧剃ｽｿ縺｣縺滄ｫ倬滓怙霑第磁謗｢邏｢
-/// 蛟呵｣懊′隕九▽縺九ｉ縺ｪ縺・ｴ蜷医・蜊雁ｾ・ｒ 2 蛟阪★縺､譛螟ｧ 4 蝗樊僑螟ｧ縺励※蜀崎ｩｦ陦後＠縲・
-/// 縺昴ｌ縺ｧ繧りｦ九▽縺九ｉ縺ｪ縺・ｴ蜷医・縺ｿ O(n) 蜈ｨ謗｢邏｢縺ｫ繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ縺吶ｋ・育ｨ縺ｪ繧ｱ繝ｼ繧ｹ・・
+/// Spatial Hash ???????????
+/// ??????????????? 2 ????? 4 ???????????
+/// ?????????????? O(n) ????????????????????
 pub fn find_nearest_enemy_spatial(
     collision: &CollisionWorld,
     enemies: &EnemyWorld,
@@ -71,9 +70,7 @@ pub fn find_nearest_enemy_spatial(
     find_nearest_enemy_spatial_excluding(collision, enemies, px, py, search_radius, &[], buf)
 }
 
-/// Spatial Hash 繧剃ｽｿ縺｣縺滄ｫ倬滓怙霑第磁謗｢邏｢・磯勁螟悶そ繝・ヨ莉倥″繝ｻLightning 繝√ぉ繝ｼ繝ｳ逕ｨ・・
-/// exclude: &[bool] 窶・繧､繝ｳ繝・ャ繧ｯ繧ｹ i 縺・true 縺ｪ繧蛾勁螟厄ｼ・(1) 讀懃ｴ｢・・
-/// 蛟呵｣懊′隕九▽縺九ｉ縺ｪ縺・ｴ蜷医・蜊雁ｾ・ｒ 2 蛟阪★縺､譛螟ｧ 4 蝗樊僑螟ｧ縺励※蜀崎ｩｦ陦後☆繧・
+/// Spatial Hash ????????????????????Lightning ??????
 pub fn find_nearest_enemy_spatial_excluding(
     collision: &CollisionWorld,
     enemies: &EnemyWorld,
@@ -102,11 +99,11 @@ pub fn find_nearest_enemy_spatial_excluding(
         }
         radius *= 2.0;
     }
-    // 蜈ｨ謨ｵ縺・Spatial Hash 縺ｮ遽・峇螟悶↓謨｣繧峨・縺｣縺ｦ縺・ｋ讌ｵ遞縺ｪ繧ｱ繝ｼ繧ｹ
+    // ??? Spatial Hash ??????????????????
     find_nearest_enemy_excluding_set(enemies, px, py, exclude)
 }
 
-/// 1 菴灘・縺ｮ Chase AI・医せ繧ｫ繝ｩ繝ｼ迚医・SIMD 繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ逕ｨ・・
+/// 1 ??? Chase AI???????SIMD ?????????
 #[inline]
 fn scalar_chase_one(
     enemies: &mut EnemyWorld,
@@ -125,7 +122,7 @@ fn scalar_chase_one(
     enemies.positions_y[i] += enemies.velocities_y[i] * dt;
 }
 
-/// SIMD・・SE2・臥沿 Chase AI 窶・x86_64 蟆ら畑
+/// SIMD (SSE2) Chase AI -- x86_64 only
 #[cfg(target_arch = "x86_64")]
 pub fn update_chase_ai_simd(
     enemies: &mut EnemyWorld,
@@ -161,9 +158,9 @@ pub fn update_chase_ai_simd(
             let new_ex = _mm_add_ps(ex, _mm_mul_ps(vx, dt4));
             let new_ey = _mm_add_ps(ey, _mm_mul_ps(vy, dt4));
 
-            // alive 縺ｯ Vec<u8>・・xFF=逕溷ｭ・ 0x00=豁ｻ莠｡・峨・
-            // 4 繝舌う繝医ｒ u32 縺ｨ縺励※荳諡ｬ繝ｭ繝ｼ繝峨＠縲∝推繝舌う繝医Ξ繝ｼ繝ｳ繧・0xFF 縺ｨ豈碑ｼ・＠縺ｦ
-            // 32 繝薙ャ繝亥・繝薙ャ繝育ｫ九■繝槭せ繧ｯ繧堤函謌舌☆繧具ｼ医せ繧ｫ繝ｩ繝ｼ蛻・ｲ舌↑縺暦ｼ峨・
+            // alive is Vec<u8> (0xFF=alive, 0x00=dead).
+            // Load 4 bytes as u32, compare each byte lane to 0xFF,
+            // then expand to 32-bit mask (no scalar branch).
             let alive4_u32 = u32::from_ne_bytes([
                 enemies.alive[base],
                 enemies.alive[base + 1],
@@ -172,10 +169,10 @@ pub fn update_chase_ai_simd(
             ]);
             let alive_bytes = _mm_cvtsi32_si128(alive4_u32 as i32);
             let ff4 = _mm_set1_epi8(-1i8);
-            // 蜷・ヰ繧､繝医Ξ繝ｼ繝ｳ繧・0xFF 縺ｨ豈碑ｼ・竊・0xFF or 0x00 縺ｮ繝舌う繝医・繧ｹ繧ｯ
+            // Compare each byte lane to 0xFF -> byte mask (0xFF or 0x00)
             let byte_mask = _mm_cmpeq_epi8(alive_bytes, ff4);
-            // 繝舌う繝医・繧ｹ繧ｯ繧・32 繝薙ャ繝亥腰菴阪↓螻暮幕: 蜷・u8 繝槭せ繧ｯ繧・i32 蜈ｨ繝薙ャ繝医↓蠎・￡繧・
-            // _mm_unpacklo_epi8 ﾃ・2 縺ｧ byte 竊・word 竊・dword 縺ｫ隨ｦ蜿ｷ諡｡蠑ｵ
+            // Expand byte mask to 32-bit lanes: byte -> word -> dword via sign extension
+            // _mm_unpacklo_epi8 x2: byte -> word -> dword
             let word_mask  = _mm_unpacklo_epi8(byte_mask, byte_mask);
             let dword_mask = _mm_unpacklo_epi16(word_mask, word_mask);
             let alive_mask = _mm_castsi128_ps(dword_mask);
@@ -248,15 +245,14 @@ mod tests {
 
         update_chase_ai(&mut enemies, player_x, player_y, dt);
 
-        // 謨ｵ縺ｯ繝励Ξ繧､繝､繝ｼ譁ｹ蜷托ｼ・x・峨↓遘ｻ蜍輔＠縺ｦ縺・ｋ縺ｹ縺・
         assert!(
             enemies.positions_x[0] > 0.0,
-            "謨ｵ縺ｯ +x 譁ｹ蜷代↓遘ｻ蜍輔☆繧九∋縺・ x={}",
+            "enemy should move toward +x, got x={}",
             enemies.positions_x[0]
         );
         assert!(
             enemies.velocities_x[0] > 0.0,
-            "騾溷ｺｦ x 縺ｯ豁｣縺ｧ縺ゅｋ縺ｹ縺・ vx={}",
+            "velocity x should be positive, got vx={}",
             enemies.velocities_x[0]
         );
     }
@@ -278,7 +274,7 @@ mod tests {
 
         assert!(
             (speed - 100.0).abs() < 0.1,
-            "騾溷ｺｦ縺ｮ螟ｧ縺阪＆縺ｯ speed 繝代Λ繝｡繝ｼ繧ｿ (100.0) 縺ｫ遲峨＠縺・∋縺・ {speed:.3}"
+            "speed magnitude should equal speed param (100.0), got {speed:.3}"
         );
     }
 
@@ -290,7 +286,7 @@ mod tests {
         enemies.spawn(&[(50.0, 0.0)], 0, &ep);
 
         let nearest = find_nearest_enemy(&enemies, 0.0, 0.0);
-        assert_eq!(nearest, Some(0), "譛霑第磁縺ｮ謨ｵ繧､繝ｳ繝・ャ繧ｯ繧ｹ縺ｯ 0 縺ｧ縺ゅｋ縺ｹ縺・);
+        assert_eq!(nearest, Some(0), "nearest enemy index should be 0");
     }
 
     #[test]
@@ -302,7 +298,7 @@ mod tests {
         enemies.kill(0);
 
         let nearest = find_nearest_enemy(&enemies, 0.0, 0.0);
-        assert_eq!(nearest, Some(1), "豁ｻ莠｡縺励◆謨ｵ縺ｯ辟｡隕悶＆繧後ｋ縺ｹ縺・);
+        assert_eq!(nearest, Some(1), "dead enemy should be ignored");
     }
 
     #[test]
@@ -312,14 +308,14 @@ mod tests {
     }
 }
 
-/// rayon 荳ｦ蛻怜喧繧帝←逕ｨ縺吶ｋ譛蟆乗雰謨ｰ縲・
-/// 縺薙ｌ譛ｪ貅縺ｧ縺ｯ繧ｹ繝ｬ繝・ラ繝励・繝ｫ縺ｮ繧ｪ繝ｼ繝舌・繝倥ャ繝峨′繧ｳ繧｢繝ｭ繧ｸ繝・け繧剃ｸ雁屓繧九◆繧・
-/// 繧ｷ繝ｳ繧ｰ繝ｫ繧ｹ繝ｬ繝・ラ迚医↓繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ縺吶ｋ縲・
-/// 繝吶Φ繝√・繝ｼ繧ｯ・・cargo bench --bench chase_ai_bench`・峨〒螳滓ｸｬ縺励※隱ｿ謨ｴ縺吶ｋ縺薙→縲・
+/// Minimum enemy count to apply rayon parallelism.
+/// Below this threshold, thread-pool overhead outweighs core logic.
+/// Falls back to single-threaded scalar version.
+/// Tune via `cargo bench --bench chase_ai_bench`.
 const RAYON_THRESHOLD: usize = 500;
 
-/// Chase AI: 蜈ｨ謨ｵ繧偵・繝ｬ繧､繝､繝ｼ縺ｫ蜷代￠縺ｦ遘ｻ蜍・
-/// 謨ｵ謨ｰ縺・RAYON_THRESHOLD 譛ｪ貅縺ｮ蝣ｴ蜷医・繧ｷ繝ｳ繧ｰ繝ｫ繧ｹ繝ｬ繝・ラ迚医〒蜃ｦ逅・☆繧九・
+/// Chase AI: move all enemies toward the player.
+/// Uses single-threaded path when enemy count < RAYON_THRESHOLD.
 pub fn update_chase_ai(enemies: &mut EnemyWorld, player_x: f32, player_y: f32, dt: f32) {
     let len = enemies.len();
 
@@ -332,7 +328,7 @@ pub fn update_chase_ai(enemies: &mut EnemyWorld, player_x: f32, player_y: f32, d
         return;
     }
 
-    // rayon 荳ｦ蛻礼沿・・AYON_THRESHOLD 莉･荳翫・謨ｵ謨ｰ・・
+    // rayon parallel path (>= RAYON_THRESHOLD enemies)
     let positions_x  = &mut enemies.positions_x[..len];
     let positions_y  = &mut enemies.positions_y[..len];
     let velocities_x = &mut enemies.velocities_x[..len];

@@ -1,5 +1,5 @@
 //! Path: native/game_physics/src/world/game_world.rs
-//! Summary: ゲームワールド！EameWorldInner, GameWorld�E�E
+//! Summary: ゲームワールド（GameWorldInner, GameWorld）
 
 use super::{BossState, BulletWorld, EnemyWorld, ParticleWorld, PlayerState};
 use crate::entity_params::EntityParamTables;
@@ -11,69 +11,69 @@ use std::sync::RwLock;
 
 use super::FrameEvent;
 
-/// ゲームワールド�E部状慁E
+/// ???????????
 ///
-/// ## Elixir as SSoT 移行後�E構造
-/// 以下�Eフィールド�E Elixir 側が権威を持ち、毎フレーム NIF で注入されめE
-/// - `player.hp`        ↁEset_player_hp NIF�E�フェーズ2�E�E
-/// - `player.input_dx/dy` ↁEset_player_input NIF�E�フェーズ5�E�E
-/// - `elapsed_seconds`  ↁEset_elapsed_seconds NIF�E�フェーズ3�E�E
-/// - `boss.hp`          ↁEset_boss_hp NIF�E�フェーズ4�E�E
-/// - `score`, `kill_count` ↁEset_hud_state NIF�E�フェーズ1�E�E
-/// - `params`           ↁEset_entity_params NIF�E�Ehase 3-A�E�E
-/// - `map_width/height` ↁEset_world_size NIF�E�Ehase 3-A�E�E
+/// ## Elixir as SSoT ??????
+/// ????????? Elixir ????????????? NIF ??????:
+/// - `player.hp`        ? set_player_hp NIF?????2?
+/// - `player.input_dx/dy` ? set_player_input NIF?????5?
+/// - `elapsed_seconds`  ? set_elapsed_seconds NIF?????3?
+/// - `boss.hp`          ? set_boss_hp NIF?????4?
+/// - `score`, `kill_count` ? set_hud_state NIF?????1?
+/// - `params`           ? set_entity_params NIF?Phase 3-A?
+/// - `map_width/height` ? set_world_size NIF?Phase 3-A?
 /// - `hud_level`, `hud_exp`, `hud_exp_to_next`, `hud_level_up_pending`, `hud_weapon_choices`
-///                      ↁEset_hud_level_state NIF�E�Ehase 3-B: 描画専用�E�E
-/// - `weapon_slots`     ↁEset_weapon_slots NIF�E�E-2: 毎フレーム Elixir から注入�E�E
+///                      ? set_hud_level_state NIF?Phase 3-B: ?????
+/// - `weapon_slots`     ? set_weapon_slots NIF?I-2: ????? Elixir ?????
 pub struct GameWorldInner {
     pub frame_id:           u32,
     pub player:             PlayerState,
     pub enemies:            EnemyWorld,
     pub bullets:            BulletWorld,
     pub particles:          ParticleWorld,
-    /// 1.2.4: アイチE��
+    /// 1.2.4: ????
     pub items:              ItemWorld,
-    /// 磁石エフェクト残り時間�E�秒！E
+    /// ??????????????
     pub magnet_timer:       f32,
     pub rng:                SimpleRng,
     pub collision:          CollisionWorld,
-    /// 1.5.2: 障害物クエリ用バッファ�E�毎フレーム再利用�E�E
+    /// 1.5.2: ?????????????????????
     pub obstacle_query_buf: Vec<usize>,
-    /// 動的エンチE��チE���E�敵・弾丸�E�クエリ用バッファ�E�毎フレーム再利用、アロケーション回避�E�E
+    /// ??????????????????????????????????????????
     pub spatial_query_buf:  Vec<usize>,
-    /// 直近フレームの物琁E��チE��プ�E琁E��間（ミリ秒！E
+    /// ??????????????????????
     pub last_frame_time_ms: f64,
-    /// ゲーム開始から�E経過時間�E�秒！E Elixir から毎フレーム注入�E�スポ�Eン計算用�E�E
+    /// ???????????????- Elixir ??????????????????
     pub elapsed_seconds:    f32,
-    /// プレイヤーの最大 HP�E�EP バ�E計算用�E�E
+    /// ???????? HP?HP ??????
     pub player_max_hp:      f32,
-    /// I-2: 裁E��中の武器スロチE���E�クールダウン管琁E�Eみ�E�E Elixir から毎フレーム set_weapon_slots NIF で注入
+    /// I-2: ??????????????????????- Elixir ??????? set_weapon_slots NIF ???
     pub weapon_slots:       Vec<WeaponSlot>,
-    /// I-2: ボスエネミー物琁E��態！Eoss.hp は Elixir から毎フレーム注入�E�E
-    /// ボス種別の概念は Elixir 側 Rule state で管琁E��る、E
+    /// I-2: ???????????boss.hp ? Elixir ??????????
+    /// ???????? Elixir ? Rule state ??????
     pub boss:               Option<BossState>,
-    /// 1.3.1: こ�Eフレームで発生したイベント（毎フレーム drain される！E
+    /// 1.3.1: ????????????????????? drain ????
     pub frame_events:       Vec<FrameEvent>,
-    /// 1.7.5: スコアポップアチE�E [(world_x, world_y, value, lifetime)]�E�描画用�E�E
+    /// 1.7.5: ????????? [(world_x, world_y, value, lifetime)]?????
     pub score_popups:       Vec<(f32, f32, u32, f32)>,
-    /// スコア - Elixir から毎フレーム注入�E�EUD 表示用�E�E
+    /// ??? - Elixir ??????????HUD ????
     pub score:              u32,
-    /// キル数 - Elixir から毎フレーム注入�E�EUD 表示用�E�E
+    /// ??? - Elixir ??????????HUD ????
     pub kill_count:         u32,
-    /// 1.10.7: 補間用 - 前フレームのプレイヤー位置
+    /// 1.10.7: ??? - ?????????????
     pub prev_player_x:      f32,
     pub prev_player_y:      f32,
-    /// 1.10.7: 補間用 - 前フレームの更新タイムスタンプ！Es�E�E
+    /// 1.10.7: ??? - ????????????????ms?
     pub prev_tick_ms:       u64,
-    /// 1.10.7: 補間用 - 現在フレームの更新タイムスタンプ！Es�E�E
+    /// 1.10.7: ??? - ?????????????????ms?
     pub curr_tick_ms:       u64,
-    /// Phase 3-A: エンチE��チE��パラメータチE�Eブル�E�Eet_entity_params NIF で注入�E�E
+    /// Phase 3-A: ????????????????set_entity_params NIF ????
     pub params:             EntityParamTables,
-    /// Phase 3-A: マップサイズ�E�Eet_world_size NIF で注入�E�E
+    /// Phase 3-A: ???????set_world_size NIF ????
     pub map_width:          f32,
     pub map_height:         f32,
-    /// Phase 3-B: HUD 描画専用フィールド！Elixir SSoT から毎フレーム注入�E�E
-    /// ゲームロジチE��には使用しなぁE��レンダリングパイプラインのみが参照する、E
+    /// Phase 3-B: HUD ??????????Elixir SSoT ??????????
+    /// ???????????????????????????????????
     pub hud_level:              u32,
     pub hud_exp:                u32,
     pub hud_exp_to_next:        u32,
@@ -82,7 +82,7 @@ pub struct GameWorldInner {
 }
 
 impl GameWorldInner {
-    /// 衝突判定用の Spatial Hash を�E構築する！Elone 不要E��E
+    /// ?????? Spatial Hash ???????clone ???
     pub fn rebuild_collision(&mut self) {
         self.collision.dynamic.clear();
         self.enemies.alive
@@ -99,7 +99,7 @@ impl GameWorldInner {
     }
 }
 
-/// ゲームワールド！EwLock で保護された�E部状態！E
+/// ????????RwLock ???????????
 pub struct GameWorld(pub RwLock<GameWorldInner>);
 
 #[cfg(feature = "nif")]

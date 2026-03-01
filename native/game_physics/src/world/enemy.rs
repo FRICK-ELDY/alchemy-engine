@@ -1,10 +1,10 @@
 //! Path: native/game_physics/src/world/enemy.rs
-//! Summary: 敵 SoA�E�EnemyWorld�E�と EnemySeparation の実裁E
+//! Summary: 敵 SoA（EnemyWorld）と EnemySeparation の実装
 
 use crate::entity_params::EnemyParams;
 use crate::physics::separation::EnemySeparation;
 
-/// 敵 SoA�E�Etructure of Arrays�E�E
+/// ? SoA?Structure of Arrays?
 #[derive(Clone)]
 pub struct EnemyWorld {
     pub positions_x:  Vec<f32>,
@@ -13,16 +13,16 @@ pub struct EnemyWorld {
     pub velocities_y: Vec<f32>,
     pub speeds:       Vec<f32>,
     pub hp:           Vec<f32>,
-    /// 生存フラグ: 0xFF = 生孁E 0x00 = 死亡�E�EIMD マスクとして直接ロード可能�E�E
+    /// ?????: 0xFF = ???0x00 = ???SIMD ??????????????
     pub alive:        Vec<u8>,
     pub kind_ids:     Vec<u8>,
     pub count:        usize,
-    /// 刁E��パス用の作業バッファ�E�毎フレーム再利用してアロケーションを回避�E�E
+    /// ??????????????????????????????????
     pub sep_x:        Vec<f32>,
     pub sep_y:        Vec<f32>,
-    /// 近隣クエリ結果の再利用バッファ�E�毎フレームのヒ�Eプアロケーションを回避�E�E
+    /// ????????????????????????????????????
     pub neighbor_buf: Vec<usize>,
-    /// 空きスロチE��のインチE��クススタチE��  EO(1) でスロチE��を取得�E返却
+    /// ????????????????? ? O(1) ???????????
     free_list:        Vec<usize>,
 }
 
@@ -57,9 +57,9 @@ impl EnemyWorld {
         }
     }
 
-    /// 持E��EID の敵めE`positions` の座標にスポ�Eン�E�E(1) でスロチE��取得！E
-    /// `ep` は呼び出し�Eで `params.get_enemy(kind_id).clone()` して渡す、E
-    /// �E�可変借用と不変借用の競合を避けるため、テーブルではなく値を受け取る！E
+    /// ?? ID ??? `positions` ?????????O(1) ????????
+    /// `ep` ??????? `params.get_enemy(kind_id).clone()` ?????
+    /// ???????????????????????????????????
     pub fn spawn(&mut self, positions: &[(f32, f32)], kind_id: u8, ep: &EnemyParams) {
         let speed  = ep.speed;
         let max_hp = ep.max_hp;
@@ -127,8 +127,8 @@ mod tests {
 
         world.kill(0);
 
-        assert_eq!(world.count, 1, "kill 後�E count は 1 であるべぁE);
-        assert_eq!(world.alive[0], 0x00, "kill 後�E alive=0x00 であるべぁE);
+        assert_eq!(world.count, 1, "kill ?? count ? 1 ?????");
+        assert_eq!(world.alive[0], 0x00, "kill ?? alive=0x00 ?????");
     }
 
     #[test]
@@ -141,11 +141,11 @@ mod tests {
         let len_before = world.len();
         world.spawn(&[(99.0, 99.0)], 0, &ep);
 
-        // free_list のスロチE��を�E利用するため配�E長は変わらなぁE
+        // free_list ???????????????????????
         assert_eq!(
             world.len(),
             len_before,
-            "free_list 再利用時�E配�Eが伸長しなぁE��ぁE
+            "free_list ???????????????"
         );
         assert_eq!(world.count, 1);
         assert_ne!(world.alive[0], 0x00);
@@ -158,7 +158,7 @@ mod tests {
         let ep = default_params();
         world.spawn(&[(0.0, 0.0)], 0, &ep);
         world.kill(0);
-        world.kill(0); // 2 囁Ekill してめEcount が負にならなぁE
+        world.kill(0); // 2 ? kill ??? count ???????
         assert_eq!(world.count, 0);
     }
 

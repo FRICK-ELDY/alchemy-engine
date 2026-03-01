@@ -1,9 +1,9 @@
 //! Path: native/game_physics/src/world/particle.rs
-//! Summary: ãƒ‘ãEãƒE‚£ã‚¯ãƒ« SoAEEarticleWorldEE
+//! Summary: ãƒ‘ãƒ¼ãƒ†ã‚£ã‚¯ãƒ« SoAï¼ˆParticleWorldï¼‰
 
 use crate::physics::rng::SimpleRng;
 
-/// ãƒ‘ãEãƒE‚£ã‚¯ãƒ« SoAEEtructure of ArraysEE
+/// ?????? SoA?Structure of Arrays?
 pub struct ParticleWorld {
     pub positions_x:  Vec<f32>,
     pub positions_y:  Vec<f32>,
@@ -16,7 +16,7 @@ pub struct ParticleWorld {
     pub alive:        Vec<bool>,
     pub count:        usize,
     rng:              SimpleRng,
-    /// ç©ºãã‚¹ãƒ­ãƒEƒˆã®ã‚¤ãƒ³ãƒEƒƒã‚¯ã‚¹ã‚¹ã‚¿ãƒE‚¯ â€EO(1) ã§ã‚¹ãƒ­ãƒEƒˆã‚’å–å¾—ãEè¿”å´
+    /// ????????????????? ? O(1) ???????????
     free_list:        Vec<usize>,
 }
 

@@ -1,8 +1,8 @@
 //! Path: native/game_physics/benches/chase_ai_bench.rs
-//! Summary: Chase AI の rayon 並列版と SIMD 版�Eベンチ�Eーク�E�敵数 100、E0000 体！E
+//! Summary: Chase AI の rayon 並列版と SIMD 版のベンチマーク（敵数 100～10000 体）
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use game_simulation::{
+use game_physics::{
     entity_params::EnemyParams,
     game_logic::{update_chase_ai, update_chase_ai_simd},
     world::EnemyWorld,

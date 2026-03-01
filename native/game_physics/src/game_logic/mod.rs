@@ -1,5 +1,5 @@
 //! Path: native/game_physics/src/game_logic/mod.rs
-//! Summary: 物琁E��チE��プ�EChase AI・シスチE��群
+//! Summary: 物理ステップ・ Chase AI・システム群
 
 mod chase_ai;
 pub mod systems;

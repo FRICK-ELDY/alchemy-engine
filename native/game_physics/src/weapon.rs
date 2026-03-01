@@ -1,15 +1,15 @@
 //! Path: native/game_physics/src/weapon.rs
-//! Summary: 武器スロチE��管琁E��EeaponSlot�E�E
+//! Summary: 武器スロット管理（WeaponSlot）
 //!
-//! Phase 3-A: WeaponKind enum を除去、E
-//! パラメータは EntityParamTables 経由で参�Eする、E
+//! Phase 3-A: WeaponKind enum を除去。
+//! パラメータは EntityParamTables 経由で参照する。
 
 use crate::entity_params::{FirePattern, WeaponParams};
 
 pub const MAX_WEAPON_LEVEL: u32 = 8;
 pub const MAX_WEAPON_SLOTS: usize = 6;
 
-// ─── WeaponSlot ───────────────────────────────────────────────
+// --- WeaponSlot -----------------------------------------------------------
 
 pub struct WeaponSlot {
     pub kind_id:        u8,
@@ -37,10 +37,10 @@ impl WeaponSlot {
     }
 }
 
-// ─── UI 用アチE�Eグレード説明（レベルアチE�Eカード表示�E�───────────────
+// --- UI ??????????????????????-----------------------
 
-/// 武器の `as_u8` ID と現在レベルから、アチE�Eグレード説明行を返す、EUD のレベルアチE�Eカード用、E
-/// `tables` は `GameWorldInner::params` を渡す、E
+/// ??? `as_u8` ID ???????????????????????HUD ????????????
+/// `tables` ? `GameWorldInner::params` ????
 pub fn weapon_upgrade_desc(
     weapon_id: u8,
     current_lv: u32,
@@ -102,7 +102,7 @@ pub fn weapon_upgrade_desc(
                 wp.whip_range(current_lv.max(1)) as u32,
                 wp.whip_range(next) as u32,
             ),
-            "Fan sweep (108°)".to_string(),
+            "Fan sweep (108deg)".to_string(),
         ],
         FirePattern::Piercing => vec![
             format!("DMG: {} -> {}", dmg(current_lv), dmg(next)),
