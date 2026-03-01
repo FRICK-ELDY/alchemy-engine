@@ -1,7 +1,7 @@
-//! Path: native/game_simulation/src/world/game_loop_control.rs
-//! Summary: GameLoop 制御用（pause/resume）リソース
+//! Path: native/game_physics/src/world/game_loop_control.rs
+//! Summary: GameLoop 制御用�E�Eause/resume�E�リソース
 
-/// 1.5.1: GameLoop 制御用（pause/resume）
+/// 1.5.1: GameLoop 制御用�E�Eause/resume�E�E
 pub struct GameLoopControl {
     paused: std::sync::atomic::AtomicBool,
 }

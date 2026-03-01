@@ -63,15 +63,60 @@ Rust 側には `chase_ai.rs`・`spatial_hash.rs` 等に単体テストが存在�
 
 ---
 
+### I-G: 補間（Dead Reckoning）を `game_physics` から完全分離
+
+**優先度**: 🟢 中
+
+**問題**
+
+Elixir は 20-30Hz、描画スレッドは 60-144Hz（ディスプレイ依存）で動作する。
+この Hz 差を埋めるフレーム間補間（Dead Reckoning / lerp）は「物理演算」ではなく「描画パイプラインの責務」である。
+
+しかし現状、補間に必要なデータフィールドが `game_physics` の `GameWorldInner` に混入している：
+
+```rust
+// native/game_physics/src/world/game_world.rs
+pub prev_player_x: f32,   // ← 補間用（物理演算には不要）
+pub prev_player_y: f32,   // ← 補間用（物理演算には不要）
+pub prev_tick_ms:  u64,   // ← 補間用（物理演算には不要）
+pub curr_tick_ms:  u64,   // ← 補間用（物理演算には不要）
+```
+
+補間ロジック自体（`InterpolationData`・`calc_interpolation_alpha`・`interpolate_player_pos`）は
+すでに `game_nif/src/render_snapshot.rs` に正しく配置されているが、
+データの保持場所が `game_physics` に残っている。
+
+**改善方針**
+
+1. `GameWorldInner` から補間用フィールド 4 つを削除する
+2. `game_nif/src/render_snapshot.rs` の `InterpolationData` に `prev/curr` の値を直接保持する
+3. `push_tick_nif.rs` で物理ステップ後に `InterpolationData` を更新する（`GameWorldInner` を経由しない）
+4. `render_bridge.rs` はそのまま `InterpolationData` を参照する
+
+**影響ファイル**
+
+- `native/game_physics/src/world/game_world.rs` — フィールド削除
+- `native/game_nif/src/render_snapshot.rs` — `InterpolationData` に状態を持たせる
+- `native/game_nif/src/nif/push_tick_nif.rs` — 補間データ更新ロジックを移動
+- `native/game_nif/src/nif/world_nif.rs` — `create_world` から補間フィールド初期化を削除
+
+---
+
 ## 改善の優先順位と推奨実施順序
 
 ```mermaid
 graph TD
+    IG["I-G: 補間を game_physics から分離"]
     IE["I-E: game_network 実装\n（Elixir 真価の証明）"]
     IF["I-F: Elixir テスト整備"]
 
+    IG --> IE
     IE --> IF
 ```
+
+### フェーズ1（短期）
+
+1. **I-G**: 補間フィールドを `GameWorldInner` から `game_nif` 側へ移動
 
 ### フェーズ2（中期）
 

@@ -1,34 +1,34 @@
-//! Path: native/game_simulation/src/entity_params.rs
-//! Summary: 敵・武器・ボスの ID ベースパラメータテーブル
+//! Path: native/game_physics/src/entity_params.rs
+//! Summary: 敵・武器・ボスの ID ベ�EスパラメータチE�Eブル
 //!
-//! Phase 3-A: `EntityParamTables` を `GameWorldInner` に持たせることで
-//! NIF 経由で外部から注入可能にする。
-//! `EntityParamTables::default()` は空テーブルを返す。
-//! `set_entity_params` NIF が呼ばれるまで動作しない設計。
+//! Phase 3-A: `EntityParamTables` めE`GameWorldInner` に持たせることで
+//! NIF 経由で外部から注入可能にする、E
+//! `EntityParamTables::default()` は空チE�Eブルを返す、E
+//! `set_entity_params` NIF が呼ばれるまで動作しなぁE��計、E
 
 // ─── フォールバック定数 ──────────────────────────────────────────
 
-/// params テーブルに該当 ID が存在しない場合のデフォルト敵半径
+/// params チE�Eブルに該彁EID が存在しなぁE��合�EチE��ォルト敵半征E
 pub const DEFAULT_ENEMY_RADIUS: f32 = 16.0;
 
-/// params テーブルに該当 ID が存在しない場合のデフォルトパーティクル色
+/// params チE�Eブルに該彁EID が存在しなぁE��合�EチE��ォルトパーチE��クル色
 pub const DEFAULT_PARTICLE_COLOR: [f32; 4] = [1.0, 0.5, 0.1, 1.0];
 
-/// params テーブルに該当 ID が存在しない場合のデフォルト whip 射程
+/// params チE�Eブルに該彁EID が存在しなぁE��合�EチE��ォルチEwhip 封E��E
 pub const DEFAULT_WHIP_RANGE: f32 = 200.0;
 
-/// params テーブルに該当 ID が存在しない場合のデフォルト aura 半径
+/// params チE�Eブルに該彁EID が存在しなぁE��合�EチE��ォルチEaura 半征E
 pub const DEFAULT_AURA_RADIUS: f32 = 150.0;
 
-/// params テーブルに該当 ID が存在しない場合のデフォルト chain 数
+/// params チE�Eブルに該彁EID が存在しなぁE��合�EチE��ォルチEchain 数
 pub const DEFAULT_CHAIN_COUNT: usize = 1;
 
-/// Chain 武器がボスに連鎖する最大距離
+/// Chain 武器が�Eスに連鎖する最大距離
 pub const CHAIN_BOSS_RANGE: f32 = 600.0;
 
 // ─── EnemyParams ────────────────────────────────────────────────
 
-/// 敵のパラメータ（kind_id: u8 で参照）
+/// 敵のパラメータ�E�Eind_id: u8 で参�E�E�E
 #[derive(Clone, Debug)]
 pub struct EnemyParams {
     pub max_hp:           f32,
@@ -36,46 +36,46 @@ pub struct EnemyParams {
     pub radius:           f32,
     pub damage_per_sec:   f32,
     pub render_kind:      u8,
-    /// パーティクル色 [r, g, b, a]
+    /// パ�EチE��クル色 [r, g, b, a]
     pub particle_color:   [f32; 4],
-    /// 障害物をすり抜けるか（Ghost など）
+    /// 障害物をすり抜けるか！Ehost など�E�E
     pub passes_obstacles: bool,
 }
 
 // ─── WeaponParams ───────────────────────────────────────────────
 
-/// 武器の発射パターン
+/// 武器の発封E��ターン
 #[derive(Clone, Debug, PartialEq)]
 pub enum FirePattern {
-    /// 最近接敵に向けて扇状に発射（magic_wand 等）
+    /// 最近接敵に向けて扁E��に発封E��Eagic_wand 等！E
     Aimed,
-    /// 固定方向に発射（axe: 上方向）
+    /// 固定方向に発封E��Exe: 上方向！E
     FixedUp,
-    /// 全方向に発射（cross: 4方向 or 8方向）
+    /// 全方向に発封E��Eross: 4方吁Eor 8方向！E
     Radial,
-    /// 扇形の直接判定（弾丸なし、whip）
+    /// 扁E��の直接判定（弾丸なし、whip�E�E
     Whip,
-    /// プレイヤー周囲オーラ（garlic）
+    /// プレイヤー周囲オーラ�E�Earlic�E�E
     Aura,
-    /// 最近接敵に向けて貫通弾（fireball）
+    /// 最近接敵に向けて貫通弾�E�Eireball�E�E
     Piercing,
-    /// 連鎖電撃（lightning）
+    /// 連鎖電撁E��Eightning�E�E
     Chain,
 }
 
-/// 武器のパラメータ（kind_id: u8 で参照）
+/// 武器のパラメータ�E�Eind_id: u8 で参�E�E�E
 #[derive(Clone, Debug)]
 pub struct WeaponParams {
     pub cooldown:      f32,
     pub damage:        i32,
     pub as_u8:         u8,
-    /// bullet_count_table: index=level (1-based)。None の場合は固定 1 発
+    /// bullet_count_table: index=level (1-based)、Eone の場合�E固宁E1 発
     pub bullet_table:  Option<Vec<usize>>,
-    /// 発射パターン
+    /// 発封E��ターン
     pub fire_pattern:  FirePattern,
-    /// 範囲（Whip: 扇形半径、Aura: オーラ半径）
+    /// 篁E���E�Ehip: 扁E��半征E��Aura: オーラ半征E��E
     pub range:         f32,
-    /// 連鎖数（Chain パターン用）
+    /// 連鎖数�E�Ehain パターン用�E�E
     pub chain_count:   u8,
 }
 
@@ -88,12 +88,12 @@ impl WeaponParams {
             .unwrap_or(1)
     }
 
-    /// Whip の実効範囲: base_range + (level - 1) * 20
+    /// Whip の実効篁E��: base_range + (level - 1) * 20
     pub fn whip_range(&self, level: u32) -> f32 {
         self.range + (level as f32 - 1.0) * 20.0
     }
 
-    /// Aura の実効半径: base_range + (level - 1) * 15
+    /// Aura の実効半征E base_range + (level - 1) * 15
     pub fn aura_radius(&self, level: u32) -> f32 {
         self.range + (level as f32 - 1.0) * 15.0
     }
@@ -106,7 +106,7 @@ impl WeaponParams {
 
 // ─── BossParams ────────────────────────────────────────────────
 
-/// ボスのパラメータ（kind_id: u8 で参照）
+/// ボスのパラメータ�E�Eind_id: u8 で参�E�E�E
 #[derive(Clone, Debug)]
 pub struct BossParams {
     pub max_hp:           f32,
@@ -119,9 +119,9 @@ pub struct BossParams {
 
 // ─── EntityParamTables ─────────────────────────────────────────
 
-/// NIF 経由で外部注入可能なエンティティパラメータテーブル。
-/// `GameWorldInner` に保持し、`set_entity_params` NIF で上書きする。
-/// デフォルトは空テーブル。`set_entity_params` が呼ばれるまで動作しない。
+/// NIF 経由で外部注入可能なエンチE��チE��パラメータチE�Eブル、E
+/// `GameWorldInner` に保持し、`set_entity_params` NIF で上書きする、E
+/// チE��ォルト�E空チE�Eブル。`set_entity_params` が呼ばれるまで動作しなぁE��E
 #[derive(Clone, Debug)]
 pub struct EntityParamTables {
     pub enemies: Vec<EnemyParams>,
@@ -228,7 +228,7 @@ mod tests {
     fn weapon_bullet_count_by_level() {
         let tables = make_tables();
         let wp = tables.get_weapon(0).expect("weapon 0 should exist");
-        // bullet_table = [0, 1, 1, 2, 2, 3, 3, 4, 4] (index 0 は未使用、1-based)
+        // bullet_table = [0, 1, 1, 2, 2, 3, 3, 4, 4] (index 0 は未使用、E-based)
         assert_eq!(wp.bullet_count(1), 1);
         assert_eq!(wp.bullet_count(4), 2);
         assert_eq!(wp.bullet_count(8), 4);

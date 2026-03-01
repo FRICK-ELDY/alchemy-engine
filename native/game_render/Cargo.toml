@@ -5,7 +5,7 @@ edition = "2021"
 description = "WGPU描画パイプライン・ウィンドウ管理・OS入力イベント処理"
 
 [dependencies]
-game_simulation = { path = "../game_simulation" }
+game_physics = { path = "../game_physics" }
 wgpu = "24"
 winit = "0.30.12"
 bytemuck = { version = "1", features = ["derive"] }

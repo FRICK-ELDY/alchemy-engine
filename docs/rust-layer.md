@@ -11,7 +11,7 @@ Rust 側は **Cargo ワークスペース** として構成され、4 つのク�
 ```mermaid
 graph LR
     GN[game_nif<br/>NIF インターフェース<br/>ゲームループ / レンダーブリッジ]
-    GS[game_simulation<br/>物理 / ECS<br/>依存: rustc-hash のみ]
+    GS[game_physics<br/>物理 / ECS<br/>依存: rustc-hash のみ]
     GR[game_render<br/>wgpu 描画 / winit ウィンドウ]
     GA[game_audio<br/>rodio オーディオ]
 
@@ -19,11 +19,12 @@ graph LR
     GN -->|依存| GR
     GN -->|依存| GA
     GR -->|依存| GS
+
 ```
 
 ---
 
-## `game_simulation` — 物理演算・ECS
+## `game_physics` — 物理演算・ECS
 
 依存クレートは `rustc-hash = "2"` のみ。no-std 互換を意識した設計。
 

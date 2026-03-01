@@ -1,15 +1,15 @@
-//! Path: native/game_simulation/src/world/bullet.rs
-//! Summary: 弾丸 SoA（BulletWorld）と描画種別定数
+//! Path: native/game_physics/src/world/bullet.rs
+//! Summary: 弾丸 SoA�E�EulletWorld�E�と描画種別定数
 
-/// 弾丸の描画種別（renderer に渡す kind 値）
-pub const BULLET_KIND_NORMAL:    u8 = 4;  // MagicWand / Axe / Cross（黄色い円）
-pub const BULLET_KIND_FIREBALL:  u8 = 8;  // Fireball（赤橙の炎球）
-pub const BULLET_KIND_LIGHTNING: u8 = 9;  // Lightning（水色の電撃球）
-pub const BULLET_KIND_WHIP:      u8 = 10; // Whip（黄緑の弧状）
-// 11=SlimeKing, 12=BatLord, 13=StoneGolem（ボス render_kind と共有）
+/// 弾丸の描画種別�E�Eenderer に渡ぁEkind 値�E�E
+pub const BULLET_KIND_NORMAL:    u8 = 4;  // MagicWand / Axe / Cross�E�黁E��ぁE�E�E�E
+pub const BULLET_KIND_FIREBALL:  u8 = 8;  // Fireball�E�赤橙�E炎球�E�E
+pub const BULLET_KIND_LIGHTNING: u8 = 9;  // Lightning�E�水色の電撁E���E�E
+pub const BULLET_KIND_WHIP:      u8 = 10; // Whip�E�黁E���E弧状�E�E
+// 11=SlimeKing, 12=BatLord, 13=StoneGolem�E��Eス render_kind と共有！E
 pub const BULLET_KIND_ROCK:      u8 = 14; // StoneGolem の岩弾
 
-/// 弾丸 SoA（Structure of Arrays）
+/// 弾丸 SoA�E�Etructure of Arrays�E�E
 pub struct BulletWorld {
     pub positions_x:  Vec<f32>,
     pub positions_y:  Vec<f32>,
@@ -18,12 +18,12 @@ pub struct BulletWorld {
     pub damage:       Vec<i32>,
     pub lifetime:     Vec<f32>,
     pub alive:        Vec<bool>,
-    /// true の弾丸は敵に当たっても消えずに貫通する（Fireball 用）
+    /// true の弾丸は敵に当たっても消えずに貫通する！Eireball 用�E�E
     pub piercing:     Vec<bool>,
-    /// 描画種別（BULLET_KIND_* 定数）
+    /// 描画種別�E�EULLET_KIND_* 定数�E�E
     pub render_kind:  Vec<u8>,
     pub count:        usize,
-    /// 空きスロットのインデックススタック — O(1) でスロットを取得・返却
+    /// 空きスロチE��のインチE��クススタチE��  EO(1) でスロチE��を取得�E返却
     free_list:        Vec<usize>,
 }
 
@@ -52,7 +52,7 @@ impl BulletWorld {
         self.spawn_ex(x, y, vx, vy, damage, lifetime, true, BULLET_KIND_FIREBALL);
     }
 
-    /// ダメージ 0・短命の表示専用エフェクト弾を生成する（Whip / Lightning 用）
+    /// ダメージ 0・短命の表示専用エフェクト弾を生成する！Ehip / Lightning 用�E�E
     pub fn spawn_effect(&mut self, x: f32, y: f32, lifetime: f32, render_kind: u8) {
         self.spawn_ex(x, y, 0.0, 0.0, 0, lifetime, false, render_kind);
     }

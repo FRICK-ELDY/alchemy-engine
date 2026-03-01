@@ -1,9 +1,9 @@
-//! Path: native/game_simulation/src/world/particle.rs
-//! Summary: パーティクル SoA（ParticleWorld）
+//! Path: native/game_physics/src/world/particle.rs
+//! Summary: パ�EチE��クル SoA�E�EarticleWorld�E�E
 
 use crate::physics::rng::SimpleRng;
 
-/// パーティクル SoA（Structure of Arrays）
+/// パ�EチE��クル SoA�E�Etructure of Arrays�E�E
 pub struct ParticleWorld {
     pub positions_x:  Vec<f32>,
     pub positions_y:  Vec<f32>,
@@ -16,7 +16,7 @@ pub struct ParticleWorld {
     pub alive:        Vec<bool>,
     pub count:        usize,
     rng:              SimpleRng,
-    /// 空きスロットのインデックススタック — O(1) でスロットを取得・返却
+    /// 空きスロチE��のインチE��クススタチE��  EO(1) でスロチE��を取得�E返却
     free_list:        Vec<usize>,
 }
 

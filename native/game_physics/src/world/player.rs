@@ -1,7 +1,7 @@
-//! Path: native/game_simulation/src/world/player.rs
-//! Summary: プレイヤー状態（座標・入力・HP・無敵タイマー）
+//! Path: native/game_physics/src/world/player.rs
+//! Summary: プレイヤー状態（座標�E入力�EHP・無敵タイマ�E�E�E
 
-/// プレイヤー状態
+/// プレイヤー状慁E
 pub struct PlayerState {
     pub x:                f32,
     pub y:                f32,

@@ -1,8 +1,8 @@
-//! Path: native/game_simulation/src/weapon.rs
-//! Summary: 武器スロット管理（WeaponSlot）
+//! Path: native/game_physics/src/weapon.rs
+//! Summary: 武器スロチE��管琁E��EeaponSlot�E�E
 //!
-//! Phase 3-A: WeaponKind enum を除去。
-//! パラメータは EntityParamTables 経由で参照する。
+//! Phase 3-A: WeaponKind enum を除去、E
+//! パラメータは EntityParamTables 経由で参�Eする、E
 
 use crate::entity_params::{FirePattern, WeaponParams};
 
@@ -37,10 +37,10 @@ impl WeaponSlot {
     }
 }
 
-// ─── UI 用アップグレード説明（レベルアップカード表示）───────────────
+// ─── UI 用アチE�Eグレード説明（レベルアチE�Eカード表示�E�───────────────
 
-/// 武器の `as_u8` ID と現在レベルから、アップグレード説明行を返す。HUD のレベルアップカード用。
-/// `tables` は `GameWorldInner::params` を渡す。
+/// 武器の `as_u8` ID と現在レベルから、アチE�Eグレード説明行を返す、EUD のレベルアチE�Eカード用、E
+/// `tables` は `GameWorldInner::params` を渡す、E
 pub fn weapon_upgrade_desc(
     weapon_id: u8,
     current_lv: u32,

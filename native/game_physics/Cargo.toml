@@ -1,8 +1,8 @@
 [package]
-name = "game_simulation"
+name = "game_physics"
 version = "0.1.0"
 edition = "2021"
-description = "ECS World・ゲームロジック・物理演算・Dead Reckoning（ヘッドレス動作可能）"
+description = "ECS World・物理演算（衝突・分離・空間ハッシュ・Chase AI）（ヘッドレス動作可能）"
 
 [dependencies]
 rustc-hash = "2"

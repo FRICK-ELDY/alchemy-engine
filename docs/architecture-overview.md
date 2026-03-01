@@ -26,7 +26,7 @@ graph TB
 
     subgraph Rust["Rust Workspace"]
         GNIF[game_nif<br/>NIF インターフェース / ゲームループ / レンダーブリッジ]
-        GSIM[game_simulation<br/>物理 / ECS]
+        GSIM[game_physics<br/>物理 / ECS]
         GRENDER[game_render<br/>wgpu 描画 / winit ウィンドウ]
         GAUDIO[game_audio<br/>rodio オーディオ]
         GNIF -->|依存| GSIM
@@ -100,7 +100,7 @@ alchemy-engine/
 │   ├── Cargo.toml                   # Rust ワークスペース定義
 │   ├── Cargo.lock
 │   │
-│   ├── game_simulation/             # 物理演算・ECS（依存: rustc-hash のみ）
+│   ├── game_physics/                # 物理演算・ECS（依存: rustc-hash のみ）
 │   │   └── src/
 │   │       ├── lib.rs
 │   │       ├── constants.rs         # 画面定数（スクリーンサイズ等）
@@ -190,7 +190,7 @@ alchemy-engine/
 | `game_engine` | ゲームループ制御・シーン管理・イベント配信・セーブ・World/Rule インターフェース定義 | Elixir GenServer / ETS |
 | `game_content` | World/Rule 実装（VampireSurvivor）・エンティティパラメータ・ボスAI | Elixir |
 | `game_nif` | Elixir-Rust 間 NIF ブリッジ・ゲームループ・レンダーブリッジ | Rust / Rustler |
-| `game_simulation` | 物理演算・空間ハッシュ・ECS・外部注入パラメータテーブル | Rust（no_std 互換） |
+| `game_physics` | 物理演算・空間ハッシュ・ECS・外部注入パラメータテーブル | Rust（no_std 互換） |
 | `game_render` | GPU 描画パイプライン・HUD・winit ウィンドウ管理 | Rust / wgpu / egui / winit |
 | `game_audio` | オーディオ管理・アセット読み込み | Rust / rodio |
 

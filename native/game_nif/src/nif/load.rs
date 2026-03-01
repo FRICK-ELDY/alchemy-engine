@@ -1,7 +1,7 @@
 //! Path: native/game_nif/src/nif/load.rs
 //! Summary: NIF ローダー（パニックフック・リソース登録・アトム事前登録）
 
-use game_simulation::world::{GameLoopControl, GameWorld};
+use game_physics::world::{GameLoopControl, GameWorld};
 
 #[cfg(debug_assertions)]
 fn init_panic_hook() {

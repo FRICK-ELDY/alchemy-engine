@@ -1,11 +1,11 @@
-//! Path: native/game_simulation/src/game_logic/chase_ai.rs
-//! Summary: 敵 Chase AI と最近接探索（find_nearest_*）
+//! Path: native/game_physics/src/game_logic/chase_ai.rs
+//! Summary: 敵 Chase AI と最近接探索�E�Eind_nearest_*�E�E
 
 use crate::world::EnemyWorld;
 use crate::physics::spatial_hash::CollisionWorld;
 use rayon::prelude::*;
 
-/// 最近接の生存敵インデックスを返す
+/// 最近接の生存敵インチE��クスを返す
 pub fn find_nearest_enemy(enemies: &EnemyWorld, px: f32, py: f32) -> Option<usize> {
     let mut min_dist = f32::MAX;
     let mut nearest  = None;
@@ -24,8 +24,8 @@ pub fn find_nearest_enemy(enemies: &EnemyWorld, px: f32, py: f32) -> Option<usiz
     nearest
 }
 
-/// 指定インデックスを除外した最近接の生存敵インデックスを返す（Lightning チェーン用・最終フォールバック）
-/// exclude: &[bool] — インデックス i が true なら除外（O(1) 検索）
+/// 持E��インチE��クスを除外した最近接の生存敵インチE��クスを返す�E�Eightning チェーン用・最終フォールバック�E�E
+/// exclude: &[bool]  EインチE��クス i ぁEtrue なら除外！E(1) 検索�E�E
 fn find_nearest_enemy_excluding_set(
     enemies: &EnemyWorld,
     px: f32,
@@ -49,7 +49,7 @@ fn find_nearest_enemy_excluding_set(
     nearest
 }
 
-/// 二乗距離（sqrt を避けて高速化）
+/// 二乗距離�E�Eqrt を避けて高速化�E�E
 #[inline]
 fn dist_sq(x1: f32, y1: f32, x2: f32, y2: f32) -> f32 {
     let dx = x1 - x2;
@@ -58,8 +58,8 @@ fn dist_sq(x1: f32, y1: f32, x2: f32, y2: f32) -> f32 {
 }
 
 /// Spatial Hash を使った高速最近接探索
-/// 候補が見つからない場合は半径を 2 倍ずつ最大 4 回拡大して再試行し、
-/// それでも見つからない場合のみ O(n) 全探索にフォールバックする（稀なケース）
+/// 候補が見つからなぁE��合�E半征E�� 2 倍ずつ最大 4 回拡大して再試行し、E
+/// それでも見つからなぁE��合�Eみ O(n) 全探索にフォールバックする�E�稀なケース�E�E
 pub fn find_nearest_enemy_spatial(
     collision: &CollisionWorld,
     enemies: &EnemyWorld,
@@ -71,9 +71,9 @@ pub fn find_nearest_enemy_spatial(
     find_nearest_enemy_spatial_excluding(collision, enemies, px, py, search_radius, &[], buf)
 }
 
-/// Spatial Hash を使った高速最近接探索（除外セット付き・Lightning チェーン用）
-/// exclude: &[bool] — インデックス i が true なら除外（O(1) 検索）
-/// 候補が見つからない場合は半径を 2 倍ずつ最大 4 回拡大して再試行する
+/// Spatial Hash を使った高速最近接探索�E�除外セチE��付き・Lightning チェーン用�E�E
+/// exclude: &[bool]  EインチE��クス i ぁEtrue なら除外！E(1) 検索�E�E
+/// 候補が見つからなぁE��合�E半征E�� 2 倍ずつ最大 4 回拡大して再試行すめE
 pub fn find_nearest_enemy_spatial_excluding(
     collision: &CollisionWorld,
     enemies: &EnemyWorld,
@@ -102,11 +102,11 @@ pub fn find_nearest_enemy_spatial_excluding(
         }
         radius *= 2.0;
     }
-    // 全敵が Spatial Hash の範囲外に散らばっている極稀なケース
+    // 全敵ぁESpatial Hash の篁E��外に散ら�EってぁE��極稀なケース
     find_nearest_enemy_excluding_set(enemies, px, py, exclude)
 }
 
-/// 1 体分の Chase AI（スカラー版・SIMD フォールバック用）
+/// 1 体�Eの Chase AI�E�スカラー版�ESIMD フォールバック用�E�E
 #[inline]
 fn scalar_chase_one(
     enemies: &mut EnemyWorld,
@@ -125,7 +125,7 @@ fn scalar_chase_one(
     enemies.positions_y[i] += enemies.velocities_y[i] * dt;
 }
 
-/// SIMD（SSE2）版 Chase AI — x86_64 専用
+/// SIMD�E�ESE2�E�版 Chase AI  Ex86_64 専用
 #[cfg(target_arch = "x86_64")]
 pub fn update_chase_ai_simd(
     enemies: &mut EnemyWorld,
@@ -161,9 +161,9 @@ pub fn update_chase_ai_simd(
             let new_ex = _mm_add_ps(ex, _mm_mul_ps(vx, dt4));
             let new_ey = _mm_add_ps(ey, _mm_mul_ps(vy, dt4));
 
-            // alive は Vec<u8>（0xFF=生存, 0x00=死亡）。
-            // 4 バイトを u32 として一括ロードし、各バイトレーンを 0xFF と比較して
-            // 32 ビット全ビット立ちマスクを生成する（スカラー分岐なし）。
+            // alive は Vec<u8>�E�ExFF=生孁E 0x00=死亡�E�、E
+            // 4 バイトを u32 として一括ロードし、各バイトレーンめE0xFF と比輁E��て
+            // 32 ビット�Eビット立ちマスクを生成する（スカラー刁E��なし）、E
             let alive4_u32 = u32::from_ne_bytes([
                 enemies.alive[base],
                 enemies.alive[base + 1],
@@ -172,10 +172,10 @@ pub fn update_chase_ai_simd(
             ]);
             let alive_bytes = _mm_cvtsi32_si128(alive4_u32 as i32);
             let ff4 = _mm_set1_epi8(-1i8);
-            // 各バイトレーンを 0xFF と比較 → 0xFF or 0x00 のバイトマスク
+            // 吁E��イトレーンめE0xFF と比輁EↁE0xFF or 0x00 のバイト�Eスク
             let byte_mask = _mm_cmpeq_epi8(alive_bytes, ff4);
-            // バイトマスクを 32 ビット単位に展開: 各 u8 マスクを i32 全ビットに広げる
-            // _mm_unpacklo_epi8 × 2 で byte → word → dword に符号拡張
+            // バイト�EスクめE32 ビット単位に展開: 吁Eu8 マスクめEi32 全ビットに庁E��めE
+            // _mm_unpacklo_epi8 ÁE2 で byte ↁEword ↁEdword に符号拡張
             let word_mask  = _mm_unpacklo_epi8(byte_mask, byte_mask);
             let dword_mask = _mm_unpacklo_epi16(word_mask, word_mask);
             let alive_mask = _mm_castsi128_ps(dword_mask);
@@ -248,15 +248,15 @@ mod tests {
 
         update_chase_ai(&mut enemies, player_x, player_y, dt);
 
-        // 敵はプレイヤー方向（+x）に移動しているべき
+        // 敵はプレイヤー方向！Ex�E�に移動してぁE��べぁE
         assert!(
             enemies.positions_x[0] > 0.0,
-            "敵は +x 方向に移動するべき: x={}",
+            "敵は +x 方向に移動するべぁE x={}",
             enemies.positions_x[0]
         );
         assert!(
             enemies.velocities_x[0] > 0.0,
-            "速度 x は正であるべき: vx={}",
+            "速度 x は正であるべぁE vx={}",
             enemies.velocities_x[0]
         );
     }
@@ -278,7 +278,7 @@ mod tests {
 
         assert!(
             (speed - 100.0).abs() < 0.1,
-            "速度の大きさは speed パラメータ (100.0) に等しいべき: {speed:.3}"
+            "速度の大きさは speed パラメータ (100.0) に等しぁE��ぁE {speed:.3}"
         );
     }
 
@@ -290,7 +290,7 @@ mod tests {
         enemies.spawn(&[(50.0, 0.0)], 0, &ep);
 
         let nearest = find_nearest_enemy(&enemies, 0.0, 0.0);
-        assert_eq!(nearest, Some(0), "最近接の敵インデックスは 0 であるべき");
+        assert_eq!(nearest, Some(0), "最近接の敵インチE��クスは 0 であるべぁE);
     }
 
     #[test]
@@ -302,7 +302,7 @@ mod tests {
         enemies.kill(0);
 
         let nearest = find_nearest_enemy(&enemies, 0.0, 0.0);
-        assert_eq!(nearest, Some(1), "死亡した敵は無視されるべき");
+        assert_eq!(nearest, Some(1), "死亡した敵は無視されるべぁE);
     }
 
     #[test]
@@ -312,14 +312,14 @@ mod tests {
     }
 }
 
-/// rayon 並列化を適用する最小敵数。
-/// これ未満ではスレッドプールのオーバーヘッドがコアロジックを上回るため
-/// シングルスレッド版にフォールバックする。
-/// ベンチマーク（`cargo bench --bench chase_ai_bench`）で実測して調整すること。
+/// rayon 並列化を適用する最小敵数、E
+/// これ未満ではスレチE��プ�Eルのオーバ�EヘッドがコアロジチE��を上回るためE
+/// シングルスレチE��版にフォールバックする、E
+/// ベンチ�Eーク�E�Ecargo bench --bench chase_ai_bench`�E�で実測して調整すること、E
 const RAYON_THRESHOLD: usize = 500;
 
-/// Chase AI: 全敵をプレイヤーに向けて移動
-/// 敵数が RAYON_THRESHOLD 未満の場合はシングルスレッド版で処理する。
+/// Chase AI: 全敵を�Eレイヤーに向けて移勁E
+/// 敵数ぁERAYON_THRESHOLD 未満の場合�EシングルスレチE��版で処琁E��る、E
 pub fn update_chase_ai(enemies: &mut EnemyWorld, player_x: f32, player_y: f32, dt: f32) {
     let len = enemies.len();
 
@@ -332,7 +332,7 @@ pub fn update_chase_ai(enemies: &mut EnemyWorld, player_x: f32, player_y: f32, d
         return;
     }
 
-    // rayon 並列版（RAYON_THRESHOLD 以上の敵数）
+    // rayon 並列版�E�EAYON_THRESHOLD 以上�E敵数�E�E
     let positions_x  = &mut enemies.positions_x[..len];
     let positions_y  = &mut enemies.positions_y[..len];
     let velocities_x = &mut enemies.velocities_x[..len];

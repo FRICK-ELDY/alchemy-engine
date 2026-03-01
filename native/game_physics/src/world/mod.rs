@@ -1,5 +1,5 @@
-//! Path: native/game_simulation/src/world/mod.rs
-//! Summary: ワールド型（PlayerState, EnemyWorld, BulletWorld, ParticleWorld, BossState, GameWorld）
+//! Path: native/game_physics/src/world/mod.rs
+//! Summary: ワールド型�E�ElayerState, EnemyWorld, BulletWorld, ParticleWorld, BossState, GameWorld�E�E
 
 mod boss;
 mod bullet;
