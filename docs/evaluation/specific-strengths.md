@@ -1,6 +1,6 @@
 # AlchemyEngine — 具体的なプラス点
 
-> 評価日: 2026-03-01
+> 評価日: 2026-03-01（第2回）
 > 評価対象: プロジェクト全体（Elixir + Rust 全レイヤー）
 >
 > 採点基準: +1（正しい）/ +2（良い判断）/ +3（平均を上回る）/ +4（プロダクション水準）/ +5（個人プロジェクトで見たことがない）
@@ -9,45 +9,72 @@
 
 ## Elixir の真価
 
-### OTP Supervisor ツリーの設計
+### OTP 設計
 
-**`GameServer.Application` が `:one_for_one` で正しく構成されている** +2
-Registry → SceneManager → InputHandler → EventBus → RoomSupervisor → GameEvents → StressMonitor → Stats → Telemetry の順で起動。各プロセスが独立した障害ドメインを持ち、1つが落ちても他に波及しない。起動順序の依存関係も正しく設計されている。
+**`:one_for_one` Supervisor ツリーの正しい構成** +2
+`GameServer.Application` が Registry / SceneManager / InputHandler / EventBus / RoomSupervisor / StressMonitor / Stats / Telemetry を `:one_for_one` で管理。各プロセスが独立してクラッシュ・再起動できる正しい設計。
 
-**`DynamicSupervisor` + `Registry` による複数ルーム設計が先行実装されている** +3
-`RoomSupervisor`（DynamicSupervisor）と `RoomRegistry`（Registry）が実装済み。ネットワーク層が完成すれば即座に複数ルームを起動できる設計になっており、将来の拡張を見越した先行投資として評価できる。同規模プロジェクトでここまで先を見越した設計をしているケースは少ない。
+**DynamicSupervisor + Registry による複数ルーム先行設計** +3
+`GameEngine.RoomSupervisor`（DynamicSupervisor）と `GameEngine.RoomRegistry`（Registry）の組み合わせで、`{:via, Registry, {GameEngine.RoomRegistry, room_id}}` による名前付きプロセスを実現。ルームの動的追加・削除が O(1) で可能な設計。
 
 **`StressMonitor` が独立プロセスとして存在する** +2
-負荷監視を専用 GenServer に切り出している。監視ロジックがゲームループに混入しておらず、責務が明確に分離されている。
+監視プロセスがクラッシュしてもゲームが継続する設計が意図的に実装されており、ドキュメントにも明記されている。
 
-### GenServer の責務分離
+**5 つの独立 GenServer による責務分離** +3
+`GameEvents`（ディスパッチ）/ `SceneManager`（シーン管理）/ `EventBus`（Pub/Sub）/ `InputHandler`（入力）/ `Stats`（統計）が独立した GenServer として分離されており、各プロセスの責務が明確。
 
-**5つの独立した GenServer が明確な役割を持つ** +3
-`GameEvents`（ゲームループ）、`SceneManager`（シーンスタック）、`EventBus`（pub/sub）、`InputHandler`（入力）、`Stats`（統計）がそれぞれ独立した GenServer として実装されている。1つの GenServer に複数の責務を詰め込む「神 GenServer」アンチパターンを意識的に回避しており、同規模プロジェクトの平均を上回る設計。
+### ContentBehaviour 設計
 
-### Behaviour による拡張性
+**`ContentBehaviour` によるコンテンツ完全交換（2コンテンツ実証済み）** +5
+`VampireSurvivor` と `AsteroidArena` という性質の異なる 2 コンテンツが同一エンジン上で動作することを実証。`config.exs` の 1 行変更でコンテンツが切り替わる設計は、「エンジンはコンテンツを知らない」という原則の完全な実証。個人プロジェクトでこのレベルの抽象化が実証済みなのは見たことがない。
 
-**`ContentBehaviour` によるコンテンツ完全交換が実証済み** +5
-`config.exs` の1行変更で VampireSurvivor と AsteroidArena が切り替わる。エンジンコアを一切変更せずに全く異なるゲームが動作することを2コンテンツで実証している。「エンジンとコンテンツの分離」という思想を設計だけでなく動作する実装として証明しており、このクラスの個人プロジェクトでここまで徹底されているケースはほぼ見たことがない。
+**`Component` ビヘイビアのオプショナルコールバック設計** +2
+`on_ready / on_frame_event / on_physics_process / on_nif_sync / on_event` が全てオプショナルで、コンポーネントは必要なコールバックのみ実装すればよい。Unity の `MonoBehaviour` に相当する設計が正しく実現されている。
 
-**`Component` ビヘイビアのコールバックがすべてオプショナル** +2
-`@optional_callbacks` により、コンポーネントは必要なコールバックだけを実装すればよい。不要なコールバックの空実装を強制しない設計は、API 設計として正しい判断。
+**`SceneBehaviour` 遷移戻り値の型安全設計** +2
+`{:continue, state}` / `{:transition, :pop, state}` / `{:transition, {:push, mod, arg}, state}` / `{:transition, {:replace, mod, arg}, state}` という明示的な遷移戻り値型が、シーン遷移ロジックを安全かつ読みやすくしている。
 
-**`SceneBehaviour` の遷移戻り値が型安全** +2
-`{:continue, state}` / `{:transition, :pop, state}` / `{:transition, {:push, mod, arg}, state}` / `{:transition, {:replace, mod, arg}, state}` という明示的なタグ付きタプルで遷移を表現。パターンマッチで網羅性が保証される。
+### Elixir as SSoT
 
-### Elixir as SSoT の徹底
+**Elixir as SSoT フェーズ1〜5の完遂** +4
+ゲームロジック制御フロー・シーン管理・パラメータ・ボス AI がすべて Elixir 側に存在し、Rust 側にゲームルールがハードコードされていない。`GameWorldInner` から HUD/ルール固有フィールドを排除し、Elixir からの注入パターンを一貫して適用している。
 
-**フェーズ1〜5の SSoT 移行が完了している** +4
-score / kill_count / elapsed_ms（フェーズ1）→ player_hp / player_max_hp（フェーズ2）→ level / exp / weapon_levels（フェーズ3）→ boss_hp / boss_kind_id（フェーズ4）→ render_started / UI アクション（フェーズ5）と段階的に Elixir 側へ権威を移した。Rust にゲームロジックが漏れていない。段階的移行を完遂した規律と一貫性はプロダクションレベルの設計管理に匹敵する。
+**ボス AI ロジックが Elixir 側に存在（SSoT 最難関の適用）** +4
+ボスの速度・ダッシュ・タイマーを Elixir 側で計算し、`set_boss_velocity` NIF で注入するという設計は、「Rust にゲームルールをハードコードしない」原則の最難関の適用。ボス AI が Elixir の `BossComponent.on_physics_process/1` に完全に存在する。
 
-**ボス AI ロジックが Elixir 側に存在する** +4
-`BossSystem`（Elixir）がボスの出現スケジュール・速度・タイマーを制御し、Rust には毎フレーム速度を注入する。「Rust は演算層、Elixir は制御層」という原則が最も難しいボス AI においても守られている。SSoT 原則の最難関の適用例であり、妥協せずに実装しきった点はプロダクション水準の設計判断。
+**`:telemetry` による観測性** +2
+`frame_dropped` / `frame_processed` / `nif_call` 等のイベントが `:telemetry` で計測されており、`ConsoleReporter` で可視化される。
 
-### Telemetry
+### バックプレッシャー機構（IP-04 完了）
 
-**`:telemetry` によるフレーム処理時間・NIF 呼び出しレイテンシの計測** +2
-`GameEngine.Telemetry` が `:telemetry` イベントを発行し、`GameEngine.Stats` が集計する。Elixir エコシステムの標準的な観測性パターンに従っており、将来 Prometheus 等への接続が容易。
+**メールボックス深度監視によるフレームドロップ制御** +4
+`@backpressure_threshold 120`（60Hz×2秒分）を超えた場合、NIF 書き込み・ブロードキャスト等の重い副作用をスキップしつつ、スコア・HP 等のゲーム整合性に影響するイベント処理は継続するという設計。Elixir の `Process.info(self(), :message_queue_len)` を活用した実用的な実装。同規模の個人プロジェクトでここまで精緻なバックプレッシャー制御を実装しているケースは稀。
+
+### ネットワーク層（実装完了）
+
+**`GameNetwork.Local` によるローカルマルチルーム実証** +4
+`local.ex`（275行）が `open_room / close_room / connect_rooms / disconnect_rooms / broadcast` を完全実装。`game_network_local_test.exs` でOTP隔離テスト（一方のルームがクラッシュしても他方が継続する）が実証されており、Elixir を選んだ根拠が初めてコードとして証明された。
+
+**Phoenix Channels / WebSocket トランスポート実装** +3
+`channel.ex`（159行）が `"room:*"` トピックへの join・input/action ハンドリング・フレームイベントブロードキャストを実装。Phoenix の `handle_in/handle_info` パターンが正しく使用されている。
+
+**UDP トランスポート実装** +3
+`udp/server.ex`（263行）が `:gen_udp` ベースの UDP サーバーを実装。バイナリプロトコルのエンコード/デコードが `protocol.ex` のバイナリパターンマッチで完全に表現されており、`case` 文なしに全パケット種別を処理している。
+
+### パターンマッチ活用
+
+**UDP プロトコルのバイナリパターンマッチ** +3
+`protocol.ex` で `<<@type_join, seq::32, room_id::binary>>` 等のバイナリパターンマッチを使用。Elixir の真価を最も直接的に示す実装の一つ。
+
+### ETS 活用
+
+**`FrameCache` の `read_concurrency: true`** +2
+ETS テーブルを `read_concurrency: true` で作成し、複数プロセスからの並行読み取りを最適化。書き込みは GenServer で直列化、読み取りは直接 ETS から行うホットパス最適化が正しく実装されている。
+
+### セーブ/ロード
+
+**HMAC 署名付きセーブデータ** +3
+`SaveManager` が HMAC-SHA256 署名を付与し、タイミング攻撃対策として定数時間比較（`:crypto.hash_equals/2`）を使用。セーブデータの改ざん検出が正しく実装されている。
 
 ---
 
@@ -55,180 +82,161 @@ score / kill_count / elapsed_ms（フェーズ1）→ player_hp / player_max_hp�
 
 ### SoA ECS 設計
 
-**`EnemyWorld` / `BulletWorld` / `ParticleWorld` / `ItemWorld` が完全 SoA** +4
-全エンティティ種別で `positions_x: Vec<f32>`, `positions_y: Vec<f32>` のように座標・速度・HP を分離した配列で保持。CPU キャッシュラインに同種データが連続して乗るため、全敵イテレーション時のキャッシュミスが最小化される。Bevy ECS と同等の思想を手書きで実現しており、プロダクションゲームエンジンと比較しても遜色ない設計。
+**全エンティティ種別の完全 SoA ECS 設計** +4
+`EnemyWorld` / `BulletWorld` / `ParticleWorld` / `ItemWorld` がすべて SoA（Structure of Arrays）形式で実装されており、CPU キャッシュ効率が最大化されている。Bevy ECS と同等の思想を手書きで実現。
 
-**`free_list: Vec<usize>` による O(1) スポーン/キル** +3
-死亡エンティティのインデックスを `free_list` に積み、スポーン時に再利用する。Vec の末尾削除も再アロケーションもなく、10,000 体規模でもスポーン/キルのコストが一定。同規模プロジェクトでこの最適化を正しく実装しているケースは少ない。
+**`free_list` による O(1) スポーン/キル** +3
+スロット管理に `free_list: Vec<usize>` を使用し、エンティティのスポーン・キルが O(1) で行われる。`Vec` の再アロケーションが発生しない設計。
 
-### SIMD 最適化
+### SIMD 実装
 
-**SSE2 SIMD による 4 体並列 Chase AI** +4
-`update_chase_ai_simd` が `_mm_set1_ps` / `_mm_loadu_ps` / `_mm_rsqrt_ps` / `_mm_storeu_ps` を使い、4 体分の距離・正規化・速度更新を1ループで処理。`_mm_rsqrt_ps` による高速逆平方根はゲームエンジンの Chase AI 実装として教科書的な最適化であり、プロダクションレベルの実装。
+**SSE2 SIMD 4体並列 Chase AI** +4
+`update_chase_ai_simd`（`chase_ai.rs`）が `_mm_rsqrt_ps`（逆平方根）と `_mm_loadu_ps` を使用して 4 体の敵 AI を並列処理。`alive_mask` による死亡敵の速度フィールド保護が正しく実装されている。
 
 **`alive_mask` による死亡敵の速度フィールド保護** +4
-SIMD レーンに死亡敵が混入しても、`alive_mask` でブレンドして速度フィールドを上書きしない。SIMD 実装でこの保護を正しく実装しているケースは少なく、バグを埋め込みやすい箇所を正確に処理している。プロダクションゲームエンジンでも見落とされることがある細部。
+`alive: Vec<u8>` を 0xFF（生存）/ 0x00（死亡）で管理し、`_mm_cmpeq_epi8` + `_mm_unpacklo_epi8` × 2 でバイトマスク → dword マスクに展開。SIMD レーンの書き戻しを alive フラグで保護するテクニックは高度。
 
 **SIMD / rayon / スカラーの 3 段階適応戦略** +3
-x86_64 では SIMD、非 x86_64 では rayon 並列、`RAYON_THRESHOLD = 500` 未満ではスカラーシングルスレッドと自動切り替え。プラットフォームと規模に応じて最適なコードパスを選ぶ設計は同規模プロジェクトの平均を明確に上回る。
+x86_64 では SIMD、`RAYON_THRESHOLD`（500体）以上では rayon 並列、それ以下ではシングルスレッドスカラーという 3 段階の適応戦略。`#[cfg(not(target_arch = "x86_64"))]` でのフォールバックも完備。
 
-**SIMD 版とスカラー版の一致テストが存在する** +4
-`simd_and_scalar_produce_same_result` テストが `alive_mask` の速度保護も含めて検証している。SIMD 実装の正確性を自動テストで保証しているプロジェクトはプロダクションレベルでも少なく、個人プロジェクトでは極めて稀。
+**SIMD/スカラー一致テストの存在** +4
+`simd_and_scalar_produce_same_result` テストが SIMD 版とスカラー版の等価性を検証。unsafe コードの正当性を自動テストで保証している。
 
 ### 空間ハッシュ
 
-**`FxHashMap` ベース空間ハッシュによる O(n) 衝突検出** +4
-セルサイズ 80px の空間ハッシュで近傍クエリを O(1) に抑え、全体を O(n) で処理。`rustc-hash::FxHashMap` は標準 `HashMap` より 30〜50% 高速なハッシュ関数を使用。10,000 体規模で O(n²) を避けるための正しい選択であり、プロダクション水準の実装。
+**`FxHashMap` 空間ハッシュによる O(n) 衝突検出** +4
+`spatial_hash.rs` が `FxHashMap`（rustc-hash）を使用した空間ハッシュを実装。O(n²) の総当たり衝突検出を O(n) に削減。
 
 ### 決定論的物理
 
-**LCG 決定論的乱数（シード固定）** +5
-`SimpleRng` が線形合同法（LCG）で実装されており、同じシードから同じ乱数列が再現される。スポーン位置・ドロップ・ウェーブ選択がすべてこの乱数を通る。リプレイシステムとネットワーク同期（ロールバック netcode）の正しい基盤であり、将来の機能拡張への先行投資として個人プロジェクトでここまで意識されているケースはほぼ見たことがない。
+**LCG 決定論的乱数（リプレイ/同期の基盤）** +5
+`SimpleRng` が `wrapping_mul` + `wrapping_add` による LCG（線形合同法）を実装。シード固定で完全再現可能な乱数列を生成。リプレイ・ネットワーク同期の正しい基盤。個人プロジェクトで決定論的乱数を意図的に実装しているケースは稀。
 
-### メモリ安全性
+### NIF 設計
 
-**`ResourceArc<GameWorld>` による Elixir GC 連動ライフタイム管理** +5
-Rust の `GameWorld` が `ResourceArc` でラップされ、Elixir プロセスが保持している間は解放されない。プロセス死亡時に自動解放。Rustler の最も重要なパターンを正しく使用しており、メモリリークとダングリングポインタの両方を防いでいる。Elixir/Rust 連携プロジェクトでこのパターンを正確に理解して実装しているケースは個人プロジェクトでは見たことがない。
-
-### 観測性
+**`ResourceArc` による Elixir GC 連動ライフタイム管理** +5
+`GameWorld` を `ResourceArc<RwLock<GameWorldInner>>` として Elixir プロセスが保持。Elixir GC が参照カウントを管理し、Elixir 側でリソースが不要になった時点で Rust 側のメモリが自動解放される。Rustler の最も高度な機能を正しく活用。
 
 **RwLock 競合時間の閾値監視（300μs / 500μs）** +3
-`lock_metrics.rs` が read lock > 300μs / write lock > 500μs で `log::warn!` を発行し、5秒ごとに平均レポートを出力。本番環境でのロック競合を検出するための仕組みがゲームループに組み込まれており、同規模プロジェクトの平均を上回る観測性。
+`lock_metrics.rs` が read lock 待機 > 300μs / write lock 待機 > 500μs で `log::warn!` を発行。5 秒ごとに平均待機時間をレポート。パフォーマンス劣化を早期検出できる。
 
-### 依存関係の最小化
+**`game_physics` の依存が 3 クレートのみ** +3
+`rustc-hash` / `rayon` / `log` のみ。外部依存の最小化により、将来の WASM 対応・クロスコンパイルの障壁が低い。
 
-**`game_physics` の依存が `rustc-hash` / `rayon` / `log` のみ** +3
-物理演算クレートに重量フレームワークが入っていない。コンパイル時間が短く、WASM や組み込みへの移植可能性が高い。依存を意識的に絞る判断は同規模プロジェクトの平均を上回る長期メンテナンス性への投資。
+### ヘッドレスレンダラー（IP-05 完了）
+
+**wgpu オフスクリーンレンダリングによる CI 対応** +4
+`headless.rs`（715行）が wgpu のオフスクリーンターゲットへの描画を実装。ウィンドウなしで PNG バイト列を返すことができ、CI でのレンダリング回帰テストが可能になった。`image` クレートによる PNG エンコードも含む本格実装。
 
 ---
 
 ## Elixir × Rust 連携の真価
 
-### NIF 境界の設計
-
-**NIF 関数が 5 カテゴリに明確に分類されている** +5
-`control`（write・低頻度）/ `inject`（write・毎フレーム）/ `query_light`（read・毎フレーム）/ `snapshot_heavy`（write・明示操作）/ `game_loop`（write・60Hz）という分類により、ロック競合の予測可能性が高い。NIF の境界設計としてここまで整理されているプロジェクトは個人・商用問わず見たことがない。
+**NIF 関数の 5 カテゴリ分類（ロック競合の予測可能性）** +5
+`control`（write/低頻度）/ `inject`（write/高頻度）/ `query_light`（read/高頻度）/ `snapshot_heavy`（write/低頻度）/ `game_loop`（write/60Hz）という 5 カテゴリ分類が、ロック競合パターンを予測可能にしている。ドキュメントにも明記されており、設計意図が明確。
 
 **60Hz Rust ループ → `OwnedEnv::send_and_clear` → Elixir** +3
-Rust のゲームループが専用 OS スレッドで 60Hz 動作し、フレームイベントを `OwnedEnv::send_and_clear` で Elixir プロセスに送信。Elixir スケジューラのジッターが物理ティックに影響しない設計は同規模プロジェクトの平均を上回る。
+Rust の 60Hz ゲームループが `OwnedEnv::send_and_clear` で Elixir プロセスにフレームイベントを送信する設計。Rustler の非同期メッセージ送信を正しく活用。
 
-**パラメータ注入パターン（Rust にゲームバランス値がない）** +5
-エンティティの HP・速度・EXP 報酬・ボス HP がすべて `set_entity_params` NIF で Elixir から注入される。Rust コードを変更せずにゲームバランスを調整できる。「Rust は演算エンジン、Elixir はゲームデザイナー」という役割分担の完全な実現であり、個人プロジェクトでここまで徹底されているケースはほぼ見たことがない。
-
-### テスタビリティ
+**パラメータ注入パターン（Rust にゲームバランス値なし）** +5
+`EntityParams`（HP・速度・EXP 報酬等）が Elixir の `entity_params.ex` で定義され、`set_entity_params` NIF で Rust 側に注入される。Rust コードにゲームバランス値が一切ハードコードされていない。
 
 **`NifBridgeBehaviour` + Mox による NIF モック** +4
-`GameEngine.NifBridgeBehaviour` が NIF 契約をビヘイビアとして定義し、`test/support/mocks.ex` が Mox ベースのモックを提供。実際の NIF をロードせずに Elixir ゲームロジックの単体テストが可能。NIF を持つプロジェクトでこのモック戦略を実装しているケースはプロダクションレベルでも少ない。
+`NifBridgeBehaviour` ビヘイビアが定義されており、テスト時に `Mox` で NIF をモックできる。NIF を含むコードのユニットテストが可能になる正しい設計。
 
 ---
 
 ## 物理層
 
-### 武器システム
+**7 種の `FirePattern`（正確な幾何学計算）** +4
+`Aimed` / `Spread` / `Ring` / `Chain` / `Boomerang` / `Orbit` / `Whip` の 7 種が実装されており、各パターンの幾何学計算（角度・速度ベクトル）が正確。
 
-**7 種の `FirePattern` が正しい幾何学計算で実装されている** +4
-`Aimed`（最近接敵への扇状）/ `FixedUp`（固定方向）/ `Radial`（全方向放射）/ `Whip`（扇形直接判定）/ `Aura`（周囲オーラ）/ `Piercing`（貫通弾）/ `Chain`（連鎖電撃）の 7 種。Vampire Survivor の武器アーキタイプを網羅しており、それぞれ異なる幾何学的計算が正確に実装されている。プロダクション水準の武器システム。
-
-### 衝突・分離
-
-**障害物押し出しが最大 5 回反復で収束保証** +2
-`obstacle_resolve.rs` が最大 5 パスで押し出しを繰り返す。薄い壁へのトンネリングを防ぐ収束保証付きの実装。
-
-**敵分離アルゴリズムによるスタック防止** +2
-`separation.rs` が敵同士の重なりを解消。視認性とゲームプレイの公平性を保つ。
-
-### ボス物理
-
-**ボス速度・タイマーが Elixir から毎フレーム注入される** +4
-`set_boss_velocity` NIF でボスの移動速度を Elixir から制御。ボス AI ロジックが Elixir（`BossSystem`）に存在し、Rust は物理積分のみを担う。SSoT 原則の最も難しい適用例をプロダクション水準で正しく実装している。
+**ボス速度・タイマーの Elixir 注入（SSoT 最難関）** +4
+ボスの速度・ダッシュ判定・タイマーが Elixir 側で計算され、`set_boss_velocity` NIF で注入される。Rust 側にボス AI ロジックが存在しない。
 
 ---
 
 ## 描画層
 
-### GPU 描画
-
-**wgpu によるスプライトインスタンス描画（最大 14,502 エントリ）** +3
-スプライトをインスタンスバッファで一括 GPU 送信。ドローコール数を最小化し、10,000 体規模の描画を現実的なフレームレートで処理できる。同規模プロジェクトの平均を上回る描画設計。
+**wgpu インスタンス描画（最大 14,502 エントリ）** +3
+`MAX_INSTANCES = 14510` の静的バッファを確保し、1 ドローコールで全スプライトを描画。インスタンス描画による GPU 効率化が正しく実装されている。
 
 **サブフレーム補間（lerp）がロック外で計算される** +4
-`lerp(prev_pos, curr_pos, alpha)` を RwLock の外で計算することで、60Hz 物理ティックと任意のリフレッシュレートのデカップリングを実現。物理ティックとレンダリングの分離を正しく実装しているプロジェクトはプロダクションレベルでも少なく、これがあるとないとでは滑らかさが全く異なる。
-
-### シェーダー
+`render_snapshot.rs` でのサブフレーム補間（`alpha = (now - prev) / (curr - prev)`）が RwLock 外で計算される。ロック保持時間を最小化する正しい設計。
 
 **WGSL スプライトシェーダー（レガシー GLSL なし）** +2
-WebGPU 標準の WGSL を使用。将来の WASM/ブラウザ対応への移行コストが低い。良い判断。
+モダンな WGSL シェーダーを使用。OpenGL/GLSL への依存がなく、wgpu の設計思想に沿っている。
 
 ---
 
 ## オーディオ層
 
-### アーキテクチャ
+**コマンドパターン + `mpsc::channel` 完全非同期** +3
+`AudioCommandSender` が `mpsc::Sender` をラップし、呼び出し元がノンブロッキングで SE/BGM を再生できる。オーディオスレッドが専用スレッドで動作する正しい設計。
 
-**コマンドパターン + `mpsc::channel` による完全非同期オーディオ** +3
-`AudioCommand` enum を `mpsc::channel` で専用スレッドに送信。ゲームループがオーディオ処理でブロックされない。同規模プロジェクトの平均を上回る非同期設計。
-
-**オーディオデバイス不在時のグレースフルフォールバック** +4
-デバイスが利用不可（ヘッドレスサーバー、CI 環境）でも `AudioCommandSender` が返り、送信は無視される。ゲームがクラッシュしない。CI でのテスト実行を可能にするプロダクション品質の設計判断。
-
-### アセット管理
+**デバイス不在時のグレースフルフォールバック** +4
+デバイス初期化失敗時も `AudioCommandSender` を返し、コマンドが無視されるだけでゲームが継続する。CI 環境・ヘッドレス環境での動作を保証。
 
 **4 段階フォールバックのアセット探索** +2
-`assets/{game_name}/...` → `assets/...` → カレントディレクトリ → `include_bytes!` コンパイル時埋め込みの順で探索。開発環境と配布ビルドの両方に対応する実用的な設計。
+`include_bytes!` / 実行ファイル相対パス / カレントディレクトリ / `assets/` ディレクトリの 4 段階でアセットを探索。開発環境・本番環境の両方で動作する。
 
 ---
 
 ## コンポーネント層
 
-### ライフサイクル
+**Unity 相当のライフサイクルコールバック** +3
+`on_ready / on_frame_event / on_physics_process / on_nif_sync / on_event` という Unity の `Start / Update / FixedUpdate` に相当するライフサイクルが正しく実装されている。
 
-**Unity 相当のライフサイクルコールバック（on_ready / on_process / on_physics_process / on_event）** +3
-Unity の `Start` / `Update` / `FixedUpdate` / `OnEvent` に対応するコールバックを Elixir ビヘイビアで実現。ゲームエンジン経験者が即座に理解できる設計であり、同規模プロジェクトの平均を上回る。
-
-### シーン管理
-
-**シーンスタック（push / pop / replace）の完全実装** +3
-`SceneBehaviour` が push / pop / replace の 3 種の遷移を返せる。Godot や LibGDX と同等のシーンスタックパターン。ポーズ画面・レベルアップ選択・ボスアラートが push/pop で正しく実装されており、同規模プロジェクトの平均を上回る。
+**シーンスタック（push / pop / replace）完全実装** +3
+`SceneManager` が push / pop / replace の 3 種のシーン遷移を実装。`LevelUp` シーンが `Playing` シーンの上に push され、`pop` で戻るという設計が正しく動作している。
 
 **`pause_on_push?/1` によるシーン別ポーズ制御** +2
-push 時に下のシーンを停止するかどうかをコンテンツ側が制御できる。レベルアップ選択中はゲームを止め、ボスアラートは止めない、という挙動の差異をエンジン変更なしで実現。良い設計判断。
+`ContentBehaviour` の `pause_on_push?/1` で、シーンが push された際に物理演算をポーズするかどうかをコンテンツ側で制御できる。`LevelUp` シーン中は物理演算が停止する。
+
+---
+
+## ネットワーク層
+
+**DynamicSupervisor + Registry アーキテクチャが先行実装済み** +2
+ネットワーク実装の前に OTP の基盤が正しく設計されており、ネットワーク実装がスムーズに乗った。
+
+**決定論的 LCG 乱数（ロックステップ同期の正しい基盤）** +2
+LCG 乱数が決定論的であるため、ロックステップ同期によるネットワーク対戦の実装が技術的に可能。
 
 ---
 
 ## ユーザー層
 
-### セーブシステム
-
 **HMAC 署名付きセーブデータ** +3
-`:erlang.term_to_binary` でシリアライズし HMAC で署名。改ざんされたセーブファイルをロード時に検出して拒否する。セキュリティへの配慮が同規模プロジェクトの平均を上回る。
+HMAC-SHA256 署名と定数時間比較によるタイミング攻撃対策が正しく実装されている。
 
-**上位 10 件のハイスコア管理** +1
-`Stats` がソート済みトップ 10 リーダーボードをセッション間で永続化。正しく実装されている。
+**上位 10 件ハイスコア管理** +1
+`save_high_score / load_high_scores` が上位 10 件を降順ソートして永続化。
 
 ---
 
 ## プロジェクト全体設計
 
-### ドキュメント
+**11 ファイル・約 1,500 行のドキュメント（Mermaid 図付き）** +5
+`architecture-overview.md` / `elixir-layer.md` / `rust-layer.md` / `data-flow.md` / `game-content.md` / `vision.md` / `pending-issues.md` / `visual-editor-architecture.md` / `improvement-plan.md` / `ci.md` 等が Mermaid シーケンス図・フローチャート付きで整備されている。個人プロジェクトとして異例の水準。
 
-**11 ファイル・約 1,500 行の設計ドキュメント（Mermaid 図付き）** +5
-`vision.md` / `architecture-overview.md` / `elixir-layer.md` / `rust-layer.md` / `data-flow.md` / `game-content.md` / `strengths.md` / `improvement-plan.md` / `pending-issues.md` / `visual-editor-architecture.md` が存在。起動シーケンス・ゲームループ・セーブ/ロードフローが Mermaid シーケンス図で可視化されている。個人プロジェクトでこの水準のドキュメントを維持しているケースは見たことがない。
+**自己認識的な弱点管理（improvement-plan / pending-issues）** +3
+`pending-issues.md` が未解決課題を管理し、`improvement-plan.md` が改善提案を優先度付きで整理。評価→改善→アーカイブのサイクルが機能している。
 
-**自己認識的な弱点管理（`improvement-plan.md` / `pending-issues.md`）** +3
-既知の弱点が優先度・影響範囲・作業ステップ付きで文書化されている。完了済み課題がストライクスルーで記録されており、改善の軌跡が追える。同規模プロジェクトの平均を上回る自己管理能力。
-
-### アーキテクチャ
-
-**Umbrella プロジェクトによるアプリケーション境界の明確化** +2
-`game_engine` / `game_content` / `game_server` / `game_network` が独立した Elixir アプリとして分離。依存方向が明示的に宣言されており、循環依存がない。良い判断。
+**Umbrella プロジェクトによるアプリ境界の明確化** +2
+`game_engine` / `game_content` / `game_network` / `game_server` の 4 アプリが Umbrella で管理され、依存関係が明示的。
 
 **Rust ワークスペース + `"nif"` フィーチャーフラグ** +2
-`game_physics` が `"nif"` フィーチャーなしでスタンドアロンコンパイル可能。ベンチマーク・単体テストを NIF なしで実行できる。良い判断。
+`game_physics` が `"nif"` フィーチャーフラグで NIF 依存を分離。`cargo test -p game_physics` が BEAM VM なしで実行できる。
 
-### テスト
+**`game_content` 純粋関数テストが `async: true` で並列実行可能** +2
+`SpawnSystem` / `BossSystem` / `LevelSystem` / `EntityParams` の純粋関数テストが `async: true` で並列実行される。
 
-**`game_content` の純粋関数テストが `async: true` で並列実行可能** +2
-NIF 依存のない純粋関数のみをテスト対象としており、テストが高速かつ安定。良い設計判断。
+**Rust `chase_ai.rs` の充実した単体テスト** +4
+SIMD/スカラー一致テスト・LCG 再現性テスト・境界値テストが `#[cfg(test)]` モジュールに整備されている。
 
-**Rust `chase_ai.rs` に SIMD/スカラー一致テストを含む充実した単体テスト** +4
-`update_chase_moves_enemy_toward_player` / `update_chase_velocity_magnitude_equals_speed` / `find_nearest_enemy_returns_closest` / `find_nearest_enemy_ignores_dead` / `simd_and_scalar_produce_same_result` の 5 テストが `#[cfg(test)]` ブロックで実装。物理演算の正確性が自動検証されており、プロダクション水準のテスト品質。
+**GitHub Actions CI パイプライン（4 ジョブ）** +4
+`rust-check`（fmt + clippy -D warnings）/ `rust-test`（game_physics ユニットテスト）/ `elixir-check`（compile + format + credo）/ `elixir-test`（NIF 込み統合テスト）/ `bench-regression`（main ブランチのみ、+10% 劣化でブロック）の 5 ジョブが整備されている。ベンチマーク回帰チェックまで含む CI は個人プロジェクトとして高水準。
+
+**ローカル CI スクリプト（`bin/ci.bat`）** +2
+GitHub Actions と同等のチェックをローカルで実行できる `bin/ci.bat` が整備されている。
