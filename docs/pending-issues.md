@@ -18,98 +18,6 @@
 
 ---
 
-### ~~課題12: `GameEvents` がコンテンツ固有ロジックを知りすぎている~~ ✅ 解消済み
-
-**解消内容（フェーズ1 I-D）**:
-- `GameEngine.ContentBehaviour` を新設し、コンテンツのオプショナルコールバックを定義
-- `GameEngine.Component` の `context` に `push_scene/pop_scene/replace_scene` API を追加
-- UI アクション（`__skip__`・武器選択）を `VampireSurvivor.LevelComponent.on_event/2` に移動
-- `process_transition` の `pause_on_push?/1` を `ContentBehaviour` のコールバックに委譲
-- `GameEvents` から `level_up_scene/0`・`boss_alert_scene/0` への直接参照を除去
-
-**残存する `function_exported?/3`**:
-- `on_ready/1`・`on_physics_process/1`・`on_event/2` のオプショナルコールバックチェック（エンジンの正当な使用）
-- `boss_exp_reward/1` チェック（`ContentBehaviour` のオプショナルコールバックとして定義済み）
-- `weapon_slots_for_nif/1` チェック（Playing シーンの拡張ポイント）
-- `pause_on_push?/1` チェック（`ContentBehaviour` のオプショナルコールバックとして定義済み）
-
----
-
-**背景**
-
-`vision.md` の核心は「エンジンはコンテンツを知らない」だが、現状の `GameEvents` はコンテンツ固有の概念（武器選択・レベルアップ・ボスアラート）を直接扱っており、原則と乖離している。
-
-AsteroidArena を追加した際、`game_events.ex` に `function_exported?/3` による分岐が複数追加された。これは「コンテンツが増えるたびにエンジンコアが肥大化する」という構造的な問題であり、3つ目・4つ目のコンテンツを追加するたびに同じ問題が繰り返される。
-
-**理想の姿**
-
-新しいコンテンツを追加するとき、変更が必要なのは `apps/game_content/` 以下だけであるべきだ。`game_events.ex` はコンテンツの存在を知らず、コンテンツ側が「エンジンのライフサイクルに乗っかる」形でのみ動作するべきである。
-
-```
-現状（悪い）:
-  GameEvents → function_exported?(content, :level_up_scene, 0) → 分岐
-  GameEvents → function_exported?(content, :boss_alert_scene, 0) → 分岐
-  GameEvents → function_exported?(content, :boss_exp_reward, 1) → 分岐
-
-理想（良い）:
-  GameEvents → コンテンツを知らない。イベントを流すだけ。
-  Content    → エンジンのイベントを受け取り、自分で判断して動く。
-```
-
-**根本原因**
-
-`GameEvents` が担っている以下の責務は、本来コンテンツ側が持つべきものだ：
-
-| 現在 `GameEvents` が持つ責務 | 本来の所在 |
-|:---|:---|
-| 武器選択 UI アクションの処理（`handle_ui_action_weapon`） | コンテンツの `on_event` コンポーネント |
-| レベルアップシーンの開閉（`maybe_close_level_up_scene`） | コンテンツの `on_event` コンポーネント |
-| ボスアラートシーンの一時停止判定 | コンテンツの `on_event` コンポーネント |
-| HUD レベル状態の Rust 注入（`set_hud_level_state`） | コンテンツの `on_physics_process` コンポーネント |
-| `boss_exp_reward` を使ったスコア計算 | コンテンツの `on_event` コンポーネント |
-
-**解決の方向性**
-
-`GameEvents` が担うべき責務は「Rust からのフレームイベントを受信し、コンポーネントの `on_event` に流す」だけにする。コンテンツ固有の処理はすべてコンポーネントの `on_event/2` で行う。
-
-```elixir
-# GameEvents（理想）
-defp apply_event(event, state) do
-  dispatch_event_to_components(event, context)
-  update_engine_ssot(event, state)  # score, kill_count, player_hp のみ
-end
-
-# VampireSurvivor の LevelComponent（理想）
-def on_event({:enemy_killed, world_ref, kind_id, x, y}, context) do
-  # EXP 加算・レベルアップ判定・武器選択シーン遷移もここで行う
-end
-```
-
-ただし、シーン遷移（`SceneManager.push_scene` 等）をコンポーネントから呼べるようにするには、`context` にシーン遷移 API を含める必要がある。これは `GameEngine.Component` の `context` 設計の見直しを伴う。
-
-**UI アクション（`{:ui_action, action}`）の問題**
-
-現在、描画スレッドから送られる `{:ui_action, "weapon_name"}` 等の文字列アクションを `GameEvents` が直接解釈している。これもコンテンツ固有の概念（武器名・スキップ）をエンジンが知っている状態だ。
-
-UI アクションをコンテンツ側にルーティングする仕組みが必要である。
-
-**作業ステップ（概案）**
-
-1. `context` に `scene_manager` API（`push_scene/2`・`pop_scene/0`・`replace_scene/2`）を追加し、コンポーネントからシーン遷移できるようにする
-2. `GameEvents.apply_event` からコンテンツ固有の処理（EXP 計算・武器選択・ボス処理）を除去し、`dispatch_event_to_components` に委譲する
-3. `VampireSurvivor.LevelComponent`・`BossComponent` の `on_event/2` でシーン遷移まで完結させる
-4. UI アクションをコンポーネントの `on_event({:ui_action, action}, context)` としてルーティングする
-5. `GameEvents` から `function_exported?/3` による分岐をすべて除去する
-
-**影響ファイル**
-
-- `apps/game_engine/lib/game_engine/game_events.ex` — コンテンツ固有ロジックの除去
-- `apps/game_engine/lib/game_engine/component.ex` — `context` への `scene_manager` API 追加
-- `apps/game_content/lib/game_content/vampire_survivor/level_component.ex` — シーン遷移ロジックの移動
-- `apps/game_content/lib/game_content/vampire_survivor/boss_component.ex` — 同上
-
----
-
 ### 課題9: クラウドセーブ（独自サーバーによるセーブデータ同期）
 
 **優先度**: 低（`game_network` の実装が前提）
@@ -285,6 +193,122 @@ Phoenix Channels を使わずに、Elixir の `Registry` と `PubSub` を使っ�
 - `apps/game_network/lib/game_network.ex` — `GameNetwork.Behaviour` 定義・`GameNetwork.Local` 実装
 - `apps/game_engine/lib/game_engine/game_events.ex` — `GameNetwork` へのブロードキャスト追加
 - `apps/game_engine/mix.exs` — `game_network` への依存追加（フェーズ2以降）
+
+---
+
+### 課題13: コンポーネントがシーンモジュールを直接参照している
+
+**優先度**: 中（IP-01 完了後に着手推奨）
+
+**背景**
+
+`BossComponent.on_physics_process/1` および `LevelComponent.on_event/2` は、
+`GameEngine.SceneManager.get_scene_state/1` を呼ぶ際に
+`GameContent.VampireSurvivor.Scenes.Playing` というモジュール名をハードコードしている。
+
+```elixir
+# BossComponent（現状）
+playing_state =
+  GameEngine.SceneManager.get_scene_state(GameContent.VampireSurvivor.Scenes.Playing)
+```
+
+これはコンテンツ内部（`game_content` → `game_content`）の参照なので即座に問題にはならないが、
+将来的に「コンポーネントを別コンテンツで再利用する」「コンポーネントを `game_engine` 側に移動する」
+といった場面で障壁になる。
+
+**理想の姿**
+
+コンポーネントはシーンモジュール名を知らず、`context` 経由でシーン状態を取得できる。
+
+```elixir
+# 案A: context に playing_state を含める（エンジンがコンテンツを知ることになるため NG）
+
+# 案B: ContentBehaviour に playing_state 取得用コールバックを追加する
+#   → content.get_playing_state() が SceneManager を呼ぶ（間接参照）
+#   → コンポーネントはコンテンツ経由でシーン状態を取得する
+
+# 案C: SceneManager に「現在の playing シーン状態」を返す汎用 API を追加する
+#   → SceneManager.playing_state() が ContentBehaviour 経由でモジュールを解決する
+```
+
+**現時点の判断**
+
+IP-01 の実装（`on_nif_sync` / `on_frame_event` の導入）が完了してから、
+実際の参照箇所と影響範囲を再評価して設計を決定する。
+
+**影響ファイル**
+
+- `apps/game_content/lib/game_content/vampire_survivor/boss_component.ex`
+- `apps/game_content/lib/game_content/vampire_survivor/level_component.ex`
+- `apps/game_engine/lib/game_engine/scene_manager.ex`（案C の場合）
+- `apps/game_engine/lib/game_engine/content_behaviour.ex`（案B の場合）
+
+---
+
+### 課題14: セーブ対象データの収集責務が未定義
+
+**優先度**: 中（IP-01 完了後に着手推奨）
+
+**背景**
+
+現状の `SaveManager.save_session/1` は `NifBridge.get_save_snapshot/1` を呼んで
+Rust 側のスナップショット（`player_hp`, `player_x/y`, `weapon_slots` 等）のみを保存している。
+
+IP-01 の実装により `score`, `kill_count`, `player_hp`, `elapsed_ms` が
+`GameEvents.state` から各コンポーネント管理下（`Playing` シーンの state）に移動すると、
+**Elixir 側の状態がセーブに含まれなくなる**という問題が生じる。
+
+```
+現状のセーブ対象:
+  Rust スナップショット（player_hp, player_x/y, weapon_slots, elapsed_seconds）
+
+IP-01 完了後に必要なセーブ対象:
+  Rust スナップショット（変わらず）
+  + Elixir 側 Playing state（score, kill_count, level, exp, weapon_levels, boss_state 等）
+```
+
+**設計の方向性**
+
+コンポーネントに `on_save/1` コールバックを追加し、
+セーブ時に各コンポーネントが自分の管理データを返す方式を検討する。
+
+```elixir
+# Component ビヘイビアへの追加案
+@callback on_save(context()) :: map()
+@optional_callbacks [..., on_save: 1]
+
+# SaveManager の変更案
+def save_session(world_ref) do
+  rust_snapshot = NifBridge.get_save_snapshot(world_ref)
+  
+  elixir_state =
+    GameEngine.Config.components()
+    |> Enum.reduce(%{}, fn component, acc ->
+      if function_exported?(component, :on_save, 1) do
+        Map.merge(acc, component.on_save(context))
+      else
+        acc
+      end
+    end)
+  
+  write_json(session_path(), %{rust: snapshot_to_map(rust_snapshot), elixir: elixir_state})
+end
+```
+
+ロード時は `on_load/2` コールバックで各コンポーネントが自分の状態を復元する。
+
+**未解決の問いかけ**
+
+- セーブデータのバージョン管理はどうするか（コンポーネントが増減した場合の互換性）
+- `on_save` の戻り値の型をどう定義するか（任意 map か、型付き struct か）
+- ロード時の `context` はどの時点のものを使うか（`world_ref` は必要）
+
+**影響ファイル**
+
+- `apps/game_engine/lib/game_engine/component.ex` — `on_save/1`, `on_load/2` 追加
+- `apps/game_engine/lib/game_engine/save_manager.ex` — コンポーネント収集ロジック追加
+- `apps/game_content/lib/game_content/vampire_survivor/level_component.ex` — `on_save/1` 実装
+- `apps/game_content/lib/game_content/vampire_survivor/boss_component.ex` — `on_save/1` 実装
 
 ---
 
