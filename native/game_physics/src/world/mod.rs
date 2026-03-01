@@ -11,7 +11,10 @@ mod particle;
 mod player;
 
 pub use boss::BossState;
-pub use bullet::{BulletWorld, BULLET_KIND_FIREBALL, BULLET_KIND_LIGHTNING, BULLET_KIND_NORMAL, BULLET_KIND_ROCK, BULLET_KIND_WHIP};
+pub use bullet::{
+    BulletWorld, BULLET_KIND_FIREBALL, BULLET_KIND_LIGHTNING, BULLET_KIND_NORMAL, BULLET_KIND_ROCK,
+    BULLET_KIND_WHIP,
+};
 pub use enemy::EnemyWorld;
 pub use frame_event::FrameEvent;
 pub use game_loop_control::GameLoopControl;

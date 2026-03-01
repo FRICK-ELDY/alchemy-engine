@@ -5,7 +5,12 @@ use super::{GamePhase, GameUiState, HudData, LoadDialogKind};
 /// - タイトル画面「Start」: "__start__"
 /// - ゲームオーバー「Retry」: "__retry__"
 /// - 1.5.3: セーブ「__save__」/ ロード「__load__」/ ロード確認「__load_confirm__」「__load_cancel__」
-pub fn build_hud_ui(ctx: &egui::Context, hud: &HudData, fps: f32, ui_state: &mut GameUiState) -> Option<String> {
+pub fn build_hud_ui(
+    ctx: &egui::Context,
+    hud: &HudData,
+    fps: f32,
+    ui_state: &mut GameUiState,
+) -> Option<String> {
     // トースト更新（毎フレーム減衰）
     if let Some((_, ref mut t)) = ui_state.save_toast {
         *t -= ctx.input(|i| i.stable_dt);
@@ -31,9 +36,15 @@ pub fn build_hud_ui(ctx: &egui::Context, hud: &HudData, fps: f32, ui_state: &mut
         // また build_playing_hud_ui 内の Save/Load ボタンが再クリックされた場合、
         // ui_state.pending_action が再セットされる可能性があるため、描画後に破棄する。
         match hud.phase {
-            GamePhase::Title    => { let _ = build_title_ui(ctx); }
-            GamePhase::GameOver => { let _ = build_game_over_ui(ctx, hud); }
-            GamePhase::Playing  => { let _ = build_playing_ui(ctx, hud, fps, ui_state); }
+            GamePhase::Title => {
+                let _ = build_title_ui(ctx);
+            }
+            GamePhase::GameOver => {
+                let _ = build_game_over_ui(ctx, hud);
+            }
+            GamePhase::Playing => {
+                let _ = build_playing_ui(ctx, hud, fps, ui_state);
+            }
         }
         ui_state.pending_action = None;
 
@@ -45,9 +56,9 @@ pub fn build_hud_ui(ctx: &egui::Context, hud: &HudData, fps: f32, ui_state: &mut
     }
 
     let mut chosen = match hud.phase {
-        GamePhase::Title    => build_title_ui(ctx),
+        GamePhase::Title => build_title_ui(ctx),
         GamePhase::GameOver => build_game_over_ui(ctx, hud),
-        GamePhase::Playing  => build_playing_ui(ctx, hud, fps, ui_state),
+        GamePhase::Playing => build_playing_ui(ctx, hud, fps, ui_state),
     };
 
     // ロードダイアログ（モーダル）
@@ -76,7 +87,10 @@ fn build_title_ui(ctx: &egui::Context) -> Option<String> {
                 .fill(egui::Color32::from_rgba_unmultiplied(5, 5, 20, 230))
                 .inner_margin(egui::Margin::symmetric(60, 40))
                 .corner_radius(16.0)
-                .stroke(egui::Stroke::new(2.0, egui::Color32::from_rgb(100, 160, 255)))
+                .stroke(egui::Stroke::new(
+                    2.0,
+                    egui::Color32::from_rgb(100, 160, 255),
+                ))
                 .show(ui, |ui| {
                     ui.vertical_centered(|ui| {
                         ui.label(
@@ -142,19 +156,30 @@ fn build_game_over_ui(ctx: &egui::Context, hud: &HudData) -> Option<String> {
                         let total_s = hud.elapsed_seconds as u32;
                         let (m, s) = (total_s / 60, total_s % 60);
                         for (text, color) in &[
-                            (format!("Survived:  {:02}:{:02}", m, s), egui::Color32::from_rgb(220, 220, 255)),
-                            (format!("Score:     {}", hud.score),     egui::Color32::from_rgb(255, 220, 80)),
-                            (format!("Kills:     {}", hud.kill_count), egui::Color32::from_rgb(200, 230, 200)),
-                            (format!("Level:     {}", hud.level),     egui::Color32::from_rgb(180, 200, 255)),
+                            (
+                                format!("Survived:  {:02}:{:02}", m, s),
+                                egui::Color32::from_rgb(220, 220, 255),
+                            ),
+                            (
+                                format!("Score:     {}", hud.score),
+                                egui::Color32::from_rgb(255, 220, 80),
+                            ),
+                            (
+                                format!("Kills:     {}", hud.kill_count),
+                                egui::Color32::from_rgb(200, 230, 200),
+                            ),
+                            (
+                                format!("Level:     {}", hud.level),
+                                egui::Color32::from_rgb(180, 200, 255),
+                            ),
                         ] {
                             ui.label(egui::RichText::new(text).color(*color).size(18.0));
                         }
                         ui.add_space(20.0);
-                        let btn = egui::Button::new(
-                            egui::RichText::new("  RETRY  ").size(20.0).strong(),
-                        )
-                        .fill(egui::Color32::from_rgb(160, 40, 40))
-                        .min_size(egui::vec2(160.0, 44.0));
+                        let btn =
+                            egui::Button::new(egui::RichText::new("  RETRY  ").size(20.0).strong())
+                                .fill(egui::Color32::from_rgb(160, 40, 40))
+                                .min_size(egui::vec2(160.0, 44.0));
                         if ui.add(btn).clicked() {
                             chosen = Some("__retry__".to_string());
                         }
@@ -178,55 +203,72 @@ fn build_load_dialog(ctx: &egui::Context, ui_state: &mut GameUiState) -> Option<
                 .fill(egui::Color32::from_rgba_unmultiplied(0, 0, 0, 200))
                 .inner_margin(egui::Margin::symmetric(40, 30))
                 .corner_radius(12.0)
-                .stroke(egui::Stroke::new(2.0, egui::Color32::from_rgb(100, 180, 255)))
+                .stroke(egui::Stroke::new(
+                    2.0,
+                    egui::Color32::from_rgb(100, 180, 255),
+                ))
                 .show(ui, |ui| {
-                    ui.vertical_centered(|ui| {
-                        match dialog_kind {
-                            LoadDialogKind::Confirm => {
-                                ui.label(
-                                    egui::RichText::new("Load saved game?")
-                                        .color(egui::Color32::from_rgb(220, 220, 255))
-                                        .size(20.0)
-                                        .strong(),
-                                );
-                                ui.label(
-                                    egui::RichText::new("Current progress will be lost.")
-                                        .color(egui::Color32::from_rgb(180, 180, 200))
-                                        .size(14.0),
-                                );
-                                ui.add_space(20.0);
-                                ui.horizontal(|ui| {
-                                    if ui.add(
-                                        egui::Button::new(egui::RichText::new("Load").color(egui::Color32::WHITE))
-                                            .fill(egui::Color32::from_rgb(60, 120, 200))
-                                            .min_size(egui::vec2(100.0, 36.0)),
-                                    ).clicked() {
-                                        result = Some("__load_confirm__".to_string());
-                                    }
-                                    if ui.add(
-                                        egui::Button::new(egui::RichText::new("Cancel").color(egui::Color32::WHITE))
-                                            .fill(egui::Color32::from_rgb(80, 80, 80))
-                                            .min_size(egui::vec2(100.0, 36.0)),
-                                    ).clicked() {
-                                        result = Some("__load_cancel__".to_string());
-                                    }
-                                });
-                            }
-                            LoadDialogKind::NoSaveData => {
-                                ui.label(
-                                    egui::RichText::new("No save data")
-                                        .color(egui::Color32::from_rgb(255, 200, 100))
-                                        .size(20.0)
-                                        .strong(),
-                                );
-                                ui.add_space(20.0);
-                                if ui.add(
-                                    egui::Button::new(egui::RichText::new("OK").color(egui::Color32::WHITE))
+                    ui.vertical_centered(|ui| match dialog_kind {
+                        LoadDialogKind::Confirm => {
+                            ui.label(
+                                egui::RichText::new("Load saved game?")
+                                    .color(egui::Color32::from_rgb(220, 220, 255))
+                                    .size(20.0)
+                                    .strong(),
+                            );
+                            ui.label(
+                                egui::RichText::new("Current progress will be lost.")
+                                    .color(egui::Color32::from_rgb(180, 180, 200))
+                                    .size(14.0),
+                            );
+                            ui.add_space(20.0);
+                            ui.horizontal(|ui| {
+                                if ui
+                                    .add(
+                                        egui::Button::new(
+                                            egui::RichText::new("Load").color(egui::Color32::WHITE),
+                                        )
+                                        .fill(egui::Color32::from_rgb(60, 120, 200))
+                                        .min_size(egui::vec2(100.0, 36.0)),
+                                    )
+                                    .clicked()
+                                {
+                                    result = Some("__load_confirm__".to_string());
+                                }
+                                if ui
+                                    .add(
+                                        egui::Button::new(
+                                            egui::RichText::new("Cancel")
+                                                .color(egui::Color32::WHITE),
+                                        )
                                         .fill(egui::Color32::from_rgb(80, 80, 80))
                                         .min_size(egui::vec2(100.0, 36.0)),
-                                ).clicked() {
+                                    )
+                                    .clicked()
+                                {
                                     result = Some("__load_cancel__".to_string());
                                 }
+                            });
+                        }
+                        LoadDialogKind::NoSaveData => {
+                            ui.label(
+                                egui::RichText::new("No save data")
+                                    .color(egui::Color32::from_rgb(255, 200, 100))
+                                    .size(20.0)
+                                    .strong(),
+                            );
+                            ui.add_space(20.0);
+                            if ui
+                                .add(
+                                    egui::Button::new(
+                                        egui::RichText::new("OK").color(egui::Color32::WHITE),
+                                    )
+                                    .fill(egui::Color32::from_rgb(80, 80, 80))
+                                    .min_size(egui::vec2(100.0, 36.0)),
+                                )
+                                .clicked()
+                            {
+                                result = Some("__load_cancel__".to_string());
                             }
                         }
                     });
@@ -246,7 +288,10 @@ fn build_save_toast(ctx: &egui::Context, msg: &str) {
                 .fill(egui::Color32::from_rgba_unmultiplied(20, 80, 20, 230))
                 .inner_margin(egui::Margin::symmetric(24, 12))
                 .corner_radius(8.0)
-                .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(100, 255, 100)))
+                .stroke(egui::Stroke::new(
+                    1.0,
+                    egui::Color32::from_rgb(100, 255, 100),
+                ))
                 .show(ui, |ui| {
                     ui.label(
                         egui::RichText::new(msg)
@@ -259,7 +304,12 @@ fn build_save_toast(ctx: &egui::Context, msg: &str) {
 }
 
 /// プレイ中の全 HUD（フラッシュ・ポップアップ・ステータスバー・ボス HP・レベルアップ・セーブ/ロード）
-fn build_playing_ui(ctx: &egui::Context, hud: &HudData, fps: f32, ui_state: &mut GameUiState) -> Option<String> {
+fn build_playing_ui(
+    ctx: &egui::Context,
+    hud: &HudData,
+    fps: f32,
+    ui_state: &mut GameUiState,
+) -> Option<String> {
     build_screen_flash_ui(ctx, hud);
     build_score_popups_ui(ctx, hud);
     build_playing_hud_ui(ctx, hud, fps, ui_state);
@@ -269,7 +319,9 @@ fn build_playing_ui(ctx: &egui::Context, hud: &HudData, fps: f32, ui_state: &mut
 
 /// 画面フラッシュ（プレイヤーダメージ時に赤いオーバーレイ）
 fn build_screen_flash_ui(ctx: &egui::Context, hud: &HudData) {
-    if hud.screen_flash_alpha <= 0.0 { return; }
+    if hud.screen_flash_alpha <= 0.0 {
+        return;
+    }
     let alpha = (hud.screen_flash_alpha * 255.0) as u8;
     egui::Area::new(egui::Id::new("screen_flash"))
         .anchor(egui::Align2::LEFT_TOP, egui::vec2(0.0, 0.0))
@@ -286,7 +338,9 @@ fn build_screen_flash_ui(ctx: &egui::Context, hud: &HudData) {
 
 /// スコアポップアップ（ワールド座標 → スクリーン座標変換して描画）
 fn build_score_popups_ui(ctx: &egui::Context, hud: &HudData) {
-    if hud.score_popups.is_empty() { return; }
+    if hud.score_popups.is_empty() {
+        return;
+    }
     egui::Area::new(egui::Id::new("score_popups"))
         .anchor(egui::Align2::LEFT_TOP, egui::vec2(0.0, 0.0))
         .order(egui::Order::Foreground)
@@ -296,9 +350,8 @@ fn build_score_popups_ui(ctx: &egui::Context, hud: &HudData) {
                 let sx = wx - hud.camera_x;
                 let sy = wy - hud.camera_y;
                 let alpha = (lifetime / 0.8).clamp(0.0, 1.0);
-                let color = egui::Color32::from_rgba_unmultiplied(
-                    255, 230, 50, (alpha * 220.0) as u8,
-                );
+                let color =
+                    egui::Color32::from_rgba_unmultiplied(255, 230, 50, (alpha * 220.0) as u8);
                 painter.text(
                     egui::pos2(sx, sy),
                     egui::Align2::CENTER_CENTER,
@@ -334,17 +387,13 @@ fn build_playing_hud_ui(ctx: &egui::Context, hud: &HudData, fps: f32, ui_state: 
                                 .color(egui::Color32::from_rgb(255, 100, 100))
                                 .strong(),
                         );
-                        let (rect, _) = ui.allocate_exact_size(
-                            egui::vec2(160.0, 18.0),
-                            egui::Sense::hover(),
-                        );
+                        let (rect, _) =
+                            ui.allocate_exact_size(egui::vec2(160.0, 18.0), egui::Sense::hover());
                         let painter = ui.painter();
                         painter.rect_filled(rect, 4.0, egui::Color32::from_rgb(60, 20, 20));
                         let fill_w = rect.width() * hp_ratio;
-                        let fill_rect = egui::Rect::from_min_size(
-                            rect.min,
-                            egui::vec2(fill_w, rect.height()),
-                        );
+                        let fill_rect =
+                            egui::Rect::from_min_size(rect.min, egui::vec2(fill_w, rect.height()));
                         let hp_color = if hp_ratio > 0.5 {
                             egui::Color32::from_rgb(80, 220, 80)
                         } else if hp_ratio > 0.25 {
@@ -373,10 +422,8 @@ fn build_playing_hud_ui(ctx: &egui::Context, hud: &HudData, fps: f32, ui_state: 
                                 .color(egui::Color32::from_rgb(255, 220, 50))
                                 .strong(),
                         );
-                        let (exp_rect, _) = ui.allocate_exact_size(
-                            egui::vec2(100.0, 18.0),
-                            egui::Sense::hover(),
-                        );
+                        let (exp_rect, _) =
+                            ui.allocate_exact_size(egui::vec2(100.0, 18.0), egui::Sense::hover());
                         let painter = ui.painter();
                         painter.rect_filled(exp_rect, 4.0, egui::Color32::from_rgb(20, 20, 60));
                         let exp_fill = egui::Rect::from_min_size(
@@ -409,25 +456,40 @@ fn build_playing_hud_ui(ctx: &egui::Context, hud: &HudData, fps: f32, ui_state: 
                             ui.separator();
                             for (name, lv) in &hud.weapon_levels {
                                 ui.label(
-                                    egui::RichText::new(format!("[{}] Lv.{lv}", weapon_short_name(name)))
-                                        .color(egui::Color32::from_rgb(180, 230, 255))
-                                        .strong(),
+                                    egui::RichText::new(format!(
+                                        "[{}] Lv.{lv}",
+                                        weapon_short_name(name)
+                                    ))
+                                    .color(egui::Color32::from_rgb(180, 230, 255))
+                                    .strong(),
                                 );
                             }
                         }
 
                         // 1.5.3: セーブ・ロードボタン
                         ui.separator();
-                        if ui.add(
-                            egui::Button::new(egui::RichText::new("Save").color(egui::Color32::from_rgb(100, 220, 100)))
+                        if ui
+                            .add(
+                                egui::Button::new(
+                                    egui::RichText::new("Save")
+                                        .color(egui::Color32::from_rgb(100, 220, 100)),
+                                )
                                 .min_size(egui::vec2(50.0, 22.0)),
-                        ).clicked() {
+                            )
+                            .clicked()
+                        {
                             ui_state.pending_action = Some("__save__".to_string());
                         }
-                        if ui.add(
-                            egui::Button::new(egui::RichText::new("Load").color(egui::Color32::from_rgb(100, 180, 255)))
+                        if ui
+                            .add(
+                                egui::Button::new(
+                                    egui::RichText::new("Load")
+                                        .color(egui::Color32::from_rgb(100, 180, 255)),
+                                )
                                 .min_size(egui::vec2(50.0, 22.0)),
-                        ).clicked() {
+                            )
+                            .clicked()
+                        {
                             ui_state.pending_action = Some("__load__".to_string());
                         }
                     });
@@ -461,8 +523,11 @@ fn build_playing_hud_ui(ctx: &egui::Context, hud: &HudData, fps: f32, ui_state: 
                             .color(egui::Color32::from_rgb(150, 230, 150)),
                     );
                     ui.label(
-                        egui::RichText::new(format!("Cam: ({:.0}, {:.0})", hud.camera_x, hud.camera_y))
-                            .color(egui::Color32::from_rgb(180, 180, 255)),
+                        egui::RichText::new(format!(
+                            "Cam: ({:.0}, {:.0})",
+                            hud.camera_x, hud.camera_y
+                        ))
+                        .color(egui::Color32::from_rgb(180, 180, 255)),
                     );
                     if hud.magnet_timer > 0.0 {
                         ui.label(
@@ -477,7 +542,9 @@ fn build_playing_hud_ui(ctx: &egui::Context, hud: &HudData, fps: f32, ui_state: 
 
 /// ボス HP バー（画面上部中央）
 fn build_boss_hp_bar_ui(ctx: &egui::Context, hud: &HudData) {
-    let Some(ref boss) = hud.boss_info else { return };
+    let Some(ref boss) = hud.boss_info else {
+        return;
+    };
     let boss_ratio = if boss.max_hp > 0.0 {
         (boss.hp / boss.max_hp).clamp(0.0, 1.0)
     } else {
@@ -501,10 +568,8 @@ fn build_boss_hp_bar_ui(ctx: &egui::Context, hud: &HudData) {
                                 .strong(),
                         );
                         ui.add_space(4.0);
-                        let (bar_rect, _) = ui.allocate_exact_size(
-                            egui::vec2(360.0, 22.0),
-                            egui::Sense::hover(),
-                        );
+                        let (bar_rect, _) =
+                            ui.allocate_exact_size(egui::vec2(360.0, 22.0), egui::Sense::hover());
                         let painter = ui.painter();
                         painter.rect_filled(bar_rect, 6.0, egui::Color32::from_rgb(40, 10, 10));
                         let fill_w = bar_rect.width() * boss_ratio;
@@ -532,7 +597,9 @@ fn build_boss_hp_bar_ui(ctx: &egui::Context, hud: &HudData) {
 
 /// レベルアップ選択画面
 fn build_level_up_ui(ctx: &egui::Context, hud: &HudData) -> Option<String> {
-    if !hud.level_up_pending { return None; }
+    if !hud.level_up_pending {
+        return None;
+    }
 
     // キーボードショートカット（Esc / 1 / 2 / 3）
     if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
@@ -540,10 +607,15 @@ fn build_level_up_ui(ctx: &egui::Context, hud: &HudData) -> Option<String> {
     }
     if !hud.weapon_choices.is_empty() {
         let selected_index = ctx.input(|i| {
-            if i.key_pressed(egui::Key::Num1) { Some(0usize) }
-            else if i.key_pressed(egui::Key::Num2) { Some(1usize) }
-            else if i.key_pressed(egui::Key::Num3) { Some(2usize) }
-            else { None }
+            if i.key_pressed(egui::Key::Num1) {
+                Some(0usize)
+            } else if i.key_pressed(egui::Key::Num2) {
+                Some(1usize)
+            } else if i.key_pressed(egui::Key::Num3) {
+                Some(2usize)
+            } else {
+                None
+            }
         });
         if let Some(idx) = selected_index {
             if let Some(choice) = hud.weapon_choices.get(idx) {
@@ -561,7 +633,10 @@ fn build_level_up_ui(ctx: &egui::Context, hud: &HudData) -> Option<String> {
                 .fill(egui::Color32::from_rgba_unmultiplied(10, 10, 40, 240))
                 .inner_margin(egui::Margin::symmetric(40, 30))
                 .corner_radius(12.0)
-                .stroke(egui::Stroke::new(2.0, egui::Color32::from_rgb(255, 220, 50)))
+                .stroke(egui::Stroke::new(
+                    2.0,
+                    egui::Color32::from_rgb(255, 220, 50),
+                ))
                 .show(ui, |ui| {
                     ui.vertical_centered(|ui| {
                         ui.label(
@@ -594,13 +669,9 @@ fn build_max_level_ui(ui: &mut egui::Ui) -> Option<String> {
             .strong(),
     );
     ui.add_space(16.0);
-    let btn = egui::Button::new(
-        egui::RichText::new("Continue  [Esc]")
-            .size(16.0)
-            .strong(),
-    )
-    .fill(egui::Color32::from_rgb(80, 80, 80))
-    .min_size(egui::vec2(160.0, 36.0));
+    let btn = egui::Button::new(egui::RichText::new("Continue  [Esc]").size(16.0).strong())
+        .fill(egui::Color32::from_rgb(80, 80, 80))
+        .min_size(egui::vec2(160.0, 36.0));
     if ui.add(btn).clicked() {
         Some("__skip__".to_string())
     } else {
@@ -621,12 +692,14 @@ fn build_weapon_choice_ui(ui: &mut egui::Ui, hud: &HudData) -> Option<String> {
 
     ui.horizontal(|ui| {
         for (i, choice) in hud.weapon_choices.iter().enumerate() {
-            let current_lv = hud.weapon_levels
+            let current_lv = hud
+                .weapon_levels
                 .iter()
                 .find(|(n, _)| n == choice)
                 .map(|(_, lv)| *lv)
                 .unwrap_or(0);
-            let upgrade_desc = hud.weapon_upgrade_descs
+            let upgrade_desc = hud
+                .weapon_upgrade_descs
                 .get(i)
                 .map(|v| v.as_slice())
                 .unwrap_or(&[]);
@@ -638,11 +711,9 @@ fn build_weapon_choice_ui(ui: &mut egui::Ui, hud: &HudData) -> Option<String> {
     });
 
     ui.add_space(12.0);
-    let skip_btn = egui::Button::new(
-        egui::RichText::new("Skip  [Esc]").size(12.0),
-    )
-    .fill(egui::Color32::from_rgba_unmultiplied(60, 60, 60, 200))
-    .min_size(egui::vec2(90.0, 24.0));
+    let skip_btn = egui::Button::new(egui::RichText::new("Skip  [Esc]").size(12.0))
+        .fill(egui::Color32::from_rgba_unmultiplied(60, 60, 60, 200))
+        .min_size(egui::vec2(90.0, 24.0));
     if ui.add(skip_btn).clicked() {
         chosen = Some("__skip__".to_string());
     }
@@ -651,9 +722,14 @@ fn build_weapon_choice_ui(ui: &mut egui::Ui, hud: &HudData) -> Option<String> {
 }
 
 /// 武器1枚分のカードUIを描画し、選択されたら `Some(())` を返す
-fn build_weapon_card(ui: &mut egui::Ui, choice: &str, current_lv: u32, upgrade_desc: &[String]) -> Option<()> {
-    let is_upgrade  = current_lv > 0;
-    let next_lv     = current_lv + 1;
+fn build_weapon_card(
+    ui: &mut egui::Ui,
+    choice: &str,
+    current_lv: u32,
+    upgrade_desc: &[String],
+) -> Option<()> {
+    let is_upgrade = current_lv > 0;
+    let next_lv = current_lv + 1;
 
     let border_color = if is_upgrade {
         egui::Color32::from_rgb(255, 180, 50)
@@ -710,28 +786,29 @@ fn build_weapon_card(ui: &mut egui::Ui, choice: &str, current_lv: u32, upgrade_d
             }
             ui.add_space(8.0);
 
-            let btn = egui::Button::new(
-                egui::RichText::new("Select  [1/2/3]")
-                    .size(13.0)
-                    .strong(),
-            )
-            .fill(border_color)
-            .min_size(egui::vec2(110.0, 28.0));
+            let btn = egui::Button::new(egui::RichText::new("Select  [1/2/3]").size(13.0).strong())
+                .fill(border_color)
+                .min_size(egui::vec2(110.0, 28.0));
             ui.add(btn)
-        }).inner
+        })
+        .inner
     });
 
-    if response.inner.clicked() { Some(()) } else { None }
+    if response.inner.clicked() {
+        Some(())
+    } else {
+        None
+    }
 }
 
 fn weapon_short_name(name: &str) -> &str {
     match name {
         "magic_wand" => "Magic Wand",
-        "axe"        => "Axe",
-        "cross"      => "Cross",
-        "whip"       => "Whip",
-        "fireball"   => "Fireball",
-        "lightning"  => "Lightning",
-        _            => name,
+        "axe" => "Axe",
+        "cross" => "Cross",
+        "whip" => "Whip",
+        "fireball" => "Fireball",
+        "lightning" => "Lightning",
+        _ => name,
     }
 }

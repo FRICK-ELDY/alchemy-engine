@@ -1,24 +1,24 @@
 //! Path: native/game_physics/src/game_logic/chase_ai.rs
 //! Summary: 敵 Chase AI と最近接探索（find_nearest_*）
 
-use crate::world::EnemyWorld;
 use crate::physics::spatial_hash::CollisionWorld;
+use crate::world::EnemyWorld;
 use rayon::prelude::*;
 
 /// 最近接の生存敵インデックスを返す
 pub fn find_nearest_enemy(enemies: &EnemyWorld, px: f32, py: f32) -> Option<usize> {
     let mut min_dist = f32::MAX;
-    let mut nearest  = None;
+    let mut nearest = None;
     for i in 0..enemies.len() {
         if enemies.alive[i] == 0 {
             continue;
         }
-        let dx   = enemies.positions_x[i] - px;
-        let dy   = enemies.positions_y[i] - py;
+        let dx = enemies.positions_x[i] - px;
+        let dy = enemies.positions_y[i] - py;
         let dist = dx * dx + dy * dy;
         if dist < min_dist {
             min_dist = dist;
-            nearest  = Some(i);
+            nearest = Some(i);
         }
     }
     nearest
@@ -33,17 +33,17 @@ fn find_nearest_enemy_excluding_set(
     exclude: &[bool],
 ) -> Option<usize> {
     let mut min_dist = f32::MAX;
-    let mut nearest  = None;
+    let mut nearest = None;
     for i in 0..enemies.len() {
         if enemies.alive[i] == 0 || exclude.get(i).copied().unwrap_or(false) {
             continue;
         }
-        let dx   = enemies.positions_x[i] - px;
-        let dy   = enemies.positions_y[i] - py;
+        let dx = enemies.positions_x[i] - px;
+        let dy = enemies.positions_y[i] - py;
         let dist = dx * dx + dy * dy;
         if dist < min_dist {
             min_dist = dist;
-            nearest  = Some(i);
+            nearest = Some(i);
         }
     }
     nearest
@@ -101,7 +101,12 @@ pub fn find_nearest_enemy_spatial_excluding(
                     && enemies.alive[i] != 0
                     && !exclude.get(i).copied().unwrap_or(false)
             })
-            .map(|&i| (i, dist_sq(enemies.positions_x[i], enemies.positions_y[i], px, py)))
+            .map(|&i| {
+                (
+                    i,
+                    dist_sq(enemies.positions_x[i], enemies.positions_y[i], px, py),
+                )
+            })
             .min_by(|(_, da), (_, db)| da.partial_cmp(db).unwrap_or(std::cmp::Ordering::Equal))
             .map(|(i, _)| i);
         if result.is_some() {
@@ -115,13 +120,7 @@ pub fn find_nearest_enemy_spatial_excluding(
 
 /// 1 体分の Chase AI（スカラー版・SIMD フォールバック用）
 #[inline]
-fn scalar_chase_one(
-    enemies: &mut EnemyWorld,
-    i: usize,
-    player_x: f32,
-    player_y: f32,
-    dt: f32,
-) {
+fn scalar_chase_one(enemies: &mut EnemyWorld, i: usize, player_x: f32, player_y: f32, dt: f32) {
     let dx = player_x - enemies.positions_x[i];
     let dy = player_y - enemies.positions_y[i];
     let dist = (dx * dx + dy * dy).sqrt().max(0.001);
@@ -134,12 +133,7 @@ fn scalar_chase_one(
 
 /// SIMD（SSE2）版 Chase AI — x86_64 専用
 #[cfg(target_arch = "x86_64")]
-pub fn update_chase_ai_simd(
-    enemies: &mut EnemyWorld,
-    player_x: f32,
-    player_y: f32,
-    dt: f32,
-) {
+pub fn update_chase_ai_simd(enemies: &mut EnemyWorld, player_x: f32, player_y: f32, dt: f32) {
     use std::arch::x86_64::*;
 
     let len = enemies.len();
@@ -183,7 +177,7 @@ pub fn update_chase_ai_simd(
             let byte_mask = _mm_cmpeq_epi8(alive_bytes, ff4);
             // バイトマスクを 32 ビット単位に展開: 各 u8 マスクを i32 全ビットに広げる
             // _mm_unpacklo_epi8 × 2 で byte → word → dword に符号拡張
-            let word_mask  = _mm_unpacklo_epi8(byte_mask, byte_mask);
+            let word_mask = _mm_unpacklo_epi8(byte_mask, byte_mask);
             let dword_mask = _mm_unpacklo_epi16(word_mask, word_mask);
             let alive_mask = _mm_castsi128_ps(dword_mask);
 
@@ -228,17 +222,17 @@ pub fn update_chase_ai_simd(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::EnemyWorld;
     use crate::entity_params::EnemyParams;
+    use crate::world::EnemyWorld;
 
     fn make_enemy_params() -> EnemyParams {
         EnemyParams {
-            max_hp:           100.0,
-            speed:            100.0,
-            radius:           20.0,
-            damage_per_sec:   10.0,
-            render_kind:      1,
-            particle_color:   [1.0, 0.0, 0.0, 1.0],
+            max_hp: 100.0,
+            speed: 100.0,
+            radius: 20.0,
+            damage_per_sec: 10.0,
+            render_kind: 1,
+            particle_color: [1.0, 0.0, 0.0, 1.0],
             passes_obstacles: false,
         }
     }
@@ -351,11 +345,12 @@ mod tests {
             positions.len() < RAYON_THRESHOLD,
             "テストの敵数 ({}) が RAYON_THRESHOLD ({}) 以上になっている。\
              テストを修正するか RAYON_THRESHOLD の変更を確認すること。",
-            positions.len(), RAYON_THRESHOLD
+            positions.len(),
+            RAYON_THRESHOLD
         );
 
         let mut scalar_world = EnemyWorld::new();
-        let mut simd_world   = EnemyWorld::new();
+        let mut simd_world = EnemyWorld::new();
 
         for &(x, y) in &positions {
             scalar_world.spawn(&[(x, y)], 0, &ep);
@@ -382,22 +377,26 @@ mod tests {
             assert!(
                 px_diff < tol,
                 "敵[{i}] 位置 x が一致しない: scalar={:.4}, simd={:.4}",
-                scalar_world.positions_x[i], simd_world.positions_x[i]
+                scalar_world.positions_x[i],
+                simd_world.positions_x[i]
             );
             assert!(
                 py_diff < tol,
                 "敵[{i}] 位置 y が一致しない: scalar={:.4}, simd={:.4}",
-                scalar_world.positions_y[i], simd_world.positions_y[i]
+                scalar_world.positions_y[i],
+                simd_world.positions_y[i]
             );
             assert!(
                 vx_diff < tol,
                 "敵[{i}] 速度 x が一致しない: scalar={:.4}, simd={:.4}",
-                scalar_world.velocities_x[i], simd_world.velocities_x[i]
+                scalar_world.velocities_x[i],
+                simd_world.velocities_x[i]
             );
             assert!(
                 vy_diff < tol,
                 "敵[{i}] 速度 y が一致しない: scalar={:.4}, simd={:.4}",
-                scalar_world.velocities_y[i], simd_world.velocities_y[i]
+                scalar_world.velocities_y[i],
+                simd_world.velocities_y[i]
             );
         }
 
@@ -439,12 +438,12 @@ pub fn update_chase_ai(enemies: &mut EnemyWorld, player_x: f32, player_y: f32, d
     }
 
     // rayon 並列版（RAYON_THRESHOLD 以上の敵数）
-    let positions_x  = &mut enemies.positions_x[..len];
-    let positions_y  = &mut enemies.positions_y[..len];
+    let positions_x = &mut enemies.positions_x[..len];
+    let positions_y = &mut enemies.positions_y[..len];
     let velocities_x = &mut enemies.velocities_x[..len];
     let velocities_y = &mut enemies.velocities_y[..len];
-    let speeds       = &enemies.speeds[..len];
-    let alive        = &enemies.alive[..len];
+    let speeds = &enemies.speeds[..len];
+    let alive = &enemies.alive[..len];
 
     (
         positions_x,
@@ -459,11 +458,11 @@ pub fn update_chase_ai(enemies: &mut EnemyWorld, player_x: f32, player_y: f32, d
             if *is_alive == 0 {
                 return;
             }
-            let dx   = player_x - *px;
-            let dy   = player_y - *py;
+            let dx = player_x - *px;
+            let dy = player_y - *py;
             let dist = (dx * dx + dy * dy).sqrt().max(0.001);
-            *vx  = (dx / dist) * speed;
-            *vy  = (dy / dist) * speed;
+            *vx = (dx / dist) * speed;
+            *vy = (dy / dist) * speed;
             *px += *vx * dt;
             *py += *vy * dt;
         });

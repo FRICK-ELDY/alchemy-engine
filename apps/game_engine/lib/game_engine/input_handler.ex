@@ -13,12 +13,12 @@ defmodule GameEngine.InputHandler do
   def get_move_vector do
     case :ets.lookup(@table, :move) do
       [{:move, vec}] -> vec
-      []             -> {0, 0}
+      [] -> {0, 0}
     end
   end
 
   def key_down(key), do: GenServer.cast(__MODULE__, {:key_down, key})
-  def key_up(key),   do: GenServer.cast(__MODULE__, {:key_up, key})
+  def key_up(key), do: GenServer.cast(__MODULE__, {:key_up, key})
 
   @impl true
   def init(_opts) do
@@ -51,12 +51,14 @@ defmodule GameEngine.InputHandler do
 
   defp write_move_vector(keys_held) do
     dx =
-      (if MapSet.member?(keys_held, :d) or MapSet.member?(keys_held, :arrow_right), do: 1, else: 0) +
-      (if MapSet.member?(keys_held, :a) or MapSet.member?(keys_held, :arrow_left),  do: -1, else: 0)
+      if(MapSet.member?(keys_held, :d) or MapSet.member?(keys_held, :arrow_right), do: 1, else: 0) +
+        if MapSet.member?(keys_held, :a) or MapSet.member?(keys_held, :arrow_left),
+          do: -1,
+          else: 0
 
     dy =
-      (if MapSet.member?(keys_held, :s) or MapSet.member?(keys_held, :arrow_down), do: 1, else: 0) +
-      (if MapSet.member?(keys_held, :w) or MapSet.member?(keys_held, :arrow_up),   do: -1, else: 0)
+      if(MapSet.member?(keys_held, :s) or MapSet.member?(keys_held, :arrow_down), do: 1, else: 0) +
+        if MapSet.member?(keys_held, :w) or MapSet.member?(keys_held, :arrow_up), do: -1, else: 0
 
     :ets.insert(@table, {:move, {dx, dy}})
   end

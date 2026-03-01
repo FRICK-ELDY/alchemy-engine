@@ -1,8 +1,8 @@
 //! Path: native/game_core/src/physics/obstacle_resolve.rs
 //! Summary: プレイヤーと障害物の衝突解決・押し出し処理
 
-use crate::constants::PLAYER_RADIUS;
 use super::spatial_hash::CollisionWorld;
+use crate::constants::PLAYER_RADIUS;
 
 /// プレイヤーが障害物と重なっている場合に押し出す（複数障害物対応）
 pub fn resolve_obstacles_player(

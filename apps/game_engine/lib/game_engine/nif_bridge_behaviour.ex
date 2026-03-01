@@ -24,7 +24,14 @@ defmodule GameEngine.NifBridge.Behaviour do
   @callback set_boss_velocity(reference(), float(), float()) :: :ok
   @callback set_boss_invincible(reference(), boolean()) :: :ok
   @callback set_boss_phase_timer(reference(), float()) :: :ok
-  @callback fire_boss_projectile(reference(), float(), float(), float(), non_neg_integer(), float()) :: :ok
+  @callback fire_boss_projectile(
+              reference(),
+              float(),
+              float(),
+              float(),
+              non_neg_integer(),
+              float()
+            ) :: :ok
   @callback create_game_loop_control() :: reference()
   @callback start_rust_game_loop(reference(), reference(), pid()) :: :ok
   @callback start_render_thread(reference(), pid()) :: :ok
@@ -41,12 +48,20 @@ defmodule GameEngine.NifBridge.Behaviour do
   @callback get_frame_metadata(reference()) :: map()
   @callback get_magnet_timer(reference()) :: float()
   # I-2: kind_id を返り値から除去。ボス種別は Elixir 側 Rule state で管理する。
-  @callback get_boss_state(reference()) :: {:alive, float(), float(), float(), float(), float()} | :none
+  @callback get_boss_state(reference()) ::
+              {:alive, float(), float(), float(), float(), float()} | :none
   @callback is_player_dead(reference()) :: boolean()
 
   # ── Elixir SSoT 注入 NIF ─────────────────────────────────────────
   @callback set_player_hp(reference(), float()) :: :ok
-  @callback set_hud_level_state(reference(), non_neg_integer(), non_neg_integer(), non_neg_integer(), boolean(), list()) :: :ok
+  @callback set_hud_level_state(
+              reference(),
+              non_neg_integer(),
+              non_neg_integer(),
+              non_neg_integer(),
+              boolean(),
+              list()
+            ) :: :ok
   @callback set_elapsed_seconds(reference(), float()) :: :ok
   @callback set_boss_hp(reference(), float()) :: :ok
   @callback set_hud_state(reference(), non_neg_integer(), non_neg_integer()) :: :ok

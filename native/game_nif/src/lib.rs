@@ -45,19 +45,19 @@ mod nif;
 mod render_bridge;
 mod render_snapshot;
 
-pub use game_audio::{AssetId, AssetLoader, AudioCommand, AudioCommandSender, AudioManager, start_audio_thread};
+pub use game_audio::{
+    start_audio_thread, AssetId, AssetLoader, AudioCommand, AudioCommandSender, AudioManager,
+};
 pub use game_physics::game_logic::{
-    find_nearest_enemy, find_nearest_enemy_spatial,
-    find_nearest_enemy_spatial_excluding,
+    find_nearest_enemy, find_nearest_enemy_spatial, find_nearest_enemy_spatial_excluding,
+};
+pub use game_physics::world::{
+    BossState, BulletWorld, EnemyWorld, FrameEvent, GameLoopControl, GameWorld, GameWorldInner,
+    ParticleWorld, PlayerState, BULLET_KIND_FIREBALL, BULLET_KIND_LIGHTNING, BULLET_KIND_NORMAL,
+    BULLET_KIND_ROCK, BULLET_KIND_WHIP,
 };
 pub use game_render::{BossHudInfo, GamePhase, HudData, RenderFrame};
 pub use nif::{SaveSnapshot, WeaponSlotSave};
-pub use game_physics::world::{
-    BossState, BulletWorld, EnemyWorld, FrameEvent, GameLoopControl, GameWorld, GameWorldInner,
-    ParticleWorld, PlayerState,
-    BULLET_KIND_FIREBALL, BULLET_KIND_LIGHTNING, BULLET_KIND_NORMAL, BULLET_KIND_ROCK,
-    BULLET_KIND_WHIP,
-};
 
 #[cfg(feature = "umbrella")]
 rustler::init!("Elixir.GameEngine.NifBridge", load = nif::load);

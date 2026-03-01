@@ -29,10 +29,18 @@ struct Vertex {
 }
 
 const VERTICES: &[Vertex] = &[
-    Vertex { position: [0.0, 0.0] }, // 左上
-    Vertex { position: [1.0, 0.0] }, // 右上
-    Vertex { position: [1.0, 1.0] }, // 右下
-    Vertex { position: [0.0, 1.0] }, // 左下
+    Vertex {
+        position: [0.0, 0.0],
+    }, // 左上
+    Vertex {
+        position: [1.0, 0.0],
+    }, // 右上
+    Vertex {
+        position: [1.0, 1.0],
+    }, // 右下
+    Vertex {
+        position: [0.0, 1.0],
+    }, // 左下
 ];
 
 const INDICES: &[u16] = &[0, 1, 2, 0, 2, 3];
@@ -42,10 +50,10 @@ const INDICES: &[u16] = &[0, 1, 2, 0, 2, 3];
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct SpriteInstance {
-    pub position:   [f32; 2], // ワールド座標（左上）
-    pub size:       [f32; 2], // ピクセルサイズ
-    pub uv_offset:  [f32; 2], // アトラス UV オフセット（0.0〜1.0）
-    pub uv_size:    [f32; 2], // アトラス UV サイズ（0.0〜1.0）
+    pub position: [f32; 2],   // ワールド座標（左上）
+    pub size: [f32; 2],       // ピクセルサイズ
+    pub uv_offset: [f32; 2],  // アトラス UV オフセット（0.0〜1.0）
+    pub uv_size: [f32; 2],    // アトラス UV サイズ（0.0〜1.0）
     pub color_tint: [f32; 4], // RGBA 乗算カラー
 }
 
@@ -113,41 +121,77 @@ pub fn golem_anim_uv(frame: u8) -> ([f32; 2], [f32; 2]) {
     ([x / ATLAS_W, 0.0], [FRAME_W / ATLAS_W, 1.0])
 }
 pub fn bullet_uv() -> ([f32; 2], [f32; 2]) {
-    ([BULLET_ATLAS_OFFSET_X / ATLAS_W, 0.0], [FRAME_W / ATLAS_W, 1.0])
+    (
+        [BULLET_ATLAS_OFFSET_X / ATLAS_W, 0.0],
+        [FRAME_W / ATLAS_W, 1.0],
+    )
 }
 pub fn particle_uv() -> ([f32; 2], [f32; 2]) {
-    ([PARTICLE_ATLAS_OFFSET_X / ATLAS_W, 0.0], [FRAME_W / ATLAS_W, 1.0])
+    (
+        [PARTICLE_ATLAS_OFFSET_X / ATLAS_W, 0.0],
+        [FRAME_W / ATLAS_W, 1.0],
+    )
 }
 pub fn gem_uv() -> ([f32; 2], [f32; 2]) {
-    ([GEM_ATLAS_OFFSET_X / ATLAS_W, 0.0], [FRAME_W / ATLAS_W, 1.0])
+    (
+        [GEM_ATLAS_OFFSET_X / ATLAS_W, 0.0],
+        [FRAME_W / ATLAS_W, 1.0],
+    )
 }
 pub fn potion_uv() -> ([f32; 2], [f32; 2]) {
-    ([POTION_ATLAS_OFFSET_X / ATLAS_W, 0.0], [FRAME_W / ATLAS_W, 1.0])
+    (
+        [POTION_ATLAS_OFFSET_X / ATLAS_W, 0.0],
+        [FRAME_W / ATLAS_W, 1.0],
+    )
 }
 pub fn magnet_uv() -> ([f32; 2], [f32; 2]) {
-    ([MAGNET_ATLAS_OFFSET_X / ATLAS_W, 0.0], [FRAME_W / ATLAS_W, 1.0])
+    (
+        [MAGNET_ATLAS_OFFSET_X / ATLAS_W, 0.0],
+        [FRAME_W / ATLAS_W, 1.0],
+    )
 }
 pub fn fireball_uv() -> ([f32; 2], [f32; 2]) {
-    ([FIREBALL_ATLAS_OFFSET_X / ATLAS_W, 0.0], [FRAME_W / ATLAS_W, 1.0])
+    (
+        [FIREBALL_ATLAS_OFFSET_X / ATLAS_W, 0.0],
+        [FRAME_W / ATLAS_W, 1.0],
+    )
 }
 pub fn lightning_bullet_uv() -> ([f32; 2], [f32; 2]) {
-    ([LIGHTNING_ATLAS_OFFSET_X / ATLAS_W, 0.0], [FRAME_W / ATLAS_W, 1.0])
+    (
+        [LIGHTNING_ATLAS_OFFSET_X / ATLAS_W, 0.0],
+        [FRAME_W / ATLAS_W, 1.0],
+    )
 }
 pub fn whip_uv() -> ([f32; 2], [f32; 2]) {
-    ([WHIP_ATLAS_OFFSET_X / ATLAS_W, 0.0], [FRAME_W / ATLAS_W, 1.0])
+    (
+        [WHIP_ATLAS_OFFSET_X / ATLAS_W, 0.0],
+        [FRAME_W / ATLAS_W, 1.0],
+    )
 }
 /// 1.2.9: ボス UV
 pub fn slime_king_uv() -> ([f32; 2], [f32; 2]) {
-    ([SLIME_KING_ATLAS_OFFSET_X / ATLAS_W, 0.0], [FRAME_W / ATLAS_W, 1.0])
+    (
+        [SLIME_KING_ATLAS_OFFSET_X / ATLAS_W, 0.0],
+        [FRAME_W / ATLAS_W, 1.0],
+    )
 }
 pub fn bat_lord_uv() -> ([f32; 2], [f32; 2]) {
-    ([BAT_LORD_ATLAS_OFFSET_X / ATLAS_W, 0.0], [FRAME_W / ATLAS_W, 1.0])
+    (
+        [BAT_LORD_ATLAS_OFFSET_X / ATLAS_W, 0.0],
+        [FRAME_W / ATLAS_W, 1.0],
+    )
 }
 pub fn stone_golem_uv() -> ([f32; 2], [f32; 2]) {
-    ([STONE_GOLEM_ATLAS_OFFSET_X / ATLAS_W, 0.0], [FRAME_W / ATLAS_W, 1.0])
+    (
+        [STONE_GOLEM_ATLAS_OFFSET_X / ATLAS_W, 0.0],
+        [FRAME_W / ATLAS_W, 1.0],
+    )
 }
 pub fn rock_bullet_uv() -> ([f32; 2], [f32; 2]) {
-    ([ROCK_BULLET_ATLAS_OFFSET_X / ATLAS_W, 0.0], [FRAME_W / ATLAS_W, 1.0])
+    (
+        [ROCK_BULLET_ATLAS_OFFSET_X / ATLAS_W, 0.0],
+        [FRAME_W / ATLAS_W, 1.0],
+    )
 }
 
 // ─── 画面サイズ Uniform ────────────────────────────────────────
@@ -174,12 +218,15 @@ impl ScreenUniform {
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 struct CameraUniform {
     offset: [f32; 2],
-    _pad:   [f32; 2],
+    _pad: [f32; 2],
 }
 
 impl CameraUniform {
     fn new(offset_x: f32, offset_y: f32) -> Self {
-        Self { offset: [offset_x, offset_y], _pad: [0.0; 2] }
+        Self {
+            offset: [offset_x, offset_y],
+            _pad: [0.0; 2],
+        }
     }
 }
 
@@ -196,14 +243,14 @@ const MAX_INSTANCES: usize = 14510;
 // 1.2.9: boss kind: 11=SlimeKing(96px), 12=BatLord(96px), 13=StoneGolem(128px)
 fn enemy_sprite_size(kind: u8) -> f32 {
     match kind {
-        2  => 24.0,   // Bat: 小さい
-        3  => 64.0,   // Golem: 大きい
-        4  => 32.0,   // Ghost
-        5  => 40.0,   // Skeleton
-        11 => 96.0,   // Slime King: 巨大
-        12 => 96.0,   // Bat Lord: 巨大
-        13 => 128.0,  // Stone Golem: 最大
-        _  => 40.0,   // Slime: 基本
+        2 => 24.0,   // Bat: 小さい
+        3 => 64.0,   // Golem: 大きい
+        4 => 32.0,   // Ghost
+        5 => 40.0,   // Skeleton
+        11 => 96.0,  // Slime King: 巨大
+        12 => 96.0,  // Bat Lord: 巨大
+        13 => 128.0, // Stone Golem: 最大
+        _ => 40.0,   // Slime: 基本
     }
 }
 
@@ -221,14 +268,14 @@ fn ghost_anim_uv(frame: u8) -> ([f32; 2], [f32; 2]) {
 /// 1.2.8/1.2.9: アニメーションフレームを考慮した敵 UV（ボスは静止スプライト）
 fn enemy_anim_uv(kind: u8, frame: u8) -> ([f32; 2], [f32; 2]) {
     match kind {
-        2  => bat_anim_uv(frame),
-        3  => golem_anim_uv(frame),
-        4  => ghost_anim_uv(frame),
-        5  => skeleton_anim_uv(frame),
+        2 => bat_anim_uv(frame),
+        3 => golem_anim_uv(frame),
+        4 => ghost_anim_uv(frame),
+        5 => skeleton_anim_uv(frame),
         11 => slime_king_uv(),
         12 => bat_lord_uv(),
         13 => stone_golem_uv(),
-        _  => slime_anim_uv(frame),
+        _ => slime_anim_uv(frame),
     }
 }
 
@@ -236,59 +283,73 @@ fn enemy_anim_uv(kind: u8, frame: u8) -> ([f32; 2], [f32; 2]) {
 
 #[derive(Clone)]
 pub struct HudData {
-    pub hp:               f32,
-    pub max_hp:           f32,
-    pub score:            u32,
-    pub elapsed_seconds:  f32,
-    pub level:            u32,
-    pub exp:              u32,
+    pub hp: f32,
+    pub max_hp: f32,
+    pub score: u32,
+    pub elapsed_seconds: f32,
+    pub level: u32,
+    pub exp: u32,
     /// 次レベルまでの残り EXP（= 次レベル必要総 EXP − 現在 EXP）。
     /// EXP バーの計算では `exp + exp_to_next` が「次レベル必要総 EXP」になる。
-    pub exp_to_next:      u32,
-    pub enemy_count:      usize,
-    pub bullet_count:     usize,
+    pub exp_to_next: u32,
+    pub enemy_count: usize,
+    pub bullet_count: usize,
     #[allow(dead_code)]
-    pub fps:              f32,
+    pub fps: f32,
     pub level_up_pending: bool,
-    pub weapon_choices:   Vec<String>,
+    pub weapon_choices: Vec<String>,
     /// `weapon_choices` と同順のアップグレード説明文。`render_snapshot` で事前生成される。
     pub weapon_upgrade_descs: Vec<Vec<String>>,
-    pub weapon_levels:    Vec<(String, u32)>,
-    pub magnet_timer:     f32,
-    pub item_count:       usize,
-    pub camera_x:         f32,
-    pub camera_y:         f32,
+    pub weapon_levels: Vec<(String, u32)>,
+    pub magnet_timer: f32,
+    pub item_count: usize,
+    pub camera_x: f32,
+    pub camera_y: f32,
     /// 1.2.9: ボス情報（ボスが存在しない場合は None）
-    pub boss_info:        Option<BossHudInfo>,
+    pub boss_info: Option<BossHudInfo>,
     // 1.2.10
-    pub phase:            GamePhase,
+    pub phase: GamePhase,
     /// 画面フラッシュのアルファ値（0.0=なし, 0.5=最大）
     pub screen_flash_alpha: f32,
     /// スコアポップアップ [(world_x, world_y, value, lifetime)]
-    pub score_popups:     Vec<(f32, f32, u32, f32)>,
-    pub kill_count:       u32,
+    pub score_popups: Vec<(f32, f32, u32, f32)>,
+    pub kill_count: u32,
 }
 
 /// 1.2.9: HUD に表示するボス情報
 #[derive(Clone)]
 pub struct BossHudInfo {
-    pub name:    String,
-    pub hp:      f32,
-    pub max_hp:  f32,
+    pub name: String,
+    pub hp: f32,
+    pub max_hp: f32,
 }
 
 impl Default for HudData {
     fn default() -> Self {
         Self {
-            hp: 0.0, max_hp: 100.0, score: 0, elapsed_seconds: 0.0,
-            level: 1, exp: 0, exp_to_next: 10, enemy_count: 0, bullet_count: 0,
-            fps: 0.0, level_up_pending: false, weapon_choices: Vec::new(),
+            hp: 0.0,
+            max_hp: 100.0,
+            score: 0,
+            elapsed_seconds: 0.0,
+            level: 1,
+            exp: 0,
+            exp_to_next: 10,
+            enemy_count: 0,
+            bullet_count: 0,
+            fps: 0.0,
+            level_up_pending: false,
+            weapon_choices: Vec::new(),
             weapon_upgrade_descs: Vec::new(),
-            weapon_levels: Vec::new(), magnet_timer: 0.0, item_count: 0,
-            camera_x: 0.0, camera_y: 0.0,
+            weapon_levels: Vec::new(),
+            magnet_timer: 0.0,
+            item_count: 0,
+            camera_x: 0.0,
+            camera_y: 0.0,
             boss_info: None,
-            phase: GamePhase::Title, screen_flash_alpha: 0.0,
-            score_popups: Vec::new(), kill_count: 0,
+            phase: GamePhase::Title,
+            screen_flash_alpha: 0.0,
+            score_popups: Vec::new(),
+            kill_count: 0,
         }
     }
 }
@@ -306,10 +367,10 @@ pub enum LoadDialogKind {
 #[derive(Default)]
 pub struct GameUiState {
     /// トースト表示 (メッセージ, 残り秒数)
-    pub save_toast:     Option<(String, f32)>,
+    pub save_toast: Option<(String, f32)>,
     /// ロードダイアログ: None=閉, Some(Confirm)=確認待ち, Some(NoSaveData)=「セーブデータなし」
-    pub load_dialog:    Option<LoadDialogKind>,
-    pub has_save:       bool,
+    pub load_dialog: Option<LoadDialogKind>,
+    pub has_save: bool,
     /// ボタンクリックでセットするアクション（毎フレーム消費）
     pub pending_action: Option<String>,
 }
@@ -317,29 +378,29 @@ pub struct GameUiState {
 // ─── Renderer ─────────────────────────────────────────────────
 
 pub struct Renderer {
-    surface:              wgpu::Surface<'static>,
-    device:               wgpu::Device,
-    queue:                wgpu::Queue,
-    config:               wgpu::SurfaceConfiguration,
-    render_pipeline:      wgpu::RenderPipeline,
-    vertex_buffer:        wgpu::Buffer,
-    index_buffer:         wgpu::Buffer,
-    instance_buffer:      wgpu::Buffer,
-    instance_count:       u32,
-    bind_group:           wgpu::BindGroup,
-    screen_uniform_buf:   wgpu::Buffer,
-    screen_bind_group:    wgpu::BindGroup,
+    surface: wgpu::Surface<'static>,
+    device: wgpu::Device,
+    queue: wgpu::Queue,
+    config: wgpu::SurfaceConfiguration,
+    render_pipeline: wgpu::RenderPipeline,
+    vertex_buffer: wgpu::Buffer,
+    index_buffer: wgpu::Buffer,
+    instance_buffer: wgpu::Buffer,
+    instance_count: u32,
+    bind_group: wgpu::BindGroup,
+    screen_uniform_buf: wgpu::Buffer,
+    screen_bind_group: wgpu::BindGroup,
     // 1.2.5: カメラ Uniform
-    camera_uniform_buf:   wgpu::Buffer,
-    camera_bind_group:    wgpu::BindGroup,
+    camera_uniform_buf: wgpu::Buffer,
+    camera_bind_group: wgpu::BindGroup,
     // egui
-    egui_ctx:             egui::Context,
-    egui_renderer:        egui_wgpu::Renderer,
-    egui_winit:           egui_winit::State,
+    egui_ctx: egui::Context,
+    egui_renderer: egui_wgpu::Renderer,
+    egui_winit: egui_winit::State,
     // FPS 計測
-    frame_count:          u32,
-    fps_timer:            std::time::Instant,
-    pub current_fps:      f32,
+    frame_count: u32,
+    fps_timer: std::time::Instant,
+    pub current_fps: f32,
 }
 
 impl Renderer {
@@ -353,7 +414,7 @@ impl Renderer {
 
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
-                power_preference:   wgpu::PowerPreference::HighPerformance,
+                power_preference: wgpu::PowerPreference::HighPerformance,
                 compatible_surface: Some(&surface),
                 ..Default::default()
             })
@@ -376,79 +437,79 @@ impl Renderer {
             .expect("atlas.png の読み込みに失敗しました")
             .to_rgba8();
         let atlas_size = wgpu::Extent3d {
-            width:                 atlas_image.width(),
-            height:                atlas_image.height(),
+            width: atlas_image.width(),
+            height: atlas_image.height(),
             depth_or_array_layers: 1,
         };
         let texture = device.create_texture(&wgpu::TextureDescriptor {
-            label:           Some("Atlas Texture"),
-            size:            atlas_size,
+            label: Some("Atlas Texture"),
+            size: atlas_size,
             mip_level_count: 1,
-            sample_count:    1,
-            dimension:       wgpu::TextureDimension::D2,
-            format:          wgpu::TextureFormat::Rgba8UnormSrgb,
-            usage:           wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-            view_formats:    &[],
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
         });
         queue.write_texture(
             wgpu::TexelCopyTextureInfo {
-                texture:   &texture,
+                texture: &texture,
                 mip_level: 0,
-                origin:    wgpu::Origin3d::ZERO,
-                aspect:    wgpu::TextureAspect::All,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
             },
             &atlas_image,
             wgpu::TexelCopyBufferLayout {
-                offset:         0,
-                bytes_per_row:  Some(4 * atlas_image.width()),
+                offset: 0,
+                bytes_per_row: Some(4 * atlas_image.width()),
                 rows_per_image: Some(atlas_image.height()),
             },
             atlas_size,
         );
         let texture_view = texture.create_view(&Default::default());
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            label:          Some("Atlas Sampler"),
+            label: Some("Atlas Sampler"),
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,
-            mag_filter:     wgpu::FilterMode::Nearest,
-            min_filter:     wgpu::FilterMode::Nearest,
+            mag_filter: wgpu::FilterMode::Nearest,
+            min_filter: wgpu::FilterMode::Nearest,
             ..Default::default()
         });
 
         // ─── バインドグループ group(0): テクスチャ ───────────────
         let texture_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label:   Some("Texture Bind Group Layout"),
+                label: Some("Texture Bind Group Layout"),
                 entries: &[
                     wgpu::BindGroupLayoutEntry {
-                        binding:    0,
+                        binding: 0,
                         visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty:         wgpu::BindingType::Texture {
-                            multisampled:   false,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
                             view_dimension: wgpu::TextureViewDimension::D2,
-                            sample_type:    wgpu::TextureSampleType::Float { filterable: true },
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
                         },
                         count: None,
                     },
                     wgpu::BindGroupLayoutEntry {
-                        binding:    1,
+                        binding: 1,
                         visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty:         wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                        count:      None,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
                     },
                 ],
             });
 
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label:   Some("Texture Bind Group"),
-            layout:  &texture_bind_group_layout,
+            label: Some("Texture Bind Group"),
+            layout: &texture_bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry {
-                    binding:  0,
+                    binding: 0,
                     resource: wgpu::BindingResource::TextureView(&texture_view),
                 },
                 wgpu::BindGroupEntry {
-                    binding:  1,
+                    binding: 1,
                     resource: wgpu::BindingResource::Sampler(&sampler),
                 },
             ],
@@ -457,31 +518,31 @@ impl Renderer {
         // ─── バインドグループ group(1): 画面サイズ Uniform ──────
         let screen_uniform = ScreenUniform::new(size.width, size.height);
         let screen_uniform_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label:    Some("Screen Uniform Buffer"),
+            label: Some("Screen Uniform Buffer"),
             contents: bytemuck::bytes_of(&screen_uniform),
-            usage:    wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
         let screen_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label:   Some("Screen Bind Group Layout"),
+                label: Some("Screen Bind Group Layout"),
                 entries: &[wgpu::BindGroupLayoutEntry {
-                    binding:    0,
+                    binding: 0,
                     visibility: wgpu::ShaderStages::VERTEX,
-                    ty:         wgpu::BindingType::Buffer {
-                        ty:                 wgpu::BufferBindingType::Uniform,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
                         has_dynamic_offset: false,
-                        min_binding_size:   None,
+                        min_binding_size: None,
                     },
                     count: None,
                 }],
             });
 
         let screen_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label:   Some("Screen Bind Group"),
-            layout:  &screen_bind_group_layout,
+            label: Some("Screen Bind Group"),
+            layout: &screen_bind_group_layout,
             entries: &[wgpu::BindGroupEntry {
-                binding:  0,
+                binding: 0,
                 resource: screen_uniform_buf.as_entire_binding(),
             }],
         });
@@ -489,31 +550,31 @@ impl Renderer {
         // ─── バインドグループ group(2): カメラ Uniform（1.2.5）─
         let camera_uniform = CameraUniform::new(0.0, 0.0);
         let camera_uniform_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label:    Some("Camera Uniform Buffer"),
+            label: Some("Camera Uniform Buffer"),
             contents: bytemuck::bytes_of(&camera_uniform),
-            usage:    wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
         let camera_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label:   Some("Camera Bind Group Layout"),
+                label: Some("Camera Bind Group Layout"),
                 entries: &[wgpu::BindGroupLayoutEntry {
-                    binding:    0,
+                    binding: 0,
                     visibility: wgpu::ShaderStages::VERTEX,
-                    ty:         wgpu::BindingType::Buffer {
-                        ty:                 wgpu::BufferBindingType::Uniform,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
                         has_dynamic_offset: false,
-                        min_binding_size:   None,
+                        min_binding_size: None,
                     },
                     count: None,
                 }],
             });
 
         let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label:   Some("Camera Bind Group"),
-            layout:  &camera_bind_group_layout,
+            label: Some("Camera Bind Group"),
+            layout: &camera_bind_group_layout,
             entries: &[wgpu::BindGroupEntry {
-                binding:  0,
+                binding: 0,
                 resource: camera_uniform_buf.as_entire_binding(),
             }],
         });
@@ -521,32 +582,36 @@ impl Renderer {
         // ─── シェーダー・パイプライン ────────────────────────────
         let shader_source = include_str!("shaders/sprite.wgsl");
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label:  Some("Sprite Shader"),
+            label: Some("Sprite Shader"),
             source: wgpu::ShaderSource::Wgsl(shader_source.into()),
         });
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label:                Some("Sprite Pipeline Layout"),
-            bind_group_layouts:   &[&texture_bind_group_layout, &screen_bind_group_layout, &camera_bind_group_layout],
+            label: Some("Sprite Pipeline Layout"),
+            bind_group_layouts: &[
+                &texture_bind_group_layout,
+                &screen_bind_group_layout,
+                &camera_bind_group_layout,
+            ],
             push_constant_ranges: &[],
         });
 
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label:  Some("Sprite Pipeline"),
+            label: Some("Sprite Pipeline"),
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
-                module:      &shader,
+                module: &shader,
                 entry_point: Some("vs_main"),
-                buffers:     &[
+                buffers: &[
                     wgpu::VertexBufferLayout {
                         array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
-                        step_mode:    wgpu::VertexStepMode::Vertex,
-                        attributes:   &wgpu::vertex_attr_array![0 => Float32x2],
+                        step_mode: wgpu::VertexStepMode::Vertex,
+                        attributes: &wgpu::vertex_attr_array![0 => Float32x2],
                     },
                     wgpu::VertexBufferLayout {
                         array_stride: std::mem::size_of::<SpriteInstance>() as wgpu::BufferAddress,
-                        step_mode:    wgpu::VertexStepMode::Instance,
-                        attributes:   &wgpu::vertex_attr_array![
+                        step_mode: wgpu::VertexStepMode::Instance,
+                        attributes: &wgpu::vertex_attr_array![
                             1 => Float32x2, // i_position
                             2 => Float32x2, // i_size
                             3 => Float32x2, // i_uv_offset
@@ -558,45 +623,45 @@ impl Renderer {
                 compilation_options: Default::default(),
             },
             fragment: Some(wgpu::FragmentState {
-                module:      &shader,
+                module: &shader,
                 entry_point: Some("fs_main"),
-                targets:     &[Some(wgpu::ColorTargetState {
-                    format:     config.format,
-                    blend:      Some(wgpu::BlendState::ALPHA_BLENDING),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: config.format,
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
                 compilation_options: Default::default(),
             }),
             primitive: wgpu::PrimitiveState {
-                topology:           wgpu::PrimitiveTopology::TriangleList,
+                topology: wgpu::PrimitiveTopology::TriangleList,
                 strip_index_format: None,
-                front_face:         wgpu::FrontFace::Ccw,
-                cull_mode:          None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: None,
                 ..Default::default()
             },
             depth_stencil: None,
-            multisample:   wgpu::MultisampleState::default(),
-            multiview:     None,
-            cache:         None,
+            multisample: wgpu::MultisampleState::default(),
+            multiview: None,
+            cache: None,
         });
 
         // ─── 頂点・インデックスバッファ ──────────────────────────
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label:    Some("Vertex Buffer"),
+            label: Some("Vertex Buffer"),
             contents: bytemuck::cast_slice(VERTICES),
-            usage:    wgpu::BufferUsages::VERTEX,
+            usage: wgpu::BufferUsages::VERTEX,
         });
         let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label:    Some("Index Buffer"),
+            label: Some("Index Buffer"),
             contents: bytemuck::cast_slice(INDICES),
-            usage:    wgpu::BufferUsages::INDEX,
+            usage: wgpu::BufferUsages::INDEX,
         });
 
         // ─── インスタンスバッファ（動的・最大 MAX_INSTANCES 体）──
         let instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label:              Some("Instance Buffer"),
-            size:               (std::mem::size_of::<SpriteInstance>() * MAX_INSTANCES) as u64,
-            usage:              wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            label: Some("Instance Buffer"),
+            size: (std::mem::size_of::<SpriteInstance>() * MAX_INSTANCES) as u64,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
 
@@ -661,19 +726,24 @@ impl Renderer {
     ) {
         // 1.2.5: カメラ Uniform を更新
         let cam_uniform = CameraUniform::new(camera_offset.0, camera_offset.1);
-        self.queue.write_buffer(&self.camera_uniform_buf, 0, bytemuck::bytes_of(&cam_uniform));
-        let (bullet_uv_off, bullet_uv_sz)           = bullet_uv();
-        let (fireball_uv_off, fireball_uv_sz)       = fireball_uv();
-        let (lightning_uv_off, lightning_uv_sz)     = lightning_bullet_uv();
-        let (whip_uv_off, whip_uv_sz)               = whip_uv();
-        let (particle_uv_off, particle_uv_sz)       = particle_uv();
-        let (gem_uv_off, gem_uv_sz)                 = gem_uv();
-        let (potion_uv_off, potion_uv_sz)           = potion_uv();
-        let (magnet_uv_off, magnet_uv_sz)           = magnet_uv();
-        let (rock_uv_off, rock_uv_sz)               = rock_bullet_uv();
+        self.queue.write_buffer(
+            &self.camera_uniform_buf,
+            0,
+            bytemuck::bytes_of(&cam_uniform),
+        );
+        let (bullet_uv_off, bullet_uv_sz) = bullet_uv();
+        let (fireball_uv_off, fireball_uv_sz) = fireball_uv();
+        let (lightning_uv_off, lightning_uv_sz) = lightning_bullet_uv();
+        let (whip_uv_off, whip_uv_sz) = whip_uv();
+        let (particle_uv_off, particle_uv_sz) = particle_uv();
+        let (gem_uv_off, gem_uv_sz) = gem_uv();
+        let (potion_uv_off, potion_uv_sz) = potion_uv();
+        let (magnet_uv_off, magnet_uv_sz) = magnet_uv();
+        let (rock_uv_off, rock_uv_sz) = rock_bullet_uv();
 
-        let mut instances: Vec<SpriteInstance> =
-            Vec::with_capacity(render_data.len() + particle_data.len() + item_data.len() + obstacle_data.len());
+        let mut instances: Vec<SpriteInstance> = Vec::with_capacity(
+            render_data.len() + particle_data.len() + item_data.len() + obstacle_data.len(),
+        );
 
         for &(x, y, kind, anim_frame) in render_data {
             let inst = match kind {
@@ -681,10 +751,10 @@ impl Renderer {
                 0 => {
                     let (uv_off, uv_sz) = player_anim_uv(anim_frame);
                     SpriteInstance {
-                        position:   [x, y],
-                        size:       [SPRITE_SIZE, SPRITE_SIZE],
-                        uv_offset:  uv_off,
-                        uv_size:    uv_sz,
+                        position: [x, y],
+                        size: [SPRITE_SIZE, SPRITE_SIZE],
+                        uv_offset: uv_off,
+                        uv_size: uv_sz,
                         color_tint: [1.0, 1.0, 1.0, 1.0],
                     }
                 }
@@ -693,10 +763,10 @@ impl Renderer {
                     let sz = enemy_sprite_size(kind);
                     let (uv_off, uv_sz) = enemy_anim_uv(kind, anim_frame);
                     SpriteInstance {
-                        position:   [x, y],
-                        size:       [sz, sz],
-                        uv_offset:  uv_off,
-                        uv_size:    uv_sz,
+                        position: [x, y],
+                        size: [sz, sz],
+                        uv_offset: uv_off,
+                        uv_size: uv_sz,
                         color_tint: [1.0, 1.0, 1.0, 1.0],
                     }
                 }
@@ -706,43 +776,43 @@ impl Renderer {
                     let sz = enemy_sprite_size(base) * ELITE_SIZE_MULTIPLIER;
                     let (uv_off, uv_sz) = enemy_anim_uv(base, anim_frame);
                     SpriteInstance {
-                        position:   [x - sz * 0.1, y - sz * 0.1],
-                        size:       [sz, sz],
-                        uv_offset:  uv_off,
-                        uv_size:    uv_sz,
+                        position: [x - sz * 0.1, y - sz * 0.1],
+                        size: [sz, sz],
+                        uv_offset: uv_off,
+                        uv_size: uv_sz,
                         color_tint: [1.0, 0.4, 0.4, 1.0],
                     }
                 }
                 // 通常弾（MagicWand / Axe / Cross）: 黄色い円 16px
                 crate::BULLET_KIND_NORMAL => SpriteInstance {
-                    position:   [x - 8.0, y - 8.0],
-                    size:       [16.0, 16.0],
-                    uv_offset:  bullet_uv_off,
-                    uv_size:    bullet_uv_sz,
+                    position: [x - 8.0, y - 8.0],
+                    size: [16.0, 16.0],
+                    uv_offset: bullet_uv_off,
+                    uv_size: bullet_uv_sz,
                     color_tint: [1.0, 1.0, 1.0, 1.0],
                 },
                 // Fireball: 赤橙の炎球 22px（通常弾より大きめ）
                 crate::BULLET_KIND_FIREBALL => SpriteInstance {
-                    position:   [x - 11.0, y - 11.0],
-                    size:       [22.0, 22.0],
-                    uv_offset:  fireball_uv_off,
-                    uv_size:    fireball_uv_sz,
+                    position: [x - 11.0, y - 11.0],
+                    size: [22.0, 22.0],
+                    uv_offset: fireball_uv_off,
+                    uv_size: fireball_uv_sz,
                     color_tint: [1.0, 1.0, 1.0, 1.0],
                 },
                 // Lightning 弾丸: 水色の電撃球 18px
                 crate::BULLET_KIND_LIGHTNING => SpriteInstance {
-                    position:   [x - 9.0, y - 9.0],
-                    size:       [18.0, 18.0],
-                    uv_offset:  lightning_uv_off,
-                    uv_size:    lightning_uv_sz,
+                    position: [x - 9.0, y - 9.0],
+                    size: [18.0, 18.0],
+                    uv_offset: lightning_uv_off,
+                    uv_size: lightning_uv_sz,
                     color_tint: [1.0, 1.0, 1.0, 1.0],
                 },
                 // Whip エフェクト弾: 黄緑の横長楕円 40x20px
                 crate::BULLET_KIND_WHIP => SpriteInstance {
-                    position:   [x - 20.0, y - 10.0],
-                    size:       [40.0, 20.0],
-                    uv_offset:  whip_uv_off,
-                    uv_size:    whip_uv_sz,
+                    position: [x - 20.0, y - 10.0],
+                    size: [40.0, 20.0],
+                    uv_offset: whip_uv_off,
+                    uv_size: whip_uv_sz,
                     color_tint: [1.0, 1.0, 1.0, 1.0],
                 },
                 // 1.2.9: ボス本体（11=SlimeKing, 12=BatLord, 13=StoneGolem）
@@ -750,19 +820,19 @@ impl Renderer {
                     let sz = enemy_sprite_size(kind);
                     let (uv_off, uv_sz) = enemy_anim_uv(kind, 0);
                     SpriteInstance {
-                        position:   [x, y],
-                        size:       [sz, sz],
-                        uv_offset:  uv_off,
-                        uv_size:    uv_sz,
+                        position: [x, y],
+                        size: [sz, sz],
+                        uv_offset: uv_off,
+                        uv_size: uv_sz,
                         color_tint: [1.0, 1.0, 1.0, 1.0],
                     }
                 }
                 // 1.2.9: 岩弾（Stone Golem の範囲攻撃）: 灰色の岩 28px
                 crate::BULLET_KIND_ROCK => SpriteInstance {
-                    position:   [x - 14.0, y - 14.0],
-                    size:       [28.0, 28.0],
-                    uv_offset:  rock_uv_off,
-                    uv_size:    rock_uv_sz,
+                    position: [x - 14.0, y - 14.0],
+                    size: [28.0, 28.0],
+                    uv_offset: rock_uv_off,
+                    uv_size: rock_uv_sz,
                     color_tint: [1.0, 1.0, 1.0, 1.0],
                 },
                 _ => continue,
@@ -775,48 +845,54 @@ impl Renderer {
 
         // パーティクルを描画（スプライトサイズはパーティクルの size に合わせる）
         for &(x, y, r, g, b, alpha, size) in particle_data {
-            if instances.len() >= MAX_INSTANCES { break; }
+            if instances.len() >= MAX_INSTANCES {
+                break;
+            }
             instances.push(SpriteInstance {
-                position:   [x - size / 2.0, y - size / 2.0],
-                size:       [size, size],
-                uv_offset:  particle_uv_off,
-                uv_size:    particle_uv_sz,
+                position: [x - size / 2.0, y - size / 2.0],
+                size: [size, size],
+                uv_offset: particle_uv_off,
+                uv_size: particle_uv_sz,
                 color_tint: [r, g, b, alpha],
             });
         }
 
         // 1.5.2: 障害物を描画（木=緑褐色、岩=灰色の円）
         for &(x, y, radius, kind) in obstacle_data {
-            if instances.len() >= MAX_INSTANCES { break; }
+            if instances.len() >= MAX_INSTANCES {
+                break;
+            }
             let (r, g, b) = if kind == 0 {
-                (0.35, 0.55, 0.2)  // 木
+                (0.35, 0.55, 0.2) // 木
             } else {
-                (0.45, 0.45, 0.5)  // 岩
+                (0.45, 0.45, 0.5) // 岩
             };
             let sz = radius * 2.0;
             instances.push(SpriteInstance {
-                position:   [x - radius, y - radius],
-                size:       [sz, sz],
-                uv_offset:  particle_uv_off,
-                uv_size:    particle_uv_sz,
+                position: [x - radius, y - radius],
+                size: [sz, sz],
+                uv_offset: particle_uv_off,
+                uv_size: particle_uv_sz,
                 color_tint: [r, g, b, 1.0],
             });
         }
 
         // 1.2.4: アイテムを描画
         for &(x, y, kind) in item_data {
-            if instances.len() >= MAX_INSTANCES { break; }
+            if instances.len() >= MAX_INSTANCES {
+                break;
+            }
             let (uv_off, uv_sz, sz) = match kind {
-                RENDER_KIND_GEM    => (gem_uv_off,    gem_uv_sz,    20.0_f32),
+                RENDER_KIND_GEM => (gem_uv_off, gem_uv_sz, 20.0_f32),
                 RENDER_KIND_POTION => (potion_uv_off, potion_uv_sz, 24.0_f32),
                 RENDER_KIND_MAGNET => (magnet_uv_off, magnet_uv_sz, 28.0_f32),
                 _ => continue,
             };
             instances.push(SpriteInstance {
-                position:   [x - sz / 2.0, y - sz / 2.0],
-                size:       [sz, sz],
-                uv_offset:  uv_off,
-                uv_size:    uv_sz,
+                position: [x - sz / 2.0, y - sz / 2.0],
+                size: [sz, sz],
+                uv_offset: uv_off,
+                uv_size: uv_sz,
                 color_tint: [1.0, 1.0, 1.0, 1.0],
             });
         }
@@ -824,11 +900,8 @@ impl Renderer {
         self.instance_count = instances.len() as u32;
 
         if !instances.is_empty() {
-            self.queue.write_buffer(
-                &self.instance_buffer,
-                0,
-                bytemuck::cast_slice(&instances),
-            );
+            self.queue
+                .write_buffer(&self.instance_buffer, 0, bytemuck::cast_slice(&instances));
         }
     }
 
@@ -836,7 +909,7 @@ impl Renderer {
         if new_width == 0 || new_height == 0 {
             return;
         }
-        self.config.width  = new_width;
+        self.config.width = new_width;
         self.config.height = new_height;
         self.surface.configure(&self.device, &self.config);
 
@@ -850,14 +923,19 @@ impl Renderer {
 
     /// HUD を描画し、レベルアップ画面でボタンが押された場合は選択された武器名を返す。
     /// 1.5.3: ui_state でセーブ/ロードダイアログ・トーストを制御する。
-    pub fn render(&mut self, window: &Window, hud: &HudData, ui_state: &mut GameUiState) -> Option<String> {
+    pub fn render(
+        &mut self,
+        window: &Window,
+        hud: &HudData,
+        ui_state: &mut GameUiState,
+    ) -> Option<String> {
         // ─── FPS 計測 ────────────────────────────────────────────
         self.frame_count += 1;
         let elapsed = self.fps_timer.elapsed();
         if elapsed.as_secs_f32() >= 1.0 {
             self.current_fps = self.frame_count as f32 / elapsed.as_secs_f32();
             self.frame_count = 0;
-            self.fps_timer   = std::time::Instant::now();
+            self.fps_timer = std::time::Instant::now();
         }
 
         // ─── サーフェス取得 ──────────────────────────────────────
@@ -874,19 +952,21 @@ impl Renderer {
         };
 
         let view = output.texture.create_view(&Default::default());
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Render Encoder"),
-        });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Render Encoder"),
+            });
 
         // ─── スプライト描画パス ──────────────────────────────────
         {
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Sprite Pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view:           &view,
+                    view: &view,
                     resolve_target: None,
-                    ops:            wgpu::Operations {
-                        load:  wgpu::LoadOp::Clear(wgpu::Color {
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color {
                             r: BG_R,
                             g: BG_G,
                             b: BG_B,
@@ -896,8 +976,8 @@ impl Renderer {
                     },
                 })],
                 depth_stencil_attachment: None,
-                timestamp_writes:         None,
-                occlusion_query_set:      None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
             });
 
             if self.instance_count > 0 {
@@ -919,42 +999,49 @@ impl Renderer {
             chosen_weapon = ui::build_hud_ui(ctx, hud, self.current_fps, ui_state);
         });
 
-        self.egui_winit.handle_platform_output(window, full_output.platform_output);
+        self.egui_winit
+            .handle_platform_output(window, full_output.platform_output);
 
-        let tris = self.egui_ctx.tessellate(full_output.shapes, full_output.pixels_per_point);
+        let tris = self
+            .egui_ctx
+            .tessellate(full_output.shapes, full_output.pixels_per_point);
 
         for (id, delta) in full_output.textures_delta.set {
-            self.egui_renderer.update_texture(&self.device, &self.queue, id, &delta);
+            self.egui_renderer
+                .update_texture(&self.device, &self.queue, id, &delta);
         }
 
         let screen_desc = egui_wgpu::ScreenDescriptor {
             size_in_pixels: [self.config.width, self.config.height],
             pixels_per_point: full_output.pixels_per_point,
         };
-        self.egui_renderer.update_buffers(&self.device, &self.queue, &mut encoder, &tris, &screen_desc);
+        self.egui_renderer.update_buffers(
+            &self.device,
+            &self.queue,
+            &mut encoder,
+            &tris,
+            &screen_desc,
+        );
 
         // egui_renderer.render() は RenderPass を消費するため、別スコープで処理する
         {
             let render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("egui Pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view:           &view,
+                    view: &view,
                     resolve_target: None,
-                    ops:            wgpu::Operations {
-                        load:  wgpu::LoadOp::Load,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Load,
                         store: wgpu::StoreOp::Store,
                     },
                 })],
                 depth_stencil_attachment: None,
-                timestamp_writes:         None,
-                occlusion_query_set:      None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
             });
             // egui-wgpu 0.31 では render() が RenderPass を所有する形に変更された
-            self.egui_renderer.render(
-                &mut render_pass.forget_lifetime(),
-                &tris,
-                &screen_desc,
-            );
+            self.egui_renderer
+                .render(&mut render_pass.forget_lifetime(), &tris, &screen_desc);
         }
 
         for id in full_output.textures_delta.free {
@@ -967,4 +1054,3 @@ impl Renderer {
         chosen_weapon
     }
 }
-

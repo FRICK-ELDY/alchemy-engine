@@ -32,6 +32,7 @@ defmodule GameEngine.EventBus do
     Enum.each(state.subscribers, fn pid ->
       send(pid, {:game_events, events})
     end)
+
     {:noreply, state}
   end
 

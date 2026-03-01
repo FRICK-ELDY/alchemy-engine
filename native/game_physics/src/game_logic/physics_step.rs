@@ -11,13 +11,13 @@ use super::systems::effects::{update_particles, update_score_popups};
 use super::systems::items::update_items;
 use super::systems::projectiles::update_projectiles_and_enemy_hits;
 use super::systems::weapons::update_weapon_attacks;
-use crate::world::{FrameEvent, GameWorldInner};
 use crate::constants::{
     ENEMY_SEPARATION_FORCE, ENEMY_SEPARATION_RADIUS, FRAME_BUDGET_MS, INVINCIBLE_DURATION,
     PLAYER_RADIUS, PLAYER_SIZE, PLAYER_SPEED,
 };
 use crate::physics::obstacle_resolve;
 use crate::physics::separation::apply_separation;
+use crate::world::{FrameEvent, GameWorldInner};
 
 /// 物理ステップの内部実装（NIF と Rust ゲームループスレッドの両方から呼ぶ）
 pub fn physics_step_inner(w: &mut GameWorldInner, delta_ms: f64) {
@@ -52,7 +52,7 @@ pub fn physics_step_inner(w: &mut GameWorldInner, delta_ms: f64) {
         &mut w.obstacle_query_buf,
     );
 
-    w.player.x = w.player.x.clamp(0.0, w.map_width  - PLAYER_SIZE);
+    w.player.x = w.player.x.clamp(0.0, w.map_width - PLAYER_SIZE);
     w.player.y = w.player.y.clamp(0.0, w.map_height - PLAYER_SIZE);
 
     // Chase AI（x86_64 では SIMD 版、それ以外は rayon 版）
@@ -64,7 +64,12 @@ pub fn physics_step_inner(w: &mut GameWorldInner, delta_ms: f64) {
     update_chase_ai(&mut w.enemies, px, py, dt);
 
     // 敵同士の重なりを解消する分離パス
-    apply_separation(&mut w.enemies, ENEMY_SEPARATION_RADIUS, ENEMY_SEPARATION_FORCE, dt);
+    apply_separation(
+        &mut w.enemies,
+        ENEMY_SEPARATION_RADIUS,
+        ENEMY_SEPARATION_FORCE,
+        dt,
+    );
 
     // 敵 vs 障害物（Ghost 以外は押し出し）
     resolve_obstacles_enemy(w);
@@ -82,12 +87,18 @@ pub fn physics_step_inner(w: &mut GameWorldInner, delta_ms: f64) {
     // 最大の敵半径（Golem: 32px）を考慮してクエリ半径を広げる
     let max_enemy_radius = 32.0_f32;
     let query_radius = PLAYER_RADIUS + max_enemy_radius;
-    w.collision.dynamic.query_nearby_into(px, py, query_radius, &mut w.spatial_query_buf);
+    w.collision
+        .dynamic
+        .query_nearby_into(px, py, query_radius, &mut w.spatial_query_buf);
 
     for idx in w.spatial_query_buf.iter().copied() {
-        if w.enemies.alive[idx] == 0 { continue; }
+        if w.enemies.alive[idx] == 0 {
+            continue;
+        }
         let kind_id = w.enemies.kind_ids[idx];
-        let Some(params) = w.params.get_enemy(kind_id) else { continue; };
+        let Some(params) = w.params.get_enemy(kind_id) else {
+            continue;
+        };
         let enemy_r = params.radius;
         let hit_radius = PLAYER_RADIUS + enemy_r;
         let ex = w.enemies.positions_x[idx] + enemy_r;
@@ -103,7 +114,8 @@ pub fn physics_step_inner(w: &mut GameWorldInner, delta_ms: f64) {
             if w.player.invincible_timer <= 0.0 && w.player.hp > 0.0 {
                 let dmg = params.damage_per_sec * dt;
                 w.player.invincible_timer = INVINCIBLE_DURATION;
-                w.frame_events.push(FrameEvent::PlayerDamaged { damage: dmg });
+                w.frame_events
+                    .push(FrameEvent::PlayerDamaged { damage: dmg });
                 // 赤いパーティクルをプレイヤー位置に発生
                 let ppx = w.player.x + PLAYER_RADIUS;
                 let ppy = w.player.y + PLAYER_RADIUS;
@@ -133,8 +145,7 @@ pub fn physics_step_inner(w: &mut GameWorldInner, delta_ms: f64) {
     if elapsed_ms > FRAME_BUDGET_MS {
         eprintln!(
             "[PERF] Frame budget exceeded: {:.2}ms (enemies: {})",
-            elapsed_ms,
-            w.enemies.count
+            elapsed_ms, w.enemies.count
         );
     }
 }

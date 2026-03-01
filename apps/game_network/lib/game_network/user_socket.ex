@@ -13,7 +13,7 @@ defmodule GameNetwork.UserSocket do
 
   use Phoenix.Socket
 
-  channel "room:*", GameNetwork.Channel
+  channel("room:*", GameNetwork.Channel)
 
   @impl true
   def connect(_params, socket, _connect_info) do

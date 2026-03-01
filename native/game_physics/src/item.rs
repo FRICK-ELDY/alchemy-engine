@@ -6,13 +6,13 @@
 #[repr(u8)]
 pub enum ItemKind {
     #[default]
-    Gem    = 0, // 経験値宝石（緑）
+    Gem = 0, // 経験値宝石（緑）
     Potion = 1, // 回復ポーション（赤）
     Magnet = 2, // 磁石（黄）
 }
 
 /// `get_render_data` / `get_item_data` が返す kind 値
-pub const RENDER_KIND_GEM:    u8 = 5;
+pub const RENDER_KIND_GEM: u8 = 5;
 pub const RENDER_KIND_POTION: u8 = 6;
 pub const RENDER_KIND_MAGNET: u8 = 7;
 
@@ -20,7 +20,7 @@ impl ItemKind {
     /// レンダラーに渡す kind 値
     pub fn render_kind(self) -> u8 {
         match self {
-            Self::Gem    => RENDER_KIND_GEM,
+            Self::Gem => RENDER_KIND_GEM,
             Self::Potion => RENDER_KIND_POTION,
             Self::Magnet => RENDER_KIND_MAGNET,
         }
@@ -33,12 +33,12 @@ impl ItemKind {
 pub struct ItemWorld {
     pub positions_x: Vec<f32>,
     pub positions_y: Vec<f32>,
-    pub kinds:       Vec<ItemKind>,
-    pub value:       Vec<u32>,  // Gem: EXP 量, Potion: 回復量, Magnet: 未使用
-    pub alive:       Vec<bool>,
-    pub count:       usize,
+    pub kinds: Vec<ItemKind>,
+    pub value: Vec<u32>, // Gem: EXP 量, Potion: 回復量, Magnet: 未使用
+    pub alive: Vec<bool>,
+    pub count: usize,
     /// kill 時にインデックスを積み、spawn 時に pop して再利用する
-    free_list:       Vec<usize>,
+    free_list: Vec<usize>,
 }
 
 impl ItemWorld {
@@ -46,11 +46,11 @@ impl ItemWorld {
         Self {
             positions_x: Vec::new(),
             positions_y: Vec::new(),
-            kinds:       Vec::new(),
-            value:       Vec::new(),
-            alive:       Vec::new(),
-            count:       0,
-            free_list:   Vec::new(),
+            kinds: Vec::new(),
+            value: Vec::new(),
+            alive: Vec::new(),
+            count: 0,
+            free_list: Vec::new(),
         }
     }
 
@@ -63,9 +63,9 @@ impl ItemWorld {
         if let Some(i) = self.free_list.pop() {
             self.positions_x[i] = x;
             self.positions_y[i] = y;
-            self.kinds[i]       = kind;
-            self.value[i]       = value;
-            self.alive[i]       = true;
+            self.kinds[i] = kind;
+            self.value[i] = value;
+            self.alive[i] = true;
         } else {
             self.positions_x.push(x);
             self.positions_y.push(y);

@@ -75,13 +75,23 @@ impl AssetLoader {
 
     #[allow(dead_code)]
     pub fn with_game_assets(game_id: &str) -> Self {
-        let game_assets_id = if game_id.is_empty() { None } else { Some(game_id.to_string()) };
-        Self { base_path: Self::base_path_from_env(), game_assets_id }
+        let game_assets_id = if game_id.is_empty() {
+            None
+        } else {
+            Some(game_id.to_string())
+        };
+        Self {
+            base_path: Self::base_path_from_env(),
+            game_assets_id,
+        }
     }
 
     #[allow(dead_code)]
     pub fn with_base_path<P: AsRef<Path>>(path: P) -> Self {
-        Self { base_path: Some(path.as_ref().to_path_buf()), game_assets_id: None }
+        Self {
+            base_path: Some(path.as_ref().to_path_buf()),
+            game_assets_id: None,
+        }
     }
 
     fn game_specific_path(&self, default_path: &str) -> Option<String> {

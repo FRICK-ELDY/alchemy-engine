@@ -7,35 +7,35 @@ defmodule GameContent.AsteroidArena.SpawnSystem do
   """
 
   # ── 種別 ID ────────────────────────────────────────────────────────
-  @asteroid_large  0
+  @asteroid_large 0
   @asteroid_medium 1
-  @asteroid_small  2
-  @ufo             3
+  @asteroid_small 2
+  @ufo 3
 
   # ── スポーン上限 ───────────────────────────────────────────────────
   @max_enemies 500
 
   # ── ウェーブ定義 {開始秒, スポーン間隔ms, 1回の数} ────────────────
   @waves [
-    { 0, 4_000, 2},
+    {0, 4_000, 2},
     {30, 3_000, 3},
     {90, 2_000, 4},
-    {180, 1_500, 5},
+    {180, 1_500, 5}
   ]
 
   # ── UFO 出現スケジュール {開始秒, 出現間隔ms} ─────────────────────
   @ufo_schedule [
-    { 60, 60_000},
+    {60, 60_000},
     {120, 45_000},
-    {180, 30_000},
+    {180, 30_000}
   ]
 
   # ── EXP 報酬（Elixir SSoT）────────────────────────────────────────
   @exp_rewards %{
-    @asteroid_large  => 20,
+    @asteroid_large => 20,
     @asteroid_medium => 10,
-    @asteroid_small  => 5,
-    @ufo             => 50,
+    @asteroid_small => 5,
+    @ufo => 50
   }
 
   @doc "経過時間に応じて小惑星をスポーンする。戻り値は更新後の last_spawn_ms"
@@ -104,10 +104,10 @@ defmodule GameContent.AsteroidArena.SpawnSystem do
   @doc "ウェーブラベルを返す（ログ・HUD 用）"
   def wave_label(elapsed_sec) do
     cond do
-      elapsed_sec < 30  -> "Wave 1 - Asteroids"
-      elapsed_sec < 90  -> "Wave 2 - Denser"
+      elapsed_sec < 30 -> "Wave 1 - Asteroids"
+      elapsed_sec < 90 -> "Wave 2 - Denser"
       elapsed_sec < 180 -> "Wave 3 - UFOs Appear"
-      true              -> "Wave 4 - Chaos"
+      true -> "Wave 4 - Chaos"
     end
   end
 
@@ -125,7 +125,9 @@ defmodule GameContent.AsteroidArena.SpawnSystem do
 
   defp ufo_interval(elapsed_sec) do
     # 同上: Enum.find_last/2 の代替
-    case @ufo_schedule |> Enum.reverse() |> Enum.find(fn {start, _i} -> elapsed_sec >= start end) do
+    case @ufo_schedule
+         |> Enum.reverse()
+         |> Enum.find(fn {start, _i} -> elapsed_sec >= start end) do
       nil -> nil
       {_start, interval} -> interval
     end
@@ -135,7 +137,7 @@ defmodule GameContent.AsteroidArena.SpawnSystem do
     positions =
       for i <- 0..(count - 1) do
         angle = i * :math.pi() * 2.0 / count + (:rand.uniform() - 0.5) * 0.5
-        dist  = 40.0 + :rand.uniform() * 20.0
+        dist = 40.0 + :rand.uniform() * 20.0
         {x + :math.cos(angle) * dist, y + :math.sin(angle) * dist}
       end
 

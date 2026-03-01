@@ -11,14 +11,14 @@ defmodule GameServer.MixProject do
       lockfile: "../../mix.lock",
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
-      deps: deps(),
+      deps: deps()
     ]
   end
 
   def application do
     [
       extra_applications: [:logger],
-      mod: {GameServer.Application, []},
+      mod: {GameServer.Application, []}
     ]
   end
 
@@ -26,7 +26,7 @@ defmodule GameServer.MixProject do
     [
       {:game_engine, in_umbrella: true},
       {:game_content, in_umbrella: true},
-      {:game_network, in_umbrella: true},
+      {:game_network, in_umbrella: true}
     ]
   end
 end

@@ -8,8 +8,8 @@ defmodule GameNetwork.Router do
 
   use Plug.Router
 
-  plug :match
-  plug :dispatch
+  plug(:match)
+  plug(:dispatch)
 
   get "/health" do
     {status_code, body} =
@@ -19,7 +19,7 @@ defmodule GameNetwork.Router do
             Phoenix.json_library().encode!(%{
               status: "ok",
               rooms: length(rooms),
-              room_ids: Enum.map(rooms, &to_string/1),
+              room_ids: Enum.map(rooms, &to_string/1)
             })
 
           {200, body}
@@ -28,7 +28,7 @@ defmodule GameNetwork.Router do
           body =
             Phoenix.json_library().encode!(%{
               status: "degraded",
-              reason: inspect(reason),
+              reason: inspect(reason)
             })
 
           {503, body}

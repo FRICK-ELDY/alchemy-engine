@@ -21,8 +21,10 @@ defmodule GameContent.VampireSurvivor.Scenes.BossAlert do
     elapsed = now - alert_ms
 
     if elapsed >= GameContent.VampireSurvivor.BossSystem.alert_duration_ms() do
-      kind_id = GameContent.VampireSurvivor.entity_registry().bosses[boss_kind] ||
-                  raise "Unknown boss kind: #{inspect(boss_kind)}"
+      kind_id =
+        GameContent.VampireSurvivor.entity_registry().bosses[boss_kind] ||
+          raise "Unknown boss kind: #{inspect(boss_kind)}"
+
       GameEngine.NifBridge.spawn_boss(world_ref, kind_id)
       Logger.info("[BOSS] Spawned: #{boss_name}")
       {:transition, :pop, state}

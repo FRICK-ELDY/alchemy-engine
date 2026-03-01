@@ -30,12 +30,14 @@ defmodule GameNetwork.ChannelTest do
     test "room:* トピックに join できる" do
       track("test_room")
       {:ok, socket} = connect(GameNetwork.UserSocket, %{})
+
       assert {:ok, %{room_id: "test_room"}, _socket} =
                subscribe_and_join(socket, GameNetwork.Channel, "room:test_room")
     end
 
     test "不明なトピックは拒否される" do
       {:ok, socket} = connect(GameNetwork.UserSocket, %{})
+
       assert {:error, %{reason: "unknown_topic"}} =
                subscribe_and_join(socket, GameNetwork.Channel, "unknown:topic")
     end
@@ -51,7 +53,7 @@ defmodule GameNetwork.ChannelTest do
 
     test "ping を送ると pong が返る", %{socket: socket} do
       push(socket, "ping", %{})
-      assert_push "pong", %{ts: ts}
+      assert_push("pong", %{ts: ts})
       assert is_integer(ts)
     end
   end
@@ -77,7 +79,7 @@ defmodule GameNetwork.ChannelTest do
       {:ok, _, socket} = subscribe_and_join(socket, GameNetwork.Channel, "room:ghost_room")
 
       push(socket, "input", %{"dx" => 0.0, "dy" => 0.0})
-      assert_push "error", %{reason: "room_not_found"}
+      assert_push("error", %{reason: "room_not_found"})
     end
   end
 
@@ -107,7 +109,7 @@ defmodule GameNetwork.ChannelTest do
       send(socket.channel_pid, {:network_event, "other_room", :hello})
 
       # encode_event/1 はアトムを文字列に変換する（JSON 送信時の挙動と一致）
-      assert_push "room_event", %{from: "other_room", data: "hello"}
+      assert_push("room_event", %{from: "other_room", data: "hello"})
     end
   end
 

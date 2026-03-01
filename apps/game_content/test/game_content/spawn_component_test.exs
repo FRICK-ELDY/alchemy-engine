@@ -52,6 +52,7 @@ defmodule GameContent.VampireSurvivor.SpawnComponentTest do
 
     test "期待する敵種別が全て登録されている", %{registry: r} do
       expected_enemies = [:slime, :bat, :golem, :skeleton, :ghost]
+
       Enum.each(expected_enemies, fn e ->
         assert Map.has_key?(r.enemies, e), "#{e} が enemies に登録されていない"
       end)
@@ -59,6 +60,7 @@ defmodule GameContent.VampireSurvivor.SpawnComponentTest do
 
     test "期待する武器種別が全て登録されている", %{registry: r} do
       expected_weapons = [:magic_wand, :axe, :cross, :whip, :fireball, :lightning, :garlic]
+
       Enum.each(expected_weapons, fn w ->
         assert Map.has_key?(r.weapons, w), "#{w} が weapons に登録されていない"
       end)
@@ -66,6 +68,7 @@ defmodule GameContent.VampireSurvivor.SpawnComponentTest do
 
     test "期待するボス種別が全て登録されている", %{registry: r} do
       expected_bosses = [:slime_king, :bat_lord, :stone_golem]
+
       Enum.each(expected_bosses, fn b ->
         assert Map.has_key?(r.bosses, b), "#{b} が bosses に登録されていない"
       end)

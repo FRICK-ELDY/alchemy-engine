@@ -27,14 +27,15 @@ defmodule GameContent.VampireSurvivor.LevelSystem do
   def weapon_label(weapon, level) when is_integer(level) and level > 1 do
     "#{weapon_label(weapon)} Lv.#{level}"
   end
+
   def weapon_label(weapon, _level), do: weapon_label(weapon)
 
   def weapon_label(:magic_wand), do: "Magic Wand (auto-aim)"
-  def weapon_label(:garlic),     do: "Garlic (aura damage)"
-  def weapon_label(:axe),        do: "Axe (upward throw)"
-  def weapon_label(:cross),      do: "Cross (4-way fire)"
-  def weapon_label(:whip),       do: "Whip (fan sweep)"
-  def weapon_label(:fireball),   do: "Fireball (piercing)"
-  def weapon_label(:lightning),  do: "Lightning (chain)"
-  def weapon_label(other),       do: to_string(other)
+  def weapon_label(:garlic), do: "Garlic (aura damage)"
+  def weapon_label(:axe), do: "Axe (upward throw)"
+  def weapon_label(:cross), do: "Cross (4-way fire)"
+  def weapon_label(:whip), do: "Whip (fan sweep)"
+  def weapon_label(:fireball), do: "Fireball (piercing)"
+  def weapon_label(:lightning), do: "Lightning (chain)"
+  def weapon_label(other), do: to_string(other)
 end
