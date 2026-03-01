@@ -3,10 +3,10 @@
 
 /// プレイヤー状態
 pub struct PlayerState {
-    pub x:                f32,
-    pub y:                f32,
-    pub input_dx:         f32,
-    pub input_dy:         f32,
-    pub hp:               f32,
+    pub x: f32,
+    pub y: f32,
+    pub input_dx: f32,
+    pub input_dy: f32,
+    pub hp: f32,
     pub invincible_timer: f32,
 }

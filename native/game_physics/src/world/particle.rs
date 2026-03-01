@@ -5,36 +5,36 @@ use crate::physics::rng::SimpleRng;
 
 /// パーティクル SoA（Structure of Arrays）
 pub struct ParticleWorld {
-    pub positions_x:  Vec<f32>,
-    pub positions_y:  Vec<f32>,
+    pub positions_x: Vec<f32>,
+    pub positions_y: Vec<f32>,
     pub velocities_x: Vec<f32>,
     pub velocities_y: Vec<f32>,
-    pub lifetime:     Vec<f32>,
+    pub lifetime: Vec<f32>,
     pub max_lifetime: Vec<f32>,
-    pub color:        Vec<[f32; 4]>,
-    pub size:         Vec<f32>,
-    pub alive:        Vec<bool>,
-    pub count:        usize,
-    rng:              SimpleRng,
+    pub color: Vec<[f32; 4]>,
+    pub size: Vec<f32>,
+    pub alive: Vec<bool>,
+    pub count: usize,
+    rng: SimpleRng,
     /// 空きスロットのインデックススタック — O(1) でスロットを取得・返却
-    free_list:        Vec<usize>,
+    free_list: Vec<usize>,
 }
 
 impl ParticleWorld {
     pub fn new(seed: u64) -> Self {
         Self {
-            positions_x:  Vec::new(),
-            positions_y:  Vec::new(),
+            positions_x: Vec::new(),
+            positions_y: Vec::new(),
             velocities_x: Vec::new(),
             velocities_y: Vec::new(),
-            lifetime:     Vec::new(),
+            lifetime: Vec::new(),
             max_lifetime: Vec::new(),
-            color:        Vec::new(),
-            size:         Vec::new(),
-            alive:        Vec::new(),
-            count:        0,
-            rng:          SimpleRng::new(seed),
-            free_list:    Vec::new(),
+            color: Vec::new(),
+            size: Vec::new(),
+            alive: Vec::new(),
+            count: 0,
+            rng: SimpleRng::new(seed),
+            free_list: Vec::new(),
         }
     }
 
@@ -42,24 +42,31 @@ impl ParticleWorld {
         self.positions_x.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.positions_x.is_empty()
+    }
+
+    #[allow(clippy::too_many_arguments)]
     pub fn spawn_one(
         &mut self,
-        x: f32, y: f32,
-        vx: f32, vy: f32,
+        x: f32,
+        y: f32,
+        vx: f32,
+        vy: f32,
         lifetime: f32,
         color: [f32; 4],
         size: f32,
     ) {
         if let Some(i) = self.free_list.pop() {
-            self.positions_x[i]  = x;
-            self.positions_y[i]  = y;
+            self.positions_x[i] = x;
+            self.positions_y[i] = y;
             self.velocities_x[i] = vx;
             self.velocities_y[i] = vy;
-            self.lifetime[i]     = lifetime;
+            self.lifetime[i] = lifetime;
             self.max_lifetime[i] = lifetime;
-            self.color[i]        = color;
-            self.size[i]         = size;
-            self.alive[i]        = true;
+            self.color[i] = color;
+            self.size[i] = size;
+            self.alive[i] = true;
         } else {
             self.positions_x.push(x);
             self.positions_y.push(y);

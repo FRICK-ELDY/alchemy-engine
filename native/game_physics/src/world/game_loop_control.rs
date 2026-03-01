@@ -6,6 +6,12 @@ pub struct GameLoopControl {
     paused: std::sync::atomic::AtomicBool,
 }
 
+impl Default for GameLoopControl {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GameLoopControl {
     pub fn new() -> Self {
         Self {
@@ -16,7 +22,8 @@ impl GameLoopControl {
         self.paused.store(true, std::sync::atomic::Ordering::SeqCst);
     }
     pub fn resume(&self) {
-        self.paused.store(false, std::sync::atomic::Ordering::SeqCst);
+        self.paused
+            .store(false, std::sync::atomic::Ordering::SeqCst);
     }
     pub fn is_paused(&self) -> bool {
         self.paused.load(std::sync::atomic::Ordering::SeqCst)

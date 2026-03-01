@@ -41,8 +41,13 @@ pub fn debug_dump_world(world: ResourceArc<GameWorld>) -> NifResult<String> {
     };
     Ok(format!(
         "enemies={} bullets={} player=({:.1},{:.1}) hp={:.0}/{:.0} {}",
-        w.enemies.count, w.bullets.count, w.player.x, w.player.y,
-        w.player.hp, w.player_max_hp, boss_str
+        w.enemies.count,
+        w.bullets.count,
+        w.player.x,
+        w.player.y,
+        w.player.hp,
+        w.player_max_hp,
+        boss_str
     ))
 }
 
@@ -61,22 +66,31 @@ pub fn get_enemy_count(world: ResourceArc<GameWorld>) -> NifResult<usize> {
 #[rustler::nif]
 pub fn get_hud_data(world: ResourceArc<GameWorld>) -> NifResult<(f64, f64, u32, f64)> {
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;
-    Ok((w.player.hp as f64, w.player_max_hp as f64, w.score, w.elapsed_seconds as f64))
+    Ok((
+        w.player.hp as f64,
+        w.player_max_hp as f64,
+        w.score,
+        w.elapsed_seconds as f64,
+    ))
 }
 
 #[rustler::nif]
-pub fn get_frame_metadata(world: ResourceArc<GameWorld>) -> NifResult<(
-    (f64, f64, u32, f64),
-    (usize, usize, f64),
-    (bool, f64, f64),
-)> {
+#[allow(clippy::type_complexity)]
+pub fn get_frame_metadata(
+    world: ResourceArc<GameWorld>,
+) -> NifResult<((f64, f64, u32, f64), (usize, usize, f64), (bool, f64, f64))> {
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;
     let (boss_alive, boss_hp, boss_max_hp) = match &w.boss {
         Some(boss) => (true, boss.hp as f64, boss.max_hp as f64),
-        None       => (false, 0.0, 0.0),
+        None => (false, 0.0, 0.0),
     };
     Ok((
-        (w.player.hp as f64, w.player_max_hp as f64, w.score, w.elapsed_seconds as f64),
+        (
+            w.player.hp as f64,
+            w.player_max_hp as f64,
+            w.score,
+            w.elapsed_seconds as f64,
+        ),
         (w.enemies.count, w.bullets.count, w.last_frame_time_ms),
         (boss_alive, boss_hp, boss_max_hp),
     ))
@@ -116,5 +130,10 @@ pub fn is_player_dead(world: ResourceArc<GameWorld>) -> NifResult<bool> {
 #[rustler::nif]
 pub fn get_full_game_state(world: ResourceArc<GameWorld>) -> NifResult<(u32, f64, f64, u32)> {
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;
-    Ok((w.score, w.player.hp as f64, w.elapsed_seconds as f64, w.kill_count))
+    Ok((
+        w.score,
+        w.player.hp as f64,
+        w.elapsed_seconds as f64,
+        w.kill_count,
+    ))
 }

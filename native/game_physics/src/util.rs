@@ -7,9 +7,10 @@ use crate::physics::rng::SimpleRng;
 /// 経過時間に応じた現在のウェーブ設定を返す (interval_secs, count_per_tick)
 #[allow(dead_code)] // main スタンドアロンのみで使用
 pub fn current_wave(elapsed_secs: f32) -> (f32, usize) {
-    WAVES.iter()
+    WAVES
+        .iter()
         .filter(|&&(start, _, _)| elapsed_secs >= start)
-        .last()
+        .next_back()
         .map(|&(_, interval, count)| (interval, count))
         .unwrap_or((0.8, 20))
 }
@@ -64,8 +65,5 @@ pub fn spawn_position_around_player(
 ) -> (f32, f32) {
     let angle = rng.next_f32() * std::f32::consts::TAU;
     let dist = min_dist + rng.next_f32() * (max_dist - min_dist);
-    (
-        player_x + angle.cos() * dist,
-        player_y + angle.sin() * dist,
-    )
+    (player_x + angle.cos() * dist, player_y + angle.sin() * dist)
 }

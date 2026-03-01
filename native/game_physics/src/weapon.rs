@@ -12,14 +12,18 @@ pub const MAX_WEAPON_SLOTS: usize = 6;
 // ─── WeaponSlot ───────────────────────────────────────────────
 
 pub struct WeaponSlot {
-    pub kind_id:        u8,
-    pub level:          u32,
+    pub kind_id: u8,
+    pub level: u32,
     pub cooldown_timer: f32,
 }
 
 impl WeaponSlot {
     pub fn new(kind_id: u8) -> Self {
-        Self { kind_id, level: 1, cooldown_timer: 0.0 }
+        Self {
+            kind_id,
+            level: 1,
+            cooldown_timer: 0.0,
+        }
     }
 
     pub fn effective_cooldown(&self, params: &WeaponParams) -> f32 {
@@ -55,9 +59,13 @@ pub fn weapon_upgrade_desc(
     };
     let next = current_lv + 1;
 
-    let slot = |lv: u32| WeaponSlot { kind_id: weapon_id, level: lv.max(1), cooldown_timer: 0.0 };
+    let slot = |lv: u32| WeaponSlot {
+        kind_id: weapon_id,
+        level: lv.max(1),
+        cooldown_timer: 0.0,
+    };
     let dmg = |lv: u32| slot(lv).effective_damage(wp);
-    let cd  = |lv: u32| slot(lv).effective_cooldown(wp);
+    let cd = |lv: u32| slot(lv).effective_cooldown(wp);
     let bullets = |lv: u32| wp.bullet_count(lv.max(1));
 
     match wp.fire_pattern {
@@ -66,7 +74,7 @@ pub fn weapon_upgrade_desc(
                 format!("DMG: {} -> {}", dmg(current_lv), dmg(next)),
                 format!("CD:  {:.1}s -> {:.1}s", cd(current_lv), cd(next)),
             ];
-            let bullets_now  = bullets(current_lv);
+            let bullets_now = bullets(current_lv);
             let bullets_next = bullets(next);
             if bullets_next > bullets_now {
                 lines.push(format!("Shots: {} -> {} (+)", bullets_now, bullets_next));
@@ -81,7 +89,11 @@ pub fn weapon_upgrade_desc(
             "Throws upward".to_string(),
         ],
         FirePattern::Radial => {
-            let dirs_now  = if current_lv == 0 || current_lv <= 3 { 4 } else { 8 };
+            let dirs_now = if current_lv == 0 || current_lv <= 3 {
+                4
+            } else {
+                8
+            };
             let dirs_next = if next <= 3 { 4 } else { 8 };
             let mut lines = vec![
                 format!("DMG: {} -> {}", dmg(current_lv), dmg(next)),
@@ -130,7 +142,6 @@ pub fn weapon_upgrade_desc(
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -139,17 +150,15 @@ mod tests {
     fn make_test_tables() -> EntityParamTables {
         EntityParamTables {
             enemies: vec![],
-            weapons: vec![
-                WeaponParams {
-                    cooldown: 1.0,
-                    damage: 10,
-                    as_u8: 0,
-                    bullet_table: Some(vec![0, 1, 1, 2, 2, 3, 3, 4, 4]),
-                    fire_pattern: FirePattern::Aimed,
-                    range: 0.0,
-                    chain_count: 0,
-                },
-            ],
+            weapons: vec![WeaponParams {
+                cooldown: 1.0,
+                damage: 10,
+                as_u8: 0,
+                bullet_table: Some(vec![0, 1, 1, 2, 2, 3, 3, 4, 4]),
+                fire_pattern: FirePattern::Aimed,
+                range: 0.0,
+                chain_count: 0,
+            }],
             bosses: vec![],
         }
     }
@@ -158,7 +167,10 @@ mod tests {
     fn weapon_slot_bullet_count() {
         let tables = make_test_tables();
         let slot = WeaponSlot::new(0);
-        assert_eq!(slot.bullet_count(tables.get_weapon(0).expect("weapon 0 should exist")), 1);
+        assert_eq!(
+            slot.bullet_count(tables.get_weapon(0).expect("weapon 0 should exist")),
+            1
+        );
     }
 
     #[test]
@@ -166,6 +178,9 @@ mod tests {
         let tables = make_test_tables();
         let mut slot = WeaponSlot::new(0);
         slot.level = 2;
-        assert_eq!(slot.effective_damage(tables.get_weapon(0).expect("weapon 0 should exist")), 12);
+        assert_eq!(
+            slot.effective_damage(tables.get_weapon(0).expect("weapon 0 should exist")),
+            12
+        );
     }
 }

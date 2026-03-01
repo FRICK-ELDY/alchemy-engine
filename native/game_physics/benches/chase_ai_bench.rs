@@ -10,12 +10,12 @@ use game_simulation::{
 
 fn make_params() -> EnemyParams {
     EnemyParams {
-        max_hp:           100.0,
-        speed:            80.0,
-        radius:           20.0,
-        damage_per_sec:   10.0,
-        render_kind:      1,
-        particle_color:   [1.0, 0.0, 0.0, 1.0],
+        max_hp: 100.0,
+        speed: 80.0,
+        radius: 20.0,
+        damage_per_sec: 10.0,
+        render_kind: 1,
+        particle_color: [1.0, 0.0, 0.0, 1.0],
         passes_obstacles: false,
     }
 }

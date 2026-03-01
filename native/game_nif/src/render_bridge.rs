@@ -1,15 +1,15 @@
 //! Path: native/game_nif/src/render_bridge.rs
 //! Summary: game_render の RenderBridge 実装
 
-use game_audio::AssetLoader;
 use crate::lock_metrics::record_read_wait;
 use crate::render_snapshot::{
     build_render_frame, calc_interpolation_alpha, copy_interpolation_data, interpolate_player_pos,
 };
-use game_physics::world::GameWorld;
+use game_audio::AssetLoader;
 use game_physics::constants::{PLAYER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
-use game_render::RenderFrame;
+use game_physics::world::GameWorld;
 use game_render::window::{run_render_loop, RenderBridge, RendererInit, WindowConfig};
+use game_render::RenderFrame;
 use rustler::env::OwnedEnv;
 use rustler::{Encoder, LocalPid, ResourceArc};
 use std::time::Instant;
@@ -20,7 +20,7 @@ pub fn run_render_thread(world: ResourceArc<GameWorld>, elixir_pid: LocalPid) {
 
     let config = WindowConfig {
         title: "AlchemyEngine - Vampire Survivor".to_string(),
-        width:  SCREEN_WIDTH  as u32,
+        width: SCREEN_WIDTH as u32,
         height: SCREEN_HEIGHT as u32,
         renderer_init: RendererInit {
             atlas_png: loader.load_sprite_atlas(),
@@ -33,7 +33,7 @@ pub fn run_render_thread(world: ResourceArc<GameWorld>, elixir_pid: LocalPid) {
 }
 
 struct NativeRenderBridge {
-    world:      ResourceArc<GameWorld>,
+    world: ResourceArc<GameWorld>,
     elixir_pid: LocalPid,
 }
 
@@ -54,7 +54,7 @@ impl RenderBridge for NativeRenderBridge {
                 }
             };
             let interp = copy_interpolation_data(&guard);
-            let frame  = build_render_frame(&guard);
+            let frame = build_render_frame(&guard);
             (interp, frame)
         };
 
@@ -71,7 +71,7 @@ impl RenderBridge for NativeRenderBridge {
                 entry.0 = interp_x;
                 entry.1 = interp_y;
             }
-            let cam_x = interp_x + PLAYER_SIZE / 2.0 - SCREEN_WIDTH  / 2.0;
+            let cam_x = interp_x + PLAYER_SIZE / 2.0 - SCREEN_WIDTH / 2.0;
             let cam_y = interp_y + PLAYER_SIZE / 2.0 - SCREEN_HEIGHT / 2.0;
             frame.camera_offset = (cam_x, cam_y);
         }

@@ -2,45 +2,51 @@
 //! Summary: 弾丸 SoA（BulletWorld）と描画種別定数
 
 /// 弾丸の描画種別（renderer に渡す kind 値）
-pub const BULLET_KIND_NORMAL:    u8 = 4;  // MagicWand / Axe / Cross（黄色い円）
-pub const BULLET_KIND_FIREBALL:  u8 = 8;  // Fireball（赤橙の炎球）
-pub const BULLET_KIND_LIGHTNING: u8 = 9;  // Lightning（水色の電撃球）
-pub const BULLET_KIND_WHIP:      u8 = 10; // Whip（黄緑の弧状）
-// 11=SlimeKing, 12=BatLord, 13=StoneGolem（ボス render_kind と共有）
-pub const BULLET_KIND_ROCK:      u8 = 14; // StoneGolem の岩弾
+pub const BULLET_KIND_NORMAL: u8 = 4; // MagicWand / Axe / Cross（黄色い円）
+pub const BULLET_KIND_FIREBALL: u8 = 8; // Fireball（赤橙の炎球）
+pub const BULLET_KIND_LIGHTNING: u8 = 9; // Lightning（水色の電撃球）
+pub const BULLET_KIND_WHIP: u8 = 10; // Whip（黄緑の弧状）
+                                     // 11=SlimeKing, 12=BatLord, 13=StoneGolem（ボス render_kind と共有）
+pub const BULLET_KIND_ROCK: u8 = 14; // StoneGolem の岩弾
 
 /// 弾丸 SoA（Structure of Arrays）
 pub struct BulletWorld {
-    pub positions_x:  Vec<f32>,
-    pub positions_y:  Vec<f32>,
+    pub positions_x: Vec<f32>,
+    pub positions_y: Vec<f32>,
     pub velocities_x: Vec<f32>,
     pub velocities_y: Vec<f32>,
-    pub damage:       Vec<i32>,
-    pub lifetime:     Vec<f32>,
-    pub alive:        Vec<bool>,
+    pub damage: Vec<i32>,
+    pub lifetime: Vec<f32>,
+    pub alive: Vec<bool>,
     /// true の弾丸は敵に当たっても消えずに貫通する（Fireball 用）
-    pub piercing:     Vec<bool>,
+    pub piercing: Vec<bool>,
     /// 描画種別（BULLET_KIND_* 定数）
-    pub render_kind:  Vec<u8>,
-    pub count:        usize,
+    pub render_kind: Vec<u8>,
+    pub count: usize,
     /// 空きスロットのインデックススタック — O(1) でスロットを取得・返却
-    free_list:        Vec<usize>,
+    free_list: Vec<usize>,
+}
+
+impl Default for BulletWorld {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl BulletWorld {
     pub fn new() -> Self {
         Self {
-            positions_x:  Vec::new(),
-            positions_y:  Vec::new(),
+            positions_x: Vec::new(),
+            positions_y: Vec::new(),
             velocities_x: Vec::new(),
             velocities_y: Vec::new(),
-            damage:       Vec::new(),
-            lifetime:     Vec::new(),
-            alive:        Vec::new(),
-            piercing:     Vec::new(),
-            render_kind:  Vec::new(),
-            count:        0,
-            free_list:    Vec::new(),
+            damage: Vec::new(),
+            lifetime: Vec::new(),
+            alive: Vec::new(),
+            piercing: Vec::new(),
+            render_kind: Vec::new(),
+            count: 0,
+            free_list: Vec::new(),
         }
     }
 
@@ -57,17 +63,28 @@ impl BulletWorld {
         self.spawn_ex(x, y, 0.0, 0.0, 0, lifetime, false, render_kind);
     }
 
-    pub fn spawn_ex(&mut self, x: f32, y: f32, vx: f32, vy: f32, damage: i32, lifetime: f32, piercing: bool, render_kind: u8) {
+    #[allow(clippy::too_many_arguments)]
+    pub fn spawn_ex(
+        &mut self,
+        x: f32,
+        y: f32,
+        vx: f32,
+        vy: f32,
+        damage: i32,
+        lifetime: f32,
+        piercing: bool,
+        render_kind: u8,
+    ) {
         if let Some(i) = self.free_list.pop() {
-            self.positions_x[i]  = x;
-            self.positions_y[i]  = y;
+            self.positions_x[i] = x;
+            self.positions_y[i] = y;
             self.velocities_x[i] = vx;
             self.velocities_y[i] = vy;
-            self.damage[i]       = damage;
-            self.lifetime[i]     = lifetime;
-            self.alive[i]        = true;
-            self.piercing[i]     = piercing;
-            self.render_kind[i]  = render_kind;
+            self.damage[i] = damage;
+            self.lifetime[i] = lifetime;
+            self.alive[i] = true;
+            self.piercing[i] = piercing;
+            self.render_kind[i] = render_kind;
         } else {
             self.positions_x.push(x);
             self.positions_y.push(y);
@@ -92,5 +109,9 @@ impl BulletWorld {
 
     pub fn len(&self) -> usize {
         self.positions_x.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.positions_x.is_empty()
     }
 }

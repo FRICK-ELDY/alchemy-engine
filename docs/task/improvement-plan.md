@@ -11,7 +11,7 @@
 | ID | タイトル | 期待改善幅 | 工数 | 優先度 |
 |:---|:---|:---:|:---:|:---:|
 | IP-01 | `GameNetwork.Local` フェーズ3（実装済み） | +9 | 大 | ✅ 完了 |
-| IP-02 | CI/CD パイプラインの追加 | +5 | 小 | 🔴 最優先 |
+| IP-02 | CI/CD パイプラインの追加 | +5 | 小 | ✅ 完了 |
 | IP-03 | `GameEvents` GenServer の分解 | +4 | 中 | 🟡 高 |
 | IP-04 | Elixir コアモジュールのテスト追加 | +4 | 中 | 🟡 高 |
 | IP-05 | NIF の `unwrap()` / `expect()` を `NifResult<T>` に統一 | +2 | 小 | 🟡 高 |
@@ -76,40 +76,23 @@
 
 **実装内容**
 
-`.github/workflows/ci.yml` を作成:
+`.github/workflows/ci.yml` を作成（✅ 実装済み）:
 
-```yaml
-name: CI
-on: [push, pull_request]
+| ジョブ | 内容 | 実行条件 |
+|:---|:---|:---|
+| `rust-check` | `cargo fmt --check` + `cargo clippy -D warnings` | 全 push / PR |
+| `rust-test` | `cargo test -p game_physics` | 全 push / PR |
+| `elixir-check` | `mix compile --warnings-as-errors` + `mix format --check-formatted` + `mix credo --strict` | 全 push / PR |
+| `elixir-test` | `mix test`（NIF ビルド込み、Rust キャッシュ付き） | 全 push / PR |
+| `bench-regression` | `cargo bench -p game_physics`（前回比 +10% 超でブロック） | `main` push のみ |
 
-jobs:
-  elixir:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: erlef/setup-beam@v1
-        with:
-          elixir-version: '1.19'
-          otp-version: '27'
-      - run: mix deps.get
-      - run: mix compile --warnings-as-errors
-      - run: mix test
-      - run: mix credo --strict
-
-  rust:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-      - run: cargo test --workspace --features nif
-      - run: cargo clippy --workspace -- -D warnings
-```
+- OTP バージョン: **28**（Elixir 1.19 と組み合わせ）
+- `bin/ci.bat` を作成し、ローカルでも同等の検証が可能（✅ 実装済み）
 
 **受け入れ基準**:
 - すべての PR で `mix test` と `cargo test` が自動実行される
-- `mix credo` と `cargo clippy` がゼロ警告で通過する
+- `mix credo --strict` と `cargo clippy -D warnings` がゼロ警告で通過する
+- `bin\ci.bat` でローカル実行が可能（`rust` / `elixir` / `check` フィルター対応）
 
 ---
 

@@ -2,15 +2,17 @@
 //! Summary: ワールド作成・入力・スポーン・障害物設定 NIF
 
 use super::util::{lock_poisoned_err, params_not_loaded_err};
+use game_physics::constants::{
+    CELL_SIZE, MAP_HEIGHT, MAP_WIDTH, PARTICLE_RNG_SEED, PLAYER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH,
+};
 use game_physics::entity_params::{
     BossParams, EnemyParams, EntityParamTables, FirePattern, WeaponParams,
 };
 use game_physics::game_logic::systems::spawn::get_spawn_positions_around_player;
-use game_physics::world::{GameWorld, GameWorldInner, PlayerState};
-use game_physics::constants::{CELL_SIZE, MAP_HEIGHT, MAP_WIDTH, PARTICLE_RNG_SEED, PLAYER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use game_physics::item::ItemWorld;
 use game_physics::physics::rng::SimpleRng;
 use game_physics::physics::spatial_hash::CollisionWorld;
+use game_physics::world::{GameWorld, GameWorldInner, PlayerState};
 use rustler::types::list::ListIterator;
 use rustler::{Atom, NifResult, ResourceArc, Term};
 use std::sync::RwLock;
@@ -21,45 +23,45 @@ use game_physics::entity_params::DEFAULT_PARTICLE_COLOR;
 #[rustler::nif]
 pub fn create_world() -> ResourceArc<GameWorld> {
     ResourceArc::new(GameWorld(RwLock::new(GameWorldInner {
-        frame_id:           0,
-        player:             PlayerState {
-            x:                SCREEN_WIDTH  / 2.0 - PLAYER_SIZE / 2.0,
-            y:                SCREEN_HEIGHT / 2.0 - PLAYER_SIZE / 2.0,
-            input_dx:         0.0,
-            input_dy:         0.0,
-            hp:               100.0,
+        frame_id: 0,
+        player: PlayerState {
+            x: SCREEN_WIDTH / 2.0 - PLAYER_SIZE / 2.0,
+            y: SCREEN_HEIGHT / 2.0 - PLAYER_SIZE / 2.0,
+            input_dx: 0.0,
+            input_dy: 0.0,
+            hp: 100.0,
             invincible_timer: 0.0,
         },
-        enemies:            EnemyWorld::new(),
-        bullets:            BulletWorld::new(),
-        particles:          ParticleWorld::new(PARTICLE_RNG_SEED),
-        items:              ItemWorld::new(),
-        magnet_timer:       0.0,
-        rng:                SimpleRng::new(12345),
-        collision:          CollisionWorld::new(CELL_SIZE),
+        enemies: EnemyWorld::new(),
+        bullets: BulletWorld::new(),
+        particles: ParticleWorld::new(PARTICLE_RNG_SEED),
+        items: ItemWorld::new(),
+        magnet_timer: 0.0,
+        rng: SimpleRng::new(12345),
+        collision: CollisionWorld::new(CELL_SIZE),
         obstacle_query_buf: Vec::new(),
-        spatial_query_buf:  Vec::new(),
+        spatial_query_buf: Vec::new(),
         last_frame_time_ms: 0.0,
-        elapsed_seconds:    0.0,
-        player_max_hp:      100.0,
-        weapon_slots:       vec![],
-        boss:               None,
-        frame_events:       Vec::new(),
-        score_popups:       Vec::new(),
-        score:              0,
-        kill_count:         0,
-        prev_player_x:      SCREEN_WIDTH  / 2.0 - PLAYER_SIZE / 2.0,
-        prev_player_y:      SCREEN_HEIGHT / 2.0 - PLAYER_SIZE / 2.0,
-        prev_tick_ms:       0,
-        curr_tick_ms:       0,
-        params:                 EntityParamTables::default(),
-        map_width:              MAP_WIDTH,
-        map_height:             MAP_HEIGHT,
-        hud_level:              1,
-        hud_exp:                0,
-        hud_exp_to_next:        10,
-        hud_level_up_pending:   false,
-        hud_weapon_choices:     Vec::new(),
+        elapsed_seconds: 0.0,
+        player_max_hp: 100.0,
+        weapon_slots: vec![],
+        boss: None,
+        frame_events: Vec::new(),
+        score_popups: Vec::new(),
+        score: 0,
+        kill_count: 0,
+        prev_player_x: SCREEN_WIDTH / 2.0 - PLAYER_SIZE / 2.0,
+        prev_player_y: SCREEN_HEIGHT / 2.0 - PLAYER_SIZE / 2.0,
+        prev_tick_ms: 0,
+        curr_tick_ms: 0,
+        params: EntityParamTables::default(),
+        map_width: MAP_WIDTH,
+        map_height: MAP_HEIGHT,
+        hud_level: 1,
+        hud_exp: 0,
+        hud_exp_to_next: 10,
+        hud_level_up_pending: false,
+        hud_weapon_choices: Vec::new(),
     })))
 }
 
@@ -74,7 +76,9 @@ pub fn set_player_input(world: ResourceArc<GameWorld>, dx: f64, dy: f64) -> NifR
 #[rustler::nif]
 pub fn spawn_enemies(world: ResourceArc<GameWorld>, kind_id: u8, count: usize) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
-    let ep = w.params.get_enemy(kind_id)
+    let ep = w
+        .params
+        .get_enemy(kind_id)
         .ok_or_else(params_not_loaded_err)?
         .clone();
     let positions = get_spawn_positions_around_player(&mut w, count);
@@ -85,13 +89,22 @@ pub fn spawn_enemies(world: ResourceArc<GameWorld>, kind_id: u8, count: usize) -
 /// Phase 3-B: 指定座標リストに敵をスポーンする NIF。
 /// positions: [{x, y}] のリスト
 #[rustler::nif]
-pub fn spawn_enemies_at(world: ResourceArc<GameWorld>, kind_id: u8, positions_term: Term) -> NifResult<Atom> {
+pub fn spawn_enemies_at(
+    world: ResourceArc<GameWorld>,
+    kind_id: u8,
+    positions_term: Term,
+) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
-    let ep = w.params.get_enemy(kind_id)
+    let ep = w
+        .params
+        .get_enemy(kind_id)
         .ok_or_else(params_not_loaded_err)?
         .clone();
     let positions_list: Vec<(f64, f64)> = positions_term.decode()?;
-    let positions: Vec<(f32, f32)> = positions_list.iter().map(|&(x, y)| (x as f32, y as f32)).collect();
+    let positions: Vec<(f32, f32)> = positions_list
+        .iter()
+        .map(|&(x, y)| (x as f32, y as f32))
+        .collect();
     w.enemies.spawn(&positions, kind_id, &ep);
     Ok(ok())
 }
@@ -116,11 +129,11 @@ pub fn set_hud_level_state(
     weapon_choices: Vec<String>,
 ) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
-    w.hud_level            = level;
-    w.hud_exp              = exp;
-    w.hud_exp_to_next      = exp_to_next;
+    w.hud_level = level;
+    w.hud_exp = exp;
+    w.hud_exp_to_next = exp_to_next;
     w.hud_level_up_pending = level_up_pending;
-    w.hud_weapon_choices   = weapon_choices;
+    w.hud_weapon_choices = weapon_choices;
     Ok(ok())
 }
 
@@ -143,9 +156,13 @@ pub fn set_boss_hp(world: ResourceArc<GameWorld>, hp: f64) -> NifResult<Atom> {
 /// score と kill_count を Elixir 側から注入する（フェーズ1 SSoT 完結）。
 /// render_snapshot がこれらの値を HUD に反映するため、毎フレーム呼び出す。
 #[rustler::nif]
-pub fn set_hud_state(world: ResourceArc<GameWorld>, score: u32, kill_count: u32) -> NifResult<Atom> {
+pub fn set_hud_state(
+    world: ResourceArc<GameWorld>,
+    score: u32,
+    kill_count: u32,
+) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
-    w.score      = score;
+    w.score = score;
     w.kill_count = kill_count;
     Ok(ok())
 }
@@ -156,7 +173,12 @@ pub fn set_map_obstacles(world: ResourceArc<GameWorld>, obstacles_term: Term) ->
     let mut obstacles: Vec<(f32, f32, f32, u8)> = Vec::new();
     for item in list {
         let tuple: (f64, f64, f64, u32) = item.decode()?;
-        obstacles.push((tuple.0 as f32, tuple.1 as f32, tuple.2 as f32, tuple.3 as u8));
+        obstacles.push((
+            tuple.0 as f32,
+            tuple.1 as f32,
+            tuple.2 as f32,
+            tuple.3 as u8,
+        ));
     }
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
     w.collision.rebuild_static(&obstacles);
@@ -168,7 +190,7 @@ pub fn set_map_obstacles(world: ResourceArc<GameWorld>, obstacles_term: Term) ->
 #[rustler::nif]
 pub fn set_world_size(world: ResourceArc<GameWorld>, width: f64, height: f64) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
-    w.map_width  = width as f32;
+    w.map_width = width as f32;
     w.map_height = height as f32;
     Ok(ok())
 }
@@ -185,13 +207,17 @@ pub fn set_entity_params(
     world: ResourceArc<GameWorld>,
     enemies_term: Term,
     weapons_term: Term,
-    bosses_term:  Term,
+    bosses_term: Term,
 ) -> NifResult<Atom> {
     let enemies = decode_enemy_params(enemies_term)?;
     let weapons = decode_weapon_params(weapons_term)?;
-    let bosses  = decode_boss_params(bosses_term)?;
+    let bosses = decode_boss_params(bosses_term)?;
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
-    w.params = EntityParamTables { enemies, weapons, bosses };
+    w.params = EntityParamTables {
+        enemies,
+        weapons,
+        bosses,
+    };
     Ok(ok())
 }
 
@@ -209,15 +235,16 @@ fn decode_enemy_params(term: Term) -> NifResult<Vec<EnemyParams>> {
     list.map(|item| {
         let particle_color = decode_particle_color(item);
         Ok(EnemyParams {
-            max_hp:           map_get::<f64>(item, "max_hp")? as f32,
-            speed:            map_get::<f64>(item, "speed")? as f32,
-            radius:           map_get::<f64>(item, "radius")? as f32,
-            damage_per_sec:   map_get::<f64>(item, "damage_per_sec")? as f32,
-            render_kind:      map_get::<i64>(item, "render_kind")? as u8,
+            max_hp: map_get::<f64>(item, "max_hp")? as f32,
+            speed: map_get::<f64>(item, "speed")? as f32,
+            radius: map_get::<f64>(item, "radius")? as f32,
+            damage_per_sec: map_get::<f64>(item, "damage_per_sec")? as f32,
+            render_kind: map_get::<i64>(item, "render_kind")? as u8,
             particle_color,
             passes_obstacles: map_get::<bool>(item, "passes_obstacles")?,
         })
-    }).collect()
+    })
+    .collect()
 }
 
 fn decode_particle_color(item: Term) -> [f32; 4] {
@@ -231,14 +258,14 @@ fn decode_particle_color(item: Term) -> [f32; 4] {
 
 fn decode_fire_pattern(s: &str) -> FirePattern {
     match s {
-        "aimed"    => FirePattern::Aimed,
+        "aimed" => FirePattern::Aimed,
         "fixed_up" => FirePattern::FixedUp,
-        "radial"   => FirePattern::Radial,
-        "whip"     => FirePattern::Whip,
-        "aura"     => FirePattern::Aura,
+        "radial" => FirePattern::Radial,
+        "whip" => FirePattern::Whip,
+        "aura" => FirePattern::Aura,
         "piercing" => FirePattern::Piercing,
-        "chain"    => FirePattern::Chain,
-        _          => FirePattern::Aimed,
+        "chain" => FirePattern::Chain,
+        _ => FirePattern::Aimed,
     }
 }
 
@@ -250,7 +277,11 @@ fn decode_weapon_params(term: Term) -> NifResult<Vec<WeaponParams>> {
             None
         } else {
             let bt_list: ListIterator = bt_term.decode()?;
-            Some(bt_list.map(|x| x.decode::<usize>()).collect::<rustler::NifResult<Vec<usize>>>()?)
+            Some(
+                bt_list
+                    .map(|x| x.decode::<usize>())
+                    .collect::<rustler::NifResult<Vec<usize>>>()?,
+            )
         };
         let pattern_str: String = map_get::<String>(item, "fire_pattern")?;
         let fire_pattern = decode_fire_pattern(&pattern_str);
@@ -261,9 +292,9 @@ fn decode_weapon_params(term: Term) -> NifResult<Vec<WeaponParams>> {
             .or_else(|_| map_get::<i64>(item, "chain_count").map(|v| v as u64))
             .unwrap_or(0) as u8;
         Ok(WeaponParams {
-            cooldown:     map_get::<f64>(item, "cooldown")? as f32,
-            damage:       map_get::<i64>(item, "damage")? as i32,
-            as_u8:        map_get::<u64>(item, "as_u8")
+            cooldown: map_get::<f64>(item, "cooldown")? as f32,
+            damage: map_get::<i64>(item, "damage")? as i32,
+            as_u8: map_get::<u64>(item, "as_u8")
                 .or_else(|_| map_get::<i64>(item, "as_u8").map(|v| v as u64))
                 .unwrap_or(0) as u8,
             bullet_table,
@@ -271,19 +302,21 @@ fn decode_weapon_params(term: Term) -> NifResult<Vec<WeaponParams>> {
             range,
             chain_count,
         })
-    }).collect()
+    })
+    .collect()
 }
 
 fn decode_boss_params(term: Term) -> NifResult<Vec<BossParams>> {
     let list: ListIterator = term.decode()?;
     list.map(|item| {
         Ok(BossParams {
-            max_hp:           map_get::<f64>(item, "max_hp")? as f32,
-            speed:            map_get::<f64>(item, "speed")? as f32,
-            radius:           map_get::<f64>(item, "radius")? as f32,
-            damage_per_sec:   map_get::<f64>(item, "damage_per_sec")? as f32,
-            render_kind:      map_get::<i64>(item, "render_kind")? as u8,
+            max_hp: map_get::<f64>(item, "max_hp")? as f32,
+            speed: map_get::<f64>(item, "speed")? as f32,
+            radius: map_get::<f64>(item, "radius")? as f32,
+            damage_per_sec: map_get::<f64>(item, "damage_per_sec")? as f32,
+            render_kind: map_get::<i64>(item, "render_kind")? as u8,
             special_interval: map_get::<f64>(item, "special_interval")? as f32,
         })
-    }).collect()
+    })
+    .collect()
 }
