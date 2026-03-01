@@ -1,0 +1,175 @@
+name: CI
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+  # push と pull_request が同一コミットで二重実行されるのを防ぐ
+  # （fork からの PR は push イベントが発生しないため pull_request でカバー）
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─────────────────────────────────────────────
+  # [A] Rust: フォーマット + Clippy（警告ゼロ強制）
+  # ─────────────────────────────────────────────
+  rust-check:
+    name: "Rust — fmt & clippy"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # game_audio が cpal → alsa-sys を依存するため ALSA 開発ヘッダが必要
+      - name: install system deps
+        run: sudo apt-get update -q && sudo apt-get install -y libasound2-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native
+
+      - name: cargo fmt
+        run: cargo fmt --manifest-path native/Cargo.toml --all -- --check
+
+      - name: cargo clippy
+        run: cargo clippy --manifest-path native/Cargo.toml --workspace -- -D warnings
+
+  # ─────────────────────────────────────────────
+  # [B] Rust: ユニットテスト（game_physics のみ）
+  #   game_render / game_audio は GPU・音声デバイスが必要なため除外
+  #   game_nif は BEAM VM が必要なため [D] elixir-test でカバー
+  # ─────────────────────────────────────────────
+  rust-test:
+    name: "Rust — unit tests"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native
+
+      - name: cargo test (game_physics)
+        run: cargo test --manifest-path native/Cargo.toml -p game_physics
+
+  # ─────────────────────────────────────────────
+  # [C] Elixir: コンパイル + フォーマット + Credo
+  # ─────────────────────────────────────────────
+  elixir-check:
+    name: "Elixir — compile & credo"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # mix compile が NIF（game_audio → cpal → alsa-sys）をビルドするため必要
+      - name: install system deps
+        run: sudo apt-get update -q && sudo apt-get install -y libasound2-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.19"
+          otp-version: "28"
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: elixir-check-${{ runner.os }}-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            elixir-check-${{ runner.os }}-
+
+      - run: mix deps.get
+      - run: mix compile --warnings-as-errors
+      - run: mix format --check-formatted
+      - run: mix credo --strict
+        env:
+          MIX_ENV: dev
+
+  # ─────────────────────────────────────────────
+  # [D] Elixir: NIF ビルド込み統合テスト
+  #   Rust キャッシュが効けば NIF 再ビルドをスキップ
+  # ─────────────────────────────────────────────
+  elixir-test:
+    name: "Elixir — mix test (with NIF)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # NIF ビルドで game_audio (cpal → alsa-sys) が必要とする ALSA 開発ヘッダ
+      - name: install system deps
+        run: sudo apt-get update -q && sudo apt-get install -y libasound2-dev
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.19"
+          otp-version: "28"
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # Elixir deps と _build のキャッシュ
+      # native/**/*.toml の変更でも無効化（NIF 再ビルドを確実に行うため）
+      - uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: elixir-test-${{ runner.os }}-${{ hashFiles('mix.lock', 'native/**/*.toml') }}
+          restore-keys: |
+            elixir-test-${{ runner.os }}-
+
+      # Rust ビルドキャッシュ（NIF コンパイル時間を大幅短縮）
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native
+
+      - run: mix deps.get
+      - run: mix test
+        env:
+          MIX_ENV: test
+
+  # ─────────────────────────────────────────────
+  # [E] ベンチマーク回帰チェック（main ブランチへの push のみ）
+  #   前回比 +10% 以上の劣化でブロック
+  # ─────────────────────────────────────────────
+  bench-regression:
+    name: "Rust — bench regression"
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native
+
+      - name: cargo bench
+        run: >
+          cargo bench
+          --manifest-path native/Cargo.toml
+          -p game_physics
+          -- --output-format bencher
+          | tee bench_output.txt
+
+      - uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: cargo
+          output-file-path: bench_output.txt
+          fail-on-alert: true
+          alert-threshold: "110%"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
