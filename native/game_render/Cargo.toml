@@ -4,11 +4,15 @@ version = "0.1.0"
 edition = "2021"
 description = "WGPU描画パイプライン・ウィンドウ管理・OS入力イベント処理"
 
+[features]
+headless = []
+
 [dependencies]
 game_physics = { path = "../game_physics" }
 wgpu = "24"
 winit = "0.30.12"
 bytemuck = { version = "1", features = ["derive"] }
+# image は通常レンダラー（atlas.png 読み込み）でも必須のため optional にできない
 image = "0.25"
 egui = "0.31"
 egui-wgpu = "0.31"
