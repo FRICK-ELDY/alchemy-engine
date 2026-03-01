@@ -96,11 +96,9 @@ impl AssetLoader {
 
     fn game_specific_path(&self, default_path: &str) -> Option<String> {
         let id = self.game_assets_id.as_ref()?;
-        if let Some(rest) = default_path.strip_prefix("assets/") {
-            Some(format!("assets/{}/{}", id, rest))
-        } else {
-            None
-        }
+        default_path
+            .strip_prefix("assets/")
+            .map(|rest| format!("assets/{}/{}", id, rest))
     }
 
     /// アセットのバイト列をロードする。

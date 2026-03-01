@@ -9,8 +9,7 @@ use crate::physics::rng::SimpleRng;
 pub fn current_wave(elapsed_secs: f32) -> (f32, usize) {
     WAVES
         .iter()
-        .filter(|&&(start, _, _)| elapsed_secs >= start)
-        .next_back()
+        .rfind(|&&(start, _, _)| elapsed_secs >= start)
         .map(|&(_, interval, count)| (interval, count))
         .unwrap_or((0.8, 20))
 }
