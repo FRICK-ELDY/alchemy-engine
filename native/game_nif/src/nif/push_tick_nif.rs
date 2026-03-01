@@ -2,8 +2,8 @@
 //! Summary: Push 型同期 NIF（push_tick / physics_result delta）
 
 use super::util::lock_poisoned_err;
-use game_simulation::game_logic::physics_step_inner;
-use game_simulation::world::GameWorld;
+use game_physics::game_logic::physics_step_inner;
+use game_physics::world::GameWorld;
 use crate::lock_metrics::record_write_wait;
 use rustler::{Atom, NifResult, ResourceArc};
 use std::time::Instant;
@@ -47,7 +47,7 @@ pub fn push_tick(
     let player_y    = w.player.y as f64;
     let player_hp   = w.player.hp as f64;
     let enemy_count = w.enemies.positions_x.iter().zip(w.enemies.alive.iter())
-        .filter(|(_, &alive)| alive)
+        .filter(|(_, &alive)| alive != 0)
         .count() as u32;
 
     Ok((ok(), frame_id, player_x, player_y, player_hp, enemy_count, physics_ms))

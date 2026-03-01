@@ -1,5 +1,5 @@
 [package]
-name = "game_simulation"
+name = "game_physics"
 version = "0.1.0"
 edition = "2021"
 description = "ECS World・ゲームロジック・物理演算・Dead Reckoning（ヘッドレス動作可能）"

@@ -1,4 +1,4 @@
-//! Path: native/game_simulation/src/world/enemy.rs
+//! Path: native/game_physics/src/world/enemy.rs
 //! Summary: 敵 SoA（EnemyWorld）と EnemySeparation の実装
 
 use crate::entity_params::EnemyParams;

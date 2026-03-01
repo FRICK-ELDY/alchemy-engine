@@ -1,4 +1,4 @@
-//! Path: native/game_simulation/src/world/player.rs
+//! Path: native/game_physics/src/world/player.rs
 //! Summary: プレイヤー状態（座標・入力・HP・無敵タイマー）
 
 /// プレイヤー状態

@@ -1,7 +1,7 @@
 //! Path: native/game_nif/src/nif/events.rs
 //! Summary: フレームイベントの drain（Elixir EventBus 用）
 
-use game_simulation::world::{FrameEvent, GameWorldInner};
+use game_physics::world::{FrameEvent, GameWorldInner};
 use rustler::Atom;
 
 /// フレームイベントを `(atom, u32, u32, u32, u32)` の 5 要素タプルに変換する。

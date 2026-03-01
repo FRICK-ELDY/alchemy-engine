@@ -1181,12 +1181,23 @@ dependencies = [
  "bincode",
  "env_logger",
  "game_audio",
+ "game_physics",
  "game_render",
- "game_simulation",
  "log",
  "rayon",
  "rustler",
  "serde",
+]
+
+[[package]]
+name = "game_physics"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "log",
+ "rayon",
+ "rustc-hash 2.1.1",
+ "rustler",
 ]
 
 [[package]]
@@ -1197,23 +1208,12 @@ dependencies = [
  "egui",
  "egui-wgpu",
  "egui-winit",
- "game_simulation",
+ "game_physics",
  "image",
  "log",
  "pollster",
  "wgpu",
  "winit",
-]
-
-[[package]]
-name = "game_simulation"
-version = "0.1.0"
-dependencies = [
- "criterion",
- "log",
- "rayon",
- "rustc-hash 2.1.1",
- "rustler",
 ]
 
 [[package]]

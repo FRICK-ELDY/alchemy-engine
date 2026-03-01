@@ -3,8 +3,8 @@
 
 use super::util::lock_poisoned_err;
 use super::events::drain_frame_events_inner;
-use game_simulation::game_logic::physics_step_inner;
-use game_simulation::world::{GameLoopControl, GameWorld};
+use game_physics::game_logic::physics_step_inner;
+use game_physics::world::{GameLoopControl, GameWorld};
 use crate::lock_metrics::record_write_wait;
 use rustler::env::OwnedEnv;
 use rustler::{Atom, Encoder, LocalPid, NifResult, ResourceArc};

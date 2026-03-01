@@ -1,4 +1,4 @@
-//! Path: native/game_simulation/src/entity_params.rs
+//! Path: native/game_physics/src/entity_params.rs
 //! Summary: 敵・武器・ボスの ID ベースパラメータテーブル
 //!
 //! Phase 3-A: `EntityParamTables` を `GameWorldInner` に持たせることで

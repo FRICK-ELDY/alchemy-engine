@@ -1,4 +1,4 @@
-//! Path: native/game_simulation/src/world/frame_event.rs
+//! Path: native/game_physics/src/world/frame_event.rs
 //! Summary: フレーム内で発生したゲームイベント（EventBus 用）
 
 /// 1.3.1: フレーム内で発生したゲームイベント（EventBus 用）

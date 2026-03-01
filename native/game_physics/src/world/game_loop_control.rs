@@ -1,4 +1,4 @@
-//! Path: native/game_simulation/src/world/game_loop_control.rs
+//! Path: native/game_physics/src/world/game_loop_control.rs
 //! Summary: GameLoop 制御用（pause/resume）リソース
 
 /// 1.5.1: GameLoop 制御用（pause/resume）

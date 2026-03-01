@@ -2,11 +2,11 @@
 //! Summary: アクション NIF（set_weapon_slots, spawn_boss, spawn_elite_enemy, spawn_item 等）
 
 use super::util::{lock_poisoned_err, params_not_loaded_err};
-use game_simulation::game_logic::systems::spawn::get_spawn_positions_around_player;
-use game_simulation::world::{BossState, FrameEvent, GameWorld};
-use game_simulation::constants::{PLAYER_RADIUS, POPUP_Y_OFFSET, POPUP_LIFETIME};
-use game_simulation::item::ItemKind;
-use game_simulation::weapon::WeaponSlot;
+use game_physics::game_logic::systems::spawn::get_spawn_positions_around_player;
+use game_physics::world::{BossState, FrameEvent, GameWorld};
+use game_physics::constants::{PLAYER_RADIUS, POPUP_Y_OFFSET, POPUP_LIFETIME};
+use game_physics::item::ItemKind;
+use game_physics::weapon::WeaponSlot;
 use rustler::{Atom, NifResult, ResourceArc};
 
 use crate::ok;
@@ -95,7 +95,7 @@ pub fn fire_boss_projectile(world: ResourceArc<GameWorld>, dx: f64, dy: f64, spe
         let len = ((dx * dx + dy * dy) as f32).sqrt().max(0.001);
         let vx = (dx as f32 / len) * speed as f32;
         let vy = (dy as f32 / len) * speed as f32;
-        use game_simulation::world::BULLET_KIND_ROCK;
+        use game_physics::world::BULLET_KIND_ROCK;
         w.bullets.spawn_ex(bx, by, vx, vy, damage, lifetime as f32, false, BULLET_KIND_ROCK);
     }
     Ok(ok())
@@ -141,7 +141,7 @@ pub fn spawn_elite_enemy(world: ResourceArc<GameWorld>, kind_id: u8, count: usiz
     let mut applied = 0;
     for i in (0..after_len).rev() {
         if applied >= count { break; }
-        if w.enemies.alive[i] && w.enemies.kind_ids[i] == kind_id {
+        if w.enemies.alive[i] != 0 && w.enemies.kind_ids[i] == kind_id {
             if i >= before_len || (w.enemies.hp[i] - base_max_hp).abs() < 0.01 {
                 w.enemies.hp[i] = base_hp;
                 applied += 1;
