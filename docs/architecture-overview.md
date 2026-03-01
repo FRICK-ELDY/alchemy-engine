@@ -16,8 +16,8 @@ graph TB
     subgraph Elixir["Elixir Umbrella"]
         GS[game_server<br/>起動制御]
         GE[game_engine<br/>SSoT コア]
-        GC[game_content<br/>VampireSurvivor]
-        GN[game_network<br/>通信スタブ]
+        GC[game_content<br/>VampireSurvivor / AsteroidArena]
+        GN[game_network<br/>Phoenix Channels / UDP]
         GS -->|依存| GE
         GC -->|依存| GE
     end
@@ -45,7 +45,7 @@ alchemy-engine/
 ├── mix.exs                          # Umbrella ルートプロジェクト定義
 ├── mix.lock                         # Elixir 依存ロックファイル
 ├── config/
-│   └── config.exs                   # current_world / current_rule / map 設定
+│   └── config.exs                   # :current（コンテンツモジュール）/ :map 設定
 │
 ├── apps/                            # Elixir アプリケーション群
 │   ├── game_engine/                 # SSoT コアエンジン
@@ -53,12 +53,15 @@ alchemy-engine/
 │   │   └── lib/game_engine/
 │   │       ├── game_engine.ex       # 公開 API（エントリポイント）
 │   │       ├── nif_bridge.ex        # Rustler NIF ラッパー
-│   │       ├── world_behaviour.ex   # World 定義インターフェース
-│   │       ├── rule_behaviour.ex    # Rule 定義インターフェース
-│   │       ├── config.ex            # current_world / current_rule 解決
+│   │       ├── nif_bridge_behaviour.ex  # NifBridge ビヘイビア（テスト用 Mock 対応）
+│   │       ├── content_behaviour.ex # ContentBehaviour（コンテンツ定義インターフェース）
+│   │       ├── component.ex         # Component ビヘイビア（コンテンツ構成単位）
+│   │       ├── config.ex            # :current コンテンツモジュール解決
 │   │       ├── scene_behaviour.ex   # シーンコールバック定義
 │   │       ├── scene_manager.ex     # シーンスタック管理 GenServer
 │   │       ├── game_events.ex       # メインゲームループ GenServer
+│   │       ├── game_events/
+│   │       │   └── diagnostics.ex   # ログ・FrameCache 更新ヘルパー
 │   │       ├── room_supervisor.ex   # DynamicSupervisor
 │   │       ├── room_registry.ex     # Registry ラッパー
 │   │       ├── event_bus.ex         # フレームイベント配信 GenServer
@@ -76,31 +79,51 @@ alchemy-engine/
 │   │       ├── game_server.ex
 │   │       └── application.ex       # OTP Application / Supervisor ツリー
 │   │
-│   ├── game_content/                # ゲームコンテンツ（VampireSurvivor）
+│   ├── game_content/                # ゲームコンテンツ
 │   │   ├── mix.exs
 │   │   └── lib/game_content/
-│   │       ├── vampire_survivor_world.ex  # WorldBehaviour 実装
-│   │       ├── vampire_survivor_rule.ex   # RuleBehaviour 実装
+│   │       ├── vampire_survivor.ex        # ContentBehaviour 実装（VampireSurvivor）
+│   │       ├── asteroid_arena.ex          # ContentBehaviour 実装（AsteroidArena）
 │   │       ├── entity_params.ex           # EXP・スコア・ボスパラメータ（Elixir SSoT）
-│   │       └── vampire_survivor/
-│   │           ├── spawn_system.ex        # ウェーブスポーン
-│   │           ├── boss_system.ex         # ボス出現スケジュール
-│   │           ├── level_system.ex        # 武器選択肢生成
+│   │       ├── vampire_survivor/
+│   │       │   ├── spawn_component.ex     # Component: ワールド初期化・エンティティ登録
+│   │       │   ├── level_component.ex     # Component: EXP・レベル・スコア管理
+│   │       │   ├── boss_component.ex      # Component: ボス HP・AI 制御
+│   │       │   ├── spawn_system.ex        # ウェーブスポーン
+│   │       │   ├── boss_system.ex         # ボス出現スケジュール
+│   │       │   ├── level_system.ex        # 武器選択肢生成
+│   │       │   └── scenes/
+│   │       │       ├── playing.ex         # プレイ中シーン
+│   │       │       ├── level_up.ex        # レベルアップ選択シーン
+│   │       │       ├── boss_alert.ex      # ボス出現アラートシーン
+│   │       │       └── game_over.ex       # ゲームオーバーシーン
+│   │       └── asteroid_arena/
+│   │           ├── spawn_component.ex     # Component: ワールド初期化
+│   │           ├── split_component.ex     # Component: 小惑星分裂処理
+│   │           ├── spawn_system.ex        # スポーン制御
 │   │           └── scenes/
-│   │               ├── playing.ex         # プレイ中シーン
-│   │               ├── level_up.ex        # レベルアップ選択シーン
-│   │               ├── boss_alert.ex      # ボス出現アラートシーン
-│   │               └── game_over.ex       # ゲームオーバーシーン
+│   │               ├── playing.ex
+│   │               └── game_over.ex
 │   │
-│   └── game_network/                # 通信（スタブ・将来実装）
-│       ├── mix.exs
-│       └── lib/game_network.ex
+│   └── game_network/                # 通信レイヤー
+│       ├── mix.exs                  # deps: phoenix ~> 1.8, phoenix_pubsub, plug_cowboy
+│       └── lib/game_network/
+│           ├── game_network.ex
+│           ├── application.ex
+│           ├── local.ex             # ローカルマルチルーム管理 GenServer
+│           ├── channel.ex           # Phoenix Channels / WebSocket
+│           ├── endpoint.ex          # Phoenix Endpoint（ポート 4000）
+│           ├── router.ex
+│           ├── user_socket.ex
+│           └── udp/
+│               ├── server.ex        # UDP サーバー（ポート 4001）
+│               └── protocol.ex
 │
 ├── native/                          # Rust クレート群
 │   ├── Cargo.toml                   # Rust ワークスペース定義
 │   ├── Cargo.lock
 │   │
-│   ├── game_physics/             # 物理演算・ECS（依存: rustc-hash のみ）
+│   ├── game_physics/             # 物理演算・ECS（依存: rustc-hash / rayon / log）
 │   │   └── src/
 │   │       ├── lib.rs
 │   │       ├── constants.rs         # 画面定数（スクリーンサイズ等）
@@ -146,7 +169,7 @@ alchemy-engine/
 │   │       │   ├── mod.rs
 │   │       │   ├── load.rs          # パニックフック・リソース登録
 │   │       │   ├── world_nif.rs     # ワールド生成・入力・スポーン・パラメータ注入
-│   │       │   ├── action_nif.rs    # 武器追加・ボス操作・HUD 状態注入
+│   │       │   ├── action_nif.rs    # 武器スロット・ボス操作・HUD 状態注入
 │   │       │   ├── read_nif.rs      # 状態読み取り（軽量クエリ）
 │   │       │   ├── game_loop_nif.rs # ゲームループ制御
 │   │       │   ├── push_tick_nif.rs # Elixir プッシュ型同期
@@ -168,11 +191,10 @@ alchemy-engine/
 │       └── src/
 │           ├── lib.rs               # 公開型（RenderFrame / HudData）
 │           ├── window.rs            # winit ウィンドウ管理・イベントループ
+│           ├── headless.rs          # ヘッドレスモード（CI / テスト用）
 │           └── renderer/
 │               ├── mod.rs           # Renderer 構造体（wgpu 初期化・描画）
-│               ├── ui.rs            # egui HUD
-│               └── shaders/
-│                   └── sprite.wgsl  # WGSL スプライトシェーダー
+│               └── ui.rs            # egui HUD
 │
 ├── assets/                          # スプライト・音声アセット
 └── saves/                           # セーブデータ
@@ -187,11 +209,12 @@ alchemy-engine/
 | レイヤー | 責務 | 技術 |
 |:---|:---|:---|
 | `game_server` | OTP Application 起動・Supervisor ツリー構築 | Elixir / OTP |
-| `game_engine` | ゲームループ制御・シーン管理・イベント配信・セーブ・World/Rule インターフェース定義 | Elixir GenServer / ETS |
-| `game_content` | World/Rule 実装（VampireSurvivor）・エンティティパラメータ・ボスAI | Elixir |
+| `game_engine` | ゲームループ制御・シーン管理・イベント配信・セーブ・ContentBehaviour / Component インターフェース定義 | Elixir GenServer / ETS |
+| `game_content` | ContentBehaviour 実装（VampireSurvivor / AsteroidArena）・Component 群・エンティティパラメータ | Elixir |
+| `game_network` | Phoenix Channels（WebSocket）・UDP トランスポート・ローカルマルチルーム管理 | Elixir / Phoenix |
 | `game_nif` | Elixir-Rust 間 NIF ブリッジ・ゲームループ・レンダーブリッジ | Rust / Rustler |
-| `game_physics` | 物理演算・空間ハッシュ・ECS・外部注入パラメータテーブル | Rust（no_std 互換） |
-| `game_render` | GPU 描画パイプライン・HUD・winit ウィンドウ管理 | Rust / wgpu / egui / winit |
+| `game_physics` | 物理演算・空間ハッシュ・ECS・外部注入パラメータテーブル | Rust |
+| `game_render` | GPU 描画パイプライン・HUD・winit ウィンドウ管理・ヘッドレスモード | Rust / wgpu / egui / winit |
 | `game_audio` | オーディオ管理・アセット読み込み | Rust / rodio |
 
 ---
@@ -231,38 +254,39 @@ EnemyWorld {
 sequenceDiagram
     participant R as Rust 60Hz ループ
     participant GE as GameEvents GenServer
-    participant RULE as RuleBehaviour
+    participant COMP as Component 群
     participant SM as SceneManager
     participant S as Scene.update()
 
     loop 毎フレーム（60Hz）
         R->>R: physics_step()
         R->>R: drain_frame_events()
-        R-->>GE: {:frame_events, [entity_removed, level_up, ...]}
-        GE->>RULE: on_entity_removed / update_boss_ai
-        GE->>GE: シーン遷移・セーブ・UI アクション処理
-        GE->>SM: push / pop / replace
-        SM->>S: update(context, state)
+        R-->>GE: {:frame_events, [enemy_killed, player_damaged, ...]}
+        GE->>COMP: on_frame_event/2（スコア・HP・ボス HP 更新）
+        GE->>SM: Scene.update() → シーン遷移判断
+        GE->>COMP: on_physics_process/1（ボス AI 等）
+        GE->>COMP: on_nif_sync/1（Elixir state → Rust 注入）
     end
 ```
 
-### 4. World / Rule 分離
+### 4. ContentBehaviour + Component による拡張設計
 
 ```mermaid
 graph LR
-    CFG["config.exs\ncurrent_world / current_rule"]
-    WB["WorldBehaviour\nassets_path / entity_registry\nsetup_world_params"]
-    RB["RuleBehaviour\ninitial_scenes / physics_scenes\nboss_ai / item_drop"]
+    CFG["config.exs\n:current コンテンツモジュール"]
+    CB["ContentBehaviour\ncomponents / initial_scenes\nentity_registry 等"]
+    COMP["Component ビヘイビア\non_ready / on_frame_event\non_nif_sync 等（全オプショナル）"]
     GE["GameEvents\n（エンジンコア）"]
-    VS_W["VampireSurvivorWorld"]
-    VS_R["VampireSurvivorRule"]
+    VS["VampireSurvivor\n+ SpawnComponent\n+ LevelComponent\n+ BossComponent"]
+    AA["AsteroidArena\n+ SpawnComponent\n+ SplitComponent"]
 
-    CFG -->|解決| WB
-    CFG -->|解決| RB
-    WB -->|実装| VS_W
-    RB -->|実装| VS_R
-    GE -->|参照| WB
-    GE -->|参照| RB
+    CFG -->|解決| CB
+    CB -->|実装| VS
+    CB -->|実装| AA
+    VS -->|使用| COMP
+    AA -->|使用| COMP
+    GE -->|参照| CB
+    GE -->|ディスパッチ| COMP
 ```
 
 ---

@@ -12,8 +12,8 @@ Elixir 側は **Umbrella プロジェクト** として構成され、4 つの�
 graph LR
     GS[game_server<br/>OTP Application 起動]
     GE[game_engine<br/>SSoT コアエンジン]
-    GC[game_content<br/>VampireSurvivor]
-    GN[game_network<br/>通信スタブ・将来実装]
+    GC[game_content<br/>VampireSurvivor / AsteroidArena]
+    GN[game_network<br/>Phoenix Channels / UDP]
 
     GS -->|依存| GE
     GS -->|依存| GC
@@ -56,8 +56,9 @@ graph TD
 
 **設定（`config/config.exs`）:**
 ```elixir
-config :game_server, :current_world, GameContent.VampireSurvivorWorld
-config :game_server, :current_rule,  GameContent.VampireSurvivorRule
+# 使用するコンテンツモジュールを指定する
+# GameContent.VampireSurvivor または GameContent.AsteroidArena
+config :game_server, :current, GameContent.VampireSurvivor
 config :game_server, :map, :plain
 ```
 
@@ -67,7 +68,7 @@ config :game_server, :map, :plain
 
 ### `game_engine.ex` — 公開 API
 
-外部から呼び出す全操作の窓口。エンティティ ID は `Config.current_world().entity_registry()` から解決します。
+外部から呼び出す全操作の窓口。エンティティ ID は `Config.current().entity_registry()` から解決します。
 
 **ゲームコンテンツ向け:**
 
@@ -119,59 +120,75 @@ NIF 関数は 3 カテゴリに分類されます：
 
 ---
 
-### `world_behaviour.ex` — World 定義インターフェース
+### `content_behaviour.ex` — コンテンツ定義インターフェース
 
-World（舞台）が提供すべきコールバック定義。同じ World に複数の Rule を適用できる。
+コンテンツモジュールが実装すべきビヘイビア。旧 `WorldBehaviour` / `RuleBehaviour` の 2 分割設計を統合した設計。
+
+**必須コールバック:**
 
 ```elixir
-@callback assets_path()                              :: String.t()
-@callback entity_registry()                          :: map()
-@callback setup_world_params(world_ref :: reference()) :: :ok  # optional
+@callback components()        :: [module()]
+@callback initial_scenes()    :: [%{module: scene_module(), init_arg: map()}]
+@callback physics_scenes()    :: [scene_module()]
+@callback playing_scene()     :: scene_module()
+@callback game_over_scene()   :: scene_module()
+@callback entity_registry()   :: map()
+@callback enemy_exp_reward(kind_id :: non_neg_integer()) :: exp()
+@callback score_from_exp(exp()) :: non_neg_integer()
+@callback wave_label(elapsed_sec :: float()) :: String.t()
+@callback context_defaults()  :: map()
 ```
 
-`setup_world_params/1` はワールド生成後に一度だけ呼ばれ、`set_entity_params` / `set_world_size` NIF で Rust 側にパラメータを注入する。
+**オプショナルコールバック（武器・ボスの概念を持つコンテンツのみ）:**
+
+```elixir
+@callback level_up_scene()                              :: scene_module()
+@callback boss_alert_scene()                            :: scene_module()
+@callback boss_exp_reward(boss_kind())                  :: exp()
+@callback generate_weapon_choices(weapon_levels :: map()) :: [weapon()]
+@callback apply_weapon_selected(scene_state(), weapon()) :: scene_state()
+@callback apply_level_up_skipped(scene_state())         :: scene_state()
+@callback pause_on_push?(scene_module())                :: boolean()
+```
 
 ---
 
-### `rule_behaviour.ex` — Rule 定義インターフェース
+### `component.ex` — Component ビヘイビア
 
-Rule（遊び方）が提供すべきコールバック定義。
+コンテンツの構成単位。全コールバックがオプショナルであり、必要なものだけ実装する。
 
 ```elixir
-@callback render_type()                              :: atom()
-@callback initial_scenes()                           :: [scene_spec()]
-@callback physics_scenes()                           :: [module()]
-@callback title()                                    :: String.t()
-@callback version()                                  :: String.t()
-@callback context_defaults()                         :: map()
-@callback playing_scene()                            :: module()
-@callback generate_weapon_choices(weapon_levels)     :: [atom()]
-@callback apply_level_up(scene_state, choices)       :: map()
-@callback apply_weapon_selected(scene_state, weapon) :: map()
-@callback apply_level_up_skipped(scene_state)        :: map()
-@callback game_over_scene()                          :: module()
-@callback level_up_scene()                           :: module()
-@callback boss_alert_scene()                         :: module()
-@callback initial_weapons()                          :: [atom()]
-@callback enemy_exp_reward(enemy_kind)               :: non_neg_integer()
-@callback boss_exp_reward(boss_kind)                 :: non_neg_integer()
-@callback score_from_exp(exp)                        :: non_neg_integer()
-@callback wave_label(elapsed_sec)                    :: String.t()
-# optional
-@callback on_entity_removed(world_ref, kind_id, x, y) :: :ok
-@callback on_boss_defeated(world_ref, boss_kind, x, y) :: :ok
-@callback update_boss_ai(context, boss_state)          :: :ok
+@callback on_ready(world_ref())          :: :ok  # 初期化時（1回）
+@callback on_process(context())          :: :ok  # 毎フレーム（Elixir 側）
+@callback on_physics_process(context())  :: :ok  # 物理フレーム（60Hz）
+@callback on_event(event(), context())   :: :ok  # UI アクション・内部イベント
+@callback on_frame_event(event(), context()) :: :ok  # Rust フレームイベント
+@callback on_nif_sync(context())         :: :ok  # 毎フレームの NIF 注入
 ```
+
+**context マップのフィールド:**
+
+| フィールド | 説明 |
+|:---|:---|
+| `context.world_ref` | Rust ワールドへの参照 |
+| `context.now` | 現在時刻（monotonic ms） |
+| `context.elapsed` | ゲーム開始からの経過 ms |
+| `context.frame_count` | フレームカウンタ |
+| `context.tick_ms` | 目標フレーム時間（ms） |
+| `context.start_ms` | ゲーム開始時刻（monotonic ms） |
+| `context.push_scene.(mod, init_arg)` | シーンをスタックに積む |
+| `context.pop_scene.()` | 現在のシーンをスタックから取り出す |
+| `context.replace_scene.(mod, init_arg)` | 現在のシーンを置き換える |
 
 ---
 
 ### `config.ex` — 設定解決ヘルパー
 
-`current_world` / `current_rule` の Application 設定を解決する。
+`:current` の Application 設定を解決する。
 
 ```elixir
-GameEngine.Config.current_world()  # WorldBehaviour 実装モジュールを返す
-GameEngine.Config.current_rule()   # RuleBehaviour 実装モジュールを返す
+GameEngine.Config.current()     # ContentBehaviour 実装モジュールを返す
+GameEngine.Config.components()  # current().components() を呼び出す
 ```
 
 ---
@@ -199,7 +216,7 @@ GameEngine.Config.current_rule()   # RuleBehaviour 実装モジュールを返�
 
 ### `scene_manager.ex` — シーンスタック管理 GenServer
 
-シーンスタックを管理する GenServer。起動時に `game_module.initial_scenes()` からスタックを初期化します。
+シーンスタックを管理する GenServer。起動時に `content_module.initial_scenes()` からスタックを初期化します。
 
 | 関数 | 説明 |
 |:---|:---|
@@ -207,56 +224,54 @@ GameEngine.Config.current_rule()   # RuleBehaviour 実装モジュールを返�
 | `pop_scene/0` | 最上位シーンを取り出す |
 | `replace_scene/2` | 最上位シーンを置き換える |
 | `update_current/1` | 現在シーンの状態を更新 |
+| `update_by_module/2` | スタック内の特定シーンの状態を更新 |
+| `get_scene_state/1` | スタック内の特定シーンの状態を取得 |
 
 ---
 
 ### `game_events.ex` — メインゲームループ GenServer
 
-Rust の 60Hz ゲームループから `{:frame_events, events}` を受信し、シーン遷移・UI アクションを処理するコアコンポーネント。
+Rust の 60Hz ゲームループから `{:frame_events, events}` を受信し、コンポーネントへ委譲するコアコンポーネント。エンジン自体はゲームロジックを知らず、ディスパッチのみを担う。
 
-**Elixir as SSoT 移行完了状況:**
-- フェーズ1: `score`, `kill_count`, `elapsed_ms` を Elixir 側で管理
-- フェーズ2: `player_hp`, `player_max_hp` を Elixir 側で管理
-- フェーズ3: `level`, `exp`, `weapon_levels` 等を Playing シーン state で管理
-- フェーズ4: `boss_hp`, `boss_kind_id` を Playing シーン state で管理
-- フェーズ5: `render_started` フラグ管理・UI アクションを描画スレッドから直接受信
+**GenServer state:**
 
-**フレーム処理フロー:**
+```elixir
+%{
+  room_id: atom(),
+  world_ref: reference(),
+  control_ref: reference(),
+  last_tick: integer(),
+  frame_count: integer(),
+  start_ms: integer(),
+  render_started: boolean()
+}
+```
+
+**フレーム処理フロー（毎フレーム）:**
 
 ```mermaid
 flowchart TD
     R["Rust\n{:frame_events, events}"]
-    ER[EntityRemoved]
-    PD[PlayerDamaged]
-    LU[LevelUp]
-    BD[BossDefeated]
-    IP[ItemPickup]
-    PER[60フレームごと]
+    BP{バックプレッシャー\n> 120 メッセージ?}
+    FE[on_frame_event/2\n全コンポーネントへ配信]
+    SC[Scene.update/2\nシーン遷移判断]
+    PHY[on_physics_process/1\nボス AI 等]
+    NIF[on_nif_sync/1\nElixir state → Rust 注入]
+    LOG[ログ・FrameCache\n60フレームごと]
 
-    RULE[RuleBehaviour\non_entity_removed\non_boss_defeated\nupdate_boss_ai]
-    SR[Stats.record]
-    HC{HP チェック}
-    GO[GameOver 遷移]
-    LS[LevelUp シーン遷移]
-    LOG[ログ出力<br/>Telemetry 計測<br/>FrameCache 更新]
-
-    R --> ER --> RULE
-    R --> PD --> HC
-    HC -->|HP <= 0| GO
-    R --> LU --> LS
-    R --> BD --> RULE
-    R --> IP --> SR
-    R --> PER --> LOG
+    R --> BP
+    BP -->|No: 通常処理| FE --> SC --> PHY --> NIF --> LOG
+    BP -->|Yes: 軽量処理| FE --> SC
 ```
 
 **シーン遷移パターン:**
 
 ```mermaid
 stateDiagram-v2
-    Playing --> LevelUp   : LevelUp イベント
-    LevelUp --> Playing   : 選択 / 3秒タイムアウト
+    Playing --> LevelUp   : SpecialEntitySpawned / EXP 閾値超過
+    LevelUp --> Playing   : 選択 / 3秒タイムアウト（auto_select）
 
-    Playing --> BossAlert : BossSpawn イベント
+    Playing --> BossAlert : ボス出現スケジュール到達
     BossAlert --> Playing : 3秒後にボスをスポーン
 
     Playing --> GameOver  : 死亡（HP <= 0）
@@ -370,13 +385,38 @@ Rust から受信したフレームイベントを複数のサブスクライバ
 
 ---
 
+## `game_network` — 通信レイヤー
+
+Phoenix Channels（WebSocket）と UDP トランスポートが実装されています。
+
+| モジュール | 説明 |
+|:---|:---|
+| `GameNetwork.Local` | ローカルマルチルーム管理 GenServer（OTP 隔離・同時 60Hz 実証用） |
+| `GameNetwork.Channel` | Phoenix Channels / WebSocket チャンネル |
+| `GameNetwork.Endpoint` | Phoenix Endpoint（ポート 4000） |
+| `GameNetwork.UDP.Server` | UDP サーバー（ポート 4001） |
+| `GameNetwork.UDP.Protocol` | UDP プロトコル定義 |
+
+**`GameNetwork.Local` の主要 API:**
+
+| 関数 | 説明 |
+|:---|:---|
+| `open_room/1` | 新しいルームを起動して登録 |
+| `close_room/1` | ルームを停止して登録解除 |
+| `register_room/1` | 既存プロセスを接続テーブルに登録（冪等） |
+| `connect_rooms/2` | 2 つのルームを双方向接続 |
+| `broadcast/2` | 指定ルームとその接続先にイベントを配信 |
+
+---
+
 ## 依存関係
 
 ```mermaid
 graph LR
     GS[game_server]
-    GE["game_engine\n(rustler ~> 0.34\ntelemetry ~> 1.3\ntelemetry_metrics ~> 1.0)"]
+    GE["game_engine\n(rustler ~> 0.34\ntelemetry ~> 1.3\njason\nmox)"]
     GC[game_content]
+    GN["game_network\n(phoenix ~> 1.8\nphoenix_pubsub\nplug_cowboy)"]
 
     GS --> GE
     GS --> GC

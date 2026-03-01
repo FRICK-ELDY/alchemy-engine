@@ -11,8 +11,8 @@ Rust 側は **Cargo ワークスペース** として構成され、4 つのク�
 ```mermaid
 graph LR
     GN[game_nif<br/>NIF インターフェース<br/>ゲームループ / レンダーブリッジ]
-    GS[game_physics<br/>物理 / ECS<br/>依存: rustc-hash のみ]
-    GR[game_render<br/>wgpu 描画 / winit ウィンドウ]
+    GS[game_physics<br/>物理 / ECS<br/>依存: rustc-hash / rayon / log]
+    GR[game_render<br/>wgpu 描画 / winit ウィンドウ<br/>ヘッドレスモード対応]
     GA[game_audio<br/>rodio オーディオ]
 
     GN -->|依存| GS
@@ -25,7 +25,7 @@ graph LR
 
 ## `game_physics` — 物理演算・ECS
 
-依存クレートは `rustc-hash = "2"` のみ。no-std 互換を意識した設計。
+依存クレートは `rustc-hash = "2"`, `rayon = "1"`, `log = "0.4"`。
 
 ### `constants.rs`
 
@@ -110,9 +110,9 @@ pub struct BossParams {
 
 ```rust
 pub struct WeaponSlot {
-    pub kind_id:  u8,
-    pub level:    u32,
-    pub cooldown: f32,  // 残りクールダウン（秒）
+    pub kind_id:       u8,
+    pub level:         u32,
+    pub cooldown_timer: f32,  // 残りクールダウン（秒）
 }
 ```
 
@@ -181,9 +181,10 @@ graph TD
 | `elapsed_seconds` | Elixir | `set_elapsed_seconds` |
 | `boss.hp` | Elixir | `set_boss_hp` |
 | `score`, `kill_count` | Elixir | `set_hud_state` |
-| `params` | Elixir | `set_entity_params`（Phase 3-A） |
-| `map_width/height` | Elixir | `set_world_size`（Phase 3-A） |
+| `params` | Elixir | `set_entity_params` |
+| `map_width/height` | Elixir | `set_world_size` |
 | `hud_level/exp/exp_to_next` 等 | Elixir | `set_hud_level_state`（描画専用） |
+| `weapon_slots` | Elixir | `set_weapon_slots`（I-2: 毎フレーム差分注入） |
 
 #### SoA（Structure of Arrays）構造
 
@@ -203,13 +204,22 @@ struct EnemyWorld {
 
 ```rust
 enum FrameEvent {
-    EntityRemoved { kind_id: u8, x: f32, y: f32 },  // 敵撃破（アイテムドロップは Elixir 側）
+    /// 敵が撃破された。x/y はアイテムドロップ位置として Elixir 側で使用する。
+    EnemyKilled { enemy_kind: u8, x: f32, y: f32 },
     PlayerDamaged { damage: f32 },
-    LevelUp       { new_level: u32 },
-    ItemPickup    { kind: ItemKind },
-    BossDefeated  { kind_id: u8, x: f32, y: f32 },  // ボス撃破（ドロップは Elixir 側）
+    ItemPickup { item_kind: u8 },
+    /// 特殊エンティティ（ボス等）が撃破された。
+    /// ボス種別は Elixir 側 Component state で管理するため entity_kind フィールドなし。
+    SpecialEntityDefeated { x: f32, y: f32 },
+    /// 特殊エンティティが出現した。Elixir 側で HP 初期化に使用する。
+    SpecialEntitySpawned { entity_kind: u8 },
+    /// 特殊エンティティがダメージを受けた。Elixir 側で HP 減算に使用する。
+    SpecialEntityDamaged { damage: f32 },
 }
 ```
+
+> **注意**: 旧設計の `EntityRemoved`, `LevelUp`, `BossDefeated` バリアントは廃止済み。
+> レベルアップは Elixir 側 `LevelComponent` が EXP 積算で判定する。
 
 ### `game_logic/` — 物理・AI・システム
 
@@ -228,7 +238,7 @@ flowchart TD
     PAR[パーティクル更新]
     ITEM[アイテム更新\n磁石・自動収集]
     BUL[弾丸更新\n移動・衝突・ドロップ]
-    BOSS[ボス更新\nAI・特殊行動]
+    BOSS[ボス更新\n物理のみ（AI は Elixir 側）]
     END[physics_step 終了]
 
     START --> T --> PM --> OB --> AI --> SEP --> COL --> WEP --> PAR --> ITEM --> BUL --> BOSS --> END
@@ -268,7 +278,7 @@ graph TD
     SYS --> SPW
 ```
 
-> `leveling.rs`（武器選択肢生成）は廃止済み。武器選択肢の生成は Elixir 側 `RuleBehaviour.generate_weapon_choices/1` が担当する。
+> `leveling.rs`（武器選択肢生成）は廃止済み。武器選択肢の生成は Elixir 側 `LevelSystem` が担当する。
 
 **武器発射パターン（`FirePattern` 対応）:**
 
@@ -286,8 +296,8 @@ graph TD
 
 Rust はボスの物理的存在（位置・HP・当たり判定・弾丸 vs ボス衝突）のみ管理する。
 - **移動**: Elixir が `set_boss_velocity` NIF で注入した速度ベクトルで移動
-- **特殊行動**: Elixir の `update_boss_ai` コールバックが NIF 経由で制御
-- **撃破判定**: Rust が判定し `BossDefeated` イベントを発行
+- **特殊行動**: Elixir の `BossComponent.on_physics_process/1` が NIF 経由で制御
+- **撃破判定**: Rust が判定し `SpecialEntityDefeated` イベントを発行
 
 ---
 
@@ -298,12 +308,13 @@ Rust はボスの物理的存在（位置・HP・当たり判定・弾丸 vs ボ
 ```rust
 rustler::atoms! {
     ok, error, nil,
-    enemy_killed, player_damaged, level_up, item_pickup, boss_defeated,
+    enemy_killed, player_damaged, item_pickup,
+    special_entity_spawned, special_entity_damaged, special_entity_defeated,
     // ... ゲームアトム
 }
 
 #[cfg(feature = "umbrella")]
-rustler::init!("Elixir.GameEngine.NifBridge", load = nif::load::on_load);
+rustler::init!("Elixir.GameEngine.NifBridge", load = nif::load);
 ```
 
 ### `nif/` — NIF 関数群
@@ -313,7 +324,7 @@ graph TD
     NIF[nif/]
     LOAD[load.rs<br/>パニックフック<br/>リソース登録]
     WORLD[world_nif.rs<br/>ワールド生成・入力・スポーン]
-    ACTION[action_nif.rs<br/>武器追加・ボス操作]
+    ACTION[action_nif.rs<br/>武器スロット・ボス操作]
     READ[read_nif.rs<br/>状態読み取り 軽量]
     LOOP[game_loop_nif.rs<br/>ゲームループ制御]
     PUSH[push_tick_nif.rs<br/>Elixir プッシュ型同期]
@@ -341,29 +352,33 @@ graph TD
 | `create_world()` | `GameWorld` リソースを生成して返す |
 | `set_player_input(world, dx, dy)` | 移動ベクトルを設定 |
 | `spawn_enemies(world, kind_id, count)` | 敵をスポーン |
-| `spawn_enemies_at(world, kind_id, positions)` | 指定座標リストに敵をスポーン（Phase 3-B） |
+| `spawn_enemies_at(world, kind_id, positions)` | 指定座標リストに敵をスポーン |
 | `set_map_obstacles(world, obstacles)` | 障害物リストを設定 |
-| `set_entity_params(world, enemies, weapons, bosses)` | エンティティパラメータを注入（Phase 3-A） |
-| `set_world_size(world, width, height)` | マップサイズを設定（Phase 3-A） |
-| `set_player_hp(world, hp)` | プレイヤー HP を注入（フェーズ2） |
-| `set_elapsed_seconds(world, elapsed)` | 経過時間を注入（フェーズ3） |
-| `set_boss_hp(world, hp)` | ボス HP を注入（フェーズ4） |
-| `set_hud_state(world, score, kill_count)` | HUD スコア・キル数を注入（フェーズ1） |
-| `set_hud_level_state(world, level, exp, ...)` | HUD レベル・EXP 状態を注入（Phase 3-B・描画専用） |
+| `set_entity_params(world, enemies, weapons, bosses)` | エンティティパラメータを注入 |
+| `set_world_size(world, width, height)` | マップサイズを設定 |
+| `set_player_hp(world, hp)` | プレイヤー HP を注入 |
+| `set_elapsed_seconds(world, elapsed)` | 経過時間を注入 |
+| `set_boss_hp(world, hp)` | ボス HP を注入 |
+| `set_hud_state(world, score, kill_count)` | HUD スコア・キル数を注入 |
+| `set_hud_level_state(world, level, exp, ...)` | HUD レベル・EXP 状態を注入（描画専用） |
 
 **`action_nif.rs`（武器・ボス操作）:**
 
 | NIF 関数 | 説明 |
 |:---|:---|
-| `add_weapon(world, weapon_id)` | 武器を追加/アップグレード |
+| `set_weapon_slots(world, slots)` | 武器スロット全体を注入（I-2: 毎フレーム差分注入） |
 | `spawn_boss(world, boss_id)` | ボスをスポーン |
 | `spawn_elite_enemy(world, kind_id, count, hp_mult)` | エリート敵をスポーン |
-| `spawn_item(world, x, y, kind, value)` | アイテムをスポーン（Phase 3-B） |
-| `set_boss_velocity(world, vx, vy)` | ボス速度を注入（Phase 3-B・AI） |
-| `set_boss_invincible(world, invincible)` | ボス無敵状態を設定（Phase 3-B・AI） |
-| `set_boss_phase_timer(world, timer)` | ボス特殊行動タイマーを設定（Phase 3-B・AI） |
-| `fire_boss_projectile(world, dx, dy, speed, dmg, lifetime)` | ボス弾を発射（Phase 3-B・AI） |
-| `get_boss_state(world)` | ボス状態を取得（Phase 3-B・AI 用） |
+| `spawn_item(world, x, y, kind, value)` | アイテムをスポーン |
+| `set_boss_velocity(world, vx, vy)` | ボス速度を注入（AI） |
+| `set_boss_invincible(world, invincible)` | ボス無敵状態を設定（AI） |
+| `set_boss_phase_timer(world, timer)` | ボス特殊行動タイマーを設定（AI） |
+| `fire_boss_projectile(world, dx, dy, speed, dmg, lifetime)` | ボス弾を発射（AI） |
+| `get_boss_state(world)` | ボス状態を取得（AI 用） |
+| `add_score_popup(world, x, y, value)` | スコアポップアップを描画バッファに追加 |
+
+> **注意**: 旧設計の `add_weapon(world, weapon_id)` NIF は廃止済み。
+> 武器管理は `set_weapon_slots` で毎フレーム Elixir 側から全スロットを注入する設計（I-2）に変更された。
 
 **`read_nif.rs`（軽量・毎フレーム利用可）:**
 
@@ -458,7 +473,7 @@ flowchart LR
 
 ### `window.rs` — winit ウィンドウ管理
 
-winit ウィンドウのイベントループと `RenderBridge` トレイトを定義します（旧 `game_window` クレートから統合）。
+winit ウィンドウのイベントループと `RenderBridge` トレイトを定義します。
 
 #### キー入力マッピング
 
@@ -482,6 +497,11 @@ flowchart TD
 
     RR --> NF --> UI --> REN --> ACT --> RR
 ```
+
+### `headless.rs` — ヘッドレスモード
+
+CI / テスト環境向けのヘッドレス実装。`[features] headless = []` で有効化。
+winit ウィンドウを開かずに物理演算のみ実行できる。
 
 ### `renderer/mod.rs` — 描画パス
 
@@ -517,20 +537,6 @@ sequenceDiagram
 | プレイ中 | HP バー・EXP バー・スコア・タイマー・武器スロット・Save/Load |
 | ボス戦 | 画面上部中央にボス HP バー |
 | レベルアップ | 武器カード×3、Esc/1/2/3 キー対応、3 秒自動選択 |
-
-### `renderer/shaders/sprite.wgsl` — WGSL シェーダー
-
-```wgsl
-@vertex
-fn vs_main(in: VertexInput) -> VertexOutput {
-    // ワールド座標 → カメラオフセット → クリップ座標変換
-}
-
-@fragment
-fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    // テクスチャサンプリング × カラーティント
-}
-```
 
 ---
 

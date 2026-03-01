@@ -15,8 +15,7 @@ sequenceDiagram
     participant RS as RoomSupervisor
     participant GEV as GameEvents
     participant NIF as NifBridge (game_nif)
-    participant WB as WorldBehaviour
-    participant RB as RuleBehaviour
+    participant COMP as Component 群（on_ready）
 
     MX->>APP: start/2
     APP->>APP: Registry / SceneManager / InputHandler / EventBus 起動
@@ -26,12 +25,10 @@ sequenceDiagram
     RS->>GEV: GameEvents 起動（:main ルーム）
     GEV->>NIF: create_world()
     NIF-->>GEV: GameWorld リソース
-    GEV->>WB: setup_world_params(world_ref)
-    WB->>NIF: set_world_size(world_ref, 4096, 4096)
-    WB->>NIF: set_entity_params(world_ref, enemies, weapons, bosses)
-    GEV->>RB: initial_weapons()
-    GEV->>NIF: add_weapon(world_ref, weapon_id) × 初期武器数
+    GEV->>COMP: on_ready(world_ref) × コンポーネント数
+    Note over COMP: set_world_size / set_entity_params NIF を呼び出す
     GEV->>NIF: set_map_obstacles(world_ref, obstacles)
+    GEV->>NIF: create_game_loop_control()
     GEV->>NIF: start_rust_game_loop(world_ref, control_ref, self())
     GEV->>NIF: start_render_thread(world_ref, self())
     Note over NIF: Rust 60Hz ループ開始
@@ -56,7 +53,7 @@ flowchart TD
     PAR[パーティクル更新]
     ITEM[アイテム更新]
     BUL[弾丸更新]
-    BOSS[ボス AI]
+    BOSS[ボス物理]
     DFE[drain_frame_events]
     SEND["send {:frame_events, [...]}"]
     GEV[Elixir GameEvents プロセス]
@@ -71,33 +68,34 @@ flowchart TD
 ```mermaid
 flowchart TD
     GEV[GameEvents GenServer\nhandle_info :frame_events]
-    ER[EntityRemoved]
+    EK[EnemyKilled]
     PD[PlayerDamaged]
-    LU[LevelUp]
-    BD[BossDefeated]
+    SE[SpecialEntitySpawned\nSpecialEntityDamaged\nSpecialEntityDefeated]
     IP[ItemPickup]
     PER[60フレームごと]
 
-    RULE[RuleBehaviour\non_entity_removed\non_boss_defeated\nupdate_boss_ai]
+    COMP[Component 群\non_frame_event/2\non_physics_process/1\non_nif_sync/1]
     EB[EventBus.broadcast]
     ST[Stats.record]
-    HC{HP <= 0?}
-    GO[SceneManager.replace_scene\nGameOver]
-    LS[SceneManager.push_scene\nLevelUp]
     LOG[Logger.debug\nFPS・敵数]
     TEL[:telemetry.execute]
     FC[FrameCache.put]
 
-    GEV --> ER --> RULE
-    GEV --> PD --> HC
-    HC -->|Yes| GO
-    GEV --> LU --> LS
-    GEV --> BD --> RULE
+    GEV --> EK --> COMP
+    GEV --> PD --> COMP
+    GEV --> SE --> COMP
     GEV --> IP --> EB --> ST
     GEV --> PER --> LOG
     PER --> TEL
     PER --> FC
 ```
+
+**フレーム処理の順序（毎フレーム）:**
+
+1. `on_frame_event/2` — 全コンポーネントにフレームイベントを配信（スコア・HP・ボス HP 更新）
+2. `Scene.update/2` — シーン遷移判断
+3. `on_physics_process/1` — ボス AI 等の物理コールバック（NIF 書き込みを含む）
+4. `on_nif_sync/1` — Elixir state を Rust 側に差分注入
 
 ---
 
@@ -144,7 +142,7 @@ flowchart LR
     KI -->|WASD / 矢印キー| VEC --> OMI --> PI --> PS
 ```
 
-### UI アクション（レベルアップ選択・セーブ等）
+### UI アクション（武器選択・セーブ等）
 
 ```mermaid
 flowchart TD
@@ -153,9 +151,9 @@ flowchart TD
     Q[on_ui_action キュー]
     SEND["Elixir プロセスに send\nRedrawRequested 末尾で取り出し"]
     GEV["GameEvents.handle_info\n{:ui_action, action}"]
-    W1["NifBridge.add_weapon()\n:select_weapon_1/2/3"]
-    W2["SaveManager.save_session()\n:save"]
-    W3["SaveManager.load_session()\n→ NifBridge.load_save_snapshot()\n:load"]
+    W1["Component.on_event/2\n:select_weapon_1/2/3 等"]
+    W2["SaveManager.save_session()\n:__save__"]
+    W3["SaveManager.load_session()\n→ NifBridge.load_save_snapshot()\n:__load__"]
 
     UI --> OUA --> Q --> SEND --> GEV
     GEV --> W1
@@ -198,7 +196,7 @@ graph TD
 | カテゴリ | 代表関数 | ロック | 呼び出し頻度 |
 |:---|:---|:---|:---|
 | control | `create_world`, `spawn_enemies`, `set_entity_params` | write | 低（起動時・イベント時） |
-| inject | `set_hud_state`, `set_hud_level_state`, `set_boss_velocity` | write | 高（毎フレーム） |
+| inject | `set_hud_state`, `set_hud_level_state`, `set_boss_velocity`, `set_weapon_slots` | write | 高（毎フレーム） |
 | query_light | `get_player_hp`, `get_enemy_count`, `get_boss_state` | read | 高（毎フレーム可） |
 | snapshot_heavy | `get_save_snapshot`, `load_save_snapshot` | write | 低（明示操作時） |
 | game_loop | `physics_step`, `drain_frame_events` | write | 高（60Hz） |
@@ -213,13 +211,13 @@ graph LR
     SUB["subscribe(pid)\nProcess.monitor で死活監視"]
     BC["broadcast(event)"]
     ST[Stats GenServer\n統計集計]
-    GN["将来: GameNetwork\n外部ログ等"]
+    GN["GameNetwork\n外部配信等"]
     DOWN[":DOWN メッセージ\n→ 自動購読解除"]
 
     EB --> SUB
     EB --> BC
     BC --> ST
-    BC -.->|将来| GN
+    BC -.->| | GN
     SUB -->|死亡検知| DOWN
 ```
 
