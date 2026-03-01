@@ -22,12 +22,16 @@ defmodule GameNetwork.MixProject do
   def application do
     [
       extra_applications: [:logger],
+      mod: {GameNetwork.Application, []},
     ]
   end
 
   defp deps do
     [
       {:game_engine, in_umbrella: true},
+      {:phoenix, "~> 1.8"},
+      {:phoenix_pubsub, "~> 2.2"},
+      {:plug_cowboy, "~> 2.7"},
     ]
   end
 end

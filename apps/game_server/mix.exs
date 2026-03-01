@@ -26,6 +26,7 @@ defmodule GameServer.MixProject do
     [
       {:game_engine, in_umbrella: true},
       {:game_content, in_umbrella: true},
+      {:game_network, in_umbrella: true},
     ]
   end
 end
