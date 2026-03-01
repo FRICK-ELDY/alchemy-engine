@@ -30,7 +30,15 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
        exp_to_next: exp_required_for_next(1),
        boss_hp: nil,
        boss_max_hp: nil,
-       boss_kind_id: nil
+       boss_kind_id: nil,
+       score: 0,
+       kill_count: 0,
+       player_hp: 100.0,
+       player_max_hp: 100.0,
+       elapsed_ms: 0,
+       # nil の場合は handle_no_boss 内で context.start_ms にフォールバックする
+       # （init 時点では start_ms が不明なため nil で初期化）
+       last_spawn_ms: nil
      }}
   end
 
@@ -39,7 +47,8 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
 
   @impl GameEngine.SceneBehaviour
   def update(context, state) do
-    %{elapsed: elapsed, player_hp: player_hp} = context
+    elapsed = context.elapsed
+    player_hp = Map.get(state, :player_hp, 100.0)
 
     if player_hp <= 0.0 do
       Logger.info("[GAME OVER] Player HP reached 0 at #{div(elapsed, 1000)}s")
@@ -90,10 +99,12 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
       :telemetry.execute([:game, :level_up], %{level: level, count: 1}, %{})
       handle_level_up(context, state, level, exp, exp_to_next, weapon_choices, weapon_levels)
     else
-      new_last_spawn =
-        SpawnSystem.maybe_spawn(context.world_ref, context.elapsed, context.last_spawn_ms)
+      last_spawn_ms = state.last_spawn_ms || context.start_ms
 
-      {:continue, state, %{context_updates: %{last_spawn_ms: new_last_spawn}}}
+      new_last_spawn =
+        SpawnSystem.maybe_spawn(context.world_ref, context.elapsed, last_spawn_ms)
+
+      {:continue, %{state | last_spawn_ms: new_last_spawn}}
     end
   end
 
