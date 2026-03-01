@@ -77,9 +77,14 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
   end
 
   defp handle_no_boss(context, state) do
-    %{level: level, exp: exp, exp_to_next: exp_to_next,
-      level_up_pending: level_up_pending, weapon_choices: weapon_choices,
-      weapon_levels: weapon_levels} = state
+    %{
+      level: level,
+      exp: exp,
+      exp_to_next: exp_to_next,
+      level_up_pending: level_up_pending,
+      weapon_choices: weapon_choices,
+      weapon_levels: weapon_levels
+    } = state
 
     if level_up_pending do
       :telemetry.execute([:game, :level_up], %{level: level, count: 1}, %{})
