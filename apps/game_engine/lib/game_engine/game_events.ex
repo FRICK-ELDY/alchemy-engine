@@ -188,11 +188,29 @@ defmodule GameEngine.GameEvents do
 
   # ── インフォ: フレームイベント ────────────────────────────────────
 
+  # 60Hz × 2秒分のバッファ。これを超えた場合、Elixir が GC ポーズや重いシーン遷移で
+  # 2秒以上遅延していることを意味し、フレームをドロップして追いつく必要がある。
+  # フレームレートが変わった場合（例: 30Hz 環境では 4秒分）は要調整。
+  @backpressure_threshold 120
+
   def handle_info({:frame_events, events}, state) do
+    throttled? =
+      case Process.info(self(), :message_queue_len) do
+        {:message_queue_len, depth} when depth > @backpressure_threshold ->
+          :telemetry.execute([:game, :frame_dropped], %{depth: depth}, %{room_id: state.room_id})
+          true
+
+        _ ->
+          false
+      end
+
     if state.room_id != :main do
+      # frame_count は「受信したフレーム数」として管理する（ドロップ分も含む）
+      # last_tick はここで更新する（:main は handle_frame_events_main の末尾で更新）
       {:noreply, %{state | last_tick: now_ms(), frame_count: state.frame_count + 1}}
     else
-      handle_frame_events_main(events, state)
+      # :main ルームの last_tick は handle_frame_events_main の末尾で常に更新される
+      handle_frame_events_main(events, state, throttled?)
     end
   end
 
@@ -228,7 +246,9 @@ defmodule GameEngine.GameEvents do
 
   # ── メインフレームループ ──────────────────────────────────────────
 
-  defp handle_frame_events_main(events, state) do
+  # throttled?: true のとき、ゲーム整合性に影響するイベント処理（スコア・HP 等）は
+  # 維持しつつ、NIF 書き込み・ブロードキャスト等の重い副作用をスキップして追いつく。
+  defp handle_frame_events_main(events, state, throttled?) do
     now = now_ms()
     elapsed = now - state.start_ms
     content = current_content()
@@ -241,30 +261,37 @@ defmodule GameEngine.GameEvents do
       {:ok, %{module: mod, state: scene_state}} ->
         context = build_context(state, now, elapsed)
 
-        # フレームイベントをコンポーネントに委譲（シーン state を更新）
+        # ── バックプレッシャー時もスキップしない処理 ──────────────────────
+        # スコア・HP・レベルアップ等のゲーム整合性に影響するため常に実行する
+
         Enum.each(events, &dispatch_frame_event_to_components(&1, context))
-
-        # 入力・物理コールバック・ブロードキャスト
-        # on_physics_process（ボス AI 等）が NIF の状態を書き換えるため、
-        # on_nif_sync より先に実行する
-        maybe_set_input_and_broadcast(state, mod, physics_scenes, events, context)
-
-        # NIF 注入をコンポーネントに委譲
-        # on_physics_process の後に実行することで、物理 AI の結果を含めた
-        # 最新のシーン state を Rust 側に反映できる
-        dispatch_nif_sync_to_components(context)
 
         # シーン update（遷移判断のみ）
         result = mod.update(context, scene_state)
         {new_scene_state, _opts} = extract_state_and_opts(result)
         GameEngine.SceneManager.update_current(fn _ -> new_scene_state end)
 
-        # シーン遷移処理
         state = process_transition(result, state, now, content)
 
-        # ログ・キャッシュ（60フレームごと）
-        GameEngine.GameEvents.Diagnostics.maybe_log_and_cache(state, mod, elapsed, content)
+        # ── バックプレッシャー時にスキップする処理 ────────────────────────
+        # NIF 書き込み・物理コールバック・ブロードキャスト・ログは重い副作用のためスキップ
 
+        unless throttled? do
+          # 入力・物理コールバック・ブロードキャスト
+          # on_physics_process（ボス AI 等）が NIF の状態を書き換えるため、
+          # on_nif_sync より先に実行する
+          maybe_set_input_and_broadcast(state, mod, physics_scenes, events, context)
+
+          # NIF 注入をコンポーネントに委譲
+          # on_physics_process の後に実行することで、物理 AI の結果を含めた
+          # 最新のシーン state を Rust 側に反映できる
+          dispatch_nif_sync_to_components(context)
+
+          # ログ・キャッシュ（60フレームごと）
+          GameEngine.GameEvents.Diagnostics.maybe_log_and_cache(state, mod, elapsed, content)
+        end
+
+        # frame_count は「受信したフレーム数」として管理する（ドロップ分も含む）
         {:noreply, %{state | last_tick: now, frame_count: state.frame_count + 1}}
     end
   end

@@ -33,6 +33,13 @@ defmodule GameEngine.Telemetry do
       ),
       Telemetry.Metrics.counter("game.boss_spawn.count",
         description: "Total boss spawn events"
+      ),
+      Telemetry.Metrics.counter("game.frame_dropped.count",
+        description: "Frames dropped due to mailbox backpressure"
+      ),
+      Telemetry.Metrics.last_value("game.frame_dropped.depth",
+        measurement: :depth,
+        description: "Mailbox depth at the time of frame drop (most recent value)"
       )
     ]
   end
