@@ -10,7 +10,7 @@
 
 | ID | タイトル | 期待改善幅 | 工数 | 優先度 |
 |:---|:---|:---:|:---:|:---:|
-| IP-01 | `GameEvents` GenServer の分解 | +4 | 中 | 🟡 高 |
+| IP-01 | `GameEvents` GenServer の分解 | +4 | 中 | ✅ 完了 |
 | IP-02 | Elixir コアモジュールのテスト追加 | +4 | 中 | 🟡 高 |
 | IP-03 | NIF の `unwrap()` / `expect()` を `NifResult<T>` に統一 | +2 | 小 | 🟡 高 |
 | IP-04 | Rust → Elixir メールボックスへのバックプレッシャー実装 | +2 | 小 | 🟡 高 |
@@ -34,31 +34,14 @@
 
 ---
 
-### IP-01: `GameEvents` GenServer の分解
+### ~~IP-01: `GameEvents` GenServer の分解~~ ✅ 完了（2026-03-01）
 
 **対応するマイナス点**: `GameEvents` 697 行・複数責務（-2）
 
-**問題の本質**
-
-ゲームループティック・シーンディスパッチ・NIF 呼び出し・イベント処理・セーブ/ロード調整が 1 つの GenServer に混在。テスト不可能な巨大モジュールになっている。
-
-**提案する分解**
-
-| 新モジュール | 責務 | 推定行数 |
-|:---|:---|:---:|
-| `GameEngine.FrameDispatcher` | `{:frame_events, events}` の受信・シーンへのディスパッチ | ~150 |
-| `GameEngine.NifCoordinator` | NIF 呼び出しシーケンス（inject / query / snapshot） | ~200 |
-| `GameEngine.SaveCoordinator` | セーブ/ロード調整・HMAC 署名 | ~100 |
-| `GameEngine.GameEvents`（スリム化） | Supervisor エントリポイント・状態集約 | ~150 |
-
-**移行戦略**:
-1. `NifCoordinator` を最初に抽出（純粋な関数呼び出し、テストが容易）
-2. `SaveCoordinator` を次に抽出
-3. `FrameDispatcher` を最後に抽出（状態スレッディングの慎重な設計が必要）
-
-**受け入れ基準**:
-- どのモジュールも 300 行を超えない
-- 各抽出モジュールに最低 5 件の単体テストが存在する
+- `Component` ビヘイビアに `on_nif_sync/1` / `on_frame_event/2` を追加し、NIF 注入・フレームイベント処理をコンポーネントへ委譲
+- `GameEvents.state` からゲーム固有フィールドをすべて除去（7 フィールドに整理）
+- `AsteroidArena.Scenes.Playing` のダミー実装を削除
+- `LevelComponent` / `BossComponent` に単体テストを追加（計 12 件）
 
 ---
 
