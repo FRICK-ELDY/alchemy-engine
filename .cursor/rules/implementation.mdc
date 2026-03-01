@@ -1,0 +1,82 @@
+---
+description: 実装時の共通ルール。常に適用する。
+alwaysApply: true
+---
+
+# 実装ルール
+
+## アーキテクチャ原則
+
+- **Elixir = SSoT（Single Source of Truth）**：ゲームロジックの制御フロー・シーン管理・パラメータはElixir側で持つ
+- **Rust = 演算層**：物理演算・描画・オーディオはRust側で処理し、Elixirからパラメータを注入する
+- Elixir側からRust側へのパラメータ注入は `game_nif` 経由（Rustler NIF）で行う
+- Rust側でゲームルールをハードコードしない
+
+## レイヤー別の責務
+
+| レイヤー | 追加・変更してよいもの | 追加・変更してはいけないもの |
+|:---|:---|:---|
+| `game_engine` | ループ制御・シーン管理・イベント配信 | ゲームコンテンツ固有ロジック |
+| `game_content` | World/Rule実装・エンティティパラメータ | エンジンコアの変更 |
+| `game_physics` | 物理演算・ECS・SoA構造 | ゲームルール・パラメータのハードコード |
+| `game_render` | 描画パイプライン・HUD | ゲームロジック |
+| `game_nif` | NIF定義・ブリッジ | 物理演算ロジック |
+
+## Rust 実装規則
+
+### SoA（Structure of Arrays）を維持する
+
+```rust
+// ✅ GOOD: SoA形式
+struct EnemyWorld {
+    positions_x: Vec<f32>,
+    positions_y: Vec<f32>,
+    hp: Vec<f32>,
+    alive: Vec<bool>,
+    free_list: Vec<usize>,
+}
+
+// ❌ BAD: AoS形式（キャッシュ効率が悪い）
+struct Enemy { x: f32, y: f32, hp: f32, alive: bool }
+struct EnemyWorld { enemies: Vec<Enemy> }
+```
+
+### unsafe ブロックの使用
+
+- `unsafe` を使う場合は必ずコメントで安全性の根拠を説明する
+- SIMD（SSE2等）使用時は `#[cfg(target_feature = "sse2")]` でフォールバックを用意する
+
+### エラーハンドリング
+
+```rust
+// ✅ GOOD
+fn process() -> Result<(), GameError> { ... }
+
+// ❌ BAD: unwrap/expect をホットパスで使わない
+let val = some_option.unwrap();
+```
+
+## Elixir 実装規則
+
+### GenServer の責務を分離する
+
+- 1つのGenServerに複数の責務を持たせない
+- 状態の読み取りは `handle_call`、副作用は `handle_cast` / `handle_info` を使い分ける
+
+### パターンマッチを活用する
+
+```elixir
+# ✅ GOOD
+def handle_info({:frame_events, events}, state) do
+  Enum.reduce(events, state, &process_event/2)
+end
+
+# ❌ BAD: if/case の多用
+def handle_info(msg, state) do
+  if is_tuple(msg) and elem(msg, 0) == :frame_events do ...
+```
+
+## 実装完了後のフロー
+
+実装が完了したら `pr-workflow` ルールに従ってPRを作成し、
+新しいチャットで `code-review` ルールを使ってレビューを依頼する。

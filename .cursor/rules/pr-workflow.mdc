@@ -1,0 +1,90 @@
+---
+description: 実装完了後の git push & PR 作成フロー。実装が完了したタイミングで適用する。
+alwaysApply: false
+---
+
+# PR 作成フロー
+
+実装が完了したら、以下の手順で PR を作成します。
+
+## 手順
+
+### 1. 変更内容の確認
+
+```bash
+git status
+git diff
+```
+
+### 2. ブランチの作成（未作成の場合）
+
+```bash
+git checkout -b feature/<作業内容を簡潔に>
+```
+
+ブランチ命名規則：
+- 新機能: `feature/<name>`
+- バグ修正: `fix/<name>`
+- リファクタリング: `refactor/<name>`
+
+### 3. コミット
+
+```bash
+git add .
+git commit -m "<type>: <変更内容の要約>"
+```
+
+コミットメッセージの type：
+- `feat` — 新機能
+- `fix` — バグ修正
+- `refactor` — リファクタリング
+- `perf` — パフォーマンス改善
+- `docs` — ドキュメント
+
+### 4. push & PR 作成
+
+```powershell
+git push -u origin HEAD
+```
+
+PR 本文を変数に入れて `gh pr create` を実行する（PowerShell）：
+
+```powershell
+$body = @"
+## 概要
+<変更内容を箇条書きで>
+
+## テスト方法
+<動作確認の手順>
+
+## レビュー観点
+<レビュアーに特に見てほしい箇所>
+"@
+
+gh pr create --title "<PRタイトル>" --body $body
+```
+
+#### gh コマンドが見つからない場合
+
+インストール後に PATH が反映されていないことがある。フルパスで実行：
+
+```powershell
+& "C:\Program Files\GitHub CLI\gh.exe" pr create --title "<PRタイトル>" --body $body
+```
+
+#### 初回のみ：認証
+
+```powershell
+gh auth login
+# GitHub.com → HTTPS → Login with a web browser の順に選択
+```
+
+## PR 作成後
+
+PR を作成したら、**新しいチャット**を開いて以下のように依頼するだけでレビューが始まります：
+
+```
+code-review ルールに従ってレビューしてください。
+```
+
+ファイルの添付は不要です。`git diff` から変更差分を自動取得します。
