@@ -10,9 +10,11 @@ defmodule GameNetwork do
     `GameNetwork.Endpoint` (`/socket`) 経由でブラウザ等から接続できる。
     `"room:<room_id>"` トピックに join してゲームルームに参加する。
 
-  ## 将来のサブモジュール（未実装）
+  ## 実装済みサブモジュール（続き）
 
-  - `GameNetwork.UDP` — `:gen_udp` によるロックステップ同期（フェーズ3）
+  - `GameNetwork.UDP` — `:gen_udp` による UDP トランスポート（フェーズ3）。
+    デフォルトポート 4001 で待ち受け。クライアントは JOIN パケットでルームに参加し、
+    INPUT/ACTION を送信してフレームイベントを受信する。
   """
 
   @doc """
@@ -62,4 +64,22 @@ defmodule GameNetwork do
   2 つのルームが接続されているかどうかを返す。`GameNetwork.Local.connected?/2` の委譲。
   """
   defdelegate connected?(room_a, room_b), to: GameNetwork.Local
+
+  @doc """
+  UDP サーバーが使用しているポート番号を返す。`GameNetwork.UDP.port/0` の委譲。
+  """
+  defdelegate udp_port(), to: GameNetwork.UDP, as: :port
+
+  @doc """
+  UDP で接続中のクライアント一覧を返す。`GameNetwork.UDP.sessions/0` の委譲。
+  """
+  defdelegate udp_sessions(), to: GameNetwork.UDP, as: :sessions
+
+  @doc """
+  指定ルームに接続している UDP クライアント全員にフレームイベントを送信する。
+  `GameNetwork.UDP.broadcast_frame/2` の委譲。
+
+  WebSocket 向けのブロードキャストと区別するため `_udp` サフィックスを付けている。
+  """
+  defdelegate broadcast_frame_udp(room_id, events), to: GameNetwork.UDP, as: :broadcast_frame
 end

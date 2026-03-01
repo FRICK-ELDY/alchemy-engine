@@ -8,6 +8,12 @@ if port_str = System.get_env("GAME_NETWORK_PORT") do
     http: [port: String.to_integer(port_str)]
 end
 
+# ── GameNetwork.UDP（実行時設定）─────────────────────────────────────
+if udp_port_str = System.get_env("GAME_NETWORK_UDP_PORT") do
+  config :game_network, GameNetwork.UDP,
+    port: String.to_integer(udp_port_str)
+end
+
 # ── セーブデータ HMAC 署名鍵（実行時設定）────────────────────────────
 # 本番環境では必ず環境変数で上書きすること。
 if secret = System.get_env("SAVE_HMAC_SECRET") do

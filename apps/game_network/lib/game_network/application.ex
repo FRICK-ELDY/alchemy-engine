@@ -6,6 +6,7 @@ defmodule GameNetwork.Application do
   - `GameNetwork.PubSub` — Phoenix.PubSub（ルーム間ブロードキャスト）
   - `GameNetwork.Local` — ローカルマルチルーム管理 GenServer
   - `GameNetwork.Endpoint` — Phoenix Endpoint（WebSocket + HTTP）
+  - `GameNetwork.UDP` — UDP トランスポートサーバー（デフォルトポート 4001）
 
   ## 起動パターン
 
@@ -36,6 +37,7 @@ defmodule GameNetwork.Application do
       {Phoenix.PubSub, name: GameNetwork.PubSub},
       GameNetwork.Local,
       GameNetwork.Endpoint,
+      GameNetwork.UDP,
     ]
 
     opts = [strategy: :one_for_one, name: GameNetwork.Supervisor]

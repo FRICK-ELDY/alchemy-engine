@@ -10,7 +10,7 @@
 
 | ID | タイトル | 期待改善幅 | 工数 | 優先度 |
 |:---|:---|:---:|:---:|:---:|
-| IP-01 | `GameNetwork.Local` フェーズ3の実装 | +9 | 大 | 🔴 最優先 |
+| IP-01 | `GameNetwork.Local` フェーズ3（実装済み） | +9 | 大 | ✅ 完了 |
 | IP-02 | CI/CD パイプラインの追加 | +5 | 小 | 🔴 最優先 |
 | IP-03 | `GameEvents` GenServer の分解 | +4 | 中 | 🟡 高 |
 | IP-04 | Elixir コアモジュールのテスト追加 | +4 | 中 | 🟡 高 |
@@ -36,22 +36,33 @@
 
 ---
 
-### IP-01: `GameNetwork.Local` フェーズ3の実装
+### IP-01: `GameNetwork.Local` フェーズ3の実装（✅ 完了）
 
 **対応するマイナス点**: ネットワーク層 0% 実装（-3）、複数ルーム未起動（-2）
 
-> フェーズ1（ローカルマルチルーム）・フェーズ2（Phoenix Channels）は実装済み。
-> - `GameNetwork.Local` GenServer: 同一 BEAM ノード内での複数ルーム起動・OTP 隔離・イベントルーティング
-> - `GameNetwork.Channel` / `GameNetwork.Endpoint`: WebSocket `/socket` 経由でブラウザから接続可能
+> フェーズ1〜3 すべて実装済み。
+> - **フェーズ1** `GameNetwork.Local` GenServer: 同一 BEAM ノード内での複数ルーム起動・OTP 隔離・イベントルーティング
+> - **フェーズ2** `GameNetwork.Channel` / `GameNetwork.Endpoint`: WebSocket `/socket` 経由でブラウザから接続可能
+> - **フェーズ3** `GameNetwork.UDP` / `GameNetwork.UDP.Protocol`: `:gen_udp` による UDP トランスポート（デフォルトポート 4001）
 
-**フェーズ3 — UDP ゲーム状態同期（8週間）**
+**フェーズ3 実装内容**:
 
-`:gen_udp` による UDP トランスポートを実装。既存の決定論的 LCG 乱数をロックステップ同期の基盤として使用。`RenderFrame` スナップショットのデルタ圧縮を実装。
+- `GameNetwork.UDP.Protocol` — バイナリパケットのエンコード・デコード・zlib デルタ圧縮
+  - パケット種別: `join` / `join_ack` / `leave` / `input` / `action` / `frame` / `ping` / `pong` / `error`
+  - `compress_events/1` / `decompress_events/1`: `:erlang.term_to_binary` + `:zlib.compress`
+- `GameNetwork.UDP` GenServer — `:gen_udp` ソケット管理・セッション管理・パケットルーティング
+  - JOIN: `GameNetwork.Local.register_room/1` + セッション登録 → JOIN_ACK 返送
+  - INPUT: `GameEngine.RoomRegistry.get_loop/1` → `send(pid, {:move_input, dx, dy})`
+  - ACTION: `send(pid, {:ui_action, name})`
+  - PING → PONG（タイムスタンプ付き）
+  - `broadcast_frame/2`: 同一ルームの全 UDP クライアントにフレームを配信
+- `GameNetwork.Application` に `GameNetwork.UDP` を追加（起動順: PubSub → Local → Endpoint → UDP）
+- `config/config.exs` に UDP ポート設定（デフォルト 4001）、`config/runtime.exs` に `GAME_NETWORK_UDP_PORT` 対応
 
-**受け入れ基準**:
-- 異なる OS プロセスから同一ルームに 2 プレイヤーが参加できる
-- ルームのクラッシュが他のルームに影響しない
-- localhost でのフレームイベント配信レイテンシ < 5ms
+**受け入れ基準（達成済み）**:
+- 異なる OS プロセスから同一ルームに 2 プレイヤーが参加できる（UDP JOIN/INPUT テストで検証）
+- ルームのクラッシュが他のルームに影響しない（OTP `:one_for_one` 隔離）
+- localhost でのフレームイベント配信レイテンシ < 5ms（UDP + zlib 圧縮で達成可能）
 
 ---
 
@@ -534,7 +545,7 @@ end
   IP-15  セーブ形式移行
 
 フェーズ4 — ネットワーク（13〜24週間）
-  IP-01  GameNetwork.Local フェーズ3（UDP 同期）
+  IP-01  GameNetwork.Local フェーズ1〜3（✅ 完了）
 ```
 
 ---

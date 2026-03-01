@@ -10,6 +10,12 @@ config :game_network, GameNetwork.Endpoint,
 
 config :game_network, :json_library, Jason
 
+# ── GameNetwork.UDP（UDP トランスポートサーバー）─────────────────────
+# デフォルトポート: 4001
+# 変更する場合は config/runtime.exs の GAME_NETWORK_UDP_PORT を設定する。
+config :game_network, GameNetwork.UDP,
+  port: 4001
+
 # ── 使用するコンテンツを指定する。
 # GameContent.VampireSurvivor — ヴァンパイアサバイバークローン
 # GameContent.AsteroidArena   — 小惑星シューター（武器・ボスなし）
