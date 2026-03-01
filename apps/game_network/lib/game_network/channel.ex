@@ -62,7 +62,10 @@ defmodule GameNetwork.Channel do
         {:ok, %{room_id: room_id}, socket}
 
       {:error, reason} ->
-        Logger.warning("[GameNetwork.Channel] Failed to register room=#{room_id}: #{inspect(reason)}")
+        Logger.warning(
+          "[GameNetwork.Channel] Failed to register room=#{room_id}: #{inspect(reason)}"
+        )
+
         {:error, %{reason: "register_failed", detail: inspect(reason)}}
     end
   end

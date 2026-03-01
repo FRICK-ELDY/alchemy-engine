@@ -13,11 +13,16 @@ defmodule GameContent.EntityParamsTest do
     end
 
     test "各種別の EXP 報酬が期待値と一致する" do
-      assert EntityParams.enemy_exp_reward(0) == 5   # slime
-      assert EntityParams.enemy_exp_reward(1) == 3   # bat
-      assert EntityParams.enemy_exp_reward(2) == 20  # skeleton
-      assert EntityParams.enemy_exp_reward(3) == 10  # ghost
-      assert EntityParams.enemy_exp_reward(4) == 8   # golem
+      # slime
+      assert EntityParams.enemy_exp_reward(0) == 5
+      # bat
+      assert EntityParams.enemy_exp_reward(1) == 3
+      # skeleton
+      assert EntityParams.enemy_exp_reward(2) == 20
+      # ghost
+      assert EntityParams.enemy_exp_reward(3) == 10
+      # golem
+      assert EntityParams.enemy_exp_reward(4) == 8
     end
 
     test "未定義の kind_id は KeyError を発生させる" do
@@ -35,9 +40,12 @@ defmodule GameContent.EntityParamsTest do
     end
 
     test "ボス EXP 報酬が期待値と一致する" do
-      assert EntityParams.boss_exp_reward(0) == 200   # slime_king
-      assert EntityParams.boss_exp_reward(1) == 400   # bat_lord
-      assert EntityParams.boss_exp_reward(2) == 800   # stone_golem
+      # slime_king
+      assert EntityParams.boss_exp_reward(0) == 200
+      # bat_lord
+      assert EntityParams.boss_exp_reward(1) == 400
+      # stone_golem
+      assert EntityParams.boss_exp_reward(2) == 800
     end
   end
 
@@ -69,9 +77,12 @@ defmodule GameContent.EntityParamsTest do
     end
 
     test "ボス最大 HP が期待値と一致する" do
-      assert EntityParams.boss_max_hp(0) == 1000.0  # slime_king
-      assert EntityParams.boss_max_hp(1) == 2000.0  # bat_lord
-      assert EntityParams.boss_max_hp(2) == 5000.0  # stone_golem
+      # slime_king
+      assert EntityParams.boss_max_hp(0) == 1000.0
+      # bat_lord
+      assert EntityParams.boss_max_hp(1) == 2000.0
+      # stone_golem
+      assert EntityParams.boss_max_hp(2) == 5000.0
     end
   end
 end

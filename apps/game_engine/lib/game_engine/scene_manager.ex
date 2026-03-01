@@ -127,6 +127,7 @@ defmodule GameEngine.SceneManager do
         %{state: s} -> s
         nil -> %{}
       end
+
     {:reply, scene_state, state}
   end
 

@@ -13,10 +13,11 @@ defmodule GameContent.AsteroidArena.Scenes.Playing do
 
   @impl GameEngine.SceneBehaviour
   def init(_init_arg) do
-    {:ok, %{
-      exp:              0,
-      last_ufo_spawn_ms: 0,
-    }}
+    {:ok,
+     %{
+       exp: 0,
+       last_ufo_spawn_ms: 0
+     }}
   end
 
   @impl GameEngine.SceneBehaviour
@@ -25,10 +26,10 @@ defmodule GameContent.AsteroidArena.Scenes.Playing do
   @impl GameEngine.SceneBehaviour
   def update(context, state) do
     %{
-      world_ref:     world_ref,
-      elapsed:       elapsed,
+      world_ref: world_ref,
+      elapsed: elapsed,
       last_spawn_ms: last_spawn_ms,
-      player_hp:     player_hp,
+      player_hp: player_hp
     } = context
 
     if player_hp <= 0.0 do
@@ -36,7 +37,7 @@ defmodule GameContent.AsteroidArena.Scenes.Playing do
       {:transition, {:replace, GameContent.AsteroidArena.Scenes.GameOver, %{}}, state}
     else
       new_last_spawn = SpawnSystem.maybe_spawn(world_ref, elapsed, last_spawn_ms)
-      new_last_ufo   = SpawnSystem.maybe_spawn_ufo(world_ref, elapsed, state.last_ufo_spawn_ms)
+      new_last_ufo = SpawnSystem.maybe_spawn_ufo(world_ref, elapsed, state.last_ufo_spawn_ms)
 
       new_state = %{state | last_ufo_spawn_ms: new_last_ufo}
 

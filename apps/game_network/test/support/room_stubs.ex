@@ -42,7 +42,7 @@ defmodule GameNetwork.Test.StubRoom do
     %{
       id: __MODULE__,
       start: {__MODULE__, :start_link, [arg]},
-      restart: :temporary,
+      restart: :temporary
     }
   end
 

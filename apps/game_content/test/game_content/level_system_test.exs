@@ -34,7 +34,7 @@ defmodule GameContent.VampireSurvivor.LevelSystemTest do
       choices = LevelSystem.generate_weapon_choices(weapon_levels)
 
       unowned = Enum.filter(choices, fn w -> not Map.has_key?(weapon_levels, w) end)
-      owned   = Enum.filter(choices, fn w -> Map.has_key?(weapon_levels, w) end)
+      owned = Enum.filter(choices, fn w -> Map.has_key?(weapon_levels, w) end)
 
       assert length(unowned) >= length(owned),
              "未所持武器が所持済み武器より先に並ぶべき"
@@ -42,6 +42,7 @@ defmodule GameContent.VampireSurvivor.LevelSystemTest do
 
     test "返り値は全て @all_weapons に含まれる atom" do
       choices = LevelSystem.generate_weapon_choices(%{magic_wand: 1})
+
       Enum.each(choices, fn w ->
         assert w in @all_weapons, "#{w} は有効な武器名であるべき"
       end)

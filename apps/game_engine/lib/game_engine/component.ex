@@ -39,10 +39,10 @@ defmodule GameEngine.Component do
   @type context :: map()
   @type event :: tuple()
 
-  @callback on_ready(world_ref())          :: :ok
-  @callback on_process(context())          :: :ok
-  @callback on_physics_process(context())  :: :ok
-  @callback on_event(event(), context())   :: :ok
+  @callback on_ready(world_ref()) :: :ok
+  @callback on_process(context()) :: :ok
+  @callback on_physics_process(context()) :: :ok
+  @callback on_event(event(), context()) :: :ok
 
   @optional_callbacks [on_ready: 1, on_process: 1, on_physics_process: 1, on_event: 2]
 end

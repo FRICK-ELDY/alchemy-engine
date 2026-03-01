@@ -12,7 +12,7 @@ defmodule GameEngine.MixProject do
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      elixirc_paths: elixirc_paths(Mix.env()),
+      elixirc_paths: elixirc_paths(Mix.env())
     ]
   end
 
@@ -21,7 +21,7 @@ defmodule GameEngine.MixProject do
 
   def application do
     [
-      extra_applications: [:logger],
+      extra_applications: [:logger]
     ]
   end
 
@@ -31,7 +31,7 @@ defmodule GameEngine.MixProject do
       {:telemetry, "~> 1.3"},
       {:telemetry_metrics, "~> 1.0"},
       {:jason, "~> 1.4"},
-      {:mox, "~> 1.0", only: :test},
+      {:mox, "~> 1.0", only: :test}
     ]
   end
 end

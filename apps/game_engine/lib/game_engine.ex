@@ -40,9 +40,15 @@ defmodule GameEngine do
   # ── エンジン内部用（GameEvents が使用）───────────────────────────────
 
   def create_world, do: NifBridge.create_world()
-  def set_map_obstacles(world_ref, obstacles), do: NifBridge.set_map_obstacles(world_ref, obstacles)
+
+  def set_map_obstacles(world_ref, obstacles),
+    do: NifBridge.set_map_obstacles(world_ref, obstacles)
+
   def create_game_loop_control, do: NifBridge.create_game_loop_control()
-  def start_rust_game_loop(world_ref, control_ref, pid), do: NifBridge.start_rust_game_loop(world_ref, control_ref, pid)
+
+  def start_rust_game_loop(world_ref, control_ref, pid),
+    do: NifBridge.start_rust_game_loop(world_ref, control_ref, pid)
+
   def start_render_thread(world_ref, pid), do: NifBridge.start_render_thread(world_ref, pid)
   def pause_physics(control_ref), do: NifBridge.pause_physics(control_ref)
   def resume_physics(control_ref), do: NifBridge.resume_physics(control_ref)

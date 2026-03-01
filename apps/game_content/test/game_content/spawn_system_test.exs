@@ -11,13 +11,13 @@ defmodule GameContent.VampireSurvivor.SpawnSystemTest do
     end
 
     test "各ウェーブ開始時刻で正しいフェーズに切り替わる" do
-      {i0, _}  = SpawnSystem.current_wave(0)
+      {i0, _} = SpawnSystem.current_wave(0)
       {i10, _} = SpawnSystem.current_wave(10)
       {i20, _} = SpawnSystem.current_wave(20)
       {i40, _} = SpawnSystem.current_wave(40)
       {i60, _} = SpawnSystem.current_wave(60)
 
-      assert i0  >= i10
+      assert i0 >= i10
       assert i10 >= i20
       assert i20 >= i40
       assert i40 >= i60

@@ -10,8 +10,9 @@ defmodule GameEngine.Telemetry do
   @impl true
   def init(_opts) do
     children = [
-      {Telemetry.Metrics.ConsoleReporter, metrics: metrics()},
+      {Telemetry.Metrics.ConsoleReporter, metrics: metrics()}
     ]
+
     Supervisor.init(children, strategy: :one_for_one)
   end
 
@@ -32,7 +33,7 @@ defmodule GameEngine.Telemetry do
       ),
       Telemetry.Metrics.counter("game.boss_spawn.count",
         description: "Total boss spawn events"
-      ),
+      )
     ]
   end
 end

@@ -14,9 +14,11 @@ defmodule GameEngine.SceneBehaviour do
               | {:transition, :pop, state :: term()}
               | {:transition, :pop, state :: term(), opts :: map()}
               | {:transition, {:push, module(), init_arg :: term()}, state :: term()}
-              | {:transition, {:push, module(), init_arg :: term()}, state :: term(), opts :: map()}
+              | {:transition, {:push, module(), init_arg :: term()}, state :: term(),
+                 opts :: map()}
               | {:transition, {:replace, module(), init_arg :: term()}, state :: term()}
-              | {:transition, {:replace, module(), init_arg :: term()}, state :: term(), opts :: map()}
+              | {:transition, {:replace, module(), init_arg :: term()}, state :: term(),
+                 opts :: map()}
 
   @callback render_type() :: atom()
 end

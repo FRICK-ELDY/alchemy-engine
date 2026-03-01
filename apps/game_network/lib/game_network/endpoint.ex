@@ -15,17 +15,19 @@ defmodule GameNetwork.Endpoint do
 
   use Phoenix.Endpoint, otp_app: :game_network
 
-  socket "/socket", GameNetwork.UserSocket,
+  socket("/socket", GameNetwork.UserSocket,
     websocket: true,
     longpoll: false
+  )
 
-  plug Plug.RequestId
-  plug Plug.Logger
+  plug(Plug.RequestId)
+  plug(Plug.Logger)
 
-  plug Plug.Parsers,
+  plug(Plug.Parsers,
     parsers: [:urlencoded, :json],
     pass: ["*/*"],
     json_decoder: Phoenix.json_library()
+  )
 
-  plug GameNetwork.Router
+  plug(GameNetwork.Router)
 end

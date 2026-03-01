@@ -11,18 +11,19 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
 
   @impl GameEngine.SceneBehaviour
   def init(_init_arg) do
-    {:ok, %{
-      spawned_bosses:   [],
-      weapon_levels:    %{magic_wand: 1},
-      level_up_pending: false,
-      weapon_choices:   [],
-      level:            1,
-      exp:              0,
-      exp_to_next:      exp_required_for_next(1),
-      boss_hp:          nil,
-      boss_max_hp:      nil,
-      boss_kind_id:     nil,
-    }}
+    {:ok,
+     %{
+       spawned_bosses: [],
+       weapon_levels: %{magic_wand: 1},
+       level_up_pending: false,
+       weapon_choices: [],
+       level: 1,
+       exp: 0,
+       exp_to_next: exp_required_for_next(1),
+       boss_hp: nil,
+       boss_max_hp: nil,
+       boss_kind_id: nil
+     }}
   end
 
   @impl GameEngine.SceneBehaviour
@@ -31,21 +32,21 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
   @impl GameEngine.SceneBehaviour
   def update(context, state) do
     %{
-      world_ref:     world_ref,
-      now:           now,
-      elapsed:       elapsed,
+      world_ref: world_ref,
+      now: now,
+      elapsed: elapsed,
       last_spawn_ms: last_spawn_ms,
-      player_hp:     player_hp,
+      player_hp: player_hp
     } = context
 
     %{
-      spawned_bosses:   spawned_bosses,
-      weapon_levels:    weapon_levels,
+      spawned_bosses: spawned_bosses,
+      weapon_levels: weapon_levels,
       level_up_pending: level_up_pending,
-      weapon_choices:   weapon_choices,
-      level:            level,
-      exp:              exp,
-      exp_to_next:      exp_to_next,
+      weapon_choices: weapon_choices,
+      level: level,
+      exp: exp,
+      exp_to_next: exp_to_next
     } = state
 
     if player_hp <= 0.0 do
@@ -59,11 +60,14 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
           :telemetry.execute([:game, :boss_spawn], %{count: 1}, %{boss: boss_name})
           Logger.info("[BOSS] Alert: #{boss_name} incoming!")
           new_state = %{state | spawned_bosses: [boss_kind | spawned_bosses]}
-          {:transition, {:push, GameContent.VampireSurvivor.Scenes.BossAlert, %{
-            boss_kind: boss_kind,
-            boss_name: boss_name,
-            alert_ms:  now,
-          }}, new_state}
+
+          {:transition,
+           {:push, GameContent.VampireSurvivor.Scenes.BossAlert,
+            %{
+              boss_kind: boss_kind,
+              boss_name: boss_name,
+              alert_ms: now
+            }}, new_state}
 
         :no_boss ->
           if level_up_pending do
@@ -84,14 +88,22 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
                   "EXP: #{exp} | to next: #{exp_to_next} | choices: #{choice_labels}"
               )
 
-              {:transition, {:push, GameContent.VampireSurvivor.Scenes.LevelUp, %{
-                choices:    weapon_choices,
-                entered_ms: now,
-                level:      level,
-              }}, state}
+              {:transition,
+               {:push, GameContent.VampireSurvivor.Scenes.LevelUp,
+                %{
+                  choices: weapon_choices,
+                  entered_ms: now,
+                  level: level
+                }}, state}
             end
           else
-            new_last_spawn = GameContent.VampireSurvivor.SpawnSystem.maybe_spawn(world_ref, elapsed, last_spawn_ms)
+            new_last_spawn =
+              GameContent.VampireSurvivor.SpawnSystem.maybe_spawn(
+                world_ref,
+                elapsed,
+                last_spawn_ms
+              )
+
             {:continue, state, %{context_updates: %{last_spawn_ms: new_last_spawn}}}
           end
       end
@@ -108,11 +120,13 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
     max_lv = GameContent.VampireSurvivor.LevelSystem.max_weapon_level()
     new_levels = Map.update(state.weapon_levels, weapon, 1, &min(&1 + 1, max_lv))
     new_level = state.level + 1
-    %{state |
-      weapon_levels:    new_levels,
-      level_up_pending: false,
-      weapon_choices:   [],
-      level:            new_level,
+
+    %{
+      state
+      | weapon_levels: new_levels,
+        level_up_pending: false,
+        weapon_choices: [],
+        level: new_level
     }
   end
 
@@ -154,6 +168,7 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
   """
   def weapon_slots_for_nif(weapon_levels) do
     registry = GameEngine.Config.current().entity_registry().weapons
+
     weapon_levels
     |> Enum.flat_map(fn {weapon_name, level} ->
       case Map.get(registry, weapon_name) do
@@ -193,6 +208,7 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
   defp exp_required_for_next(level) when level < 10 do
     Enum.at(@exp_table, level)
   end
+
   defp exp_required_for_next(level) do
     270 + (level - 9) * 50
   end
