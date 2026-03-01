@@ -13,6 +13,8 @@ use std::time::{Duration, Instant};
 
 use crate::{frame_events, ok};
 
+type FrameEvent = (Atom, u32, u32, u32, u32);
+
 #[rustler::nif(schedule = "DirtyCpu")]
 pub fn physics_step(world: ResourceArc<GameWorld>, delta_ms: f64) -> NifResult<u32> {
     let wait_start = Instant::now();
@@ -25,7 +27,7 @@ pub fn physics_step(world: ResourceArc<GameWorld>, delta_ms: f64) -> NifResult<u
 #[rustler::nif]
 pub fn drain_frame_events(
     world: ResourceArc<GameWorld>,
-) -> NifResult<Vec<(Atom, u32, u32, u32, u32)>> {
+) -> NifResult<Vec<FrameEvent>> {
     let wait_start = Instant::now();
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
     record_write_wait("nif.drain_frame_events", wait_start.elapsed());

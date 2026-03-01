@@ -7,6 +7,8 @@ use rustler::{Atom, NifResult, ResourceArc};
 
 use crate::{alive, none};
 
+type FrameMetadata = ((f64, f64, u32, f64), (usize, usize, f64), (bool, f64, f64));
+
 #[rustler::nif]
 pub fn get_player_pos(world: ResourceArc<GameWorld>) -> NifResult<(f64, f64)> {
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;
@@ -77,7 +79,7 @@ pub fn get_hud_data(world: ResourceArc<GameWorld>) -> NifResult<(f64, f64, u32, 
 #[rustler::nif]
 pub fn get_frame_metadata(
     world: ResourceArc<GameWorld>,
-) -> NifResult<((f64, f64, u32, f64), (usize, usize, f64), (bool, f64, f64))> {
+) -> NifResult<FrameMetadata> {
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;
     let (boss_alive, boss_hp, boss_max_hp) = match &w.boss {
         Some(boss) => (true, boss.hp as f64, boss.max_hp as f64),
