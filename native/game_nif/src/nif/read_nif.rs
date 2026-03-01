@@ -1,5 +1,5 @@
 //! Path: native/game_nif/src/nif/read_nif.rs
-//! Summary: 読み取り専用 NIF（get_*、debug_dump_world、is_player_dead）
+//! Summary: 読み取り専用 NIF（get_*、debug_dump_world、player_dead）
 
 use super::util::lock_poisoned_err;
 use game_physics::world::GameWorld;
@@ -122,7 +122,7 @@ pub fn get_boss_state(world: ResourceArc<GameWorld>) -> NifResult<(Atom, f64, f6
 }
 
 #[rustler::nif]
-pub fn is_player_dead(world: ResourceArc<GameWorld>) -> NifResult<bool> {
+pub fn player_dead(world: ResourceArc<GameWorld>) -> NifResult<bool> {
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;
     Ok(w.player.hp <= 0.0)
 }

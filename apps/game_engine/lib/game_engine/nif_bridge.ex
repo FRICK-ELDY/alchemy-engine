@@ -5,8 +5,6 @@ defmodule GameEngine.NifBridge do
   自動的にビルドされ、`.dll` がロードされる。
   """
 
-  @behaviour GameEngine.NifBridge.Behaviour
-
   use Rustler,
     otp_app: :game_engine,
     crate: :game_nif,
@@ -64,7 +62,8 @@ defmodule GameEngine.NifBridge do
   # I-2: ボスAI制御用（{:alive, x, y, hp, max_hp, phase_timer} または :none）
   # ボス種別（kind_id）は Elixir 側 Rule state で管理するため返り値から除去
   def get_boss_state(_world), do: :erlang.nif_error(:nif_not_loaded)
-  def player_dead?(_world), do: :erlang.nif_error(:nif_not_loaded)
+  def player_dead(_world), do: :erlang.nif_error(:nif_not_loaded)
+  def player_dead?(world), do: player_dead(world)
 
   # ── Elixir SSoT 注入 NIF（毎フレーム呼ばれる）──────────────────────
   def set_player_hp(_world, _hp), do: :erlang.nif_error(:nif_not_loaded)
