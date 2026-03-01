@@ -15,6 +15,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # game_audio が cpal → alsa-sys を依存するため ALSA 開発ヘッダが必要
+      - name: install system deps
+        run: sudo apt-get update -q && sudo apt-get install -y libasound2-dev
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -58,6 +62,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # mix compile が NIF（game_audio → cpal → alsa-sys）をビルドするため必要
+      - name: install system deps
+        run: sudo apt-get update -q && sudo apt-get install -y libasound2-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native
+
       - uses: erlef/setup-beam@v1
         with:
           elixir-version: "1.19"
@@ -88,6 +102,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # NIF ビルドで game_audio (cpal → alsa-sys) が必要とする ALSA 開発ヘッダ
+      - name: install system deps
+        run: sudo apt-get update -q && sudo apt-get install -y libasound2-dev
 
       - uses: erlef/setup-beam@v1
         with:
