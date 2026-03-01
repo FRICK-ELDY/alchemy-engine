@@ -39,7 +39,8 @@ defmodule GameContent.AsteroidArena.Scenes.Playing do
     else
       last_spawn_ms = Map.get(state, :last_spawn_ms) || context.start_ms
       new_last_spawn = SpawnSystem.maybe_spawn(context.world_ref, elapsed, last_spawn_ms)
-      new_last_ufo = SpawnSystem.maybe_spawn_ufo(context.world_ref, elapsed, state.last_ufo_spawn_ms)
+      new_last_ufo =
+        SpawnSystem.maybe_spawn_ufo(context.world_ref, elapsed, state.last_ufo_spawn_ms)
 
       new_state = %{state | last_ufo_spawn_ms: new_last_ufo, last_spawn_ms: new_last_spawn}
 

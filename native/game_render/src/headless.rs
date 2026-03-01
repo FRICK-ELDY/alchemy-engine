@@ -6,10 +6,9 @@
 
 use crate::{
     renderer::{
-        bullet_uv, enemy_anim_uv, enemy_sprite_size, fireball_uv, gem_uv,
-        lightning_bullet_uv, magnet_uv, particle_uv, player_anim_uv, potion_uv,
-        rock_bullet_uv, whip_uv, SpriteInstance, ELITE_RENDER_KIND_OFFSET,
-        ELITE_SIZE_MULTIPLIER, MAX_INSTANCES,
+        bullet_uv, enemy_anim_uv, enemy_sprite_size, fireball_uv, gem_uv, lightning_bullet_uv,
+        magnet_uv, particle_uv, player_anim_uv, potion_uv, rock_bullet_uv, whip_uv, SpriteInstance,
+        ELITE_RENDER_KIND_OFFSET, ELITE_SIZE_MULTIPLIER, MAX_INSTANCES,
     },
     RenderFrame,
 };
@@ -216,12 +215,11 @@ impl HeadlessRenderer {
             half_size: [width as f32 / 2.0, height as f32 / 2.0],
             _pad: [0.0; 2],
         };
-        let screen_uniform_buf =
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Headless Screen Uniform"),
-                contents: bytemuck::bytes_of(&screen_uniform),
-                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            });
+        let screen_uniform_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Headless Screen Uniform"),
+            contents: bytemuck::bytes_of(&screen_uniform),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
         let screen_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: Some("Headless Screen BGL"),
@@ -250,12 +248,11 @@ impl HeadlessRenderer {
             offset: [0.0, 0.0],
             _pad: [0.0; 2],
         };
-        let camera_uniform_buf =
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Headless Camera Uniform"),
-                contents: bytemuck::bytes_of(&camera_uniform),
-                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            });
+        let camera_uniform_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Headless Camera Uniform"),
+            contents: bytemuck::bytes_of(&camera_uniform),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
         let camera_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: Some("Headless Camera BGL"),
@@ -286,67 +283,64 @@ impl HeadlessRenderer {
             source: wgpu::ShaderSource::Wgsl(shader_source.into()),
         });
 
-        let pipeline_layout =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Headless Pipeline Layout"),
-                bind_group_layouts: &[
-                    &texture_bind_group_layout,
-                    &screen_bind_group_layout,
-                    &camera_bind_group_layout,
-                ],
-                push_constant_ranges: &[],
-            });
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("Headless Pipeline Layout"),
+            bind_group_layouts: &[
+                &texture_bind_group_layout,
+                &screen_bind_group_layout,
+                &camera_bind_group_layout,
+            ],
+            push_constant_ranges: &[],
+        });
 
-        let render_pipeline =
-            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: Some("Headless Sprite Pipeline"),
-                layout: Some(&pipeline_layout),
-                vertex: wgpu::VertexState {
-                    module: &shader,
-                    entry_point: Some("vs_main"),
-                    buffers: &[
-                        wgpu::VertexBufferLayout {
-                            array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
-                            step_mode: wgpu::VertexStepMode::Vertex,
-                            attributes: &wgpu::vertex_attr_array![0 => Float32x2],
-                        },
-                        wgpu::VertexBufferLayout {
-                            array_stride: std::mem::size_of::<SpriteInstance>()
-                                as wgpu::BufferAddress,
-                            step_mode: wgpu::VertexStepMode::Instance,
-                            attributes: &wgpu::vertex_attr_array![
-                                1 => Float32x2,
-                                2 => Float32x2,
-                                3 => Float32x2,
-                                4 => Float32x2,
-                                5 => Float32x4,
-                            ],
-                        },
-                    ],
-                    compilation_options: Default::default(),
-                },
-                fragment: Some(wgpu::FragmentState {
-                    module: &shader,
-                    entry_point: Some("fs_main"),
-                    targets: &[Some(wgpu::ColorTargetState {
-                        format: texture_format,
-                        blend: Some(wgpu::BlendState::ALPHA_BLENDING),
-                        write_mask: wgpu::ColorWrites::ALL,
-                    })],
-                    compilation_options: Default::default(),
-                }),
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleList,
-                    strip_index_format: None,
-                    front_face: wgpu::FrontFace::Ccw,
-                    cull_mode: None,
-                    ..Default::default()
-                },
-                depth_stencil: None,
-                multisample: wgpu::MultisampleState::default(),
-                multiview: None,
-                cache: None,
-            });
+        let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("Headless Sprite Pipeline"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &shader,
+                entry_point: Some("vs_main"),
+                buffers: &[
+                    wgpu::VertexBufferLayout {
+                        array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
+                        step_mode: wgpu::VertexStepMode::Vertex,
+                        attributes: &wgpu::vertex_attr_array![0 => Float32x2],
+                    },
+                    wgpu::VertexBufferLayout {
+                        array_stride: std::mem::size_of::<SpriteInstance>() as wgpu::BufferAddress,
+                        step_mode: wgpu::VertexStepMode::Instance,
+                        attributes: &wgpu::vertex_attr_array![
+                            1 => Float32x2,
+                            2 => Float32x2,
+                            3 => Float32x2,
+                            4 => Float32x2,
+                            5 => Float32x4,
+                        ],
+                    },
+                ],
+                compilation_options: Default::default(),
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &shader,
+                entry_point: Some("fs_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: texture_format,
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: Default::default(),
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: None,
+                ..Default::default()
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            multiview: None,
+            cache: None,
+        });
 
         // ─── 頂点・インデックス・インスタンスバッファ ───────────
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -396,18 +390,18 @@ impl HeadlessRenderer {
             offset: [frame.camera_offset.0, frame.camera_offset.1],
             _pad: [0.0; 2],
         };
-        self.queue
-            .write_buffer(&self.camera_uniform_buf, 0, bytemuck::bytes_of(&cam_uniform));
+        self.queue.write_buffer(
+            &self.camera_uniform_buf,
+            0,
+            bytemuck::bytes_of(&cam_uniform),
+        );
 
         // インスタンスリストを構築（通常レンダラーと共有の関数を使用）
         let instances = build_instances(frame);
         let instance_count = instances.len() as u32;
         if !instances.is_empty() {
-            self.queue.write_buffer(
-                &self.instance_buffer,
-                0,
-                bytemuck::cast_slice(&instances),
-            );
+            self.queue
+                .write_buffer(&self.instance_buffer, 0, bytemuck::cast_slice(&instances));
         }
 
         // オフスクリーン描画ターゲットを生成
@@ -441,11 +435,11 @@ impl HeadlessRenderer {
         });
 
         // コマンドエンコード
-        let mut encoder =
-            self.device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Headless Encoder"),
-                });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Headless Encoder"),
+            });
 
         {
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -524,8 +518,7 @@ impl HeadlessRenderer {
 
         // パディングを除去して RGBA ピクセル列を構築
         let mapped = buffer_slice.get_mapped_range();
-        let mut pixels: Vec<u8> =
-            Vec::with_capacity((self.width * self.height * 4) as usize);
+        let mut pixels: Vec<u8> = Vec::with_capacity((self.width * self.height * 4) as usize);
         for row in 0..self.height as usize {
             let start = row * padded_bytes_per_row as usize;
             let end = start + unpadded_bytes_per_row as usize;
