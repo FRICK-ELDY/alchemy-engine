@@ -17,8 +17,8 @@ pub enum GamePhase {
     GameOver,
 }
 
-const ELITE_RENDER_KIND_OFFSET: u8 = 20;
-const ELITE_SIZE_MULTIPLIER: f32 = 1.2;
+pub(crate) const ELITE_RENDER_KIND_OFFSET: u8 = 20;
+pub(crate) const ELITE_SIZE_MULTIPLIER: f32 = 1.2;
 
 // ─── 頂点・インデックス ────────────────────────────────────────
 
@@ -236,12 +236,12 @@ impl CameraUniform {
 // Enemies 内訳: うちエリート敵は最大 30% = 3000 体（kind: 21/22/23）。
 //               エリート敵は通常敵スロットを共有するため Enemies 合計は変わらない。
 // Obstacles: MapLoader の最大マップ（:forest）で 8 体。
-const MAX_INSTANCES: usize = 14510;
+pub(crate) const MAX_INSTANCES: usize = 14510;
 
 // 敵タイプ別のスプライトサイズ（px）
 // kind: 1=slime(40px), 2=bat(24px), 3=golem(64px), 4=ghost(32px), 5=skeleton(40px)
 // 1.2.9: boss kind: 11=SlimeKing(96px), 12=BatLord(96px), 13=StoneGolem(128px)
-fn enemy_sprite_size(kind: u8) -> f32 {
+pub(crate) fn enemy_sprite_size(kind: u8) -> f32 {
     match kind {
         2 => 24.0,   // Bat: 小さい
         3 => 64.0,   // Golem: 大きい
@@ -266,7 +266,7 @@ fn ghost_anim_uv(frame: u8) -> ([f32; 2], [f32; 2]) {
 }
 
 /// 1.2.8/1.2.9: アニメーションフレームを考慮した敵 UV（ボスは静止スプライト）
-fn enemy_anim_uv(kind: u8, frame: u8) -> ([f32; 2], [f32; 2]) {
+pub(crate) fn enemy_anim_uv(kind: u8, frame: u8) -> ([f32; 2], [f32; 2]) {
     match kind {
         2 => bat_anim_uv(frame),
         3 => golem_anim_uv(frame),

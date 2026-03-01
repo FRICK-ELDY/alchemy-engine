@@ -45,7 +45,12 @@ pub struct RenderFrame {
     pub hud: HudData,
 }
 
-mod renderer;
+pub(crate) mod renderer;
 pub mod window;
 
 pub use renderer::{BossHudInfo, GamePhase, GameUiState, HudData, LoadDialogKind, Renderer};
+
+#[cfg(feature = "headless")]
+pub mod headless;
+#[cfg(feature = "headless")]
+pub use headless::HeadlessRenderer;
