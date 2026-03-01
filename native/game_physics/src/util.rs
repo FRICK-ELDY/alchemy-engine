@@ -9,8 +9,7 @@ use crate::physics::rng::SimpleRng;
 pub fn current_wave(elapsed_secs: f32) -> (f32, usize) {
     WAVES
         .iter()
-        .filter(|&&(start, _, _)| elapsed_secs >= start)
-        .next_back()
+        .rfind(|&&(start, _, _)| elapsed_secs >= start)
         .map(|&(_, interval, count)| (interval, count))
         .unwrap_or((0.8, 20))
 }
@@ -18,7 +17,7 @@ pub fn current_wave(elapsed_secs: f32) -> (f32, usize) {
 /// エリート敵スポーン判定（10分以降に 20% で出現、main スタンドアロン用）
 #[allow(dead_code)] // main スタンドアロンのみで使用
 pub fn is_elite_spawn(elapsed_secs: f32, rng: &mut SimpleRng) -> bool {
-    elapsed_secs >= 600.0 && rng.next_u32() % 5 == 0
+    elapsed_secs >= 600.0 && rng.next_u32().is_multiple_of(5)
 }
 
 #[cfg(test)]
