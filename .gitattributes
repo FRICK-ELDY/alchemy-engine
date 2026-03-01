@@ -1,0 +1,20 @@
+# すべてのテキストファイルを LF に正規化
+* text=auto eol=lf
+
+# Elixir
+*.ex   text eol=lf
+*.exs  text eol=lf
+
+# Rust
+*.rs   text eol=lf
+*.toml text eol=lf
+
+# バイナリは変換しない
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.wav  binary
+*.ogg  binary
+*.mp3  binary

@@ -23,8 +23,8 @@ defmodule GameEngine do
     NifBridge.get_enemy_count(world_ref)
   end
 
-  def is_player_dead?(world_ref) do
-    NifBridge.is_player_dead(world_ref)
+  def player_dead?(world_ref) do
+    NifBridge.player_dead?(world_ref)
   end
 
   def get_frame_metadata(world_ref) do

@@ -1,4 +1,9 @@
 defmodule GameEngine.SaveManager do
+  @moduledoc """
+  セッション・ハイスコアの保存・ロードを担当するモジュール。
+  JSON 形式でファイルに永続化し、HMAC 署名で改ざんを検出する。
+  """
+
   require Logger
 
   @save_version 1
@@ -28,12 +33,10 @@ defmodule GameEngine.SaveManager do
   # ── セッション保存 ───────────────────────────────────────────────────────
 
   def save_session(world_ref) do
-    try do
-      snapshot = GameEngine.NifBridge.get_save_snapshot(world_ref)
-      write_json(session_path(), snapshot_to_map(snapshot))
-    rescue
-      e -> {:error, Exception.message(e)}
-    end
+    snapshot = GameEngine.NifBridge.get_save_snapshot(world_ref)
+    write_json(session_path(), snapshot_to_map(snapshot))
+  rescue
+    e -> {:error, Exception.message(e)}
   end
 
   # ── セッションロード ─────────────────────────────────────────────────────
@@ -64,19 +67,17 @@ defmodule GameEngine.SaveManager do
   # ── ハイスコア保存 ───────────────────────────────────────────────────────
 
   def save_high_score(score) when is_integer(score) and score >= 0 do
-    try do
-      current = load_high_scores()
+    current = load_high_scores()
 
-      new_list =
-        [score | current]
-        |> Enum.uniq()
-        |> Enum.sort(:desc)
-        |> Enum.take(@high_scores_max)
+    new_list =
+      [score | current]
+      |> Enum.uniq()
+      |> Enum.sort(:desc)
+      |> Enum.take(@high_scores_max)
 
-      write_json(high_scores_path(), %{"scores" => new_list})
-    rescue
-      e -> {:error, Exception.message(e)}
-    end
+    write_json(high_scores_path(), %{"scores" => new_list})
+  rescue
+    e -> {:error, Exception.message(e)}
   end
 
   def save_high_score(_), do: {:error, :invalid_score}

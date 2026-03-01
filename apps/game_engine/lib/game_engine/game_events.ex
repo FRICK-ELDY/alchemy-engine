@@ -305,33 +305,35 @@ defmodule GameEngine.GameEvents do
         playing_state = get_playing_scene_state(content)
 
         state =
-          with hud_level when hud_level != nil <- Map.get(playing_state, :level) do
-            level_up_pending = Map.get(playing_state, :level_up_pending, false)
-            weapon_choices = Map.get(playing_state, :weapon_choices, []) |> Enum.map(&to_string/1)
-            scene_exp = Map.get(playing_state, :exp, 0)
-            scene_exp_to_next = Map.get(playing_state, :exp_to_next, 10)
-
-            new_level_state =
-              {hud_level, scene_exp, scene_exp_to_next, level_up_pending, weapon_choices}
-
-            if new_level_state != state.last_hud_level_state do
-              call_nif(:set_hud_level_state, fn ->
-                GameEngine.NifBridge.set_hud_level_state(
-                  state.world_ref,
-                  hud_level,
-                  scene_exp,
-                  scene_exp_to_next,
-                  level_up_pending,
-                  weapon_choices
-                )
-              end)
-
-              %{state | last_hud_level_state: new_level_state}
-            else
+          case Map.get(playing_state, :level) do
+            nil ->
               state
-            end
-          else
-            _ -> state
+
+            hud_level ->
+              level_up_pending = Map.get(playing_state, :level_up_pending, false)
+              weapon_choices = Map.get(playing_state, :weapon_choices, []) |> Enum.map(&to_string/1)
+              scene_exp = Map.get(playing_state, :exp, 0)
+              scene_exp_to_next = Map.get(playing_state, :exp_to_next, 10)
+
+              new_level_state =
+                {hud_level, scene_exp, scene_exp_to_next, level_up_pending, weapon_choices}
+
+              if new_level_state != state.last_hud_level_state do
+                call_nif(:set_hud_level_state, fn ->
+                  GameEngine.NifBridge.set_hud_level_state(
+                    state.world_ref,
+                    hud_level,
+                    scene_exp,
+                    scene_exp_to_next,
+                    level_up_pending,
+                    weapon_choices
+                  )
+                end)
+
+                %{state | last_hud_level_state: new_level_state}
+              else
+                state
+              end
           end
 
         scene_boss_hp = Map.get(playing_state, :boss_hp)
@@ -701,24 +703,22 @@ defmodule GameEngine.GameEvents do
 
   # Rust 側の状態と Elixir 側の状態を比較して乖離を検出
   defp maybe_snapshot_check(state) do
-    try do
-      {rust_score, _rust_hp, _rust_elapsed, rust_kill_count} =
-        GameEngine.NifBridge.get_full_game_state(state.world_ref)
+    {rust_score, _rust_hp, _rust_elapsed, rust_kill_count} =
+      GameEngine.NifBridge.get_full_game_state(state.world_ref)
 
-      if rust_score != state.score do
-        Logger.warning(
-          "[SSOT CHECK] score mismatch: elixir=#{state.score} rust=#{rust_score} diff=#{state.score - rust_score}"
-        )
-      end
-
-      if rust_kill_count != state.kill_count do
-        Logger.warning(
-          "[SSOT CHECK] kill_count mismatch: elixir=#{state.kill_count} rust=#{rust_kill_count}"
-        )
-      end
-    rescue
-      e -> Logger.debug("[SSOT CHECK] snapshot check failed: #{inspect(e)}")
+    if rust_score != state.score do
+      Logger.warning(
+        "[SSOT CHECK] score mismatch: elixir=#{state.score} rust=#{rust_score} diff=#{state.score - rust_score}"
+      )
     end
+
+    if rust_kill_count != state.kill_count do
+      Logger.warning(
+        "[SSOT CHECK] kill_count mismatch: elixir=#{state.kill_count} rust=#{rust_kill_count}"
+      )
+    end
+  rescue
+    e -> Logger.debug("[SSOT CHECK] snapshot check failed: #{inspect(e)}")
   end
 
   # ── ユーティリティ ────────────────────────────────────────────────

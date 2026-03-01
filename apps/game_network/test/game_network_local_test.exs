@@ -11,8 +11,8 @@ defmodule GameNetwork.LocalTest do
   # 複数テストが並行して起動すると Registry の登録が衝突する。
   use ExUnit.Case, async: false
 
-  alias GameNetwork.Test.StubRoom
   alias GameNetwork.Local.TestHelpers
+  alias GameNetwork.Test.StubRoom
 
   setup do
     # このテストはアンブレラの mix test から実行される場合、

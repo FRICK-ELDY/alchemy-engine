@@ -11,7 +11,7 @@ defmodule GameContent.VampireSurvivor.LevelSystemTest do
     test "空の weapon_levels で最大 3 択を返す" do
       choices = LevelSystem.generate_weapon_choices(%{})
       assert length(choices) <= 3
-      assert length(choices) > 0
+      assert choices != []
     end
 
     test "全武器が最大レベルのとき空リストを返す" do
