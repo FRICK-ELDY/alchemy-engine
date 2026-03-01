@@ -11,7 +11,7 @@ defmodule GameEngine.NifBridge do
     path: "../../native/game_nif"
 
   # ── control ───────────────────────────────────────────────────────
-  def create_world() do
+  def create_world do
     :erlang.nif_error(:nif_not_loaded)
   end
 
@@ -44,7 +44,7 @@ defmodule GameEngine.NifBridge do
   def fire_boss_projectile(_world, _dx, _dy, _speed, _damage, _lifetime),
     do: :erlang.nif_error(:nif_not_loaded)
 
-  def create_game_loop_control(), do: :erlang.nif_error(:nif_not_loaded)
+  def create_game_loop_control, do: :erlang.nif_error(:nif_not_loaded)
   def start_rust_game_loop(_world, _control, _pid), do: :erlang.nif_error(:nif_not_loaded)
   def start_render_thread(_world, _pid), do: :erlang.nif_error(:nif_not_loaded)
   def pause_physics(_control), do: :erlang.nif_error(:nif_not_loaded)
@@ -62,6 +62,7 @@ defmodule GameEngine.NifBridge do
   # I-2: ボスAI制御用（{:alive, x, y, hp, max_hp, phase_timer} または :none）
   # ボス種別（kind_id）は Elixir 側 Rule state で管理するため返り値から除去
   def get_boss_state(_world), do: :erlang.nif_error(:nif_not_loaded)
+  # credo:disable-for-next-line Credo.Check.Readability.PredicateFunctionNames
   def is_player_dead(_world), do: :erlang.nif_error(:nif_not_loaded)
 
   # ── Elixir SSoT 注入 NIF（毎フレーム呼ばれる）──────────────────────

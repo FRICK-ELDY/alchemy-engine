@@ -21,22 +21,28 @@ defmodule GameContent.VampireSurvivor.SpawnSystem do
     {interval_ms, count} = current_wave(elapsed_sec)
 
     if elapsed_ms - last_spawn_ms >= interval_ms do
-      current = GameEngine.get_enemy_count(world_ref)
-
-      if current < @max_enemies do
-        to_spawn = min(count, @max_enemies - current)
-        kind = enemy_kind_for_wave(elapsed_sec)
-
-        if elapsed_sec >= @elite_start_sec do
-          spawn_with_elites(world_ref, kind, to_spawn)
-        else
-          GameEngine.spawn_enemies(world_ref, kind, to_spawn)
-        end
-      end
-
+      do_spawn(world_ref, elapsed_sec, count)
       elapsed_ms
     else
       last_spawn_ms
+    end
+  end
+
+  defp do_spawn(world_ref, elapsed_sec, count) do
+    current = GameEngine.get_enemy_count(world_ref)
+
+    if current < @max_enemies do
+      to_spawn = min(count, @max_enemies - current)
+      kind = enemy_kind_for_wave(elapsed_sec)
+      spawn_by_phase(world_ref, kind, to_spawn, elapsed_sec)
+    end
+  end
+
+  defp spawn_by_phase(world_ref, kind, to_spawn, elapsed_sec) do
+    if elapsed_sec >= @elite_start_sec do
+      spawn_with_elites(world_ref, kind, to_spawn)
+    else
+      GameEngine.spawn_enemies(world_ref, kind, to_spawn)
     end
   end
 

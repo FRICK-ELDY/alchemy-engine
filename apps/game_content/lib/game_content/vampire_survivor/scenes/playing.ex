@@ -7,6 +7,14 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
   """
   @behaviour GameEngine.SceneBehaviour
 
+  alias GameContent.EntityParams
+  alias GameContent.VampireSurvivor.BossSystem
+  alias GameContent.VampireSurvivor.LevelSystem
+  alias GameContent.VampireSurvivor.Scenes.BossAlert
+  alias GameContent.VampireSurvivor.Scenes.GameOver
+  alias GameContent.VampireSurvivor.Scenes.LevelUp
+  alias GameContent.VampireSurvivor.SpawnSystem
+
   require Logger
 
   @impl GameEngine.SceneBehaviour
@@ -31,83 +39,83 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
 
   @impl GameEngine.SceneBehaviour
   def update(context, state) do
-    %{
-      world_ref: world_ref,
-      now: now,
-      elapsed: elapsed,
-      last_spawn_ms: last_spawn_ms,
-      player_hp: player_hp
-    } = context
-
-    %{
-      spawned_bosses: spawned_bosses,
-      weapon_levels: weapon_levels,
-      level_up_pending: level_up_pending,
-      weapon_choices: weapon_choices,
-      level: level,
-      exp: exp,
-      exp_to_next: exp_to_next
-    } = state
+    %{elapsed: elapsed, player_hp: player_hp} = context
 
     if player_hp <= 0.0 do
       Logger.info("[GAME OVER] Player HP reached 0 at #{div(elapsed, 1000)}s")
-      {:transition, {:replace, GameContent.VampireSurvivor.Scenes.GameOver, %{}}, state}
+      {:transition, {:replace, GameOver, %{}}, state}
     else
       elapsed_sec = elapsed / 1000.0
-
-      case GameContent.VampireSurvivor.BossSystem.check_spawn(elapsed_sec, spawned_bosses) do
-        {:spawn, boss_kind, boss_name} ->
-          :telemetry.execute([:game, :boss_spawn], %{count: 1}, %{boss: boss_name})
-          Logger.info("[BOSS] Alert: #{boss_name} incoming!")
-          new_state = %{state | spawned_bosses: [boss_kind | spawned_bosses]}
-
-          {:transition,
-           {:push, GameContent.VampireSurvivor.Scenes.BossAlert,
-            %{
-              boss_kind: boss_kind,
-              boss_name: boss_name,
-              alert_ms: now
-            }}, new_state}
-
-        :no_boss ->
-          if level_up_pending do
-            :telemetry.execute([:game, :level_up], %{level: level, count: 1}, %{})
-
-            if weapon_choices == [] do
-              Logger.info("[LEVEL UP] All weapons at max level - skipping weapon selection")
-              {:continue, state}
-            else
-              choice_labels =
-                Enum.map_join(weapon_choices, " / ", fn w ->
-                  lv = Map.get(weapon_levels, w, 0)
-                  GameContent.VampireSurvivor.LevelSystem.weapon_label(w, lv)
-                end)
-
-              Logger.info(
-                "[LEVEL UP] Level #{level} -> #{level + 1} | " <>
-                  "EXP: #{exp} | to next: #{exp_to_next} | choices: #{choice_labels}"
-              )
-
-              {:transition,
-               {:push, GameContent.VampireSurvivor.Scenes.LevelUp,
-                %{
-                  choices: weapon_choices,
-                  entered_ms: now,
-                  level: level
-                }}, state}
-            end
-          else
-            new_last_spawn =
-              GameContent.VampireSurvivor.SpawnSystem.maybe_spawn(
-                world_ref,
-                elapsed,
-                last_spawn_ms
-              )
-
-            {:continue, state, %{context_updates: %{last_spawn_ms: new_last_spawn}}}
-          end
-      end
+      handle_no_death(context, state, elapsed_sec)
     end
+  end
+
+  defp handle_no_death(context, state, elapsed_sec) do
+    %{spawned_bosses: spawned_bosses} = state
+
+    case BossSystem.check_spawn(elapsed_sec, spawned_bosses) do
+      {:spawn, boss_kind, boss_name} ->
+        handle_boss_spawn(context, state, boss_kind, boss_name)
+
+      :no_boss ->
+        handle_no_boss(context, state)
+    end
+  end
+
+  defp handle_boss_spawn(context, state, boss_kind, boss_name) do
+    :telemetry.execute([:game, :boss_spawn], %{count: 1}, %{boss: boss_name})
+    Logger.info("[BOSS] Alert: #{boss_name} incoming!")
+    new_state = %{state | spawned_bosses: [boss_kind | state.spawned_bosses]}
+
+    {:transition,
+     {:push, BossAlert,
+      %{
+        boss_kind: boss_kind,
+        boss_name: boss_name,
+        alert_ms: context.now
+      }}, new_state}
+  end
+
+  defp handle_no_boss(context, state) do
+    %{level: level, exp: exp, exp_to_next: exp_to_next,
+      level_up_pending: level_up_pending, weapon_choices: weapon_choices,
+      weapon_levels: weapon_levels} = state
+
+    if level_up_pending do
+      :telemetry.execute([:game, :level_up], %{level: level, count: 1}, %{})
+      handle_level_up(context, state, level, exp, exp_to_next, weapon_choices, weapon_levels)
+    else
+      new_last_spawn =
+        SpawnSystem.maybe_spawn(context.world_ref, context.elapsed, context.last_spawn_ms)
+
+      {:continue, state, %{context_updates: %{last_spawn_ms: new_last_spawn}}}
+    end
+  end
+
+  defp handle_level_up(_context, state, _level, _exp, _exp_to_next, [], _weapon_levels) do
+    Logger.info("[LEVEL UP] All weapons at max level - skipping weapon selection")
+    {:continue, state}
+  end
+
+  defp handle_level_up(context, state, level, exp, exp_to_next, weapon_choices, weapon_levels) do
+    choice_labels =
+      Enum.map_join(weapon_choices, " / ", fn w ->
+        lv = Map.get(weapon_levels, w, 0)
+        LevelSystem.weapon_label(w, lv)
+      end)
+
+    Logger.info(
+      "[LEVEL UP] Level #{level} -> #{level + 1} | " <>
+        "EXP: #{exp} | to next: #{exp_to_next} | choices: #{choice_labels}"
+    )
+
+    {:transition,
+     {:push, LevelUp,
+      %{
+        choices: weapon_choices,
+        entered_ms: context.now,
+        level: level
+      }}, state}
   end
 
   # ── シーン state 更新ヘルパー（GameEvents から SceneManager 経由で呼ばれる）──
@@ -117,7 +125,7 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
   end
 
   def apply_weapon_selected(state, weapon) do
-    max_lv = GameContent.VampireSurvivor.LevelSystem.max_weapon_level()
+    max_lv = LevelSystem.max_weapon_level()
     new_levels = Map.update(state.weapon_levels, weapon, 1, &min(&1 + 1, max_lv))
     new_level = state.level + 1
 
@@ -143,7 +151,7 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
   end
 
   def apply_boss_spawn(state, boss_kind) do
-    max_hp = GameContent.EntityParams.boss_max_hp(boss_kind)
+    max_hp = EntityParams.boss_max_hp(boss_kind)
     %{state | boss_hp: max_hp, boss_max_hp: max_hp, boss_kind_id: boss_kind}
   end
 
@@ -188,11 +196,11 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
       already_pending = Map.get(state, :level_up_pending, false)
 
       state =
-        unless already_pending do
+        if already_pending do
+          state
+        else
           choices = content.generate_weapon_choices(state.weapon_levels)
           apply_level_up(state, choices)
-        else
-          state
         end
 
       # level はまだインクリメントしない（apply_weapon_selected / apply_level_up_skipped 時に行う）

@@ -1,4 +1,9 @@
 defmodule GameServer.Application do
+  @moduledoc """
+  GameServer OTP アプリケーションのエントリポイント。
+  ゲームエンジンの各スーパーバイザーとワーカーを起動する。
+  """
+
   use Application
 
   @impl true

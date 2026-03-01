@@ -1,4 +1,9 @@
 defmodule GameEngine.SaveManager do
+  @moduledoc """
+  セッションデータおよびハイスコアの永続化を担当するモジュール。
+  HMAC 署名付き JSON ファイルへの読み書きを行う。
+  """
+
   require Logger
 
   @save_version 1
@@ -28,33 +33,28 @@ defmodule GameEngine.SaveManager do
   # ── セッション保存 ───────────────────────────────────────────────────────
 
   def save_session(world_ref) do
-    try do
-      snapshot = GameEngine.NifBridge.get_save_snapshot(world_ref)
-      write_json(session_path(), snapshot_to_map(snapshot))
-    rescue
-      e -> {:error, Exception.message(e)}
-    end
+    snapshot = GameEngine.NifBridge.get_save_snapshot(world_ref)
+    write_json(session_path(), snapshot_to_map(snapshot))
+  rescue
+    e -> {:error, Exception.message(e)}
   end
 
   # ── セッションロード ─────────────────────────────────────────────────────
 
   def load_session(world_ref) do
     case read_json(session_path()) do
-      {:ok, data} ->
-        try do
-          snapshot = map_to_snapshot(data["state"])
-          GameEngine.NifBridge.load_save_snapshot(world_ref, snapshot)
-          :ok
-        rescue
-          e -> {:error, Exception.message(e)}
-        end
-
-      :not_found ->
-        :no_save
-
-      {:error, reason} ->
-        {:error, reason}
+      {:ok, data} -> do_load_session(world_ref, data)
+      :not_found -> :no_save
+      {:error, reason} -> {:error, reason}
     end
+  end
+
+  defp do_load_session(world_ref, data) do
+    snapshot = map_to_snapshot(data["state"])
+    GameEngine.NifBridge.load_save_snapshot(world_ref, snapshot)
+    :ok
+  rescue
+    e -> {:error, Exception.message(e)}
   end
 
   def has_save? do
@@ -64,19 +64,17 @@ defmodule GameEngine.SaveManager do
   # ── ハイスコア保存 ───────────────────────────────────────────────────────
 
   def save_high_score(score) when is_integer(score) and score >= 0 do
-    try do
-      current = load_high_scores()
+    current = load_high_scores()
 
-      new_list =
-        [score | current]
-        |> Enum.uniq()
-        |> Enum.sort(:desc)
-        |> Enum.take(@high_scores_max)
+    new_list =
+      [score | current]
+      |> Enum.uniq()
+      |> Enum.sort(:desc)
+      |> Enum.take(@high_scores_max)
 
-      write_json(high_scores_path(), %{"scores" => new_list})
-    rescue
-      e -> {:error, Exception.message(e)}
-    end
+    write_json(high_scores_path(), %{"scores" => new_list})
+  rescue
+    e -> {:error, Exception.message(e)}
   end
 
   def save_high_score(_), do: {:error, :invalid_score}
@@ -127,31 +125,34 @@ defmodule GameEngine.SaveManager do
 
   defp read_json(path) do
     case File.read(path) do
-      {:ok, raw} ->
-        case Jason.decode(raw) do
-          {:ok, %{"payload" => json, "hmac" => stored_hmac}} when is_binary(json) ->
-            if verify_hmac(json, stored_hmac) do
-              case Jason.decode(json) do
-                {:ok, payload} -> {:ok, payload}
-                {:error, reason} -> {:error, reason}
-              end
-            else
-              Logger.warning("[SAVE] HMAC mismatch: #{path}")
-              {:error, :tampered}
-            end
+      {:ok, raw} -> decode_envelope(raw, path)
+      {:error, :enoent} -> :not_found
+      {:error, reason} -> {:error, :file.format_error(reason)}
+    end
+  end
 
-          {:ok, _} ->
-            {:error, :invalid_format}
+  defp decode_envelope(raw, path) do
+    case Jason.decode(raw) do
+      {:ok, %{"payload" => json, "hmac" => stored_hmac}} when is_binary(json) ->
+        verify_and_decode(json, stored_hmac, path)
 
-          {:error, reason} ->
-            {:error, reason}
-        end
-
-      {:error, :enoent} ->
-        :not_found
+      {:ok, _} ->
+        {:error, :invalid_format}
 
       {:error, reason} ->
-        {:error, :file.format_error(reason)}
+        {:error, reason}
+    end
+  end
+
+  defp verify_and_decode(json, stored_hmac, path) do
+    if verify_hmac(json, stored_hmac) do
+      case Jason.decode(json) do
+        {:ok, payload} -> {:ok, payload}
+        {:error, reason} -> {:error, reason}
+      end
+    else
+      Logger.warning("[SAVE] HMAC mismatch: #{path}")
+      {:error, :tampered}
     end
   end
 

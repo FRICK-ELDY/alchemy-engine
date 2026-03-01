@@ -4,6 +4,8 @@ defmodule GameContent.VampireSurvivor.Scenes.BossAlert do
   """
   @behaviour GameEngine.SceneBehaviour
 
+  alias GameContent.VampireSurvivor.BossSystem
+
   require Logger
 
   @impl GameEngine.SceneBehaviour
@@ -20,7 +22,7 @@ defmodule GameContent.VampireSurvivor.Scenes.BossAlert do
     now = context.now
     elapsed = now - alert_ms
 
-    if elapsed >= GameContent.VampireSurvivor.BossSystem.alert_duration_ms() do
+    if elapsed >= BossSystem.alert_duration_ms() do
       kind_id =
         GameContent.VampireSurvivor.entity_registry().bosses[boss_kind] ||
           raise "Unknown boss kind: #{inspect(boss_kind)}"

@@ -31,13 +31,11 @@ defmodule GameEngine.FrameCache do
   end
 
   def get do
-    try do
-      case :ets.lookup(@table, :snapshot) do
-        [{:snapshot, data}] -> {:ok, data}
-        [] -> :empty
-      end
-    rescue
-      ArgumentError -> :empty
+    case :ets.lookup(@table, :snapshot) do
+      [{:snapshot, data}] -> {:ok, data}
+      [] -> :empty
     end
+  rescue
+    ArgumentError -> :empty
   end
 end
