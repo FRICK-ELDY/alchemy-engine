@@ -235,7 +235,11 @@ defmodule GameContent.VampireSurvivor.LevelComponent do
 
   defp maybe_push_hud_level_state(_world_ref, same, same), do: :ok
 
-  defp maybe_push_hud_level_state(world_ref, {level, exp, exp_to_next, level_up_pending, weapon_choices} = new_val, _prev) do
+  defp maybe_push_hud_level_state(
+         world_ref,
+         {level, exp, exp_to_next, level_up_pending, weapon_choices} = new_val,
+         _prev
+       ) do
     call_nif(:set_hud_level_state, fn ->
       GameEngine.NifBridge.set_hud_level_state(
         world_ref,
