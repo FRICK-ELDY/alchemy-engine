@@ -15,6 +15,8 @@ defmodule GameEngine.GameEvents do
   use GenServer
   require Logger
 
+  alias GameEngine.GameEvents.Diagnostics
+
   @tick_ms 16
 
   def start_link(opts \\ []) do
@@ -288,7 +290,7 @@ defmodule GameEngine.GameEvents do
           dispatch_nif_sync_to_components(context)
 
           # ログ・キャッシュ（60フレームごと）
-          GameEngine.GameEvents.Diagnostics.maybe_log_and_cache(state, mod, elapsed, content)
+          Diagnostics.maybe_log_and_cache(state, mod, elapsed, content)
         end
 
         # frame_count は「受信したフレーム数」として管理する（ドロップ分も含む）
@@ -407,7 +409,7 @@ defmodule GameEngine.GameEvents do
     elapsed = now - state.start_ms
 
     init_arg =
-      GameEngine.GameEvents.Diagnostics.build_replace_init_arg(
+      Diagnostics.build_replace_init_arg(
         mod,
         init_arg,
         elapsed,

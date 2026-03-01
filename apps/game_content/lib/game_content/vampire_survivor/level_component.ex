@@ -229,22 +229,29 @@ defmodule GameContent.VampireSurvivor.LevelComponent do
         weapon_choices = Map.get(playing_state, :weapon_choices, []) |> Enum.map(&to_string/1)
         new_val = {level, exp, exp_to_next, level_up_pending, weapon_choices}
         prev = Process.get({__MODULE__, :last_hud_level_state})
-
-        if new_val != prev do
-          call_nif(:set_hud_level_state, fn ->
-            GameEngine.NifBridge.set_hud_level_state(
-              world_ref,
-              level,
-              exp,
-              exp_to_next,
-              level_up_pending,
-              weapon_choices
-            )
-          end)
-
-          Process.put({__MODULE__, :last_hud_level_state}, new_val)
-        end
+        maybe_push_hud_level_state(world_ref, new_val, prev)
     end
+  end
+
+  defp maybe_push_hud_level_state(_world_ref, same, same), do: :ok
+
+  defp maybe_push_hud_level_state(
+         world_ref,
+         {level, exp, exp_to_next, level_up_pending, weapon_choices} = new_val,
+         _prev
+       ) do
+    call_nif(:set_hud_level_state, fn ->
+      GameEngine.NifBridge.set_hud_level_state(
+        world_ref,
+        level,
+        exp,
+        exp_to_next,
+        level_up_pending,
+        weapon_choices
+      )
+    end)
+
+    Process.put({__MODULE__, :last_hud_level_state}, new_val)
   end
 
   defp sync_weapon_slots(world_ref, content, playing_state) do

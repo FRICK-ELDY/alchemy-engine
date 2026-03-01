@@ -27,7 +27,18 @@ git checkout -b feature/<作業内容を簡潔に>
 - バグ修正: `fix/<name>`
 - リファクタリング: `refactor/<name>`
 
-### 3. コミット
+### 3. ローカル CI チェック（必須）
+
+コミット前に必ず実行し、全項目が PASS であることを確認する：
+
+```powershell
+bin\ci.bat check
+```
+
+`check` モードは Rust fmt/clippy・Elixir compile/format/credo のみ実行し、テストをスキップするため数十秒で完了する。
+FAILED が出た場合はコミットせずに修正する。
+
+### 4. コミット
 
 ```bash
 git add .
@@ -41,7 +52,7 @@ git commit -m "<type>: <変更内容の要約>"
 - `perf` — パフォーマンス改善
 - `docs` — ドキュメント
 
-### 4. push & PR 作成
+### 5. push & PR 作成
 
 ```powershell
 git push -u origin HEAD

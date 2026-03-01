@@ -42,13 +42,22 @@ defmodule GameEngine.GameEvents.Diagnostics do
 
     render_type = GameEngine.SceneManager.render_type()
     hud_data = {player_hp, player_max_hp, score, elapsed_s}
-    high_scores = if render_type == :game_over, do: GameEngine.SaveManager.load_high_scores(), else: nil
+
+    high_scores =
+      if render_type == :game_over, do: GameEngine.SaveManager.load_high_scores(), else: nil
 
     enemy_count = GameEngine.NifBridge.get_enemy_count(state.world_ref)
     bullet_count = GameEngine.NifBridge.get_bullet_count(state.world_ref)
     physics_ms = GameEngine.NifBridge.get_frame_time_ms(state.world_ref)
 
-    GameEngine.FrameCache.put(enemy_count, bullet_count, physics_ms, hud_data, render_type, high_scores)
+    GameEngine.FrameCache.put(
+      enemy_count,
+      bullet_count,
+      physics_ms,
+      hud_data,
+      render_type,
+      high_scores
+    )
 
     log_tick(content, elapsed_s, render_type, enemy_count, physics_ms, playing_state)
     maybe_snapshot_check(state, playing_state)
@@ -76,6 +85,7 @@ defmodule GameEngine.GameEvents.Diagnostics do
   end
 
   defp format_weapon_info(nil), do: "-"
+
   defp format_weapon_info(weapon_levels) do
     Enum.map_join(weapon_levels, ", ", fn {w, lv} -> "#{w}:Lv#{lv}" end)
   end
@@ -99,11 +109,15 @@ defmodule GameEngine.GameEvents.Diagnostics do
       GameEngine.NifBridge.get_full_game_state(state.world_ref)
 
     if rust_score != score do
-      Logger.warning("[SSOT CHECK] score mismatch: elixir=#{score} rust=#{rust_score} diff=#{score - rust_score}")
+      Logger.warning(
+        "[SSOT CHECK] score mismatch: elixir=#{score} rust=#{rust_score} diff=#{score - rust_score}"
+      )
     end
 
     if rust_kill_count != kill_count do
-      Logger.warning("[SSOT CHECK] kill_count mismatch: elixir=#{kill_count} rust=#{rust_kill_count}")
+      Logger.warning(
+        "[SSOT CHECK] kill_count mismatch: elixir=#{kill_count} rust=#{rust_kill_count}"
+      )
     end
   rescue
     e -> Logger.debug("[SSOT CHECK] snapshot check failed: #{inspect(e)}")
