@@ -12,7 +12,7 @@ defmodule GameContent.AsteroidArena do
   def components do
     [
       GameContent.AsteroidArena.SpawnComponent,
-      GameContent.AsteroidArena.SplitComponent,
+      GameContent.AsteroidArena.SplitComponent
     ]
   end
 
@@ -28,17 +28,17 @@ defmodule GameContent.AsteroidArena do
     [GameContent.AsteroidArena.Scenes.Playing]
   end
 
-  def playing_scene,   do: GameContent.AsteroidArena.Scenes.Playing
+  def playing_scene, do: GameContent.AsteroidArena.Scenes.Playing
   def game_over_scene, do: GameContent.AsteroidArena.Scenes.GameOver
 
   # ── メタ情報 ──────────────────────────────────────────────────────
 
-  def title,   do: "Asteroid Arena"
+  def title, do: "Asteroid Arena"
   def version, do: "0.1.0"
 
   # ── アセット・エンティティ登録 ────────────────────────────────────
 
-  defdelegate assets_path,     to: GameContent.AsteroidArena.SpawnComponent
+  defdelegate assets_path, to: GameContent.AsteroidArena.SpawnComponent
   defdelegate entity_registry, to: GameContent.AsteroidArena.SpawnComponent
 
   # ── コンテキストデフォルト ────────────────────────────────────────
@@ -47,8 +47,11 @@ defmodule GameContent.AsteroidArena do
 
   # ── 報酬・スコア計算 ──────────────────────────────────────────────
 
-  defdelegate enemy_exp_reward(enemy_kind), to: GameContent.AsteroidArena.SpawnSystem, as: :exp_reward
-  defdelegate score_from_exp(exp),          to: GameContent.AsteroidArena.SpawnSystem
+  defdelegate enemy_exp_reward(enemy_kind),
+    to: GameContent.AsteroidArena.SpawnSystem,
+    as: :exp_reward
+
+  defdelegate score_from_exp(exp), to: GameContent.AsteroidArena.SpawnSystem
 
   # ── ウェーブラベル ────────────────────────────────────────────────
 

@@ -7,41 +7,41 @@ defmodule GameContent.EntityParams do
   """
 
   # ── 敵種別 ID（entity_params.rs の ENEMY_TABLE インデックスと対応）──
-  @enemy_slime    0
-  @enemy_bat      1
+  @enemy_slime 0
+  @enemy_bat 1
   @enemy_skeleton 2
-  @enemy_ghost    3
-  @enemy_golem    4
+  @enemy_ghost 3
+  @enemy_golem 4
 
   # ── 敵 EXP 報酬（entity_params.rs の ENEMY_TABLE と同値）──────────
   # {kind_id => exp}
   @enemy_exp_rewards %{
-    @enemy_slime    => 5,
-    @enemy_bat      => 3,
+    @enemy_slime => 5,
+    @enemy_bat => 3,
     @enemy_skeleton => 20,
-    @enemy_ghost    => 10,
-    @enemy_golem    => 8,
+    @enemy_ghost => 10,
+    @enemy_golem => 8
   }
 
   # ── ボス種別 ID（boss.rs の kind_id と対応）──────────────────────
-  @boss_slime_king  0
-  @boss_bat_lord    1
+  @boss_slime_king 0
+  @boss_bat_lord 1
   @boss_stone_golem 2
 
   # ── ボス EXP 報酬（boss.rs の exp_reward と同値）──────────────────
   # {boss_kind_id => exp}
   @boss_exp_rewards %{
-    @boss_slime_king  => 200,
-    @boss_bat_lord    => 400,
-    @boss_stone_golem => 800,
+    @boss_slime_king => 200,
+    @boss_bat_lord => 400,
+    @boss_stone_golem => 800
   }
 
   # ── ボス最大 HP（boss.rs の max_hp と同値）────────────────────────
   # {boss_kind_id => max_hp}
   @boss_max_hp %{
-    @boss_slime_king  => 1000.0,
-    @boss_bat_lord    => 2000.0,
-    @boss_stone_golem => 5000.0,
+    @boss_slime_king => 1000.0,
+    @boss_bat_lord => 2000.0,
+    @boss_stone_golem => 5000.0
   }
 
   # ── ボスパラメータ（Phase 3-B: ボスAI制御用）──────────────────────
@@ -49,31 +49,36 @@ defmodule GameContent.EntityParams do
   @boss_params %{
     # Slime King: 直進してスライムをスポーン
     @boss_slime_king => %{
-      speed:            60.0,
-      special_interval: 5.0,
+      speed: 60.0,
+      special_interval: 5.0
     },
     # Bat Lord: 通常直進 + 特殊行動でダッシュ（無敵）
     @boss_bat_lord => %{
-      speed:              200.0,
-      special_interval:   4.0,
-      dash_speed:         500.0,  # ダッシュ時の速度
-      dash_duration_ms:   600,    # ダッシュ継続時間（ms）
+      speed: 200.0,
+      special_interval: 4.0,
+      # ダッシュ時の速度
+      dash_speed: 500.0,
+      # ダッシュ継続時間（ms）
+      dash_duration_ms: 600
     },
     # Stone Golem: 低速直進 + 特殊行動で4方向に岩弾を発射
     @boss_stone_golem => %{
-      speed:                30.0,
-      special_interval:     6.0,
-      projectile_speed:     200.0,  # 岩弾の速度
-      projectile_damage:    50,     # 岩弾のダメージ
-      projectile_lifetime:  3.0,    # 岩弾の寿命（秒）
-    },
+      speed: 30.0,
+      special_interval: 6.0,
+      # 岩弾の速度
+      projectile_speed: 200.0,
+      # 岩弾のダメージ
+      projectile_damage: 50,
+      # 岩弾の寿命（秒）
+      projectile_lifetime: 3.0
+    }
   }
 
   # スコア = EXP × この係数（physics_step.rs の score 加算ロジックと同値）
   @score_per_exp 2
 
   # ── アイテム種別 ID（Rust の ItemKind と対応）──────────────────────
-  @item_gem    0
+  @item_gem 0
   @item_potion 1
   @item_magnet 2
 

@@ -31,13 +31,13 @@ pub const CHAIN_BOSS_RANGE: f32 = 600.0;
 /// 敵のパラメータ（kind_id: u8 で参照）
 #[derive(Clone, Debug)]
 pub struct EnemyParams {
-    pub max_hp:           f32,
-    pub speed:            f32,
-    pub radius:           f32,
-    pub damage_per_sec:   f32,
-    pub render_kind:      u8,
+    pub max_hp: f32,
+    pub speed: f32,
+    pub radius: f32,
+    pub damage_per_sec: f32,
+    pub render_kind: u8,
     /// パーティクル色 [r, g, b, a]
-    pub particle_color:   [f32; 4],
+    pub particle_color: [f32; 4],
     /// 障害物をすり抜けるか（Ghost など）
     pub passes_obstacles: bool,
 }
@@ -66,17 +66,17 @@ pub enum FirePattern {
 /// 武器のパラメータ（kind_id: u8 で参照）
 #[derive(Clone, Debug)]
 pub struct WeaponParams {
-    pub cooldown:      f32,
-    pub damage:        i32,
-    pub as_u8:         u8,
+    pub cooldown: f32,
+    pub damage: i32,
+    pub as_u8: u8,
     /// bullet_count_table: index=level (1-based)。None の場合は固定 1 発
-    pub bullet_table:  Option<Vec<usize>>,
+    pub bullet_table: Option<Vec<usize>>,
     /// 発射パターン
-    pub fire_pattern:  FirePattern,
+    pub fire_pattern: FirePattern,
     /// 範囲（Whip: 扇形半径、Aura: オーラ半径）
-    pub range:         f32,
+    pub range: f32,
     /// 連鎖数（Chain パターン用）
-    pub chain_count:   u8,
+    pub chain_count: u8,
 }
 
 impl WeaponParams {
@@ -109,11 +109,11 @@ impl WeaponParams {
 /// ボスのパラメータ（kind_id: u8 で参照）
 #[derive(Clone, Debug)]
 pub struct BossParams {
-    pub max_hp:           f32,
-    pub speed:            f32,
-    pub radius:           f32,
-    pub damage_per_sec:   f32,
-    pub render_kind:      u8,
+    pub max_hp: f32,
+    pub speed: f32,
+    pub radius: f32,
+    pub damage_per_sec: f32,
+    pub render_kind: u8,
     pub special_interval: f32,
 }
 
@@ -126,7 +126,7 @@ pub struct BossParams {
 pub struct EntityParamTables {
     pub enemies: Vec<EnemyParams>,
     pub weapons: Vec<WeaponParams>,
-    pub bosses:  Vec<BossParams>,
+    pub bosses: Vec<BossParams>,
 }
 
 impl Default for EntityParamTables {
@@ -134,7 +134,7 @@ impl Default for EntityParamTables {
         Self {
             enemies: vec![],
             weapons: vec![],
-            bosses:  vec![],
+            bosses: vec![],
         }
     }
 }
@@ -153,7 +153,10 @@ impl EntityParamTables {
     }
 
     pub fn enemy_passes_obstacles(&self, id: u8) -> bool {
-        self.enemies.get(id as usize).map(|e| e.passes_obstacles).unwrap_or(false)
+        self.enemies
+            .get(id as usize)
+            .map(|e| e.passes_obstacles)
+            .unwrap_or(false)
     }
 }
 
@@ -165,33 +168,41 @@ mod tests {
         EntityParamTables {
             enemies: vec![
                 EnemyParams {
-                    max_hp: 30.0, speed: 80.0, radius: 20.0,
-                    damage_per_sec: 20.0, render_kind: 1,
+                    max_hp: 30.0,
+                    speed: 80.0,
+                    radius: 20.0,
+                    damage_per_sec: 20.0,
+                    render_kind: 1,
                     particle_color: [1.0, 0.5, 0.1, 1.0],
                     passes_obstacles: false,
                 },
                 EnemyParams {
-                    max_hp: 15.0, speed: 160.0, radius: 12.0,
-                    damage_per_sec: 10.0, render_kind: 2,
+                    max_hp: 15.0,
+                    speed: 160.0,
+                    radius: 12.0,
+                    damage_per_sec: 10.0,
+                    render_kind: 2,
                     particle_color: [0.7, 0.2, 0.9, 1.0],
                     passes_obstacles: false,
                 },
             ],
-            weapons: vec![
-                WeaponParams {
-                    cooldown: 1.0, damage: 10, as_u8: 0,
-                    bullet_table: Some(vec![0, 1, 1, 2, 2, 3, 3, 4, 4]),
-                    fire_pattern: FirePattern::Aimed,
-                    range: 0.0, chain_count: 0,
-                },
-            ],
-            bosses: vec![
-                BossParams {
-                    max_hp: 1000.0, speed: 60.0, radius: 48.0,
-                    damage_per_sec: 30.0, render_kind: 11,
-                    special_interval: 5.0,
-                },
-            ],
+            weapons: vec![WeaponParams {
+                cooldown: 1.0,
+                damage: 10,
+                as_u8: 0,
+                bullet_table: Some(vec![0, 1, 1, 2, 2, 3, 3, 4, 4]),
+                fire_pattern: FirePattern::Aimed,
+                range: 0.0,
+                chain_count: 0,
+            }],
+            bosses: vec![BossParams {
+                max_hp: 1000.0,
+                speed: 60.0,
+                radius: 48.0,
+                damage_per_sec: 30.0,
+                render_kind: 11,
+                special_interval: 5.0,
+            }],
         }
     }
 

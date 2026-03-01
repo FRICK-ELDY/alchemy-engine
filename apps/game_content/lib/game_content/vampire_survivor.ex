@@ -12,7 +12,7 @@ defmodule GameContent.VampireSurvivor do
     [
       GameContent.VampireSurvivor.SpawnComponent,
       GameContent.VampireSurvivor.LevelComponent,
-      GameContent.VampireSurvivor.BossComponent,
+      GameContent.VampireSurvivor.BossComponent
     ]
   end
 
@@ -42,7 +42,7 @@ defmodule GameContent.VampireSurvivor do
 
   # ── アセット・エンティティ登録（SpawnComponent に委譲）──────────
 
-  defdelegate assets_path,    to: GameContent.VampireSurvivor.SpawnComponent
+  defdelegate assets_path, to: GameContent.VampireSurvivor.SpawnComponent
   defdelegate entity_registry, to: GameContent.VampireSurvivor.SpawnComponent
 
   # ── コンテキストデフォルト ────────────────────────────────────────
@@ -52,15 +52,18 @@ defmodule GameContent.VampireSurvivor do
   # ── レベルアップ・武器選択（LevelSystem / Playing シーンに委譲）──
 
   defdelegate generate_weapon_choices(weapon_levels), to: GameContent.VampireSurvivor.LevelSystem
-  defdelegate apply_level_up(scene_state, choices),   to: GameContent.VampireSurvivor.Scenes.Playing
-  defdelegate apply_weapon_selected(scene_state, weapon), to: GameContent.VampireSurvivor.Scenes.Playing
-  defdelegate apply_level_up_skipped(scene_state),    to: GameContent.VampireSurvivor.Scenes.Playing
+  defdelegate apply_level_up(scene_state, choices), to: GameContent.VampireSurvivor.Scenes.Playing
+
+  defdelegate apply_weapon_selected(scene_state, weapon),
+    to: GameContent.VampireSurvivor.Scenes.Playing
+
+  defdelegate apply_level_up_skipped(scene_state), to: GameContent.VampireSurvivor.Scenes.Playing
 
   # ── 報酬・スコア計算（EntityParams に委譲）──────────────────────
 
   defdelegate enemy_exp_reward(enemy_kind), to: GameContent.EntityParams
-  defdelegate boss_exp_reward(boss_kind),   to: GameContent.EntityParams
-  defdelegate score_from_exp(exp),          to: GameContent.EntityParams
+  defdelegate boss_exp_reward(boss_kind), to: GameContent.EntityParams
+  defdelegate score_from_exp(exp), to: GameContent.EntityParams
 
   # ── ウェーブラベル（SpawnSystem に委譲）──────────────────────────
 
@@ -70,6 +73,6 @@ defmodule GameContent.VampireSurvivor do
 
   def pause_on_push?(mod) do
     mod == GameContent.VampireSurvivor.Scenes.LevelUp or
-    mod == GameContent.VampireSurvivor.Scenes.BossAlert
+      mod == GameContent.VampireSurvivor.Scenes.BossAlert
   end
 end

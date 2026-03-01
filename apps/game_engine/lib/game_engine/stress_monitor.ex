@@ -8,7 +8,7 @@ defmodule GameEngine.StressMonitor do
   require Logger
 
   @sample_interval_ms 1_000
-  @frame_budget_ms    1000.0 / 60.0
+  @frame_budget_ms 1000.0 / 60.0
 
   def start_link(opts), do: GenServer.start_link(__MODULE__, opts, name: __MODULE__)
 
@@ -17,7 +17,9 @@ defmodule GameEngine.StressMonitor do
   @impl true
   def init(_opts) do
     Process.send_after(self(), :sample, @sample_interval_ms)
-    {:ok, %{samples: 0, peak_enemies: 0, peak_physics_ms: 0.0, overrun_count: 0, last_enemy_count: 0}}
+
+    {:ok,
+     %{samples: 0, peak_enemies: 0, peak_physics_ms: 0.0, overrun_count: 0, last_enemy_count: 0}}
   end
 
   @impl true
@@ -34,18 +36,24 @@ defmodule GameEngine.StressMonitor do
       :empty ->
         state
 
-      {:ok, %{enemy_count: enemy_count, bullet_count: bullet_count, physics_ms: physics_ms,
-              hud_data: {hp, max_hp, score, elapsed_s}}} ->
+      {:ok,
+       %{
+         enemy_count: enemy_count,
+         bullet_count: bullet_count,
+         physics_ms: physics_ms,
+         hud_data: {hp, max_hp, score, elapsed_s}
+       }} ->
         content_module = GameEngine.Config.current()
         wave = content_module.wave_label(elapsed_s)
         overrun = physics_ms > @frame_budget_ms
 
-        new_state = %{state |
-          samples:          state.samples + 1,
-          peak_enemies:     max(state.peak_enemies, enemy_count),
-          peak_physics_ms:  Float.round(max(state.peak_physics_ms, physics_ms), 2),
-          overrun_count:    state.overrun_count + if(overrun, do: 1, else: 0),
-          last_enemy_count: enemy_count,
+        new_state = %{
+          state
+          | samples: state.samples + 1,
+            peak_enemies: max(state.peak_enemies, enemy_count),
+            peak_physics_ms: Float.round(max(state.peak_physics_ms, physics_ms), 2),
+            overrun_count: state.overrun_count + if(overrun, do: 1, else: 0),
+            last_enemy_count: enemy_count
         }
 
         hp_pct = if max_hp > 0, do: Float.round(hp / max_hp * 100, 1), else: 0.0
@@ -53,8 +61,8 @@ defmodule GameEngine.StressMonitor do
 
         log_fn.(
           "[STRESS] #{wave} | enemies=#{enemy_count}/#{new_state.peak_enemies} " <>
-          "bullets=#{bullet_count} score=#{score} HP=#{hp_pct}% " <>
-          "physics=#{Float.round(physics_ms, 2)}ms overruns=#{new_state.overrun_count}/#{new_state.samples}"
+            "bullets=#{bullet_count} score=#{score} HP=#{hp_pct}% " <>
+            "physics=#{Float.round(physics_ms, 2)}ms overruns=#{new_state.overrun_count}/#{new_state.samples}"
         )
 
         new_state

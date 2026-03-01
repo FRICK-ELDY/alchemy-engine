@@ -212,6 +212,7 @@ defmodule GameNetwork.Local do
         Enum.each(peers, fn peer_id ->
           deliver_event(peer_id, room_id, event)
         end)
+
         {:reply, :ok, state}
     end
   end
@@ -268,9 +269,7 @@ defmodule GameNetwork.Local do
         send(pid, {:network_event, from_room, event})
 
       :error ->
-        Logger.warning(
-          "[GameNetwork.Local] deliver_event: room #{inspect(room_id)} not found"
-        )
+        Logger.warning("[GameNetwork.Local] deliver_event: room #{inspect(room_id)} not found")
     end
   end
 end

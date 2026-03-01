@@ -173,10 +173,11 @@ defmodule GameNetwork.UDPTest do
       on_exit(fn -> GameNetwork.Local.unregister_room(room_id) end)
 
       # StubRoom を起動して RoomRegistry に登録する
-      {:ok, stub_pid} = start_supervised(
-        {GameNetwork.Test.StubRoom, {room_id, notify: self()}},
-        id: :"stub_#{room_id}"
-      )
+      {:ok, stub_pid} =
+        start_supervised(
+          {GameNetwork.Test.StubRoom, {room_id, notify: self()}},
+          id: :"stub_#{room_id}"
+        )
 
       sock = open_client()
       on_exit(fn -> close_client(sock) end)
@@ -201,10 +202,11 @@ defmodule GameNetwork.UDPTest do
       room_id = "udp_action_#{System.unique_integer([:positive])}"
       on_exit(fn -> GameNetwork.Local.unregister_room(room_id) end)
 
-      {:ok, _stub_pid} = start_supervised(
-        {GameNetwork.Test.StubRoom, {room_id, notify: self()}},
-        id: :"stub_#{room_id}"
-      )
+      {:ok, _stub_pid} =
+        start_supervised(
+          {GameNetwork.Test.StubRoom, {room_id, notify: self()}},
+          id: :"stub_#{room_id}"
+        )
 
       sock = open_client()
       on_exit(fn -> close_client(sock) end)
@@ -231,9 +233,10 @@ defmodule GameNetwork.UDPTest do
       {:ok, {:join_ack, 1, _}} = recv_packet(sock)
 
       sessions = GameNetwork.UDP.sessions()
+
       assert Enum.any?(sessions, fn {{_ip, p}, session} ->
-        p == port and session.room_id == room_id
-      end)
+               p == port and session.room_id == room_id
+             end)
     end
 
     test "LEAVE 後にセッションが削除される", %{server_port: server_port} do
@@ -284,6 +287,7 @@ defmodule GameNetwork.UDPTest do
     test "別ルームのクライアントにはフレームが届かない", %{server_port: server_port} do
       room_a = "udp_fa_#{System.unique_integer([:positive])}"
       room_b = "udp_fb_#{System.unique_integer([:positive])}"
+
       on_exit(fn ->
         GameNetwork.Local.unregister_room(room_a)
         GameNetwork.Local.unregister_room(room_b)
@@ -291,7 +295,11 @@ defmodule GameNetwork.UDPTest do
 
       sock_a = open_client()
       sock_b = open_client()
-      on_exit(fn -> close_client(sock_a); close_client(sock_b) end)
+
+      on_exit(fn ->
+        close_client(sock_a)
+        close_client(sock_b)
+      end)
 
       :ok = send_packet(sock_a, server_port, Protocol.encode({:join, 1, room_a}))
       {:ok, {:join_ack, 1, _}} = recv_packet(sock_a)

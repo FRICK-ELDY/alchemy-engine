@@ -17,6 +17,7 @@ defmodule GameContent.AsteroidArena.SplitComponent do
     SpawnSystem.handle_split(world_ref, kind_id, x, y)
 
     exp = SpawnSystem.exp_reward(kind_id)
+
     if exp > 0 do
       GameEngine.NifBridge.spawn_item(world_ref, x, y, @item_gem, exp)
     end

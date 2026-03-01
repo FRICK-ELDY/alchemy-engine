@@ -11,14 +11,17 @@ defmodule GameContent.VampireSurvivor.BossComponent do
   @item_gem GameContent.EntityParams.item_kind_gem()
 
   # ── ボス種別 ID（EntityParams から取得してパターンマッチ用定数に束縛）──
-  @boss_slime_king  GameContent.EntityParams.boss_kind_slime_king()
-  @boss_bat_lord    GameContent.EntityParams.boss_kind_bat_lord()
+  @boss_slime_king GameContent.EntityParams.boss_kind_slime_king()
+  @boss_bat_lord GameContent.EntityParams.boss_kind_bat_lord()
   @boss_stone_golem GameContent.EntityParams.boss_kind_stone_golem()
 
   @impl GameEngine.Component
   def on_physics_process(context) do
     world_ref = context.world_ref
-    playing_state = GameEngine.SceneManager.get_scene_state(GameContent.VampireSurvivor.Scenes.Playing)
+
+    playing_state =
+      GameEngine.SceneManager.get_scene_state(GameContent.VampireSurvivor.Scenes.Playing)
+
     kind_id = Map.get(playing_state || %{}, :boss_kind_id)
 
     if kind_id != nil do
@@ -33,11 +36,13 @@ defmodule GameContent.VampireSurvivor.BossComponent do
   def on_event({:boss_defeated, world_ref, boss_kind, x, y}, _context) do
     exp_reward = GameContent.EntityParams.boss_exp_reward(boss_kind)
     gem_value = div(exp_reward, 10)
+
     for _ <- 1..10 do
       ox = (:rand.uniform() - 0.5) * 200.0
       oy = (:rand.uniform() - 0.5) * 200.0
       GameEngine.NifBridge.spawn_item(world_ref, x + ox, y + oy, @item_gem, gem_value)
     end
+
     :ok
   end
 
@@ -56,12 +61,14 @@ defmodule GameContent.VampireSurvivor.BossComponent do
     {vx, vy} = chase_velocity(px, py, bx, by, bp.speed)
     GameEngine.NifBridge.set_boss_velocity(world_ref, vx, vy)
 
-    new_timer = if phase_timer - dt <= 0.0 do
-      handle_boss_special_action(world_ref, kind_id, px, py, bx, by, bp)
-      bp.special_interval
-    else
-      phase_timer - dt
-    end
+    new_timer =
+      if phase_timer - dt <= 0.0 do
+        handle_boss_special_action(world_ref, kind_id, px, py, bx, by, bp)
+        bp.special_interval
+      else
+        phase_timer - dt
+      end
+
     GameEngine.NifBridge.set_boss_phase_timer(world_ref, new_timer)
     :ok
   end
@@ -85,8 +92,12 @@ defmodule GameContent.VampireSurvivor.BossComponent do
   defp handle_boss_special_action(world_ref, @boss_stone_golem, _px, _py, _bx, _by, bp) do
     for {dx, dy} <- [{1.0, 0.0}, {-1.0, 0.0}, {0.0, 1.0}, {0.0, -1.0}] do
       GameEngine.NifBridge.fire_boss_projectile(
-        world_ref, dx, dy,
-        bp.projectile_speed, bp.projectile_damage, bp.projectile_lifetime
+        world_ref,
+        dx,
+        dy,
+        bp.projectile_speed,
+        bp.projectile_damage,
+        bp.projectile_lifetime
       )
     end
   end
@@ -97,6 +108,7 @@ defmodule GameContent.VampireSurvivor.BossComponent do
     ddx = px - bx
     ddy = py - by
     dist = :math.sqrt(ddx * ddx + ddy * ddy)
+
     if dist < 0.001 do
       {0.0, 0.0}
     else
@@ -105,10 +117,16 @@ defmodule GameContent.VampireSurvivor.BossComponent do
   end
 
   defp spawn_slimes_around(world_ref, bx, by) do
-    positions = for i <- 0..7 do
-      angle = i * :math.pi() * 2.0 / 8.0
-      {bx + :math.cos(angle) * 120.0, by + :math.sin(angle) * 120.0}
-    end
-    GameEngine.NifBridge.spawn_enemies_at(world_ref, GameContent.EntityParams.enemy_kind_slime(), positions)
+    positions =
+      for i <- 0..7 do
+        angle = i * :math.pi() * 2.0 / 8.0
+        {bx + :math.cos(angle) * 120.0, by + :math.sin(angle) * 120.0}
+      end
+
+    GameEngine.NifBridge.spawn_enemies_at(
+      world_ref,
+      GameContent.EntityParams.enemy_kind_slime(),
+      positions
+    )
   end
 end

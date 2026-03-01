@@ -10,7 +10,7 @@ use std::thread;
 
 #[allow(dead_code)]
 pub struct AudioManager {
-    _stream:  OutputStream,
+    _stream: OutputStream,
     bgm_sink: Sink,
 }
 
@@ -18,7 +18,10 @@ impl AudioManager {
     pub fn new() -> Option<Self> {
         let stream = OutputStreamBuilder::open_default_stream().ok()?;
         let bgm_sink = Sink::connect_new(&stream.mixer());
-        Some(Self { _stream: stream, bgm_sink })
+        Some(Self {
+            _stream: stream,
+            bgm_sink,
+        })
     }
 
     pub fn play_bgm(&self, bytes: Vec<u8>) {
@@ -83,13 +86,27 @@ impl AudioCommandSender {
         let _ = self.tx.send(command);
     }
 
-    pub fn play_bgm(&self) { self.send(AudioCommand::PlayBgm); }
-    pub fn pause_bgm(&self) { self.send(AudioCommand::PauseBgm); }
-    pub fn resume_bgm(&self) { self.send(AudioCommand::ResumeBgm); }
-    pub fn set_bgm_volume(&self, volume: f32) { self.send(AudioCommand::SetBgmVolume(volume)); }
-    pub fn play_se(&self, id: AssetId) { self.send(AudioCommand::PlaySe(id)); }
-    pub fn play_se_with_volume(&self, id: AssetId, volume: f32) { self.send(AudioCommand::PlaySeWithVolume(id, volume)); }
-    pub fn shutdown(&self) { self.send(AudioCommand::Shutdown); }
+    pub fn play_bgm(&self) {
+        self.send(AudioCommand::PlayBgm);
+    }
+    pub fn pause_bgm(&self) {
+        self.send(AudioCommand::PauseBgm);
+    }
+    pub fn resume_bgm(&self) {
+        self.send(AudioCommand::ResumeBgm);
+    }
+    pub fn set_bgm_volume(&self, volume: f32) {
+        self.send(AudioCommand::SetBgmVolume(volume));
+    }
+    pub fn play_se(&self, id: AssetId) {
+        self.send(AudioCommand::PlaySe(id));
+    }
+    pub fn play_se_with_volume(&self, id: AssetId, volume: f32) {
+        self.send(AudioCommand::PlaySeWithVolume(id, volume));
+    }
+    pub fn shutdown(&self) {
+        self.send(AudioCommand::Shutdown);
+    }
 }
 
 /// Audio ワーカーを起動し、コマンド送信ハンドルを返す。
@@ -113,22 +130,34 @@ fn run_audio_loop(rx: Receiver<AudioCommand>, loader: AssetLoader) {
     while let Ok(command) = rx.recv() {
         match command {
             AudioCommand::PlayBgm => {
-                if let Some(audio) = &audio { audio.play_bgm(loader.load_audio(AssetId::Bgm)); }
+                if let Some(audio) = &audio {
+                    audio.play_bgm(loader.load_audio(AssetId::Bgm));
+                }
             }
             AudioCommand::PauseBgm => {
-                if let Some(audio) = &audio { audio.pause_bgm(); }
+                if let Some(audio) = &audio {
+                    audio.pause_bgm();
+                }
             }
             AudioCommand::ResumeBgm => {
-                if let Some(audio) = &audio { audio.resume_bgm(); }
+                if let Some(audio) = &audio {
+                    audio.resume_bgm();
+                }
             }
             AudioCommand::SetBgmVolume(volume) => {
-                if let Some(audio) = &audio { audio.set_bgm_volume(volume); }
+                if let Some(audio) = &audio {
+                    audio.set_bgm_volume(volume);
+                }
             }
             AudioCommand::PlaySe(id) => {
-                if let Some(audio) = &audio { audio.play_se(loader.load_audio(id)); }
+                if let Some(audio) = &audio {
+                    audio.play_se(loader.load_audio(id));
+                }
             }
             AudioCommand::PlaySeWithVolume(id, volume) => {
-                if let Some(audio) = &audio { audio.play_se_with_volume(loader.load_audio(id), volume); }
+                if let Some(audio) = &audio {
+                    audio.play_se_with_volume(loader.load_audio(id), volume);
+                }
             }
             AudioCommand::Shutdown => break,
         }

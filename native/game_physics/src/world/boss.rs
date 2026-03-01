@@ -10,23 +10,23 @@ use crate::entity_params::BossParams;
 /// 物理パラメータ（radius, render_kind, max_hp 等）のみ Rust に渡す。
 /// Phase 3-B: AI ロジックは Elixir 側に移管済み。Rust はボスの物理的な存在のみ管理する。
 pub struct BossState {
-    pub x:           f32,
-    pub y:           f32,
-    pub hp:          f32,
-    pub max_hp:      f32,
+    pub x: f32,
+    pub y: f32,
+    pub hp: f32,
+    pub max_hp: f32,
     /// Elixir から set_boss_velocity NIF で注入される速度ベクトル
-    pub vx:          f32,
-    pub vy:          f32,
+    pub vx: f32,
+    pub vy: f32,
     /// Elixir から set_boss_invincible NIF で注入される無敵フラグ
-    pub invincible:  bool,
+    pub invincible: bool,
     /// Elixir 側 AI が使用するフェーズタイマー（Rust は更新しない、初期値のみ設定）
     pub phase_timer: f32,
     /// 描画用スプライト種別（spawn_boss NIF で Elixir から注入）
-    pub render_kind:      u8,
+    pub render_kind: u8,
     /// 当たり判定半径（spawn_boss NIF で Elixir から注入）
-    pub radius:           f32,
+    pub radius: f32,
     /// 接触ダメージ毎秒（spawn_boss NIF で Elixir から注入）
-    pub damage_per_sec:   f32,
+    pub damage_per_sec: f32,
 }
 
 impl BossState {
@@ -34,15 +34,16 @@ impl BossState {
     /// （可変借用と不変借用の競合を避けるため、テーブルではなく値を受け取る）
     pub fn new(x: f32, y: f32, bp: &BossParams) -> Self {
         Self {
-            x, y,
-            hp:            bp.max_hp,
-            max_hp:        bp.max_hp,
-            vx:            0.0,
-            vy:            0.0,
-            invincible:    false,
-            phase_timer:   bp.special_interval,
-            render_kind:   bp.render_kind,
-            radius:        bp.radius,
+            x,
+            y,
+            hp: bp.max_hp,
+            max_hp: bp.max_hp,
+            vx: 0.0,
+            vy: 0.0,
+            invincible: false,
+            phase_timer: bp.special_interval,
+            render_kind: bp.render_kind,
+            radius: bp.radius,
             damage_per_sec: bp.damage_per_sec,
         }
     }

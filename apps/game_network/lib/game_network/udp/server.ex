@@ -60,10 +60,11 @@ defmodule GameNetwork.UDP do
   `opts` に `port:` を渡すことで上書きできる（テスト用途など）。
   """
   def start_link(opts \\ []) do
-    port = Keyword.get_lazy(opts, :port, fn ->
-      Application.get_env(:game_network, __MODULE__, [])
-      |> Keyword.get(:port, @default_port)
-    end)
+    port =
+      Keyword.get_lazy(opts, :port, fn ->
+        Application.get_env(:game_network, __MODULE__, [])
+        |> Keyword.get(:port, @default_port)
+      end)
 
     GenServer.start_link(__MODULE__, port, name: __MODULE__)
   end
@@ -132,7 +133,9 @@ defmodule GameNetwork.UDP do
         end)
 
       {:error, reason} ->
-        Logger.error("[GameNetwork.UDP] Failed to encode frame for room=#{room_id}: #{inspect(reason)}")
+        Logger.error(
+          "[GameNetwork.UDP] Failed to encode frame for room=#{room_id}: #{inspect(reason)}"
+        )
     end
 
     {:noreply, new_state}
@@ -167,7 +170,7 @@ defmodule GameNetwork.UDP do
   # ── パケットハンドラ ─────────────────────────────────────────────────
 
   defp handle_packet({:join, seq, room_id}, client, state) do
-      case GameNetwork.Local.register_room(room_id) do
+    case GameNetwork.Local.register_room(room_id) do
       :ok ->
         session = %{room_id: room_id}
         new_sessions = Map.put(state.sessions, client, session)
@@ -180,7 +183,9 @@ defmodule GameNetwork.UDP do
         %{state | sessions: new_sessions}
 
       {:error, reason} ->
-        Logger.warning("[GameNetwork.UDP] register_room failed for room=#{room_id}: #{inspect(reason)}")
+        Logger.warning(
+          "[GameNetwork.UDP] register_room failed for room=#{room_id}: #{inspect(reason)}"
+        )
 
         {:ok, err_packet} = Protocol.encode({:error, seq, "register_failed"})
         {ip, port} = client
@@ -240,7 +245,10 @@ defmodule GameNetwork.UDP do
   end
 
   defp handle_packet(packet, client, state) do
-    Logger.debug("[GameNetwork.UDP] Unhandled packet #{inspect(elem(packet, 0))} from #{inspect(client)}")
+    Logger.debug(
+      "[GameNetwork.UDP] Unhandled packet #{inspect(elem(packet, 0))} from #{inspect(client)}"
+    )
+
     state
   end
 

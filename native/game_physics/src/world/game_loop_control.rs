@@ -16,7 +16,8 @@ impl GameLoopControl {
         self.paused.store(true, std::sync::atomic::Ordering::SeqCst);
     }
     pub fn resume(&self) {
-        self.paused.store(false, std::sync::atomic::Ordering::SeqCst);
+        self.paused
+            .store(false, std::sync::atomic::Ordering::SeqCst);
     }
     pub fn is_paused(&self) -> bool {
         self.paused.load(std::sync::atomic::Ordering::SeqCst)

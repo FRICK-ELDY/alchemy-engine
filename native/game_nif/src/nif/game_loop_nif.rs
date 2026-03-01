@@ -1,11 +1,11 @@
 //! Path: native/game_nif/src/nif/game_loop_nif.rs
 //! Summary: ゲームループ NIF（physics_step, drain_frame_events, pause/resume, Rust ループ起動）
 
-use super::util::lock_poisoned_err;
 use super::events::drain_frame_events_inner;
+use super::util::lock_poisoned_err;
+use crate::lock_metrics::record_write_wait;
 use game_physics::game_logic::physics_step_inner;
 use game_physics::world::{GameLoopControl, GameWorld};
-use crate::lock_metrics::record_write_wait;
 use rustler::env::OwnedEnv;
 use rustler::{Atom, Encoder, LocalPid, NifResult, ResourceArc};
 use std::thread;
@@ -23,7 +23,9 @@ pub fn physics_step(world: ResourceArc<GameWorld>, delta_ms: f64) -> NifResult<u
 }
 
 #[rustler::nif]
-pub fn drain_frame_events(world: ResourceArc<GameWorld>) -> NifResult<Vec<(Atom, u32, u32, u32, u32)>> {
+pub fn drain_frame_events(
+    world: ResourceArc<GameWorld>,
+) -> NifResult<Vec<(Atom, u32, u32, u32, u32)>> {
     let wait_start = Instant::now();
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
     record_write_wait("nif.drain_frame_events", wait_start.elapsed());
@@ -41,9 +43,11 @@ pub fn start_rust_game_loop(
     control: ResourceArc<GameLoopControl>,
     pid: LocalPid,
 ) -> NifResult<Atom> {
-    let world_clone   = world.clone();
+    let world_clone = world.clone();
     let control_clone = control.clone();
-    thread::spawn(move || { run_rust_game_loop(world_clone, control_clone, pid); });
+    thread::spawn(move || {
+        run_rust_game_loop(world_clone, control_clone, pid);
+    });
     Ok(ok())
 }
 
@@ -58,7 +62,9 @@ fn run_rust_game_loop(
     loop {
         next_tick += Duration::from_secs_f64(TICK_MS / 1000.0);
         let now = Instant::now();
-        if next_tick > now { thread::sleep(next_tick - now); }
+        if next_tick > now {
+            thread::sleep(next_tick - now);
+        }
 
         let events: Vec<(Atom, u32, u32, u32, u32)> = {
             let wait_start = Instant::now();
@@ -76,9 +82,7 @@ fn run_rust_game_loop(
         };
 
         let mut env = OwnedEnv::new();
-        let _ = env.send_and_clear(&pid, |env| {
-            (frame_events(), events).encode(env)
-        });
+        let _ = env.send_and_clear(&pid, |env| (frame_events(), events).encode(env));
     }
 }
 

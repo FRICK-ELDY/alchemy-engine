@@ -4,7 +4,10 @@ defmodule GameServer.Application do
   @impl true
   def start(_type, _args) do
     content = Application.get_env(:game_server, :current, GameContent.VampireSurvivor)
-    assets_path = if function_exported?(content, :assets_path, 0), do: content.assets_path(), else: ""
+
+    assets_path =
+      if function_exported?(content, :assets_path, 0), do: content.assets_path(), else: ""
+
     System.put_env("GAME_ASSETS_ID", assets_path)
 
     children = [
@@ -15,7 +18,7 @@ defmodule GameServer.Application do
       GameEngine.RoomSupervisor,
       GameEngine.StressMonitor,
       GameEngine.Stats,
-      GameEngine.Telemetry,
+      GameEngine.Telemetry
     ]
 
     opts = [strategy: :one_for_one, name: GameServer.Supervisor]

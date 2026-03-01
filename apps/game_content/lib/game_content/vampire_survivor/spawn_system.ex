@@ -6,11 +6,11 @@ defmodule GameContent.VampireSurvivor.SpawnSystem do
   @max_enemies 10_000
 
   @waves [
-    { 0, 300, 20},
+    {0, 300, 20},
     {10, 220, 30},
     {20, 170, 45},
     {40, 130, 60},
-    {60, 110, 75},
+    {60, 110, 75}
   ]
 
   @elite_start_sec 45
@@ -41,11 +41,13 @@ defmodule GameContent.VampireSurvivor.SpawnSystem do
   end
 
   def spawn_with_elites(world_ref, kind, count) do
-    elite_count  = max(1, div(count * 3, 10))
+    elite_count = max(1, div(count * 3, 10))
     normal_count = count - elite_count
 
     if normal_count > 0, do: GameEngine.spawn_enemies(world_ref, kind, normal_count)
-    if elite_count > 0,  do: GameEngine.spawn_elite_enemy(world_ref, kind, elite_count, @elite_hp_multiplier)
+
+    if elite_count > 0,
+      do: GameEngine.spawn_elite_enemy(world_ref, kind, elite_count, @elite_hp_multiplier)
   end
 
   def current_wave(elapsed_sec) do
@@ -60,20 +62,20 @@ defmodule GameContent.VampireSurvivor.SpawnSystem do
 
   def enemy_kind_for_wave(elapsed_sec) do
     cond do
-      elapsed_sec < 10  -> Enum.random([:slime, :bat])
-      elapsed_sec < 20  -> Enum.random([:slime, :bat, :skeleton])
-      elapsed_sec < 40  -> Enum.random([:slime, :bat, :skeleton, :ghost])
-      true              -> Enum.random([:slime, :bat, :skeleton, :ghost, :golem])
+      elapsed_sec < 10 -> Enum.random([:slime, :bat])
+      elapsed_sec < 20 -> Enum.random([:slime, :bat, :skeleton])
+      elapsed_sec < 40 -> Enum.random([:slime, :bat, :skeleton, :ghost])
+      true -> Enum.random([:slime, :bat, :skeleton, :ghost, :golem])
     end
   end
 
   def wave_label(elapsed_sec) do
     cond do
-      elapsed_sec < 10  -> "Wave 1 - High Spawn Start"
-      elapsed_sec < 20  -> "Wave 2 - Skeleton Added"
-      elapsed_sec < 40  -> "Wave 3 - Ghost Added"
-      elapsed_sec < 60  -> "Wave 4 - Golem Added"
-      true              -> "Wave 5 - ELITE (HP x3)"
+      elapsed_sec < 10 -> "Wave 1 - High Spawn Start"
+      elapsed_sec < 20 -> "Wave 2 - Skeleton Added"
+      elapsed_sec < 40 -> "Wave 3 - Ghost Added"
+      elapsed_sec < 60 -> "Wave 4 - Golem Added"
+      true -> "Wave 5 - ELITE (HP x3)"
     end
   end
 end

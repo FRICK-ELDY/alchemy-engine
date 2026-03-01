@@ -108,11 +108,11 @@ mod tests {
 
     /// テスト用の最小限 EnemySeparation 実装
     struct TestWorld {
-        positions_x:  Vec<f32>,
-        positions_y:  Vec<f32>,
-        alive:        Vec<bool>,
-        sep_x:        Vec<f32>,
-        sep_y:        Vec<f32>,
+        positions_x: Vec<f32>,
+        positions_y: Vec<f32>,
+        alive: Vec<bool>,
+        sep_x: Vec<f32>,
+        sep_y: Vec<f32>,
         neighbor_buf: Vec<usize>,
     }
 
@@ -120,26 +120,44 @@ mod tests {
         fn new(positions: Vec<(f32, f32)>) -> Self {
             let n = positions.len();
             Self {
-                positions_x:  positions.iter().map(|p| p.0).collect(),
-                positions_y:  positions.iter().map(|p| p.1).collect(),
-                alive:        vec![true; n],
-                sep_x:        vec![0.0; n],
-                sep_y:        vec![0.0; n],
+                positions_x: positions.iter().map(|p| p.0).collect(),
+                positions_y: positions.iter().map(|p| p.1).collect(),
+                alive: vec![true; n],
+                sep_x: vec![0.0; n],
+                sep_y: vec![0.0; n],
                 neighbor_buf: Vec::new(),
             }
         }
     }
 
     impl EnemySeparation for TestWorld {
-        fn enemy_count(&self) -> usize            { self.positions_x.len() }
-        fn is_alive(&self, i: usize) -> bool      { self.alive[i] }
-        fn pos_x(&self, i: usize) -> f32          { self.positions_x[i] }
-        fn pos_y(&self, i: usize) -> f32          { self.positions_y[i] }
-        fn add_pos_x(&mut self, i: usize, v: f32) { self.positions_x[i] += v; }
-        fn add_pos_y(&mut self, i: usize, v: f32) { self.positions_y[i] += v; }
-        fn sep_buf_x(&mut self) -> &mut Vec<f32>  { &mut self.sep_x }
-        fn sep_buf_y(&mut self) -> &mut Vec<f32>  { &mut self.sep_y }
-        fn neighbor_buf(&mut self) -> &mut Vec<usize> { &mut self.neighbor_buf }
+        fn enemy_count(&self) -> usize {
+            self.positions_x.len()
+        }
+        fn is_alive(&self, i: usize) -> bool {
+            self.alive[i]
+        }
+        fn pos_x(&self, i: usize) -> f32 {
+            self.positions_x[i]
+        }
+        fn pos_y(&self, i: usize) -> f32 {
+            self.positions_y[i]
+        }
+        fn add_pos_x(&mut self, i: usize, v: f32) {
+            self.positions_x[i] += v;
+        }
+        fn add_pos_y(&mut self, i: usize, v: f32) {
+            self.positions_y[i] += v;
+        }
+        fn sep_buf_x(&mut self) -> &mut Vec<f32> {
+            &mut self.sep_x
+        }
+        fn sep_buf_y(&mut self) -> &mut Vec<f32> {
+            &mut self.sep_y
+        }
+        fn neighbor_buf(&mut self) -> &mut Vec<usize> {
+            &mut self.neighbor_buf
+        }
     }
 
     #[test]
@@ -175,8 +193,14 @@ mod tests {
 
         apply_separation(&mut world, 30.0, 1.0, 0.016);
 
-        assert_eq!(world.positions_x[0], before_x0, "十分離れた敵は移動しないべき");
-        assert_eq!(world.positions_y[0], before_y0, "十分離れた敵は移動しないべき");
+        assert_eq!(
+            world.positions_x[0], before_x0,
+            "十分離れた敵は移動しないべき"
+        );
+        assert_eq!(
+            world.positions_y[0], before_y0,
+            "十分離れた敵は移動しないべき"
+        );
     }
 
     #[test]

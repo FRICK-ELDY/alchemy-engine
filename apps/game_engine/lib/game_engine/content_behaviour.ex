@@ -19,12 +19,12 @@ defmodule GameEngine.ContentBehaviour do
 
   # ── 必須コールバック ───────────────────────────────────────────────
 
-  @callback components()       :: [module()]
-  @callback initial_scenes()   :: [%{module: scene_module(), init_arg: map()}]
-  @callback physics_scenes()   :: [scene_module()]
-  @callback playing_scene()    :: scene_module()
-  @callback game_over_scene()  :: scene_module()
-  @callback entity_registry()  :: map()
+  @callback components() :: [module()]
+  @callback initial_scenes() :: [%{module: scene_module(), init_arg: map()}]
+  @callback physics_scenes() :: [scene_module()]
+  @callback playing_scene() :: scene_module()
+  @callback game_over_scene() :: scene_module()
+  @callback entity_registry() :: map()
   @callback enemy_exp_reward(kind_id :: non_neg_integer()) :: exp()
   @callback score_from_exp(exp()) :: non_neg_integer()
   @callback wave_label(elapsed_sec :: float()) :: String.t()
@@ -33,7 +33,7 @@ defmodule GameEngine.ContentBehaviour do
   # ── オプショナルコールバック（武器・ボスの概念を持つコンテンツのみ）──
 
   @doc "レベルアップシーンモジュールを返す（武器選択 UI を持つコンテンツのみ実装）"
-  @callback level_up_scene()   :: scene_module()
+  @callback level_up_scene() :: scene_module()
 
   @doc "ボスアラートシーンモジュールを返す（ボスの概念を持つコンテンツのみ実装）"
   @callback boss_alert_scene() :: scene_module()
@@ -65,6 +65,6 @@ defmodule GameEngine.ContentBehaviour do
     generate_weapon_choices: 1,
     apply_weapon_selected: 2,
     apply_level_up_skipped: 1,
-    pause_on_push?: 1,
+    pause_on_push?: 1
   ]
 end

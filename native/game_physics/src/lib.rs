@@ -3,12 +3,12 @@
 
 pub mod boss;
 pub mod constants;
-pub mod entity_params;
 pub mod enemy;
+pub mod entity_params;
 pub mod item;
 pub mod physics;
 pub mod util;
 pub mod weapon;
 
-pub mod world;
 pub mod game_logic;
+pub mod world;

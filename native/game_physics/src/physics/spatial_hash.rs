@@ -47,15 +47,14 @@ impl SpatialHash {
             }
         }
     }
-
 }
 
 #[derive(Clone, Copy, Debug)]
 pub struct StaticObstacle {
-    pub x:      f32,
-    pub y:      f32,
+    pub x: f32,
+    pub y: f32,
     pub radius: f32,
-    pub kind:   u8,
+    pub kind: u8,
 }
 
 #[cfg(test)]
@@ -69,7 +68,10 @@ mod tests {
         sh.insert(1, 81.0, 81.0); // セル (1,1)
         let mut buf = Vec::new();
         sh.query_nearby_into(80.0, 80.0, 40.0, &mut buf);
-        assert!(buf.contains(&0), "セル境界付近のエンティティが検出されるべき");
+        assert!(
+            buf.contains(&0),
+            "セル境界付近のエンティティが検出されるべき"
+        );
         assert!(buf.contains(&1), "隣接セルのエンティティが検出されるべき");
     }
 
@@ -123,17 +125,17 @@ mod tests {
 }
 
 pub struct CollisionWorld {
-    pub dynamic:     SpatialHash,
+    pub dynamic: SpatialHash,
     pub static_hash: SpatialHash,
-    pub obstacles:   Vec<StaticObstacle>,
+    pub obstacles: Vec<StaticObstacle>,
 }
 
 impl CollisionWorld {
     pub fn new(cell_size: f32) -> Self {
         Self {
-            dynamic:     SpatialHash::new(cell_size),
+            dynamic: SpatialHash::new(cell_size),
             static_hash: SpatialHash::new(cell_size),
-            obstacles:   Vec::new(),
+            obstacles: Vec::new(),
         }
     }
 
@@ -143,17 +145,16 @@ impl CollisionWorld {
         for (x, y, radius, kind) in obstacles {
             let idx = self.obstacles.len();
             self.obstacles.push(StaticObstacle {
-                x: *x, y: *y, radius: *radius, kind: *kind,
+                x: *x,
+                y: *y,
+                radius: *radius,
+                kind: *kind,
             });
             self.static_hash.insert(idx, *x, *y);
         }
     }
 
-    pub fn query_static_nearby_into(
-        &self,
-        x: f32, y: f32, radius: f32,
-        buf: &mut Vec<usize>,
-    ) {
+    pub fn query_static_nearby_into(&self, x: f32, y: f32, radius: f32, buf: &mut Vec<usize>) {
         self.static_hash.query_nearby_into(x, y, radius + 80.0, buf);
         let obstacles = &self.obstacles;
         buf.retain(|&idx| {

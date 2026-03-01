@@ -35,26 +35,26 @@ defmodule GameNetwork.UDP.Protocol do
   現フェーズでは全フレームデータを送信し、差分計算はフェーズ4以降で実装する。
   """
 
-  @type_join     0x01
+  @type_join 0x01
   @type_join_ack 0x02
-  @type_leave    0x03
-  @type_input    0x04
-  @type_action   0x05
-  @type_frame    0x06
-  @type_ping     0x07
-  @type_pong     0x08
-  @type_error    0x09
+  @type_leave 0x03
+  @type_input 0x04
+  @type_action 0x05
+  @type_frame 0x06
+  @type_ping 0x07
+  @type_pong 0x08
+  @type_error 0x09
 
   @type packet ::
-    {:join,     seq :: non_neg_integer(), room_id :: String.t()}
-    | {:join_ack, seq :: non_neg_integer(), room_id :: String.t()}
-    | {:leave,    seq :: non_neg_integer(), room_id :: String.t()}
-    | {:input,    seq :: non_neg_integer(), dx :: float(), dy :: float()}
-    | {:action,   seq :: non_neg_integer(), name :: String.t()}
-    | {:frame,    seq :: non_neg_integer(), events :: list()}
-    | {:ping,     seq :: non_neg_integer()}
-    | {:pong,     seq :: non_neg_integer(), ts :: integer()}
-    | {:error,    seq :: non_neg_integer(), reason :: String.t()}
+          {:join, seq :: non_neg_integer(), room_id :: String.t()}
+          | {:join_ack, seq :: non_neg_integer(), room_id :: String.t()}
+          | {:leave, seq :: non_neg_integer(), room_id :: String.t()}
+          | {:input, seq :: non_neg_integer(), dx :: float(), dy :: float()}
+          | {:action, seq :: non_neg_integer(), name :: String.t()}
+          | {:frame, seq :: non_neg_integer(), events :: list()}
+          | {:ping, seq :: non_neg_integer()}
+          | {:pong, seq :: non_neg_integer(), ts :: integer()}
+          | {:error, seq :: non_neg_integer(), reason :: String.t()}
 
   @doc """
   パケットをバイナリにエンコードする。

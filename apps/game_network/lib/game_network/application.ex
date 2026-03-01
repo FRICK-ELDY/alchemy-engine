@@ -37,7 +37,7 @@ defmodule GameNetwork.Application do
       {Phoenix.PubSub, name: GameNetwork.PubSub},
       GameNetwork.Local,
       GameNetwork.Endpoint,
-      GameNetwork.UDP,
+      GameNetwork.UDP
     ]
 
     opts = [strategy: :one_for_one, name: GameNetwork.Supervisor]
