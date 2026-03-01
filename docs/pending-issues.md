@@ -312,5 +312,45 @@ end
 
 ---
 
+### 課題15: `create_world()` NIF の戻り値が `NifResult<T>` でラップされていない
+
+**優先度**: 低（現時点でパニックは発生しないが、一貫性・将来リスクの観点から対応推奨）
+
+**背景**
+
+IP-03（NIF の `unwrap()` / `expect()` を `NifResult<T>` に統一）の受け入れ基準として
+「すべての NIF 関数の戻り値型が `NifResult<T>`」が定められているが、
+`native/game_nif/src/nif/world_nif.rs` の `create_world()` のみ `ResourceArc<GameWorld>` を直接返しており、`NifResult` でラップされていない。
+
+```rust
+// 現状（NifResult でラップされていない）
+#[rustler::nif]
+pub fn create_world() -> ResourceArc<GameWorld> {
+    ResourceArc::new(GameWorld(RwLock::new(GameWorldInner { ... })))
+}
+```
+
+**現時点のリスク評価**
+
+`GameWorldInner` の構築は定数・デフォルト値のみで行われており、`unwrap()` / `expect()` も呼ばれていないため、**現時点でパニックが発生する可能性は極めて低い**。
+ただし、将来的に `create_world()` にファイル読み込みや外部リソース確保などの失敗しうる処理が追加された場合、`NifResult` でラップされていないとパニックが BEAM VM クラッシュに直結する。
+
+**修正方針**
+
+```rust
+// 修正後
+#[rustler::nif]
+pub fn create_world() -> NifResult<ResourceArc<GameWorld>> {
+    Ok(ResourceArc::new(GameWorld(RwLock::new(GameWorldInner { ... }))))
+}
+```
+
+**影響ファイル**
+
+- `native/game_nif/src/nif/world_nif.rs` — `create_world()` の戻り値を `NifResult<ResourceArc<GameWorld>>` に変更
+- `apps/game_engine/lib/game_engine/nif_bridge.ex` — 呼び出し側で `{:ok, world}` のパターンマッチに対応（要確認）
+
+---
+
 *このドキュメントは `vision.md` の思想に基づいて管理すること。*
 *各課題の詳細な改善方針・作業ステップは [`improvement-plan.md`](./improvement-plan.md) を参照すること。*
