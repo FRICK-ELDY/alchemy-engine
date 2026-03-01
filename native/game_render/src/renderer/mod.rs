@@ -759,7 +759,7 @@ impl Renderer {
                     }
                 }
                 // 1.2.8: 敵タイプ: 1=slime, 2=bat, 3=golem（アニメーションフレーム対応）
-                1 | 2 | 3 => {
+                1..=3 => {
                     let sz = enemy_sprite_size(kind);
                     let (uv_off, uv_sz) = enemy_anim_uv(kind, anim_frame);
                     SpriteInstance {
@@ -771,7 +771,7 @@ impl Renderer {
                     }
                 }
                 // 1.2.10: エリート敵（kind = base_kind + ELITE_RENDER_KIND_OFFSET）: 赤みがかった色で描画
-                21 | 22 | 23 => {
+                21..=23 => {
                     let base = kind - ELITE_RENDER_KIND_OFFSET;
                     let sz = enemy_sprite_size(base) * ELITE_SIZE_MULTIPLIER;
                     let (uv_off, uv_sz) = enemy_anim_uv(base, anim_frame);
@@ -816,7 +816,7 @@ impl Renderer {
                     color_tint: [1.0, 1.0, 1.0, 1.0],
                 },
                 // 1.2.9: ボス本体（11=SlimeKing, 12=BatLord, 13=StoneGolem）
-                11 | 12 | 13 => {
+                11..=13 => {
                     let sz = enemy_sprite_size(kind);
                     let (uv_off, uv_sz) = enemy_anim_uv(kind, 0);
                     SpriteInstance {
