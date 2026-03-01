@@ -2,10 +2,6 @@ name: CI
 on:
   push:
     branches: ["**"]
-  pull_request:
-    branches: [main]
-  # push と pull_request が同一コミットで二重実行されるのを防ぐ
-  # （fork からの PR は push イベントが発生しないため pull_request でカバー）
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
