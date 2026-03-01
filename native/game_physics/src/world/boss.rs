@@ -1,4 +1,4 @@
-//! Path: native/game_simulation/src/world/boss.rs
+//! Path: native/game_physics/src/world/boss.rs
 //! Summary: ボス状態（BossState）
 
 use crate::entity_params::BossParams;

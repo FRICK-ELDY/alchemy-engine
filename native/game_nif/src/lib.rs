@@ -46,13 +46,13 @@ mod render_bridge;
 mod render_snapshot;
 
 pub use game_audio::{AssetId, AssetLoader, AudioCommand, AudioCommandSender, AudioManager, start_audio_thread};
-pub use game_simulation::game_logic::{
+pub use game_physics::game_logic::{
     find_nearest_enemy, find_nearest_enemy_spatial,
     find_nearest_enemy_spatial_excluding,
 };
 pub use game_render::{BossHudInfo, GamePhase, HudData, RenderFrame};
 pub use nif::{SaveSnapshot, WeaponSlotSave};
-pub use game_simulation::world::{
+pub use game_physics::world::{
     BossState, BulletWorld, EnemyWorld, FrameEvent, GameLoopControl, GameWorld, GameWorldInner,
     ParticleWorld, PlayerState,
     BULLET_KIND_FIREBALL, BULLET_KIND_LIGHTNING, BULLET_KIND_NORMAL, BULLET_KIND_ROCK,

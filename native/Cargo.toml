@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-    "game_simulation",
+    "game_physics",
     "game_audio",
     "game_render",
     "game_nif",

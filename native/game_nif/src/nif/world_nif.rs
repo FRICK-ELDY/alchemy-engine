@@ -2,21 +2,21 @@
 //! Summary: ワールド作成・入力・スポーン・障害物設定 NIF
 
 use super::util::{lock_poisoned_err, params_not_loaded_err};
-use game_simulation::entity_params::{
+use game_physics::entity_params::{
     BossParams, EnemyParams, EntityParamTables, FirePattern, WeaponParams,
 };
-use game_simulation::game_logic::systems::spawn::get_spawn_positions_around_player;
-use game_simulation::world::{GameWorld, GameWorldInner, PlayerState};
-use game_simulation::constants::{CELL_SIZE, MAP_HEIGHT, MAP_WIDTH, PARTICLE_RNG_SEED, PLAYER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
-use game_simulation::item::ItemWorld;
-use game_simulation::physics::rng::SimpleRng;
-use game_simulation::physics::spatial_hash::CollisionWorld;
+use game_physics::game_logic::systems::spawn::get_spawn_positions_around_player;
+use game_physics::world::{GameWorld, GameWorldInner, PlayerState};
+use game_physics::constants::{CELL_SIZE, MAP_HEIGHT, MAP_WIDTH, PARTICLE_RNG_SEED, PLAYER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
+use game_physics::item::ItemWorld;
+use game_physics::physics::rng::SimpleRng;
+use game_physics::physics::spatial_hash::CollisionWorld;
 use rustler::types::list::ListIterator;
 use rustler::{Atom, NifResult, ResourceArc, Term};
 use std::sync::RwLock;
 
 use crate::{ok, BulletWorld, EnemyWorld, ParticleWorld};
-use game_simulation::entity_params::DEFAULT_PARTICLE_COLOR;
+use game_physics::entity_params::DEFAULT_PARTICLE_COLOR;
 
 #[rustler::nif]
 pub fn create_world() -> ResourceArc<GameWorld> {

@@ -1,4 +1,4 @@
-//! Path: native/game_simulation/src/game_logic/mod.rs
+//! Path: native/game_physics/src/game_logic/mod.rs
 //! Summary: 物理ステップ・Chase AI・システム群
 
 mod chase_ai;

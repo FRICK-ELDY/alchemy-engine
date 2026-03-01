@@ -1,4 +1,4 @@
-//! Path: native/game_simulation/src/world/game_world.rs
+//! Path: native/game_physics/src/world/game_world.rs
 //! Summary: ゲームワールド（GameWorldInner, GameWorld）
 
 use super::{BossState, BulletWorld, EnemyWorld, ParticleWorld, PlayerState};

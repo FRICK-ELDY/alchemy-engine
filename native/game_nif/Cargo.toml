@@ -13,7 +13,7 @@ name = "game_nif"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-game_simulation = { path = "../game_simulation", features = ["nif"] }
+game_physics = { path = "../game_physics", features = ["nif"] }
 game_audio      = { path = "../game_audio" }
 game_render     = { path = "../game_render" }
 rustler = "0.34"

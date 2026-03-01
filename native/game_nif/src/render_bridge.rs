@@ -6,8 +6,8 @@ use crate::lock_metrics::record_read_wait;
 use crate::render_snapshot::{
     build_render_frame, calc_interpolation_alpha, copy_interpolation_data, interpolate_player_pos,
 };
-use game_simulation::world::GameWorld;
-use game_simulation::constants::{PLAYER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
+use game_physics::world::GameWorld;
+use game_physics::constants::{PLAYER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use game_render::RenderFrame;
 use game_render::window::{run_render_loop, RenderBridge, RendererInit, WindowConfig};
 use rustler::env::OwnedEnv;

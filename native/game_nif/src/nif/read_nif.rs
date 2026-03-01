@@ -2,7 +2,7 @@
 //! Summary: 読み取り専用 NIF（get_*、debug_dump_world、is_player_dead）
 
 use super::util::lock_poisoned_err;
-use game_simulation::world::GameWorld;
+use game_physics::world::GameWorld;
 use rustler::{Atom, NifResult, ResourceArc};
 
 use crate::{alive, none};

@@ -1,4 +1,4 @@
-//! Path: native/game_simulation/src/game_logic/chase_ai.rs
+//! Path: native/game_physics/src/game_logic/chase_ai.rs
 //! Summary: 敵 Chase AI と最近接探索（find_nearest_*）
 
 use crate::world::EnemyWorld;

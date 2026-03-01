@@ -1,4 +1,4 @@
-//! Path: native/game_simulation/src/world/bullet.rs
+//! Path: native/game_physics/src/world/bullet.rs
 //! Summary: 弾丸 SoA（BulletWorld）と描画種別定数
 
 /// 弾丸の描画種別（renderer に渡す kind 値）

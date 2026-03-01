@@ -1,10 +1,10 @@
 //! Path: native/game_nif/src/render_snapshot.rs
 //! Summary: GameWorld から描画用スナップショットを構築
 
-use game_simulation::world::GameWorldInner;
+use game_physics::world::GameWorldInner;
 use game_render::{BossHudInfo, GamePhase, HudData, RenderFrame};
-use game_simulation::constants::{INVINCIBLE_DURATION, PLAYER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
-use game_simulation::weapon::weapon_upgrade_desc;
+use game_physics::constants::{INVINCIBLE_DURATION, PLAYER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
+use game_physics::weapon::weapon_upgrade_desc;
 
 /// `GameWorldInner` から `RenderFrame` を構築する。
 /// `get_render_data` / `get_particle_data` / `get_item_data` / `get_frame_metadata` 相当のロジックを集約。
@@ -27,7 +27,7 @@ pub fn build_render_frame(w: &GameWorldInner) -> RenderFrame {
     }
 
     for i in 0..w.enemies.len() {
-        if w.enemies.alive[i] {
+        if w.enemies.alive[i] != 0 {
             let base_kind = w.params.enemies
                 .get(w.enemies.kind_ids[i] as usize)
                 .map(|ep| ep.render_kind)

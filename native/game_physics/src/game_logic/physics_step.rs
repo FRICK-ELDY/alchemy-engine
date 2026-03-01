@@ -1,4 +1,4 @@
-//! Path: native/game_simulation/src/game_logic/physics_step.rs
+//! Path: native/game_physics/src/game_logic/physics_step.rs
 //! Summary: 物理ステップ内部実装
 
 #[cfg(not(target_arch = "x86_64"))]

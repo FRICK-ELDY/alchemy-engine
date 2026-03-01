@@ -1,4 +1,4 @@
-//! Path: native/game_simulation/src/world/particle.rs
+//! Path: native/game_physics/src/world/particle.rs
 //! Summary: パーティクル SoA（ParticleWorld）
 
 use crate::physics::rng::SimpleRng;

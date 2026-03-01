@@ -160,9 +160,9 @@ audio_sender.send(AudioCommand::Play(explosion));
 
 ---
 
-### 9. `game_simulation` の依存最小化
+### 9. `game_physics` の依存最小化
 
-`game_simulation` クレートの依存は `rustc-hash = "2"` のみ（rayon は `game_nif` 経由）。
+`game_physics` クレートの依存は `rustc-hash = "2"` のみ（rayon は `game_nif` 経由）。
 物理演算コアを外部依存から切り離すことで、将来の WebAssembly 対応・組み込み環境への移植が容易になる。
 
 ---

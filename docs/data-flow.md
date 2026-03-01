@@ -286,11 +286,11 @@ graph TB
 
     BEAM <-->|NIF Rustler| GW
 
-    subgraph RUST["Rust スレッド群（game_nif / game_simulation / game_render / game_audio）"]
+    subgraph RUST["Rust スレッド群（game_nif / game_physics / game_render / game_audio）"]
         GL[ゲームループスレッド\n60Hz physics\ngame_nif]
         RT[レンダースレッド\nwinit EventLoop\ngame_render]
         AT[オーディオスレッド\nrodio / コマンド\ngame_audio]
-        GW["GameWorld\n(RwLock&lt;GameWorldInner&gt;)\ngame_simulation"]
+        GW["GameWorld\n(RwLock&lt;GameWorldInner&gt;)\ngame_physics"]
 
         GL <-->|write lock| GW
         RT <-->|read lock| GW
