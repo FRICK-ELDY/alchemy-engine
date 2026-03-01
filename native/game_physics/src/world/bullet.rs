@@ -27,6 +27,12 @@ pub struct BulletWorld {
     free_list: Vec<usize>,
 }
 
+impl Default for BulletWorld {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BulletWorld {
     pub fn new() -> Self {
         Self {
@@ -57,6 +63,7 @@ impl BulletWorld {
         self.spawn_ex(x, y, 0.0, 0.0, 0, lifetime, false, render_kind);
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn spawn_ex(
         &mut self,
         x: f32,
@@ -102,5 +109,9 @@ impl BulletWorld {
 
     pub fn len(&self) -> usize {
         self.positions_x.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.positions_x.is_empty()
     }
 }

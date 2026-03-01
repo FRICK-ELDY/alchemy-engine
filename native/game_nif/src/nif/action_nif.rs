@@ -184,11 +184,12 @@ pub fn spawn_elite_enemy(
         if applied >= count {
             break;
         }
-        if w.enemies.alive[i] != 0 && w.enemies.kind_ids[i] == kind_id {
-            if i >= before_len || (w.enemies.hp[i] - base_max_hp).abs() < 0.01 {
-                w.enemies.hp[i] = base_hp;
-                applied += 1;
-            }
+        if w.enemies.alive[i] != 0
+            && w.enemies.kind_ids[i] == kind_id
+            && (i >= before_len || (w.enemies.hp[i] - base_max_hp).abs() < 0.01)
+        {
+            w.enemies.hp[i] = base_hp;
+            applied += 1;
         }
     }
     Ok(ok())

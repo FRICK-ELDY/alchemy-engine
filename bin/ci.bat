@@ -94,8 +94,10 @@ if errorlevel 1 (set "FAILED=!FAILED! [mix format]") else (echo [PASS] mix forma
 
 echo.
 echo [STEP] mix credo --strict
+set MIX_ENV=dev
 mix credo --strict
 if errorlevel 1 (set "FAILED=!FAILED! [mix credo]") else (echo [PASS] mix credo)
+set MIX_ENV=
 
 :elixir_check_skip
 

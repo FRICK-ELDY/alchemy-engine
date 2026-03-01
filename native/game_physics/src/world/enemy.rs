@@ -26,6 +26,12 @@ pub struct EnemyWorld {
     free_list: Vec<usize>,
 }
 
+impl Default for EnemyWorld {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EnemyWorld {
     pub fn new() -> Self {
         Self {
@@ -47,6 +53,10 @@ impl EnemyWorld {
 
     pub fn len(&self) -> usize {
         self.positions_x.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.positions_x.is_empty()
     }
 
     pub fn kill(&mut self, i: usize) {

@@ -42,6 +42,11 @@ impl ParticleWorld {
         self.positions_x.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.positions_x.is_empty()
+    }
+
+    #[allow(clippy::too_many_arguments)]
     pub fn spawn_one(
         &mut self,
         x: f32,

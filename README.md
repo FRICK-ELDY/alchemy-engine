@@ -43,8 +43,8 @@ alchemy-engine/
 
 開発環境に以下のツールがインストールされている必要があります。
 
-- [Elixir](https://elixir-lang.org/install.html) (OTP 25+)
-- [Rust](https://www.rust-lang.org/tools/install) (cargo, rustc)
+- [Elixir](https://elixir-lang.org/install.html) **1.19 / OTP 28**
+- [Rust](https://www.rust-lang.org/tools/install) (stable)
 
 ### Setup & Run
 
@@ -62,6 +62,25 @@ alchemy-engine/
   ```bash
    iex -S mix
   ```
+
+---
+
+## ✅ 品質保証
+
+| 対象 | ツール | 保証内容 |
+|:---|:---|:---|
+| Rust コードスタイル | `cargo fmt` | フォーマット統一 |
+| Rust 静的解析 | `cargo clippy -D warnings` | 警告ゼロ |
+| Rust ユニットテスト | `cargo test` | 物理演算ロジックの正確性 |
+| Rust パフォーマンス | `cargo bench`（main のみ） | 前回比 +10% 超の劣化をブロック |
+| Elixir コードスタイル | `mix format` | フォーマット統一 |
+| Elixir 静的解析 | `mix credo --strict` | コード品質・一貫性 |
+| Elixir コンパイル | `mix compile --warnings-as-errors` | 警告ゼロ |
+| Elixir 統合テスト | `mix test`（NIF ビルド込み） | Elixir/Rust 結合の動作保証 |
+
+すべての push で GitHub Actions が自動実行されます。詳細は [docs/ci.md](./docs/ci.md) を参照。
+
+---
 
 ## 🤝 Contributing
 

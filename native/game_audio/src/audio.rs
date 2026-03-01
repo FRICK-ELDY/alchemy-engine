@@ -17,7 +17,7 @@ pub struct AudioManager {
 impl AudioManager {
     pub fn new() -> Option<Self> {
         let stream = OutputStreamBuilder::open_default_stream().ok()?;
-        let bgm_sink = Sink::connect_new(&stream.mixer());
+        let bgm_sink = Sink::connect_new(stream.mixer());
         Some(Self {
             _stream: stream,
             bgm_sink,
@@ -53,7 +53,7 @@ impl AudioManager {
     pub fn play_se_with_volume(&self, bytes: Vec<u8>, volume: f32) {
         let cursor = std::io::Cursor::new(bytes);
         if let Ok(source) = Decoder::new(cursor) {
-            let sink = Sink::connect_new(&self._stream.mixer());
+            let sink = Sink::connect_new(self._stream.mixer());
             sink.set_volume(volume.clamp(0.0, 1.0));
             sink.append(source);
             sink.detach();

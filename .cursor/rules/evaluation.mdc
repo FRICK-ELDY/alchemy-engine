@@ -26,6 +26,7 @@ alwaysApply: false
 - ネットワーク層（実装度・設計・分散対応）
 - ユーザー層（セーブ/ロード・スコア・入力・UX）
 - プロジェクト全体設計（ドキュメント・テスト・CI/CD・ビジョン一致度）
+  - ローカル CI として `bin\ci.bat` が **エラーゼロで通過すること**を前提とする（cargo fmt / cargo clippy -D warnings / mix compile --warnings-as-errors / mix format --check-formatted / mix credo --strict がすべて PASS）
 
 ---
 

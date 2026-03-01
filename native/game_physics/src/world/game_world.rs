@@ -23,7 +23,7 @@ use super::FrameEvent;
 /// - `params`           → set_entity_params NIF（Phase 3-A）
 /// - `map_width/height` → set_world_size NIF（Phase 3-A）
 /// - `hud_level`, `hud_exp`, `hud_exp_to_next`, `hud_level_up_pending`, `hud_weapon_choices`
-///                      → set_hud_level_state NIF（Phase 3-B: 描画専用）
+///   → set_hud_level_state NIF（Phase 3-B: 描画専用）
 /// - `weapon_slots`     → set_weapon_slots NIF（I-2: 毎フレーム Elixir から注入）
 pub struct GameWorldInner {
     pub frame_id: u32,
