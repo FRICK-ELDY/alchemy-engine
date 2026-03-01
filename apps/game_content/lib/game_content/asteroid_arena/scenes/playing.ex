@@ -16,7 +16,12 @@ defmodule GameContent.AsteroidArena.Scenes.Playing do
     {:ok,
      %{
        exp: 0,
-       last_ufo_spawn_ms: 0
+       last_ufo_spawn_ms: 0,
+       # nil の場合は update/2 内で context.start_ms にフォールバックする
+       # （init 時点では start_ms が不明なため nil で初期化）
+       last_spawn_ms: nil,
+       player_hp: 100.0,
+       player_max_hp: 100.0
      }}
   end
 
@@ -25,39 +30,24 @@ defmodule GameContent.AsteroidArena.Scenes.Playing do
 
   @impl GameEngine.SceneBehaviour
   def update(context, state) do
-    %{
-      world_ref: world_ref,
-      elapsed: elapsed,
-      last_spawn_ms: last_spawn_ms,
-      player_hp: player_hp
-    } = context
+    elapsed = context.elapsed
+    player_hp = Map.get(state, :player_hp, 100.0)
 
     if player_hp <= 0.0 do
       Logger.info("[GAME OVER] Player HP reached 0 at #{div(elapsed, 1000)}s")
       {:transition, {:replace, GameContent.AsteroidArena.Scenes.GameOver, %{}}, state}
     else
-      new_last_spawn = SpawnSystem.maybe_spawn(world_ref, elapsed, last_spawn_ms)
-      new_last_ufo = SpawnSystem.maybe_spawn_ufo(world_ref, elapsed, state.last_ufo_spawn_ms)
+      last_spawn_ms = Map.get(state, :last_spawn_ms) || context.start_ms
+      new_last_spawn = SpawnSystem.maybe_spawn(context.world_ref, elapsed, last_spawn_ms)
+      new_last_ufo = SpawnSystem.maybe_spawn_ufo(context.world_ref, elapsed, state.last_ufo_spawn_ms)
 
-      new_state = %{state | last_ufo_spawn_ms: new_last_ufo}
+      new_state = %{state | last_ufo_spawn_ms: new_last_ufo, last_spawn_ms: new_last_spawn}
 
-      {:continue, new_state, %{context_updates: %{last_spawn_ms: new_last_spawn}}}
+      {:continue, new_state}
     end
   end
 
-  # ── GameEvents から SceneManager 経由で呼ばれるヘルパー ────────────
-
-  @doc "EXP を加算する（GameEvents の apply_event から呼ばれる）"
   def accumulate_exp(state, exp_gain) do
     %{state | exp: state.exp + exp_gain}
   end
-
-  @doc "ボスなし: 何もしない（GameEvents の apply_event から呼ばれる）"
-  def apply_boss_spawn(state, _boss_kind), do: state
-
-  @doc "ボスなし: 何もしない（GameEvents の apply_event から呼ばれる）"
-  def apply_boss_damaged(state, _damage), do: state
-
-  @doc "ボスなし: 何もしない（GameEvents の apply_event から呼ばれる）"
-  def apply_boss_defeated(state), do: state
 end

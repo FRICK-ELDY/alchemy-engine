@@ -1,17 +1,15 @@
 defmodule GameEngine.GameEvents do
   @moduledoc """
-  Rust からの frame_events を受信し、フェーズ管理・NIF 呼び出しを行う GenServer。
+  Rust からの frame_events を受信し、コンポーネントへ委譲する GenServer。
 
   Rust 側が高精度 60 Hz でゲームループを駆動し、
   Elixir は `{:frame_events, events}` を受信してイベント駆動でシーン制御を行う。
 
-  ## Elixir as SSoT 移行状況
-  - フェーズ1完了: score, kill_count, elapsed_ms を Elixir 側で管理
-  - フェーズ2完了: player_hp, player_max_hp を Elixir 側で管理
-  - フェーズ3完了: level, exp, exp_to_next を Playing シーン state で管理（エンジン state から除去）
-               weapon_levels, level_up_pending, weapon_choices は Playing シーン state で管理
-  - フェーズ4完了: boss_hp, boss_max_hp, boss_kind_id を Playing シーン state で管理（エンジン state から除去）
-  - フェーズ5完了: render_started フラグを Elixir 側で管理、UI アクションを直接受信
+  ## 設計原則
+  - エンジンはディスパッチのみ行う（ゲームロジックを知らない）
+  - ゲーム固有の状態（score, player_hp 等）はシーン state で管理する
+  - NIF 注入はコンポーネントの `on_nif_sync/1` が担う
+  - フレームイベント処理はコンポーネントの `on_frame_event/2` が担う
   """
 
   use GenServer
@@ -42,7 +40,6 @@ defmodule GameEngine.GameEvents do
 
     world_ref = GameEngine.NifBridge.create_world()
 
-    # コンポーネントの on_ready/1 を順に呼び出してワールドを初期化する
     Enum.each(GameEngine.Config.components(), fn component ->
       init_component(component, world_ref)
     end)
@@ -57,8 +54,6 @@ defmodule GameEngine.GameEvents do
 
     GameEngine.NifBridge.start_rust_game_loop(world_ref, control_ref, self())
 
-    # フェーズ5: render_started フラグで重複起動を防止（RENDER_THREAD_RUNNING static 廃止）
-    # self() を渡して描画スレッドが直接 GameEvents プロセスに送信できるようにする
     render_started =
       if room_id == :main do
         GameEngine.NifBridge.start_render_thread(world_ref, self())
@@ -75,25 +70,7 @@ defmodule GameEngine.GameEvents do
        last_tick: start_ms,
        frame_count: 0,
        start_ms: start_ms,
-       last_spawn_ms: start_ms,
-       # フェーズ1: スコア・統計を Elixir 側で管理
-       score: 0,
-       kill_count: 0,
-       elapsed_ms: 0,
-       # フェーズ2: プレイヤー HP を Elixir 側で管理
-       player_hp: 100.0,
-       player_max_hp: 100.0,
-       # フェーズ5: 描画スレッド起動済みフラグ
-       render_started: render_started,
-       # I-3: 前フレームの weapon_levels（差分チェック用）
-       last_weapon_levels: nil,
-       # I-A: HUD 差分チェック用（前フレームの値）
-       last_hud_score: -1,
-       last_hud_kill_count: -1,
-       last_player_hp: -1.0,
-       last_elapsed_ms: -1,
-       last_hud_level_state: nil,
-       last_boss_hp: :unset
+       render_started: render_started
      }}
   end
 
@@ -149,15 +126,14 @@ defmodule GameEngine.GameEvents do
     case result do
       :ok ->
         GameEngine.SceneManager.replace_scene(content.physics_scenes() |> List.first(), %{})
-        new_state = reset_elixir_state(state)
-        {:reply, :ok, new_state}
+        {:reply, :ok, state}
 
       other ->
         {:reply, other, state}
     end
   end
 
-  # ── インフォ: UI アクション（フェーズ5: 描画スレッドから直接受信）──
+  # ── インフォ: UI アクション ──────────────────────────────────────
 
   @impl true
   def handle_info({:ui_action, action}, state) when is_binary(action) do
@@ -192,7 +168,7 @@ defmodule GameEngine.GameEvents do
     {:noreply, new_state}
   end
 
-  # ── インフォ: 移動入力（フェーズ5: 描画スレッドから直接受信）────────
+  # ── インフォ: 移動入力 ────────────────────────────────────────────
 
   def handle_info({:move_input, dx, dy}, state) do
     GameEngine.NifBridge.set_player_input(state.world_ref, dx * 1.0, dy * 1.0)
@@ -238,7 +214,7 @@ defmodule GameEngine.GameEvents do
       :ok ->
         content = current_content()
         GameEngine.SceneManager.replace_scene(content.physics_scenes() |> List.first(), %{})
-        reset_elixir_state(state)
+        state
 
       :no_save ->
         Logger.info("[LOAD] No save data")
@@ -255,7 +231,6 @@ defmodule GameEngine.GameEvents do
   defp handle_frame_events_main(events, state) do
     now = now_ms()
     elapsed = now - state.start_ms
-
     content = current_content()
     physics_scenes = content.physics_scenes()
 
@@ -264,272 +239,76 @@ defmodule GameEngine.GameEvents do
         {:noreply, %{state | last_tick: now}}
 
       {:ok, %{module: mod, state: scene_state}} ->
-        delta_ms = now - state.last_tick
-        state = %{state | elapsed_ms: state.elapsed_ms + delta_ms}
-        state = apply_frame_events(events, state)
-        state = sync_nif_state(state, content)
-        state = maybe_set_input_and_broadcast(state, mod, physics_scenes, events)
-
         context = build_context(state, now, elapsed)
-        run_component_callbacks(context)
 
+        # フレームイベントをコンポーネントに委譲（シーン state を更新）
+        Enum.each(events, &dispatch_frame_event_to_components(&1, context))
+
+        # 入力・物理コールバック・ブロードキャスト
+        # on_physics_process（ボス AI 等）が NIF の状態を書き換えるため、
+        # on_nif_sync より先に実行する
+        maybe_set_input_and_broadcast(state, mod, physics_scenes, events, context)
+
+        # NIF 注入をコンポーネントに委譲
+        # on_physics_process の後に実行することで、物理 AI の結果を含めた
+        # 最新のシーン state を Rust 側に反映できる
+        dispatch_nif_sync_to_components(context)
+
+        # シーン update（遷移判断のみ）
         result = mod.update(context, scene_state)
-        {new_scene_state, opts} = extract_state_and_opts(result)
+        {new_scene_state, _opts} = extract_state_and_opts(result)
         GameEngine.SceneManager.update_current(fn _ -> new_scene_state end)
 
-        state = apply_context_updates(state, opts)
+        # シーン遷移処理
         state = process_transition(result, state, now, content)
-        state = maybe_log_and_cache(state, mod, elapsed, content)
+
+        # ログ・キャッシュ（60フレームごと）
+        GameEngine.GameEvents.Diagnostics.maybe_log_and_cache(state, mod, elapsed, content)
 
         {:noreply, %{state | last_tick: now, frame_count: state.frame_count + 1}}
     end
   end
 
-  defp sync_nif_state(state, content) do
-    state = maybe_update_hud_state(state)
-    state = maybe_update_player_hp(state)
-    state = maybe_update_elapsed(state)
-    playing_state = get_playing_scene_state(content)
-    state = maybe_update_hud_level(state, playing_state)
-    scene_boss_hp = Map.get(playing_state, :boss_hp)
-    state = maybe_update_boss_hp(state, scene_boss_hp)
-    weapon_levels = Map.get(playing_state, :weapon_levels)
-    maybe_update_weapon_slots(state, content, weapon_levels)
+  defp dispatch_frame_event_to_components(event, context) do
+    dispatch_to_components(:on_frame_event, [event, context])
   end
 
-  defp maybe_update_hud_state(state) do
-    if state.score != state.last_hud_score or state.kill_count != state.last_hud_kill_count do
-      call_nif(:set_hud_state, fn ->
-        GameEngine.NifBridge.set_hud_state(state.world_ref, state.score, state.kill_count)
-      end)
-
-      %{state | last_hud_score: state.score, last_hud_kill_count: state.kill_count}
-    else
-      state
-    end
+  defp dispatch_nif_sync_to_components(context) do
+    dispatch_to_components(:on_nif_sync, [context])
   end
 
-  defp maybe_update_player_hp(state) do
-    if state.player_hp != state.last_player_hp do
-      call_nif(:set_player_hp, fn ->
-        GameEngine.NifBridge.set_player_hp(state.world_ref, state.player_hp)
-      end)
-
-      %{state | last_player_hp: state.player_hp}
-    else
-      state
-    end
+  defp dispatch_event_to_components(event, context) do
+    dispatch_to_components(:on_event, [event, context])
   end
 
-  defp maybe_update_elapsed(state) do
-    if state.elapsed_ms != state.last_elapsed_ms do
-      elapsed_sec = state.elapsed_ms / 1000.0
-
-      call_nif(:set_elapsed_seconds, fn ->
-        GameEngine.NifBridge.set_elapsed_seconds(state.world_ref, elapsed_sec)
-      end)
-
-      %{state | last_elapsed_ms: state.elapsed_ms}
-    else
-      state
-    end
+  defp run_component_physics_callbacks(context) do
+    dispatch_to_components(:on_physics_process, [context])
   end
 
-  defp maybe_update_hud_level(state, playing_state) do
-    case Map.get(playing_state, :level) do
-      hud_level when hud_level != nil ->
-        push_hud_level_to_nif(state, playing_state, hud_level)
+  defp dispatch_to_components(callback, args) do
+    arity = length(args)
 
-      _ ->
-        state
-    end
-  end
-
-  defp push_hud_level_to_nif(state, playing_state, hud_level) do
-    level_up_pending = Map.get(playing_state, :level_up_pending, false)
-    weapon_choices = Map.get(playing_state, :weapon_choices, []) |> Enum.map(&to_string/1)
-    scene_exp = Map.get(playing_state, :exp, 0)
-    scene_exp_to_next = Map.get(playing_state, :exp_to_next, 10)
-    new_level_state = {hud_level, scene_exp, scene_exp_to_next, level_up_pending, weapon_choices}
-
-    if new_level_state != state.last_hud_level_state do
-      call_nif(:set_hud_level_state, fn ->
-        GameEngine.NifBridge.set_hud_level_state(
-          state.world_ref,
-          hud_level,
-          scene_exp,
-          scene_exp_to_next,
-          level_up_pending,
-          weapon_choices
-        )
-      end)
-
-      %{state | last_hud_level_state: new_level_state}
-    else
-      state
-    end
-  end
-
-  defp maybe_update_weapon_slots(state, content, weapon_levels) do
-    with true <- weapon_levels != nil,
-         true <- weapon_levels != state.last_weapon_levels do
-      push_weapon_slots_to_nif(state, content, weapon_levels)
-      %{state | last_weapon_levels: weapon_levels}
-    else
-      _ -> state
-    end
-  end
-
-  defp push_weapon_slots_to_nif(state, content, weapon_levels) do
-    playing_scene = content.playing_scene()
-
-    if function_exported?(playing_scene, :weapon_slots_for_nif, 1) do
-      slots = playing_scene.weapon_slots_for_nif(weapon_levels)
-
-      call_nif(:set_weapon_slots, fn ->
-        GameEngine.NifBridge.set_weapon_slots(state.world_ref, slots)
-      end)
-    end
-  end
-
-  defp run_component_callbacks(context) do
     Enum.each(GameEngine.Config.components(), fn component ->
-      if function_exported?(component, :on_physics_process, 1) do
-        component.on_physics_process(context)
+      if function_exported?(component, callback, arity) do
+        apply(component, callback, args)
       end
     end)
   end
 
-  # ── フレームイベント処理（Elixir 側 SSoT 更新）──────────────────────
-
-  defp apply_frame_events(events, state) do
-    Enum.reduce(events, state, &apply_event/2)
-  end
-
-  # EnemyKilled でスコア・kill_count を積算し、ポップアップ表示・アイテムドロップを処理する
-  # x_bits/y_bits は f32::to_bits() でエンコードされた撃破座標
-  defp apply_event({:enemy_killed, enemy_kind, x_bits, y_bits, _}, state) do
-    content = current_content()
-    exp = content.enemy_exp_reward(enemy_kind)
-    x = bits_to_f32(x_bits)
-    y = bits_to_f32(y_bits)
-    scene = content.playing_scene()
-    {state, score_delta} = apply_kill_score(state, exp, content)
-    update_playing_scene_state(content, &scene.accumulate_exp(&1, exp))
-
-    call_nif(:add_score_popup, fn ->
-      GameEngine.NifBridge.add_score_popup(state.world_ref, x, y, score_delta)
-    end)
-
-    now = now_ms()
-
-    dispatch_event_to_components(
-      {:entity_removed, state.world_ref, enemy_kind, x, y},
-      build_context(state, now, now - state.start_ms)
-    )
-
-    state
-  end
-
-  # BossDefeated でスコア・kill_count を積算し、ポップアップ表示・アイテムドロップを処理する
-  # boss_exp_reward/1 を持つコンテンツ（ボスの概念があるコンテンツ）のみ処理する
-  # I-4: ボス種別は Playing シーン state の boss_kind_id から取得する（Rust 側は種別を持たない）
-  defp apply_event({:boss_defeated, _, x_bits, y_bits, _}, state) do
-    content = current_content()
-    playing_state = get_playing_scene_state(content)
-    boss_kind = Map.get(playing_state, :boss_kind_id)
-
-    if boss_kind != nil and function_exported?(content, :boss_exp_reward, 1) do
-      exp = content.boss_exp_reward(boss_kind)
-      x = bits_to_f32(x_bits)
-      y = bits_to_f32(y_bits)
-      scene = content.playing_scene()
-      {state, score_delta} = apply_kill_score(state, exp, content)
-
-      update_playing_scene_state(content, fn s ->
-        s
-        |> scene.accumulate_exp(exp)
-        |> scene.apply_boss_defeated()
-      end)
-
-      call_nif(:add_score_popup, fn ->
-        GameEngine.NifBridge.add_score_popup(state.world_ref, x, y, score_delta)
-      end)
-
-      now = now_ms()
-
-      dispatch_event_to_components(
-        {:boss_defeated, state.world_ref, boss_kind, x, y},
-        build_context(state, now, now - state.start_ms)
-      )
-
-      state
-    else
-      state
-    end
-  end
-
-  # PlayerDamaged で Elixir 側 HP を減算
-  defp apply_event({:player_damaged, damage_x1000, _, _, _}, state) do
-    damage = damage_x1000 / 1000.0
-    new_hp = max(0.0, state.player_hp - damage)
-    %{state | player_hp: new_hp}
-  end
-
-  # BossSpawn でボス状態を Playing シーン state に設定
-  defp apply_event({:boss_spawn, boss_kind, _, _, _}, state) do
-    content = current_content()
-    update_playing_scene_state(content, &content.playing_scene().apply_boss_spawn(&1, boss_kind))
-    state
-  end
-
-  # BossDamaged でボス HP を Playing シーン state で減算
-  defp apply_event({:boss_damaged, damage_x1000, _, _, _}, state) do
-    damage = damage_x1000 / 1000.0
-    content = current_content()
-    update_playing_scene_state(content, &content.playing_scene().apply_boss_damaged(&1, damage))
-    state
-  end
-
-  defp apply_event({:level_up_event, _, _, _, _}, state), do: state
-  defp apply_event({:item_pickup, _, _, _, _}, state), do: state
-  defp apply_event(_, state), do: state
-
-  # f32::to_bits() でエンコードされた u32 を Elixir の float に変換する
-  defp bits_to_f32(bits) do
-    <<f::float-size(32)>> = <<bits::unsigned-size(32)>>
-    f
-  end
-
-  # スコア・kill_count を state に適用する共通関数
-  # 戻り値: {新 state, score_delta}（score_delta はポップアップ表示に使用）
-  defp apply_kill_score(state, exp, rule) do
-    score_delta = rule.score_from_exp(exp)
-
-    new_state =
-      state
-      |> Map.update!(:score, &(&1 + score_delta))
-      |> Map.update!(:kill_count, &(&1 + 1))
-
-    {new_state, score_delta}
-  end
-
-  # ── 入力・ブロードキャスト ────────────────────────────────────────
-
-  defp maybe_set_input_and_broadcast(state, mod, physics_scenes, events) do
+  defp maybe_set_input_and_broadcast(state, mod, physics_scenes, events, context) do
     if mod in physics_scenes do
       if state.room_id != :main do
         {dx, dy} = GameEngine.InputHandler.get_move_vector()
         GameEngine.NifBridge.set_player_input(state.world_ref, dx * 1.0, dy * 1.0)
       end
 
+      run_component_physics_callbacks(context)
+
       unless events == [], do: GameEngine.EventBus.broadcast(events)
     end
 
-    state
+    :ok
   end
-
-  # ── コンテキスト構築 ──────────────────────────────────────────────
 
   defp build_context(state, now, elapsed) do
     control_ref = state.control_ref
@@ -539,14 +318,8 @@ defmodule GameEngine.GameEvents do
       world_ref: state.world_ref,
       now: now,
       elapsed: elapsed,
-      last_spawn_ms: state.last_spawn_ms,
       frame_count: state.frame_count,
       start_ms: state.start_ms,
-      score: state.score,
-      kill_count: state.kill_count,
-      elapsed_ms: state.elapsed_ms,
-      player_hp: state.player_hp,
-      player_max_hp: state.player_max_hp,
       push_scene: fn mod, init_arg ->
         content = current_content()
 
@@ -574,14 +347,6 @@ defmodule GameEngine.GameEvents do
 
   defp extract_state_and_opts({:transition, _action, scene_state, opts}),
     do: {scene_state, opts || %{}}
-
-  defp apply_context_updates(state, %{context_updates: updates}) when is_map(updates) do
-    Map.merge(state, updates)
-  end
-
-  defp apply_context_updates(state, _), do: state
-
-  # ── シーン遷移処理 ────────────────────────────────────────────────
 
   defp process_transition({:continue, _}, state, _now, _content), do: state
   defp process_transition({:continue, _, _}, state, _now, _content), do: state
@@ -611,22 +376,16 @@ defmodule GameEngine.GameEvents do
     state
   end
 
-  defp process_transition({:transition, {:replace, mod, init_arg}, _}, state, _now, content) do
-    game_over_scene = content.game_over_scene()
+  defp process_transition({:transition, {:replace, mod, init_arg}, _}, state, now, content) do
+    elapsed = now - state.start_ms
 
     init_arg =
-      if mod == game_over_scene do
-        :telemetry.execute(
-          [:game, :session_end],
-          %{elapsed_seconds: state.elapsed_ms / 1000.0, score: state.score},
-          %{}
-        )
-
-        GameEngine.SaveManager.save_high_score(state.score)
-        Map.merge(init_arg || %{}, %{high_scores: GameEngine.SaveManager.load_high_scores()})
-      else
-        init_arg || %{}
-      end
+      GameEngine.GameEvents.Diagnostics.build_replace_init_arg(
+        mod,
+        init_arg,
+        elapsed,
+        content
+      )
 
     GameEngine.SceneManager.replace_scene(mod, init_arg)
     state
@@ -634,169 +393,7 @@ defmodule GameEngine.GameEvents do
 
   defp process_transition(_, state, _, _), do: state
 
-  # ── ログ・キャッシュ更新 ──────────────────────────────────────────
-
-  defp maybe_log_and_cache(state, _mod, _elapsed, content) do
-    if state.room_id == :main and rem(state.frame_count, 60) == 0 do
-      do_log_and_cache(state, content)
-    end
-
-    state
-  end
-
-  defp do_log_and_cache(state, content) do
-    elapsed_s = state.elapsed_ms / 1000.0
-    render_type = GameEngine.SceneManager.render_type()
-    hud_data = {state.player_hp, state.player_max_hp, state.score, elapsed_s}
-
-    high_scores =
-      if render_type == :game_over, do: GameEngine.SaveManager.load_high_scores(), else: nil
-
-    enemy_count = GameEngine.NifBridge.get_enemy_count(state.world_ref)
-    bullet_count = GameEngine.NifBridge.get_bullet_count(state.world_ref)
-    physics_ms = GameEngine.NifBridge.get_frame_time_ms(state.world_ref)
-
-    GameEngine.FrameCache.put(
-      enemy_count,
-      bullet_count,
-      physics_ms,
-      hud_data,
-      render_type,
-      high_scores
-    )
-
-    log_tick(state, content, elapsed_s, render_type, enemy_count, physics_ms)
-    maybe_snapshot_check(state)
-  end
-
-  defp log_tick(_state, content, elapsed_s, render_type, enemy_count, physics_ms) do
-    wave = content.wave_label(elapsed_s)
-    budget_warn = if physics_ms > @tick_ms, do: " [OVER BUDGET]", else: ""
-    log_playing_state = get_playing_scene_state(content)
-    log_exp = Map.get(log_playing_state, :exp, 0)
-    log_level = Map.get(log_playing_state, :level, "-")
-    weapon_info = format_weapon_info(Map.get(log_playing_state, :weapon_levels))
-    boss_info = format_boss_info(log_playing_state)
-
-    Logger.info(
-      "[LOOP] #{wave} | scene=#{render_type} | enemies=#{enemy_count} | " <>
-        "physics=#{Float.round(physics_ms, 2)}ms#{budget_warn} | " <>
-        "lv=#{log_level} exp=#{log_exp} | weapons=[#{weapon_info}]" <> boss_info
-    )
-
-    :telemetry.execute(
-      [:game, :tick],
-      %{physics_ms: physics_ms, enemy_count: enemy_count},
-      %{phase: render_type, wave: wave}
-    )
-  end
-
-  defp format_weapon_info(nil), do: "-"
-
-  defp format_weapon_info(weapon_levels) do
-    Enum.map_join(weapon_levels, ", ", fn {w, lv} -> "#{w}:Lv#{lv}" end)
-  end
-
-  defp format_boss_info(playing_state) do
-    log_boss_hp = Map.get(playing_state, :boss_hp)
-    log_boss_max_hp = Map.get(playing_state, :boss_max_hp)
-
-    if log_boss_hp != nil and log_boss_max_hp != nil and log_boss_max_hp > 0 do
-      " | boss=#{Float.round(log_boss_hp / log_boss_max_hp * 100, 1)}%HP"
-    else
-      ""
-    end
-  end
-
-  defp maybe_update_boss_hp(state, scene_boss_hp) do
-    if scene_boss_hp != state.last_boss_hp do
-      push_boss_hp_to_nif(state, scene_boss_hp)
-      %{state | last_boss_hp: scene_boss_hp}
-    else
-      state
-    end
-  end
-
-  defp push_boss_hp_to_nif(_state, nil), do: :ok
-
-  defp push_boss_hp_to_nif(state, scene_boss_hp) do
-    call_nif(:set_boss_hp, fn ->
-      GameEngine.NifBridge.set_boss_hp(state.world_ref, scene_boss_hp)
-    end)
-  end
-
-  # Rust 側の状態と Elixir 側の状態を比較して乖離を検出
-  defp maybe_snapshot_check(state) do
-    {rust_score, _rust_hp, _rust_elapsed, rust_kill_count} =
-      GameEngine.NifBridge.get_full_game_state(state.world_ref)
-
-    if rust_score != state.score do
-      Logger.warning(
-        "[SSOT CHECK] score mismatch: elixir=#{state.score} rust=#{rust_score} diff=#{state.score - rust_score}"
-      )
-    end
-
-    if rust_kill_count != state.kill_count do
-      Logger.warning(
-        "[SSOT CHECK] kill_count mismatch: elixir=#{state.kill_count} rust=#{rust_kill_count}"
-      )
-    end
-  rescue
-    e -> Logger.debug("[SSOT CHECK] snapshot check failed: #{inspect(e)}")
-  end
-
-  # ── ユーティリティ ────────────────────────────────────────────────
-
   defp now_ms, do: System.monotonic_time(:millisecond)
 
   defp current_content, do: GameEngine.Config.current()
-
-  defp call_nif(name, fun) do
-    case fun.() do
-      {:error, reason} ->
-        Logger.error("[NIF ERROR] #{name} failed: #{inspect(reason)}")
-
-      _ ->
-        :ok
-    end
-  end
-
-  # コンポーネントの on_event/2 を順に呼び出す
-  defp dispatch_event_to_components(event, context) do
-    Enum.each(GameEngine.Config.components(), fn component ->
-      if function_exported?(component, :on_event, 2) do
-        component.on_event(event, context)
-      end
-    end)
-  end
-
-  # Playing シーンの state を SceneManager 経由で更新する（スタック内のどの位置にあっても更新）
-  defp update_playing_scene_state(content, fun) when is_function(fun, 1) do
-    GameEngine.SceneManager.update_by_module(content.playing_scene(), fun)
-  end
-
-  # Playing シーンの state を取得する
-  defp get_playing_scene_state(content) do
-    GameEngine.SceneManager.get_scene_state(content.playing_scene()) || %{}
-  end
-
-  # セーブロード後に Elixir 側の状態をリセット
-  # replace_scene が Playing.init/1 を呼ぶためシーン state は自動的にリセットされる
-  defp reset_elixir_state(state) do
-    %{
-      state
-      | score: 0,
-        kill_count: 0,
-        elapsed_ms: 0,
-        player_hp: 100.0,
-        player_max_hp: 100.0,
-        last_weapon_levels: nil,
-        last_hud_score: -1,
-        last_hud_kill_count: -1,
-        last_player_hp: -1.0,
-        last_elapsed_ms: -1,
-        last_hud_level_state: nil,
-        last_boss_hp: :unset
-    }
-  end
 end
