@@ -25,9 +25,7 @@ pub fn physics_step(world: ResourceArc<GameWorld>, delta_ms: f64) -> NifResult<u
 }
 
 #[rustler::nif]
-pub fn drain_frame_events(
-    world: ResourceArc<GameWorld>,
-) -> NifResult<Vec<FrameEvent>> {
+pub fn drain_frame_events(world: ResourceArc<GameWorld>) -> NifResult<Vec<FrameEvent>> {
     let wait_start = Instant::now();
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
     record_write_wait("nif.drain_frame_events", wait_start.elapsed());

@@ -77,9 +77,7 @@ pub fn get_hud_data(world: ResourceArc<GameWorld>) -> NifResult<(f64, f64, u32, 
 }
 
 #[rustler::nif]
-pub fn get_frame_metadata(
-    world: ResourceArc<GameWorld>,
-) -> NifResult<FrameMetadata> {
+pub fn get_frame_metadata(world: ResourceArc<GameWorld>) -> NifResult<FrameMetadata> {
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;
     let (boss_alive, boss_hp, boss_max_hp) = match &w.boss {
         Some(boss) => (true, boss.hp as f64, boss.max_hp as f64),
