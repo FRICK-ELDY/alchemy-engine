@@ -23,4 +23,14 @@ defmodule GameNetwork.Local.TestHelpers do
   def inject_room(room_id) do
     GameNetwork.Local.register_room(room_id)
   end
+
+  @doc """
+  `GameNetwork.Local` の接続テーブルからルームの登録を解除する。
+
+  `inject_room/1` の逆操作。テスト終了時の `on_exit` クリーンアップで使用する。
+  """
+  @spec eject_room(term()) :: :ok
+  def eject_room(room_id) do
+    GameNetwork.Local.unregister_room(room_id)
+  end
 end

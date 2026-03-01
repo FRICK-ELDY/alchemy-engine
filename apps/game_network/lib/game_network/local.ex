@@ -64,6 +64,24 @@ defmodule GameNetwork.Local do
   end
 
   @doc """
+  接続テーブルからルームの登録を解除する。
+
+  `close_room/1` と異なり、プロセスの停止は行わず登録情報の削除のみを行う。
+  登録されていない場合は何もせず `:ok` を返す（冪等操作）。
+
+  ## 注意: 接続情報も同時に削除される
+
+  このルームへの接続（他ルームの MapSet に含まれる参照）も削除される。
+  つまり `register_room → connect_rooms → unregister_room → register_room` の
+  再登録サイクルを行うと、接続は失われた状態になる。
+  再登録後に再度 `connect_rooms/2` を呼ぶ必要がある。
+  """
+  @spec unregister_room(room_id()) :: :ok
+  def unregister_room(room_id) do
+    GenServer.call(__MODULE__, {:unregister_room, room_id})
+  end
+
+  @doc """
   2 つのルームを双方向に接続する。
 
   接続後、どちらかのルームに `broadcast/2` したイベントは
@@ -123,6 +141,11 @@ defmodule GameNetwork.Local do
   @impl true
   def handle_call({:register_room, room_id}, _from, state) do
     {:reply, :ok, put_room(state, room_id)}
+  end
+
+  def handle_call({:unregister_room, room_id}, _from, state) do
+    new_connections = remove_room_connections(state.connections, room_id)
+    {:reply, :ok, %{state | connections: new_connections}}
   end
 
   def handle_call({:open_room, room_id}, _from, state) do

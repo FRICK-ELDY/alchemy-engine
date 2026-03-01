@@ -15,21 +15,28 @@ defmodule GameNetwork.LocalTest do
   alias GameNetwork.Local.TestHelpers
 
   setup do
-    # GameEngine.RoomRegistry を start_supervised で管理する。
-    # テスト終了時に ExUnit が自動シャットダウンするため、
-    # テスト間で Registry のプロセス自体が漏れない。
-    # （Registry エントリは StubRoom プロセス終了時に自動削除される）
-    start_supervised!({Registry, keys: :unique, name: GameEngine.RoomRegistry})
+    # このテストはアンブレラの mix test から実行される場合、
+    # GameNetwork.Application（GameNetwork.Local を含む）が既に起動している。
+    # GameNetwork.Local は名前付きプロセスのため、各テストで独立したインスタンスを
+    # 起動することはできない。代わりに共有インスタンスをそのまま使い、
+    # テスト間の独立性はユニークな room_id で確保する。
+    case Process.whereis(GameNetwork.Local) do
+      nil -> start_supervised!({GameNetwork.Local, []}, id: :local_under_test)
+      _ -> :ok
+    end
 
-    # 各テストで独立した GameNetwork.Local インスタンスを起動する。
-    start_supervised!({GameNetwork.Local, []}, id: :local_under_test)
+    case Process.whereis(GameEngine.RoomRegistry) do
+      nil -> start_supervised!({Registry, keys: :unique, name: GameEngine.RoomRegistry})
+      _ -> :ok
+    end
 
     :ok
   end
 
   describe "ルーム管理" do
-    test "open_room/close_room なしでは list_rooms が空を返す" do
-      assert GameNetwork.Local.list_rooms() == []
+    test "register_room していないルームは list_rooms に現れない" do
+      rooms = GameNetwork.Local.list_rooms()
+      refute "never_registered_xyz" in rooms
     end
 
     test "connect_rooms は存在しないルームに対してエラーを返す" do
@@ -66,9 +73,11 @@ defmodule GameNetwork.LocalTest do
 
       :ok = GameNetwork.Local.broadcast("room_a", :ping)
 
-      # broadcast は GenServer.call（同期）だが、deliver_event 内の send/2 は非同期。
-      # received_events は GenServer.call のため、呼び出し時点で StubRoom の
-      # メールボックスが順番に処理されており、handle_info の完了が保証される。
+      # broadcast 内の deliver_event は send/2 で非同期にイベントを送信する。
+      # received_events は GenServer.call であり、StubRoom のメッセージキューに
+      # {:network_event, ...} より後に積まれる。
+      # FIFO キューの性質上、received_events の call が処理される時点では
+      # handle_info({:network_event, ...}) が必ず先に完了している。
       assert StubRoom.received_events(pid_b) == [{"room_a", :ping}]
       assert StubRoom.received_events(pid_a) == []
     end
@@ -152,9 +161,18 @@ defmodule GameNetwork.LocalTest do
 
   # ── テスト専用ヘルパー ──────────────────────────────────────────────
 
-  # GameNetwork.Local の接続テーブルにルームを登録する。
+  # GameNetwork.Local の接続テーブルにルームを登録し、on_exit でクリーンアップを登録する。
   # open_room は RoomSupervisor（NIF 起動）を呼ぶため、テストでは使わない。
+  # on_exit のキーに {:unregister, room_id} を使うため、同一 room_id の重複登録は
+  # ExUnit によって自動的に上書きされる（冪等）。
   defp inject_room(room_id) do
+    on_exit({:unregister, room_id}, fn ->
+      case Process.whereis(GameNetwork.Local) do
+        nil -> :ok
+        _ -> GameNetwork.Local.unregister_room(room_id)
+      end
+    end)
+
     TestHelpers.inject_room(room_id)
   end
 end

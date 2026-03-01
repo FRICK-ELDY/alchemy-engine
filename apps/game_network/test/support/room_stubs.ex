@@ -72,5 +72,21 @@ defmodule GameNetwork.Test.StubRoom do
     {:noreply, %{state | events: [{from, event} | state.events]}}
   end
 
+  def handle_info({:move_input, dx, dy}, state) do
+    if state.notify do
+      send(state.notify, {:move_input_received, dx, dy})
+    end
+
+    {:noreply, state}
+  end
+
+  def handle_info({:ui_action, name}, state) do
+    if state.notify do
+      send(state.notify, {:ui_action_received, name})
+    end
+
+    {:noreply, state}
+  end
+
   def handle_info(_msg, state), do: {:noreply, state}
 end

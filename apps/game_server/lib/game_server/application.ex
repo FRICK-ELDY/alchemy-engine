@@ -19,16 +19,19 @@ defmodule GameServer.Application do
     ]
 
     opts = [strategy: :one_for_one, name: GameServer.Supervisor]
-    result = Supervisor.start_link(children, opts)
 
-    if elem(result, 0) == :ok do
-      case GameEngine.RoomSupervisor.start_room(:main) do
-        {:ok, _} -> :ok
-        {:error, :already_started} -> :ok
-        {:error, reason} -> raise "Failed to start main room: #{inspect(reason)}"
-      end
+    case Supervisor.start_link(children, opts) do
+      {:ok, pid} ->
+        case GameEngine.RoomSupervisor.start_room(:main) do
+          {:ok, _} -> :ok
+          {:error, :already_started} -> :ok
+          {:error, reason} -> raise "Failed to start main room: #{inspect(reason)}"
+        end
+
+        {:ok, pid}
+
+      {:error, _} = err ->
+        err
     end
-
-    result
   end
 end

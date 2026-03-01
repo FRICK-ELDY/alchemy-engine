@@ -10,7 +10,7 @@
 
 | ID | タイトル | 期待改善幅 | 工数 | 優先度 |
 |:---|:---|:---:|:---:|:---:|
-| IP-01 | `GameNetwork.Local` の実装 | +15 | 大 | 🔴 最優先 |
+| IP-01 | `GameNetwork.Local` フェーズ3の実装 | +9 | 大 | 🔴 最優先 |
 | IP-02 | CI/CD パイプラインの追加 | +5 | 小 | 🔴 最優先 |
 | IP-03 | `GameEvents` GenServer の分解 | +4 | 中 | 🟡 高 |
 | IP-04 | Elixir コアモジュールのテスト追加 | +4 | 中 | 🟡 高 |
@@ -36,41 +36,13 @@
 
 ---
 
-### IP-01: `GameNetwork.Local` の実装
+### IP-01: `GameNetwork.Local` フェーズ3の実装
 
 **対応するマイナス点**: ネットワーク層 0% 実装（-3）、複数ルーム未起動（-2）
 
-**問題の本質**
-
-Elixir を選んだ根拠——「OTP による耐障害性」「軽量プロセスによる大規模並行性」「分散ノード間通信」——が現在のコードで一切証明されていない。`game_network.ex` は空スタブであり、シングルプレイヤーのローカルゲームとして動作しているだけ。
-
-**フェーズ1 — ローカルマルチルーム（2週間）**
-
-同一 BEAM ノード内で 2 つの `GameEvents` プロセスが独立して動作することを実証する。
-
-```elixir
-defmodule GameNetwork.Local do
-  use GenServer
-
-  # 2つのルームを接続し、イベントを相互にルーティング
-  def connect_rooms(room_a, room_b), do: ...
-  def broadcast(room, event), do: ...
-end
-```
-
-検証項目:
-- ルーム A がクラッシュしてもルーム B が継続動作すること（OTP 隔離の証明）
-- 2 ルームが同時に 60Hz で物理演算を実行できること
-
-**フェーズ2 — Phoenix Channels トランスポート（4週間）**
-
-```elixir
-# game_network/mix.exs に追加
-{:phoenix, "~> 1.7"},
-{:phoenix_pubsub, "~> 2.1"}
-```
-
-`GameNetwork.Channel` を `Phoenix.Channel` で実装し、ブラウザからの WebSocket 接続を受け付ける。
+> フェーズ1（ローカルマルチルーム）・フェーズ2（Phoenix Channels）は実装済み。
+> - `GameNetwork.Local` GenServer: 同一 BEAM ノード内での複数ルーム起動・OTP 隔離・イベントルーティング
+> - `GameNetwork.Channel` / `GameNetwork.Endpoint`: WebSocket `/socket` 経由でブラウザから接続可能
 
 **フェーズ3 — UDP ゲーム状態同期（8週間）**
 
@@ -562,7 +534,7 @@ end
   IP-15  セーブ形式移行
 
 フェーズ4 — ネットワーク（13〜24週間）
-  IP-01  GameNetwork.Local → Phoenix Channels → UDP 同期
+  IP-01  GameNetwork.Local フェーズ3（UDP 同期）
 ```
 
 ---
