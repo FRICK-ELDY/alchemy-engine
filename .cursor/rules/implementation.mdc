@@ -78,5 +78,18 @@ def handle_info(msg, state) do
 
 ## 実装完了後のフロー
 
-実装が完了したら `pr-workflow` ルールに従ってPRを作成し、
+### Elixir ファイルを変更した場合
+
+コミット前に必ず `mix format` を実行してフォーマットを統一する：
+
+```powershell
+mix format
+```
+
+`mix format` はフォーマットを自動修正する。実行後に差分が生じた場合はコミットに含める。
+`--check-formatted` オプションは CI で使用するもので、ローカルでは不要。
+
+### PR 作成
+
+`pr-workflow` ルールに従ってPRを作成し、
 新しいチャットで `code-review` ルールを使ってレビューを依頼する。
