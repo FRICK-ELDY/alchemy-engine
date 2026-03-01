@@ -1,44 +1,73 @@
-# ゲームコンテンツ詳細（VampireSurvivor）
+# ゲームコンテンツ詳細
 
 ## 概要
 
-`game_content` アプリケーションは `WorldBehaviour` と `RuleBehaviour` を実装したゲーム固有のコンテンツを提供します。現在は **Vampire Survivor クローン** が実装されています。
+`game_content` アプリケーションは `ContentBehaviour` と `Component` ビヘイビアを実装したゲーム固有のコンテンツを提供します。現在は以下の 2 コンテンツが実装されています。
 
-World と Rule は分離されており、`config.exs` で組み合わせを指定します。
+| コンテンツ | モジュール | 説明 |
+|:---|:---|:---|
+| Vampire Survivor クローン | `GameContent.VampireSurvivor` | 武器・ボス・レベルアップあり |
+| Asteroid Arena | `GameContent.AsteroidArena` | 武器・ボスなしのシンプルなシューター |
+
+使用するコンテンツは `config.exs` で指定します。
 
 ```elixir
-config :game_server, :current_world, GameContent.VampireSurvivorWorld
-config :game_server, :current_rule,  GameContent.VampireSurvivorRule
+# GameContent.VampireSurvivor または GameContent.AsteroidArena
+config :game_server, :current, GameContent.VampireSurvivor
 ```
 
 ---
 
-## `vampire_survivor_world.ex` — WorldBehaviour 実装
+## コンテンツ設計パターン
 
-「舞台」の定義。マップサイズ・エンティティ種別・アセットパス・Rust へのパラメータ注入を担当する。
+各コンテンツは `ContentBehaviour` を実装するエントリポイントモジュールと、`Component` ビヘイビアを実装するコンポーネント群で構成されます。
+
+```mermaid
+graph LR
+    CB["ContentBehaviour\n（エントリポイント）"]
+    SC["SpawnComponent\non_ready: ワールド初期化"]
+    LC["LevelComponent\non_frame_event: EXP・HP\non_nif_sync: NIF 注入"]
+    BC["BossComponent\non_physics_process: ボス AI\non_nif_sync: ボス HP 注入"]
+
+    CB -->|components/0 で列挙| SC
+    CB -->|components/0 で列挙| LC
+    CB -->|components/0 で列挙| BC
+```
+
+---
+
+## `GameContent.VampireSurvivor` — VampireSurvivor コンテンツ
+
+### コンポーネント構成
 
 ```elixir
-defmodule GameContent.VampireSurvivorWorld do
-  @behaviour GameEngine.WorldBehaviour
-
-  @impl true
-  def assets_path, do: "vampire_survivor"
-
-  @impl true
-  def entity_registry do
-    %{
-      enemies: %{slime: 0, bat: 1, golem: 2, skeleton: 3, ghost: 4},
-      weapons: %{magic_wand: 0, axe: 1, cross: 2, whip: 3, fireball: 4, lightning: 5, garlic: 6},
-      bosses:  %{slime_king: 0, bat_lord: 1, stone_golem: 2},
-    }
-  end
-
-  @impl true
-  def setup_world_params(world_ref) do
-    GameEngine.NifBridge.set_world_size(world_ref, 4096.0, 4096.0)
-    GameEngine.NifBridge.set_entity_params(world_ref, enemy_params(), weapon_params(), boss_params())
-  end
+def components do
+  [
+    GameContent.VampireSurvivor.SpawnComponent,   # ワールド初期化・エンティティ登録
+    GameContent.VampireSurvivor.LevelComponent,   # EXP・レベル・スコア・HP・武器選択
+    GameContent.VampireSurvivor.BossComponent     # ボス HP・AI 制御
+  ]
 end
+```
+
+---
+
+### `spawn_component.ex` — SpawnComponent
+
+旧 `VampireSurvivorWorld` の責務を引き継ぐコンポーネント。
+
+**`on_ready/1`:**
+- `set_world_size` NIF でマップサイズ（4096×4096）を注入
+- `set_entity_params` NIF でエンティティパラメータを注入
+
+**`entity_registry/0`:**
+
+```elixir
+%{
+  enemies: %{slime: 0, bat: 1, golem: 2, skeleton: 3, ghost: 4},
+  weapons: %{magic_wand: 0, axe: 1, cross: 2, whip: 3, fireball: 4, lightning: 5, garlic: 6},
+  bosses:  %{slime_king: 0, bat_lord: 1, stone_golem: 2}
+}
 ```
 
 ### エンティティパラメータ（Elixir → Rust 注入）
@@ -67,57 +96,69 @@ end
 
 **ボスパラメータ（`boss_params/0`）:**
 
-| ID | 種別 | HP | 速度 | 特殊行動インターバル |
-|:---|:---|:---|:---|:---|
-| 0 | Slime King | 1,000 | 60 | 5.0s |
-| 1 | Bat Lord | 2,000 | 200 | 4.0s |
-| 2 | Stone Golem | 5,000 | 30 | 6.0s |
+| ID | 種別 | HP | 速度 | 半径 | 特殊行動インターバル |
+|:---|:---|:---|:---|:---|:---|
+| 0 | Slime King | 1,000 | 60 | 48 | 5.0s |
+| 1 | Bat Lord | 2,000 | 200 | 48 | 4.0s |
+| 2 | Stone Golem | 5,000 | 30 | 64 | 6.0s |
 
 ---
 
-## `vampire_survivor_rule.ex` — RuleBehaviour 実装
+### `level_component.ex` — LevelComponent
 
-「遊び方」の定義。シーン構成・スポーン/ボス/レベルアップ制御・ボスAI・アイテムドロップを担当する。
+EXP・レベル・スコア・プレイヤー HP・アイテムドロップ・武器選択 UI を担うコンポーネント。
 
-### 主要コールバック
+**`on_frame_event/2`:**
+- `{:enemy_killed, enemy_kind, x, y, _}` → EXP/スコア加算・アイテムドロップ・スコアポップアップ
+- `{:player_damaged, damage_x1000, _, _, _}` → HP 減算（damage は 1000 倍整数で受け取り）
 
-| コールバック | 説明 |
-|:---|:---|
-| `initial_scenes/0` | `[{Playing, %{}}]` |
-| `initial_weapons/0` | `[:magic_wand]` |
-| `generate_weapon_choices/1` | `LevelSystem.generate_weapon_choices/1` に委譲 |
-| `on_entity_removed/4` | アイテムドロップ（Gem/Potion/Magnet）を `spawn_item` NIF で実行 |
-| `on_boss_defeated/4` | Gem を10個散布 |
-| `update_boss_ai/2` | SlimeKing/BatLord/StoneGolem の AI を Elixir 側で制御 |
+**`on_nif_sync/1`（差分検知して注入）:**
+- `set_hud_state` — スコア・キル数
+- `set_player_hp` — プレイヤー HP
+- `set_elapsed_seconds` — 経過時間
+- `set_hud_level_state` — レベル・EXP・武器選択肢（描画専用）
+- `set_weapon_slots` — 武器スロット全体（I-2: 毎フレーム差分注入）
 
-### アイテムドロップ確率
-
-| アイテム | 確率 | 効果 |
-|:---|:---|:---|
-| Magnet | 2% | 画面内全 Gem を自動吸引 |
-| Potion | 5%（累積 7%） | HP +20 回復 |
-| Gem | 残り 93% | EXP 取得（敵種別の報酬値） |
-
-### ボスAI（`update_boss_ai/2`）
-
-Elixir 側で毎フレーム呼び出され、`set_boss_velocity` / `set_boss_phase_timer` / `fire_boss_projectile` NIF を通じてボスを制御する。
-
-| ボス | 通常移動 | 特殊行動（インターバルごと） |
-|:---|:---|:---|
-| SlimeKing | プレイヤー追跡（速度 60） | 周囲8方向にスライムをスポーン |
-| BatLord | プレイヤー追跡（速度 200） | ダッシュ攻撃（速度 500、600ms 無敵） |
-| StoneGolem | プレイヤー追跡（速度 30） | 4方向に岩弾を発射 |
+**`on_event/2`:**
+- `{:ui_action, weapon_name}` — 武器選択 UI アクション処理
+- `{:ui_action, "__skip__"}` — レベルアップスキップ
+- `{:ui_action, "__auto_pop__", scene_state}` — 3秒タイムアウト自動選択
 
 ---
 
-## `entity_params.ex` — Elixir 側パラメータテーブル
+### `boss_component.ex` — BossComponent
+
+ボス HP・AI 制御を担うコンポーネント。
+
+**`on_frame_event/2`:**
+- `{:special_entity_spawned, entity_kind, _, _, _}` → ボス HP を `EntityParams` から初期化
+- `{:special_entity_damaged, damage, _, _, _}` → ボス HP 減算
+- `{:special_entity_defeated, x, y, _}` → ボス撃破処理（Gem 散布・EXP 加算）
+
+**`on_physics_process/1`:**
+- `get_boss_state` NIF でボス状態取得
+- `update_boss_ai` でボス AI 制御（`set_boss_velocity` / `set_boss_phase_timer` / `fire_boss_projectile` NIF）
+
+**`on_nif_sync/1`:**
+- `set_boss_hp` — ボス HP を差分検知して注入
+
+---
+
+### `entity_params.ex` — Elixir 側パラメータテーブル
 
 Elixir 側が EXP・スコア・ボスパラメータの SSoT を持つモジュール。
 
 ```elixir
 defmodule GameContent.EntityParams do
+  # 敵種別 ID（SpawnComponent の entity_registry と対応）
+  @enemy_slime 0
+  @enemy_bat 1
+  @enemy_skeleton 2   # ← ID 2（Golem ではない）
+  @enemy_ghost 3
+  @enemy_golem 4
+
   # 敵 EXP 報酬
-  @enemy_exp_rewards %{0 => 5, 1 => 3, 2 => 8, 3 => 20, 4 => 10}
+  @enemy_exp_rewards %{0 => 5, 1 => 3, 2 => 20, 3 => 10, 4 => 8}
 
   # ボス EXP 報酬
   @boss_exp_rewards %{0 => 200, 1 => 400, 2 => 800}
@@ -125,25 +166,25 @@ defmodule GameContent.EntityParams do
   # スコア = EXP × 2
   @score_per_exp 2
 
-  # Phase 3-B: ボスAI 制御用パラメータ（速度・特殊行動インターバル等）
+  # ボスパラメータ（AI 制御用）
   @boss_params %{
-    @boss_slime_king  => %{speed: 60.0, special_interval: 5.0},
-    @boss_bat_lord    => %{speed: 200.0, special_interval: 4.0, dash_speed: 500.0, dash_duration_ms: 600},
-    @boss_stone_golem => %{speed: 30.0, special_interval: 6.0, projectile_speed: 200.0, projectile_damage: 50, projectile_lifetime: 3.0},
+    0 => %{speed: 60.0, special_interval: 5.0},
+    1 => %{speed: 200.0, special_interval: 4.0, dash_speed: 500.0, dash_duration_ms: 600},
+    2 => %{speed: 30.0, special_interval: 6.0, projectile_speed: 200.0, ...},
   }
 end
 ```
 
 ---
 
-## シーン構成
+## シーン構成（VampireSurvivor）
 
 ```mermaid
 graph TD
     SM[SceneManager スタック]
     PL[Playing\nベースシーン・常駐]
-    LU[LevelUp\npush: レベルアップ時]
-    BA[BossAlert\npush: ボス出現時]
+    LU[LevelUp\npush: EXP 閾値超過時]
+    BA[BossAlert\npush: ボス出現スケジュール到達時]
     GO[GameOver\nreplace: 死亡時]
 
     SM --> PL
@@ -173,9 +214,12 @@ graph TD
 | `boss_hp` | ボス HP（Elixir SSoT） |
 | `boss_max_hp` | ボス最大 HP |
 | `spawned_bosses` | 出現済みボス種別リスト |
-| `elapsed_sec` | 経過時間（秒） |
 | `score` | スコア |
 | `kill_count` | 撃破数 |
+| `player_hp` | プレイヤー HP（Elixir SSoT） |
+| `player_max_hp` | プレイヤー最大 HP |
+| `elapsed_ms` | 経過時間（ms） |
+| `last_spawn_ms` | 最終スポーン時刻（ms） |
 
 **トランジション:**
 ```elixir
@@ -209,7 +253,7 @@ graph TD
 @impl true
 def update(context, %{boss_kind: boss_kind, alert_ms: alert_ms} = state) do
   if context.now - alert_ms >= BossSystem.alert_duration_ms() do
-    kind_id = VampireSurvivorWorld.entity_registry().bosses[boss_kind]
+    kind_id = GameContent.VampireSurvivor.entity_registry().bosses[boss_kind]
     GameEngine.NifBridge.spawn_boss(context.world_ref, kind_id)
     {:transition, :pop, state}
   else
@@ -273,6 +317,16 @@ timeline
     540秒（9分） : Stone Golem（HP 5,000）
 ```
 
+### ボスAI（`BossComponent.on_physics_process/1`）
+
+Elixir 側で毎フレーム呼び出され、`set_boss_velocity` / `set_boss_phase_timer` / `fire_boss_projectile` NIF を通じてボスを制御する。
+
+| ボス | 通常移動 | 特殊行動（インターバルごと） |
+|:---|:---|:---|
+| SlimeKing | プレイヤー追跡（速度 60） | 周囲8方向にスライムをスポーン |
+| BatLord | プレイヤー追跡（速度 200） | ダッシュ攻撃（速度 500、600ms 無敵） |
+| StoneGolem | プレイヤー追跡（速度 30） | 4方向に岩弾を発射 |
+
 ---
 
 ## `vampire_survivor/level_system.ex` — 武器選択肢生成
@@ -320,17 +374,38 @@ Level → 必要累積 EXP
 | Potion | HP +20 回復 |
 | Magnet | 画面内全 Gem を自動吸引 |
 
+**ドロップ確率:**
+
+| アイテム | 確率 | 効果 |
+|:---|:---|:---|
+| Magnet | 2% | 画面内全 Gem を自動吸引 |
+| Potion | 5%（累積 7%） | HP +20 回復 |
+| Gem | 残り 93% | EXP 取得（敵種別の報酬値） |
+
 **自動収集範囲**: プレイヤー周囲 50px（Magnet 発動時は全画面）
 
 ---
 
-## 将来の拡張予定
+## `GameContent.AsteroidArena` — AsteroidArena コンテンツ
 
-`game_network` アプリケーションは現在スタブ状態ですが、以下の機能が計画されています：
+武器・ボス・レベルアップの概念を持たないシンプルなシューター。エンジンがゲーム固有概念を持たなくても動作することを実証する設計。
 
-- Phoenix Channels によるリアルタイムマルチプレイヤー
-- UDP による低遅延ゲーム状態同期
-- ルームベースのマッチメイキング
+### コンポーネント構成
+
+```elixir
+def components do
+  [
+    GameContent.AsteroidArena.SpawnComponent,  # ワールド初期化・エンティティ登録
+    GameContent.AsteroidArena.SplitComponent   # 小惑星分裂処理
+  ]
+end
+```
+
+### 特徴
+
+- `level_up_scene/0` / `boss_alert_scene/0` を実装しない（オプショナルコールバック）
+- 小惑星の分裂処理: Large → Medium × 2 → Small × 2
+- シーン構成: Playing / GameOver のみ
 
 ---
 
