@@ -1,189 +1,204 @@
-# AlchemyEngine — 具体的なマイナス点
+# AlchemyEngine — マイナス点 詳細一覧
 
-> 評価日: 2026-03-01（第2回）  
-> 評価対象: プロジェクト全体（Elixir + Rust 全レイヤー）
+## 採点基準
 
-| スコア | 基準 |
+| 点数 | 基準 |
 |:---:|:---|
 | -1 | 改善余地あり。動作はするが設計・品質上の軽微な問題 |
 | -2 | 重要な機能・設計の欠如。放置すると将来の拡張を阻害する |
 | -3 | 設計上の明確な欠陥。バグ・クラッシュ・性能劣化を引き起こしうる |
-| -4 | プロジェクトの価値命題を損なう重大な欠如 |
-| -5 | プロジェクトの根幹を揺るがす致命的な欠陥 |
+| -4 | プロジェクトの価値命題を損なう重大な欠如。説明責任が果たせない |
+| -5 | プロジェクトの根幹を揺るがす致命的な欠陥。存在しないに等しい |
 
 ---
 
-## Elixir 層
+## apps/game_engine — エンジンコア・OTP設計
 
-### `GameEvents` の残存課題
+### ❌ マイナス点
 
-- **`GameEvents`（426行）のテストがゼロ** `-3`
-  > IP-01 リファクタリングにより 697行→426行に削減されたが、依然としてテストが存在しない。フレームイベント処理・シーン遷移・NIF 呼び出し順序・セーブ/ロード連携のいずれも自動検証されていない。バックプレッシャー機構（`@backpressure_threshold 120`）の動作も未テスト。プロジェクトで最も重要なモジュールのテストが皆無であることは設計上の明確な欠陥。  
-  > 対象ファイル: `apps/game_engine/lib/game_engine/game_events.ex`
+- **SceneManager がシングルトン（マルチルーム非対応）** `-3`
+  > `SceneManager` がモジュール名で登録されるシングルトンであり `room_id` を持たない。`GameEvents` はマルチルーム対応（`room_id` を持つ）だが、シーン状態は全ルームで共有される。`game_events.ex` L207-214 で `:main` 以外のルームはシーン処理をスキップする実装になっており、マルチルーム対応を本格化する際には `SceneManager` のルーム分離が必要。ネットワーク層でマルチルームを謳いながらエンジンコアがシングルトンである矛盾が設計上の欠陥。
+  > 対象ファイル: `apps/game_engine/lib/game_engine/scene_manager.ex`（L11）
 
-- **`SceneManager` / `EventBus` / 全シーンモジュールのテストがゼロ** `-2`
-  > シーンスタックの push/pop/replace ロジック、EventBus のサブスクライバー配信、各シーンの `update/2` 純粋関数部分がすべて未テスト。`game_engine` アプリのテストカバレッジは事実上ゼロ。将来の拡張を阻害する。  
-  > 対象ディレクトリ: `apps/game_engine/test/`（`test_helper.exs` と `support/mocks.ex` のみ）
+- **GameEvents に BatLord 固有ロジックが漏出** `-2`
+  > エンジンコアである `GameEvents` の `handle_info` に `{:boss_dash_end, world_ref}` というBatLord固有のメッセージ処理が実装されている。実装ルールの「エンジンはディスパッチのみ行う」に違反しており、コンテンツを追加するたびにエンジンコアを変更するリスクがある。`BossComponent.on_physics_process` が `GameEvents` プロセスに `Process.send_after` しているため、構造的に回避が難しい状態になっている。
+  > 対象ファイル: `apps/game_engine/lib/game_engine/game_events.ex`（L180-187）
 
----
+- **SaveManager の HMAC シークレットがデフォルト値でハードコード** `-2`
+  > `hmac_secret/0` のデフォルト値 `"alchemy-engine-save-secret-v1"` がソースコードに公開されており、セーブデータの改ざん検証が実質的に無効化されている。本番環境で環境変数等で上書きしなければ全ユーザーのセーブデータが改ざん可能。強制機構がない。
+  > 対象ファイル: `apps/game_engine/lib/game_engine/save_manager.ex`（L162）
 
-### NIF の残存課題
-
-- **`create_world()` NIF が `NifResult` を返さない** `-2`
-  > `pending-issues.md` に記録済みの課題。`create_world()` が失敗した場合の Elixir 側エラーハンドリングが存在しない。`GameServer.Application.start/2` での `raise` 使用と合わせて、起動失敗時の OTP 互換エラー処理が不完全。将来の拡張を阻害する。  
-  > 対象ファイル: `native/game_nif/src/nif/world_nif.rs`、`apps/game_server/lib/game_server/application.ex:37`
-
-- **NIF バージョニング・ABI 互換性チェックがない** `-2`
-  > Rust NIF と Elixir コードのバージョンが一致しているかを起動時に検証する仕組みがない。NIF の ABI が変わった際に実行時クラッシュが発生するまで気づけない。将来の拡張を阻害する。
+- **GameEngine.SceneManager・GameEvents・EventBus・SaveManager のテストがゼロ** `-4`
+  > エンジンコアの中核モジュール群（`SceneManager`・`GameEvents`・`EventBus`・`SaveManager`・`StressMonitor`・`Stats`）に対するテストが一切存在しない。`improvement-plan.md` でも自己認識されているが、エンジンコアのリグレッションを検出する手段がなく、リファクタリングの安全網がない。
+  > 対象ファイル: `apps/game_engine/test/`（存在しない）
 
 ---
 
-### ネットワーク層の残存課題
+## apps/game_content — コンテンツ実装・ゲームロジック
 
-- **複数ルームの同時起動が実証されていない** `-2`
-  > `GameNetwork.Local` の実装は完成しているが、`GameServer.Application` が起動するのは `:main` の 1 ルームのみ。`game_network_local_test.exs` での OTP 隔離テストは `StubRoom` を使用しており、実際の `GameEvents` プロセスを複数起動した際の動作が未検証。将来の拡張を阻害する。
+### ❌ マイナス点
 
-- **WebSocket 認証が未実装** `-2`
-  > `GameNetwork.UserSocket.connect/3` が全接続を無条件に受け入れる。`pending-issues.md` に「フェーズ3以降でトークン検証を追加する想定」と記載されているが、現状は認証なしで本番デプロイできない。将来の拡張を阻害する。  
-  > 対象ファイル: `apps/game_network/lib/game_network/user_socket.ex:19-21`
+- **EntityParams と SpawnComponent のパラメータ二重管理** `-3`
+  > `entity_params.ex` と `spawn_component.ex` の `boss_params/0` に同一の値（SlimeKing の `max_hp: 1000.0`・`special_interval: 5.0` 等）が独立して定義されている。さらにRust側にも同じ値が存在し、**3箇所に同じ値が散在**している。どれかを変更した際の同期漏れリスクが高く、`entity_params.ex` のモジュールドキュメントにも「定期的に検証すること」と書かれており、問題を自己認識しながら解消されていない。
+  > 対象ファイル: `apps/game_content/lib/game_content/entity_params.ex`, `apps/game_content/lib/game_content/vampire_survivor/spawn_component.ex`
 
-- **ラグ補償・ロールバック netcode がない** `-2`
-  > UDP トランスポートは実装されているが、パケットロス・遅延への対処（ラグ補償・ロールバック）がない。マルチプレイヤーゲームとして実用化するには必須の機能。将来の拡張を阻害する。
+- **LevelComponent のアイテムドロップロジックの重複** `-2`
+  > `on_frame_event({:enemy_killed, ...})` と `on_event({:entity_removed, ...})` の両方でアイテムドロップ処理が実装されており、同一の敵撃破に対して両方が呼ばれる可能性がある。`@drop_magnet_threshold 2`・`@drop_potion_threshold 7` が両箇所で使われているが、これらが同一イベントを指すのか別イベントなのかがコードから読み取りにくい。
+  > 対象ファイル: `apps/game_content/lib/game_content/vampire_survivor/level_component.ex`（L30-96）
 
----
+- **AsteroidArena のテストがゼロ** `-2`
+  > `game_content` の7テストファイルは全て `VampireSurvivor` 向けであり、`AsteroidArena` に対するテストが一切存在しない。`SplitComponent`・`AsteroidArena.SpawnSystem` 等の動作が未検証。
+  > 対象ファイル: `apps/game_content/test/`
 
-### クラッシュ回復
-
-- **NIF パニック後のゲームループ再起動ロジックが存在しない** `-2`
-  > `GameEvents` がクラッシュして Supervisor が再起動しても、前のプロセスが保持していた Rust `GameWorld` リソースは失われる。チェックポイント/リストア機構がなく、クラッシュ後に既知の良い状態から再開できない。将来の拡張を阻害する。
-
----
-
-## Rust 層
-
-### プラットフォーム対応
-
-- **SIMD パスが x86_64 専用で ARM NEON 実装がない** `-2`
-  > `update_chase_ai_simd` は SSE2 専用。Apple Silicon（M1/M2/M3）・ARM サーバー・モバイル環境では rayon フォールバックになる。`#[cfg(target_arch = "x86_64")]` で分岐しており、ARM NEON への拡張が考慮されていない。将来の拡張を阻害する。  
-  > 対象ファイル: `native/game_physics/src/game_logic/chase_ai.rs:135`
-
-- **WASM / `#[no_std]` ターゲットへの準備がゼロ** `-2`
-  > `game_physics` の依存が最小限なので技術的には可能だが、`cfg` フラグも feature ゲートも存在しない。将来の拡張を阻害する。
+- **Enum.find_last/2 回避コメントが不正確** `-1`
+  > `spawn_system.ex` と `asteroid_arena/spawn_system.ex` の `Enum.find_last/2` 回避コメントに「Elixir 1.12 以降で追加されているが undefined エラーが発生する」と書かれているが、Elixir 1.19 では使えるはず。将来の開発者を混乱させる不正確なコメントが残っている。
+  > 対象ファイル: `apps/game_content/lib/game_content/vampire_survivor/spawn_system.ex`（L60-66）
 
 ---
 
-### スプライト・アセット
+## apps/game_network — ネットワーク層
 
-- **スプライトアトラスの UV 座標がマジックナンバーで散在している** `-2`
-  > `renderer/mod.rs` と `renderer/ui.rs` にピクセルオフセットがハードコードされている。新しいスプライトを追加するには UV 計算を手動で行い複数箇所を編集する必要があり、将来の拡張を阻害する。  
-  > 対象ファイル: `native/game_render/src/renderer/mod.rs:80-99`
+### ❌ マイナス点
 
-- **Ghost・Skeleton の UV が `TODO` プレースホルダー** `-2`
-  > `// TODO: assign correct UV` コメントが残存しており、これらの敵が現在のビルドで正しいスプライトで表示されていない。未完成の視覚表現がそのまま残っており、将来の拡張を阻害している。  
-  > 対象ファイル: `native/game_render/src/renderer/mod.rs:259-266`
+- **game_network が実質スタブ（Elixir選択の最大の根拠が未証明）** `-4`
+  > `improvement-plan.md` の I-E で自己認識されているが、`game_network.ex` は実装なしのスタブ。「なぜElixir + Rustか」というプロジェクトの価値命題の核心（OTPによる分散・耐障害性）がコードで証明されていない。WebSocket・UDP・Localの3トランスポートは実装されているが、実際のマルチルーム分散シナリオ（複数ノード間のルーム移動・フェイルオーバー）が未実装。
+  > 対象ファイル: `apps/game_network/lib/game_network.ex`
 
----
-
-### 描画パイプライン
-
-- **毎フレーム `Vec` アロケーション（描画インスタンス）** `-2`
-  > `update_instances` 内で `Vec::with_capacity(...)` を毎フレーム生成している。`Renderer` 構造体に `instances: Vec<SpriteInstance>` フィールドを持ち再利用することで、ホットパスのアロケーションを排除できる。将来の拡張を阻害する。  
-  > 対象ファイル: `native/game_render/src/renderer/mod.rs:744`
-
-- **レンダーグラフ・明示的パス依存宣言がない** `-2`
-  > スプライトパス → egui HUD パスの依存関係が暗黙的。Bevy の `RenderGraph` や wgpu の `RenderPass` 依存宣言に相当する明示的な管理がなく、パスの追加・変更時に依存関係を手動で管理する必要がある。将来の拡張を阻害する。
-
-- **フラスタムカリングがない** `-2`
-  > カメラビューポート外のエンティティもスナップショットに含まれ、GPU に転送される。敵数が増加した場合のパフォーマンス劣化を引き起こしうる。  
-  > 対象ファイル: `native/game_nif/src/render_snapshot.rs`
-
-- **egui HUD ロジックがレンダリングバックエンドと結合** `-2`
-  > `ui.rs` の egui ウィジェットロジックが `renderer/mod.rs` の wgpu バックエンドと直接結合している。HUD レイアウトの変更がレンダラーの変更を要求する。将来の拡張を阻害する。
+- **WebSocket 認証・認可が未実装** `-3`
+  > `channel.ex` の `join/3` でルームIDの存在確認のみを行い、認証・認可のロジックがない。誰でも任意のルームに参加できる状態。`save_manager.ex` の HMAC と同様、セキュリティ設計が未完成。
+  > 対象ファイル: `apps/game_network/lib/game_network/channel.ex`
 
 ---
 
-### オーディオ
+## native/game_physics — ECS・SoA・SIMD
 
-- **ボイスリミット・優先度システムがない** `-2`
-  > SE が大量に発生するとシンクオブジェクトが無制限に生成される。ゲームプレイ中の爆発・敵撃破 SE が大量発生した際のパフォーマンス劣化を引き起こしうる。  
-  > 対象ファイル: `native/game_audio/src/audio.rs:53-60`
+### ❌ マイナス点
 
-- **BGM ファイルがリポジトリに存在しない** `-2`
-  > `AssetId::Bgm` に対応する BGM ファイルが `assets/` ディレクトリに存在しない。BGM なしのゲームプレイが現状の実態であり、コンテンツの充実度が低い。
+- **bench/chase_ai_bench.rs のクレート名不一致（コンパイル不可）** `-3`
+  > ベンチマークが `game_simulation` クレートをインポートしているが、`Cargo.toml` のパッケージ名は `game_physics`。ベンチマークがコンパイルできない状態であり、`bench-regression` CIジョブが実際には機能していない可能性がある。
+  > 対象ファイル: `native/game_physics/benches/chase_ai_bench.rs`（L5-8）
 
-- **空間オーディオが未実装** `-1`
-  > SE の発生位置に基づく距離減衰がない。ゲームプレイの没入感を向上させる機能として軽微な欠如。
+- **spawn_elite_enemy の脆弱なスロット特定ロジック** `-3`
+  > `spawn` が `free_list` を使ってスロットを再利用する場合、`before_len..after_len` の範囲外のスロットが使われる。`i >= before_len` の条件では `free_list` 再利用スロットを捕捉できず、同じ `kind_id` の既存エネミーが `base_max_hp` と同じ HP を持つ場合、誤って既存エネミーの HP を変更する可能性がある。
+  > 対象ファイル: `native/game_nif/src/nif/action_nif.rs`（L182-194）
 
----
+- **FrameEvent::PlayerDamaged の固定小数点変換でu32オーバーフローリスク** `-2`
+  > `(damage * 1000.0) as u32` キャストで `damage` が大きい場合（ボスの接触ダメージ等）に `u32` オーバーフローが発生する。Rustの `as u32` キャストは飽和変換ではなく切り捨て変換のため、意図しない結果になる。`(damage * 1000.0).min(u32::MAX as f32) as u32` が安全。
+  > 対象ファイル: `native/game_nif/src/nif/events.rs`（L21）
 
-### 物理層
-
-- **ARM NEON の SIMD 実装がない** `-2`
-  > x86_64 専用 SIMD の問題と同じ。ARM 環境でのパフォーマンスが rayon フォールバックに依存する。
-
-- **広域フェーズに BVH / AABB ツリーがない** `-2`
-  > 空間ハッシュは実装されているが、動的オブジェクトの広域フェーズ衝突検出に BVH（Bounding Volume Hierarchy）がない。エンティティ数が増加した場合の衝突検出コストが線形増加する。将来の拡張を阻害する。
-
-- **物理ステップ実行順序が暗黙的でドキュメントがない** `-1`
-  > `physics_step.rs` の実行順序（プレイヤー移動 → 障害物押し出し → Chase AI → 敵分離 → 衝突 → 武器 → パーティクル → アイテム → 弾丸 → ボス）がコードにのみ存在し、ドキュメント化されていない。改善提案 IP-11 で対応予定だが未着手。  
-  > 対象ファイル: `native/game_physics/src/game_logic/physics_step.rs`
+- **#[cfg(target_arch = "x86_64")] の pub use 漏れ（非x86_64でリンクエラー）** `-2`
+  > `game_logic/mod.rs` で `update_chase_ai_simd` が非 x86_64 環境でも `pub use` でエクスポートされているが、実際の定義は `#[cfg(target_arch = "x86_64")]` で条件付きのため、ARM/WASM でコンパイルするとリンクエラーになる。
+  > 対象ファイル: `native/game_physics/src/game_logic/mod.rs`（L9）
 
 ---
 
-### NIF 設計
+## native/game_render — 描画パイプライン
 
-- **`set_hud_state` が毎フレーム write lock を取得** `-1`
-  > HUD 状態（スコア・キルカウント）が変化しないフレームでも write lock を取得している。改善提案 IP-10 で対応予定だが未着手。  
-  > 対象ファイル: `apps/game_content/lib/game_content/vampire_survivor/level_component.ex:177-186`
+### ❌ マイナス点
 
-- **Rust → Elixir メールボックスへのバックプレッシャーがない（Rust 側）** `-1`
-  > IP-04 で Elixir 側のバックプレッシャーは実装されたが、Rust 側から Elixir へのフレームイベント送信レートを制御する仕組みがない。Elixir 側がドロップした場合でも Rust は 60Hz で送信し続ける。軽微な改善余地。
+- **build_instances 関数の重複（DRY 違反）** `-3`
+  > `renderer/mod.rs` の `update_instances` メソッドと `headless.rs` の `build_instances` 関数に、スプライト種別ごとのUV・サイズ計算ロジックがほぼ同一の内容で重複している。スプライト種別を追加・変更した際に両方の修正が必要で、同期漏れのリスクがある。`headless.rs` のコメントに「共有の `pub(crate)` 関数を使用」と書いてあるが実際には共有されていない。
+  > 対象ファイル: `native/game_render/src/renderer/mod.rs`（L719-906）, `native/game_render/src/headless.rs`（L556-715）
 
-- **`decode_fire_pattern` のサイレントフォールバック** `-1`
-  > 未知のパターン文字列が `FirePattern::Aimed` にフォールバックするため、設定ミスが検出されない。  
-  > 対象ファイル: `native/game_nif/src/nif/world_nif.rs:259-270`
+- **Skeleton/Ghost の UV がプレースホルダー（視覚的に区別不可）** `-2`
+  > `Skeleton` が `Golem` の UV を流用し、`Ghost` が `Bat` の UV を流用している。別エンティティとして存在するにもかかわらず視覚的に区別できない状態。TODO コメントが残っており、ゲームプレイの完成度を損なっている。
+  > 対象ファイル: `native/game_render/src/renderer/mod.rs`（L258-266）
 
----
-
-## コンポーネント層
-
-- **`on_physics_process` が実質 `on_process` と同一レート** `-1`
-  > `on_physics_process` は毎フレーム呼び出されており、Godot の `_physics_process`（固定レート）と `_process`（可変レート）の区別がない。将来的に物理レートと描画レートを分離する際に設計変更が必要になる。
-
-- **コンポーネント依存性注入・サービスロケーターがない** `-2`
-  > コンポーネント間の依存関係が `GameEngine.NifBridge` への直接呼び出しで解決されており、テスト時のモック差し替えが `Application.get_env` 経由に依存している。Unity の `GetComponent<T>()` や Bevy の `Res<T>` に相当する依存性注入がない。将来の拡張を阻害する。
+- **Vertex/VERTICES/INDICES/ScreenUniform/CameraUniform の重複定義** `-2`
+  > `renderer/mod.rs` と `headless.rs` で同一の構造体・定数が重複定義されている。`pub(crate)` で共有すべき。
+  > 対象ファイル: `native/game_render/src/renderer/mod.rs`, `native/game_render/src/headless.rs`
 
 ---
 
-## ユーザー層
+## テスト戦略
 
-- **ゲーム内設定 UI がない** `-2`
-  > BGM 音量・SE 音量・フルスクリーン切り替え等の設定を変更する UI がない。改善提案 IP-02 で対応予定だが未着手。
+### ❌ マイナス点
 
-- **セーブ形式が Erlang バイナリ term（非ポータブル）** `-2`
-  > `:erlang.term_to_binary / :erlang.binary_to_term` を使用しているため、Elixir バージョン間・プラットフォーム間でのセーブデータ互換性が保証されない。改善提案 IP-09 で JSON/MessagePack 移行が提案されているが未着手。  
-  > 対象ファイル: `apps/game_engine/lib/game_engine/save_manager.ex`
+- **プロパティベーステスト・ファジングが完全に存在しない** `-3`
+  > `StreamData` / `ExUnitProperties` / `PropCheck` / `Quixir` の使用がゼロ。`entity_params_test.exs` の `score_from_exp` テストで「単調増加」を手動の固定値リストで検証しているが、プロパティテストではない。Rustのファズターゲットも存在しない。ゲームロジックの境界条件・不変条件の自動検証が未整備。
+  > 対象ファイル: `apps/game_content/test/`, `native/game_physics/`
 
-- **決定論的乱数があるにもかかわらずリプレイが未実装** `-1`
-  > LCG 乱数による決定論的物理が実装されているにもかかわらず、リプレイ録画・再生システムが存在しない。改善提案 IP-03 で対応予定だが未着手。
+- **game_nif・game_render・game_audio の Rust テストがゼロ** `-3`
+  > NIF ブリッジ・描画パイプライン・オーディオの Rust テストが一切存在しない。「GPU・音声デバイスが必要なため除外」という理由があるが、`headless.rs` が存在するにもかかわらずレンダリングテストが書かれていない。`game_nif` の `decode_enemy_params` 等のデコードロジックはGPU不要でテスト可能。
+  > 対象ファイル: `native/game_nif/src/`, `native/game_render/src/`, `native/game_audio/src/`
+
+- **E2E テストがゼロ** `-2`
+  > ゲームループ全体（開始→プレイ→終了→リトライ）を通したテストが存在しない。`headless.rs` のヘッドレスレンダラーを活用したE2Eテストが可能なはずだが未実装。
+  > 対象ファイル: テストディレクトリ全体
 
 ---
 
-## プロジェクト全体設計
+## 可観測性・デバッグ容易性
 
-- **`visual-editor-architecture.md` が存在しないシステムを記述** `-1`
-  > ビジュアルエディタは実装されていないにもかかわらず、詳細なアーキテクチャドキュメントが存在する。ドキュメントとコードの乖離が生じている。
+### ❌ マイナス点
 
-- **`improvement-plan.md` の完了済み項目管理** `-1`
-  > 前回評価時に指摘した「完了済みと進行中の混在」は IP-13 対応で改善されたが、`docs/evaluation/completed-improvements.md` がまだ作成されていない。完了済み項目のアーカイブ先が存在しない。
+- **[:game, :session_end] が metrics/0 に未登録** `-2`
+  > `diagnostics.ex` で `[:game, :session_end]` イベントが発火されているが、`telemetry.ex` の `metrics/0` に登録されていない。`ConsoleReporter` に表示されず、セッション終了時の統計（経過時間・スコア）が可観測性ツールに流れない。
+  > 対象ファイル: `apps/game_engine/lib/game_engine/telemetry.ex`
 
-- **Elixir → Rust フルラウンドトリップのベンチマークがない** `-2`
-  > `game_physics` の Rust ユニットベンチマークは存在するが、`set_hud_state → physics_step → drain_frame_events` のフルサイクルを計測するベンチマークがない。NIF オーバーヘッドの定量的把握ができない。改善提案 IP-08 で対応予定だが未着手。
+- **:telemetry.attach の呼び出しがゼロ（外部監視ツールへの接続口なし）** `-2`
+  > `ConsoleReporter` のみで外部監視ツール（Prometheus・Grafana等）への接続口がない。本番環境でのパフォーマンス監視が `ConsoleReporter` の出力を目視確認するしかない。
+  > 対象ファイル: `apps/game_engine/lib/game_engine/telemetry.ex`
 
-- **`LevelComponent` のアイテムドロップ重複ロジック（潜在バグ）** `-3`
-  > `on_event({:entity_removed, ...})` と `on_frame_event({:enemy_killed, ...})` の両方でアイテムドロップが発生する可能性がある。1回の敵撃破でアイテムが2個ドロップするバグが潜在している。バグ・クラッシュを引き起こしうる設計上の欠陥。  
-  > 対象ファイル: `apps/game_content/lib/game_content/vampire_survivor/level_component.ex:80-96` と `:285-298`
+---
 
-- **プロセス辞書によるダーティフラグ管理（テスト困難）** `-1`
-  > `LevelComponent` と `BossComponent` が `Process.put/get` でダーティフラグを管理している。プロセス辞書はデバッグが困難で、テストでの状態リセットが必要になる。  
-  > 対象ファイル: `apps/game_content/lib/game_content/vampire_survivor/level_component.ex:177-186`、`boss_component.ex:83-87`
+## 変更容易性・保守性
+
+### ❌ マイナス点
+
+- **Stats GenServer の二重集計リスク** `-1`
+  > `Stats` は `EventBus.subscribe()` で `{:game_events, events}` を受け取りキル数を集計するが、`record_kill/2`（`handle_cast`）という公開 API も持つ。両方から集計されると二重カウントになる可能性がある。インターフェースが冗長。
+  > 対象ファイル: `apps/game_engine/lib/game_engine/stats.ex`（L38-102）
+
+- **lock_metrics.rs の閾値定数が constants.rs に含まれていない** `-1`
+  > `READ_WAIT_WARN_US: 300`・`WRITE_WAIT_WARN_US: 500`・`REPORT_INTERVAL_MS: 5000` が `lock_metrics.rs` 内にハードコードされており、`constants.rs` に含まれていない。
+  > 対象ファイル: `native/game_nif/src/lock_metrics.rs`（L8-16）
+
+---
+
+## 開発者体験（DX）
+
+### ❌ マイナス点
+
+- **CI の pull_request トリガーが未設定** `-2`
+  > `.github/workflows/ci.yml` が `push` イベントのみをトリガーとしており、`pull_request:` イベントが未設定。PRへの自動チェックが走らず、PRマージ前の品質保証が機能しない。
+  > 対象ファイル: `.github/workflows/ci.yml`
+
+- **bench-regression のローカル実行スクリプトが存在しない** `-1`
+  > `bin/ci.bat` がジョブA〜Dと1:1対応しているが、ジョブE（`bench-regression`）のローカル実行スクリプトが存在しない。ベンチマーク回帰をローカルで確認する手段がない。
+  > 対象ファイル: `bin/`
+
+- **README の Contributing セクションがプレースホルダー** `-1`
+  > `README.md` の Contributing セクションが `（※チーム開発時のガイドラインや...）` というプレースホルダーのまま。
+  > 対象ファイル: `README.md`
+
+---
+
+## ゲームプレイ完成度
+
+### ❌ マイナス点
+
+- **ゲームループの完結性が未確認（E2Eテストなし）** `-2`
+  > 開始→プレイ→終了→リトライの全経路が自動テストで検証されていない。ゲームオーバー後のリトライ・スコア表示・セーブデータ反映の動作が手動確認のみに依存している。
+
+- **視覚的完成度（Skeleton/Ghost のスプライト未実装）** `-2`
+  > Skeleton と Ghost が Golem と Bat の UV を流用しており、視覚的に区別できない。「遊べるゲーム」としての完成度を損なっている。
+  > 対象ファイル: `native/game_render/src/renderer/mod.rs`（L258-266）
+
+---
+
+## セキュリティ・配布可能性
+
+### ❌ マイナス点
+
+- **WebSocket 認証・認可が未実装（再掲）** `-3`
+  > ネットワーク層の評価で既述。誰でも任意のルームに参加できる状態はセキュリティ上の重大な欠如。
+  > 対象ファイル: `apps/game_network/lib/game_network/channel.ex`
+
+- **mix audit / cargo audit の CI 組み込みなし** `-2`
+  > 依存クレート・パッケージの脆弱性チェックが CI に含まれていない。`mix audit`（`mix_audit` パッケージ）と `cargo audit` が未設定。
+  > 対象ファイル: `.github/workflows/ci.yml`
+
+- **ビルド成果物の配布手順が未整備** `-2`
+  > Windows/macOS/Linux 向けのインストーラー・パッケージングの手順が存在しない。`README.md` に `iex -S mix` での起動手順はあるが、エンドユーザー向けの配布形態が未定義。
+  > 対象ファイル: `README.md`, `docs/`

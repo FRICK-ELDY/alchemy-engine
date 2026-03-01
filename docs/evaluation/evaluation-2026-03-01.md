@@ -1,301 +1,483 @@
-# AlchemyEngine — プロジェクト総合評価レポート
+# AlchemyEngine — 総合評価レポート（2026-03-01）
 
-**評価日**: 2026-03-01（第2回）
-**評価者**: Cursor AI Agent（claude-4.6-sonnet-high）
-**対象**: コードベース全体（Elixir umbrella アプリ群 + Rust ネイティブクレート群 + ドキュメント）
-**前回評価**: 2026-03-01 早朝（第1回、+55点）
-
-> 採点基準: +1（正しい）/ +2（良い判断）/ +3（平均を上回る）/ +4（プロダクション水準）/ +5（個人プロジェクトで見たことがない）
-> 　　　　　-1（軽微）/ -2（拡張を阻害）/ -3（バグ・クラッシュを引き起こしうる）/ -4（価値命題を損なう）/ -5（根幹を揺るがす致命的欠陥）
+> 評価日: 2026年3月1日  
+> 評価対象コミット: HEAD（main ブランチ）  
+> 評価者: Cursor AI Agent  
+> 評価ルール: `evaluation.mdc` に基づく
 
 ---
 
 ## エグゼクティブサマリー
 
-AlchemyEngine は前回評価（+55点）から大幅に改善された。最大の変化は **ネットワーク層の完全実装**（`GameNetwork.Local` + Phoenix Channels + UDP）、**GitHub Actions CI パイプラインの追加**、**バックプレッシャー機構の実装**（IP-04）、**GameEvents リファクタリング**（697行→426行）、**ヘッドレスレンダラーの実装**（IP-05）の5点である。
+AlchemyEngine は「Elixir（OTP）でゲームロジックを制御し、Rust（SoA/SIMD/wgpu）で演算・描画を処理する」というアーキテクチャを採用した個人製ゲームエンジンである。
 
-これらの改善により、「なぜ Elixir か」という問いに対してコードが初めて答えられるようになった。`GameNetwork.Local` の OTP 隔離テスト（一方のルームがクラッシュしても他方が継続する）が実証されており、Phoenix Channels と UDP トランスポートも実装済みである。
+**総合スコア: +89 / -64 = +25点**
 
-残る主要課題は **Elixir コアモジュールのテスト不足**（`GameEvents` / `SceneManager` / `EventBus` のテストがゼロ）、**複数ルームの実動作未実証**、および **描画層の技術的負債**（UV マジックナンバー・毎フレームアロケーション）である。
+このスコアは「同規模・同種の個人プロジェクトの平均を明確に上回る」水準にある。特にRust物理演算層（SoA・SIMD・free_list）とElixirのビヘイビア設計（ContentBehaviour・バックプレッシャー）は、プロダクションレベルのゲームエンジンと比較しても遜色ない実装である。
 
----
-
-## 観点別採点
+一方で、**Elixirテストカバレッジの致命的な欠如**・**game_networkが実質スタブ**・**WebSocket認証未実装**という3点が、プロジェクトの価値命題を損なう重大な欠如として残っている。
 
 ---
 
-### 1. Elixir の真価
-
-| 項目 | 点数 |
-|:---|:---:|
-| `:one_for_one` Supervisor ツリーの正しい構成 | +2 |
-| DynamicSupervisor + Registry による複数ルーム先行設計 | +3 |
-| `StressMonitor` が独立プロセスとして存在する | +2 |
-| 5 つの独立 GenServer による責務分離 | +3 |
-| `ContentBehaviour` によるコンテンツ完全交換（2コンテンツ実証済み） | +5 |
-| `Component` ビヘイビアのオプショナルコールバック設計 | +2 |
-| `SceneBehaviour` 遷移戻り値の型安全設計 | +2 |
-| Elixir as SSoT フェーズ1〜5の完遂 | +4 |
-| ボス AI ロジックが Elixir 側に存在（SSoT 最難関の適用） | +4 |
-| `:telemetry` による観測性 | +2 |
-| **[NEW] バックプレッシャー機構（IP-04）** — メールボックス深度監視 | **+4** |
-| **[NEW] `GameNetwork.Local` による OTP 隔離実証** | **+4** |
-| **[NEW] Phoenix Channels / WebSocket トランスポート実装** | **+3** |
-| **[NEW] UDP トランスポート実装** | **+3** |
-| **[NEW] UDP プロトコルのバイナリパターンマッチ** | **+3** |
-| `GameEvents`（426行）のテストがゼロ | **-3** |
-| `SceneManager` / `EventBus` / 全シーンのテストがゼロ | **-2** |
-| `create_world()` NIF が `NifResult` を返さない | **-2** |
-| NIF バージョニング・ABI 互換性チェックがない | **-2** |
-| 複数ルームの同時起動が実証されていない | **-2** |
-| WebSocket 認証が未実装 | **-2** |
-| ラグ補償・ロールバック netcode がない | **-2** |
-| NIF パニック後のゲームループ再起動ロジックが存在しない | **-2** |
-
-**小計: +46 / -17 = +29点**（前回 +5点 → **+24点改善**）
-
-> ネットワーク層の実装により、Elixir を選んだ根拠がコードとして証明された。バックプレッシャー機構は精緻な実装。残る最大課題はテスト不足。
+## 技術評価層 — apps/
 
 ---
 
-### 2. Rust の真価
+### apps/game_engine（エンジンコア・OTP設計・コンポーネント・シーン管理）
 
-| 項目 | 点数 |
-|:---|:---:|
-| 全エンティティ種別の完全 SoA ECS 設計 | +4 |
-| `free_list` による O(1) スポーン/キル | +3 |
-| SSE2 SIMD 4体並列 Chase AI | +4 |
-| `alive_mask` による死亡敵の速度フィールド保護 | +4 |
-| SIMD / rayon / スカラーの 3 段階適応戦略 | +3 |
-| SIMD/スカラー一致テストの存在 | +4 |
-| `FxHashMap` 空間ハッシュによる O(n) 衝突検出 | +4 |
-| LCG 決定論的乱数（リプレイ/同期の基盤） | +5 |
-| `ResourceArc` による Elixir GC 連動ライフタイム管理 | +5 |
-| RwLock 競合時間の閾値監視（300μs / 500μs） | +3 |
-| `game_physics` の依存が 3 クレートのみ | +3 |
-| **[NEW] ヘッドレスレンダラー（IP-05）** — wgpu オフスクリーン描画 | **+4** |
-| SIMD パスが x86_64 専用（ARM NEON なし） | **-2** |
-| WASM / `#[no_std]` への準備がゼロ | **-2** |
-| スプライトアトラス UV がマジックナンバーで散在 | **-2** |
-| Ghost・Skeleton の UV が `TODO` プレースホルダー | **-2** |
-| 毎フレーム `Vec` アロケーション（描画インスタンス） | **-2** |
-| レンダーグラフ・明示的パス依存宣言がない | **-2** |
-| フラスタムカリングがない | **-2** |
-| egui HUD ロジックがレンダリングバックエンドと結合 | **-2** |
-| ボイスリミット・優先度システムがない | **-2** |
-| BGM ファイルがリポジトリに存在しない | **-2** |
-| 空間オーディオが未実装 | **-1** |
+#### ✅ プラス点
 
-**小計: +46 / -21 = +25点**（前回 +26点 → **-1点**）
+- **ContentBehaviour のオプショナルコールバック設計** `+5`
+  > `@optional_callbacks` で7つのコールバックを明示的に宣言し、`function_exported?/3` による実行時分岐を排除。`AsteroidArena` が `level_up_scene/0`・`boss_alert_scene/0` を実装しないことで、エンジンコアがこれらの概念を持たなくても2コンテンツが共存できることを実証している。
+  > 対象ファイル: `apps/game_engine/lib/game_engine/content_behaviour.ex`
 
-> ヘッドレスレンダラーの追加が +4点だが、描画層の技術的負債（毎フレームアロケーション・UV マジックナンバー）が新たに詳細評価されてわずかに減点。Rust 実装の核心部は依然プロダクション水準。
+- **バックプレッシャー設計（整合性維持とスキップの明確な分離）** `+5`
+  > GCポーズ等で2秒以上遅延した場合（メッセージキュー深度 > 120）に、`on_frame_event`・シーン遷移はスキップせず、入力・物理AI・`on_nif_sync`・ログはスキップする。「何を守り、何を捨てるか」の設計判断が明示的にコードに記述されている。
+  > 対象ファイル: `apps/game_engine/lib/game_engine/game_events.ex`（L194-291）
 
----
+- **SSoT 整合性チェック（SSOT CHECK）** `+4`
+  > 60フレームごとにRust側とElixir側の値を比較し乖離を検出。設計原則を実行時に自動検証する機構。
+  > 対象ファイル: `apps/game_engine/lib/game_engine/game_events/diagnostics.ex`（L94-110）
 
-### 3. Elixir × Rust 連携の真価
+- **ダーティフラグによる差分NIF注入** `+3`
+  > プロセス辞書を使ったダーティフラグで値が変化したときのみNIFを呼ぶ設計。
+  > 対象ファイル: `apps/game_content/lib/game_content/vampire_survivor/level_component.ex`（L177-266）
 
-| 項目 | 点数 |
-|:---|:---:|
-| NIF 関数の 5 カテゴリ分類（ロック競合の予測可能性） | +5 |
-| 60Hz Rust ループ → `OwnedEnv::send_and_clear` → Elixir | +3 |
-| パラメータ注入パターン（Rust にゲームバランス値なし） | +5 |
-| `NifBridgeBehaviour` + Mox による NIF モック | +4 |
-| NIF バージョニング・ABI 互換性チェックがない | **-2** |
-| `set_hud_state` が毎フレーム write lock を取得 | **-1** |
-| Rust → Elixir メールボックスへのバックプレッシャーがない（Rust 側） | **-1** |
-| `decode_fire_pattern` のサイレントフォールバック | **-1** |
+- **フレームループの処理順序設計** `+3`
+  > on_frame_event → シーン update → 遷移 → 入力/物理AI → on_nif_sync の順序が意図的に設計されており、コメントで明記されている。
+  > 対象ファイル: `apps/game_engine/lib/game_engine/game_events.ex`（L251-297）
 
-**小計: +17 / -5 = +12点**（前回 +11点 → **+1点改善**）
+- **SaveManager の HMAC 付きセーブデータ** `+2`
+- **DynamicSupervisor によるルーム動的管理** `+2`
 
-> IP-04 バックプレッシャーの Elixir 側実装で -3 → -1 に改善。連携設計の思想的正しさは変わらず。
+#### ❌ マイナス点
+
+- **SceneManager がシングルトン（マルチルーム非対応）** `-3`
+  > `GameEvents` はマルチルーム対応だが `SceneManager` はシングルトン。`:main` 以外のルームはシーン処理をスキップする実装になっており、設計上の矛盾がある。
+  > 対象ファイル: `apps/game_engine/lib/game_engine/scene_manager.ex`（L11）
+
+- **GameEvents に BatLord 固有ロジックが漏出** `-2`
+  > `handle_info({:boss_dash_end, world_ref})` がエンジンコアに実装されており、実装ルール違反。
+  > 対象ファイル: `apps/game_engine/lib/game_engine/game_events.ex`（L180-187）
+
+- **SaveManager の HMAC シークレットがデフォルト値でハードコード** `-2`
+  > デフォルト値がソースコードに公開されており、改ざん検証が実質無効化されている。
+  > 対象ファイル: `apps/game_engine/lib/game_engine/save_manager.ex`（L162）
+
+- **GameEngine コアのテストがゼロ** `-4`
+  > `SceneManager`・`GameEvents`・`EventBus`・`SaveManager` に対するテストが一切存在しない。
+
+**小計: +24 / -11 = +13点**
 
 ---
 
-### 4. 物理層
+### apps/game_content（コンテンツ実装・ゲームロジック・パラメータ設計）
 
-| 項目 | 点数 |
-|:---|:---:|
-| 7 種の `FirePattern`（正確な幾何学計算） | +4 |
-| 障害物押し出し最大 5 回反復（収束保証） | +2 |
-| 敵分離アルゴリズム | +2 |
-| ボス速度・タイマーの Elixir 注入（SSoT 最難関） | +4 |
-| ARM NEON の SIMD 実装がない | **-2** |
-| 広域フェーズに BVH / AABB ツリーがない | **-2** |
-| 物理ステップ実行順序が暗黙的でドキュメントがない | **-1** |
+#### ✅ プラス点
 
-**小計: +12 / -5 = +7点**（前回 +6点 → **+1点改善**）
+- **純粋関数による World/Rule 実装** `+4`
+  > `BossSystem`・`SpawnSystem`・`LevelSystem` が全て純粋関数として実装されており、副作用がない。
+  > 対象ファイル: `apps/game_content/lib/game_content/vampire_survivor/`
 
-> 物理ステップ順序の暗黙性が -2 → -1 に軽微改善（コードの可読性向上）。
+- **AsteroidArena による ContentBehaviour の実証** `+4`
+  > 武器・ボス・レベルアップのないシューターとして実装することで、エンジンコアがコンテンツ固有の概念を持たなくても動作することを実証している。
 
----
+- **エンティティパラメータの外部化** `+3`
+  > `SpawnComponent.on_ready/1` でワールド生成後に一度だけ `set_entity_params` を呼び、Rustコアにゲームバランス値がハードコードされていない。
+  > 対象ファイル: `apps/game_content/lib/game_content/vampire_survivor/spawn_component.ex`（L40-53）
 
-### 5. 描画層
+#### ❌ マイナス点
 
-| 項目 | 点数 |
-|:---|:---:|
-| wgpu インスタンス描画（最大 14,502 エントリ） | +3 |
-| サブフレーム補間（lerp）がロック外で計算される | +4 |
-| WGSL スプライトシェーダー（レガシー GLSL なし） | +2 |
-| **[NEW] ヘッドレスレンダラー（IP-05）** — CI 対応 | **+4** |
-| レンダーグラフ・明示的パス依存宣言がない | **-2** |
-| フラスタムカリングがない | **-2** |
-| egui HUD ロジックがレンダリングバックエンドと結合 | **-2** |
-| 毎フレーム `Vec` アロケーション | **-2** |
+- **EntityParams と SpawnComponent のパラメータ二重管理** `-3`
+  > 3箇所に同じ値が散在しており、同期漏れリスクが高い。
+  > 対象ファイル: `apps/game_content/lib/game_content/entity_params.ex`, `spawn_component.ex`
 
-**小計: +13 / -8 = +5点**（前回 0点 → **+5点改善**）
+- **LevelComponent のアイテムドロップロジックの重複** `-2`
+  > `on_frame_event` と `on_event` の両方でアイテムドロップ処理が実装されており、二重発火の可能性がある。
+  > 対象ファイル: `apps/game_content/lib/game_content/vampire_survivor/level_component.ex`（L30-96）
 
-> ヘッドレスレンダラーの追加が大きなプラス。CI でのレンダリング回帰テストが可能になった。
+- **AsteroidArena のテストがゼロ** `-2`
+- **Enum.find_last/2 回避コメントが不正確** `-1`
+
+**小計: +11 / -8 = +3点**
 
 ---
 
-### 6. オーディオ層
+### apps/game_network（ネットワーク層・トランスポート・OTP隔離）
 
-| 項目 | 点数 |
-|:---|:---:|
-| コマンドパターン + `mpsc::channel` 完全非同期 | +3 |
-| デバイス不在時のグレースフルフォールバック | +4 |
-| 4 段階フォールバックのアセット探索 | +2 |
-| 空間オーディオが未実装 | **-1** |
-| ボイスリミット・優先度システムがない | **-2** |
-| BGM ファイルがリポジトリに存在しない | **-2** |
+#### ✅ プラス点
 
-**小計: +9 / -5 = +4点**（前回 +4点 → **変化なし**）
+- **3トランスポートの実装（WebSocket・UDP・Local）** `+4`
+  > Phoenix Channel・UDP（zlib圧縮・9種類パケット）・ローカルマルチルームの3トランスポートが揃っている。
+  > 対象ファイル: `apps/game_network/lib/game_network/`
 
-> アーキテクチャは正しく、フォールバック設計はプロダクション品質。コンテンツの充実度が低い状況は変わらず。
+- **OTP プロセス隔離の実証（テストで検証済み）** `+4`
+  > `Process.exit(pid_a, :kill)` で一方のルームを強制終了し、他方が生存することをテストで検証している。
+  > 対象ファイル: `apps/game_network/test/game_network_local_test.exs`（L132-148）
 
----
+#### ❌ マイナス点
 
-### 7. コンポーネント層
+- **game_network が実質スタブ（Elixir選択の最大の根拠が未証明）** `-4`
+  > 分散・フェイルオーバーシナリオが未実装。「なぜElixir + Rustか」という問いにコードが答えられない。
+  > 対象ファイル: `apps/game_network/lib/game_network.ex`
 
-| 項目 | 点数 |
-|:---|:---:|
-| Unity 相当のライフサイクルコールバック | +3 |
-| シーンスタック（push / pop / replace）完全実装 | +3 |
-| `pause_on_push?/1` によるシーン別ポーズ制御 | +2 |
-| `on_physics_process` が実質 `on_process` と同一レート | **-1** |
-| コンポーネント依存性注入・サービスロケーターがない | **-2** |
+- **WebSocket 認証・認可が未実装** `-3`
+  > 誰でも任意のルームに参加できる状態。
+  > 対象ファイル: `apps/game_network/lib/game_network/channel.ex`
 
-**小計: +8 / -3 = +5点**（前回 +5点 → **変化なし**）
+**小計: +8 / -7 = +1点**
 
 ---
 
-### 8. ネットワーク層
+### apps/game_server（アプリケーション起動・設定・エントリポイント）
 
-| 項目 | 点数 |
-|:---|:---:|
-| DynamicSupervisor + Registry アーキテクチャが先行実装済み | +2 |
-| 決定論的 LCG 乱数（ロックステップ同期の正しい基盤） | +2 |
-| **[NEW] `GameNetwork.Local` 完全実装（275行）** | **+4** |
-| **[NEW] Phoenix Channels / WebSocket トランスポート実装（159行）** | **+3** |
-| **[NEW] UDP トランスポート実装（263行）** | **+3** |
-| **[NEW] OTP 隔離テスト（StubRoom を使用した実証）** | **+3** |
-| 複数ルームの同時起動が実証されていない | **-2** |
-| WebSocket 認証が未実装 | **-2** |
-| ラグ補償・ロールバック netcode がない | **-2** |
+#### ✅ プラス点
 
-**小計: +17 / -6 = +11点**（前回 -11点 → **+22点改善**）
+- **Application 起動シーケンスの堅牢性** `+2`
+  > umbrella の依存順序制御・`GameNetwork.Application` の起動タイミング注意事項がコメントで明記されている。
+  > 対象ファイル: `apps/game_server/lib/game_server/application.ex`
 
-> 前回評価で最大の失点だったネットワーク層が大幅改善。`game_network.ex` が完全実装され、Elixir を選んだ根拠が証明された。
+- **環境別設定の分離** `+1`
+  > `config.exs` / `runtime.exs` で環境別設定が分離されている。
+
+**小計: +3 / 0 = +3点**
 
 ---
 
-### 9. ユーザー層
-
-| 項目 | 点数 |
-|:---|:---:|
-| HMAC 署名付きセーブデータ | +3 |
-| 上位 10 件ハイスコア管理 | +1 |
-| ゲーム内設定 UI がない | **-2** |
-| セーブ形式が Erlang バイナリ term（非ポータブル） | **-2** |
-| 決定論的乱数があるにもかかわらずリプレイが未実装 | **-1** |
-
-**小計: +4 / -5 = -1点**（前回 -1点 → **変化なし**）
+## 技術評価層 — native/
 
 ---
 
-### 10. プロジェクト全体設計
+### native/game_physics（ECS・SoA・SIMD・衝突・決定論性）
 
-| 項目 | 点数 |
-|:---|:---:|
-| 11 ファイル・約 1,500 行のドキュメント（Mermaid 図付き） | +5 |
-| 自己認識的な弱点管理（improvement-plan / pending-issues） | +3 |
-| Umbrella プロジェクトによるアプリ境界の明確化 | +2 |
-| Rust ワークスペース + `"nif"` フィーチャーフラグ | +2 |
-| `game_content` 純粋関数テストが `async: true` で並列実行可能 | +2 |
-| Rust `chase_ai.rs` の充実した単体テスト | +4 |
-| **[NEW] GitHub Actions CI パイプライン（5 ジョブ）** | **+4** |
-| **[NEW] ローカル CI スクリプト（`bin/ci.bat`）** | **+2** |
-| **[NEW] ベンチマーク回帰チェック（main ブランチ、+10% 劣化でブロック）** | **+3** |
-| `visual-editor-architecture.md` が存在しないシステムを記述 | **-1** |
-| `improvement-plan.md` の完了済み項目アーカイブ先が未作成 | **-1** |
-| Elixir → Rust フルラウンドトリップのベンチマークがない | **-2** |
-| `LevelComponent` のアイテムドロップ重複ロジック（潜在バグ） | **-3** |
-| プロセス辞書によるダーティフラグ管理（テスト困難） | **-1** |
+#### ✅ プラス点
 
-**小計: +27 / -8 = +19点**（前回 +10点 → **+9点改善**）
+- **全エンティティで統一されたSoA構造** `+5`
+  > `alive: Vec<u8>` が `0xFF`/`0x00` の2値を取る設計はSSE2 SIMDマスクとして直接ロードできるよう意図されており、データ構造とSIMD命令が密結合した設計。
+  > 対象ファイル: `native/game_physics/src/world/enemy.rs`（L7-27）
 
-> CI/CD の追加とベンチマーク回帰チェックが大きなプラス。アイテムドロップ重複バグが新たに発見され -3点。
+- **SIMD SSE2 + スカラーフォールバック + rayon 並列の3段階戦略** `+5`
+  > unsafeブロックに安全性根拠コメントが充実し、SIMD/スカラー一致テスト（許容誤差 0.05）も完備。
+  > 対象ファイル: `native/game_physics/src/game_logic/chase_ai.rs`（L135-419）
 
----
+- **free_list O(1) スポーン/キル（全エンティティ統一）** `+4`
+  > `saturating_sub` でアンダーフロー防止・冪等性テスト完備。全エンティティ種別で統一。
+  > 対象ファイル: `native/game_physics/src/world/enemy.rs`（L62-103）
 
-## 総合スコア
+- **空間ハッシュ衝突検出（FxHashMap + 2段階フィルタ）** `+4`
+  > FxHashMap・ゼロアロケーション設計・動的/静的分離・2段階フィルタリング。
+  > 対象ファイル: `native/game_physics/src/physics/spatial_hash.rs`
 
-| 観点 | プラス | マイナス | 小計 | 前回差分 |
-|:---|:---:|:---:|:---:|:---:|
-| 1. Elixir の真価 | +46 | -17 | **+29** | +24 ↑ |
-| 2. Rust の真価 | +46 | -21 | **+25** | -1 ↓ |
-| 3. Elixir × Rust 連携 | +17 | -5 | **+12** | +1 ↑ |
-| 4. 物理層 | +12 | -5 | **+7** | +1 ↑ |
-| 5. 描画層 | +13 | -8 | **+5** | +5 ↑ |
-| 6. オーディオ層 | +9 | -5 | **+4** | 0 |
-| 7. コンポーネント層 | +8 | -3 | **+5** | 0 |
-| 8. ネットワーク層 | +17 | -6 | **+11** | +22 ↑ |
-| 9. ユーザー層 | +4 | -5 | **-1** | 0 |
-| 10. プロジェクト全体設計 | +27 | -8 | **+19** | +9 ↑ |
-| **合計** | **+199** | **-83** | **+116点** | **+61点 ↑** |
+- **決定論的 LCG 乱数（再現性テスト済み）** `+3`
+  > Knuth LCG・`wrapping_mul/add`・再現性テスト完備。
+  > 対象ファイル: `native/game_physics/src/physics/rng.rs`
 
----
+- **EnemySeparation トレイトによるテスト可能性** `+3`
+  > テスト用モック注入可能。rayon並列化できない理由をコメントで明記。
+  > 対象ファイル: `native/game_physics/src/physics/separation.rs`
 
-## 判定
+- **物理ステップのアーキテクチャ原則の明文化** `+2`
+  > 「HPの権威はElixir側」というコメントがRust側のコードにも浸透している。
 
-**AlchemyEngine の総合スコアは +116点（前回 +55点 → +61点改善）。**
+#### ❌ マイナス点
 
-前回評価から 1 日で +61点という大幅改善は、改善計画が正確に優先度付けされ、実行されたことを示している。
+- **bench/chase_ai_bench.rs のクレート名不一致（コンパイル不可）** `-3`
+  > `game_simulation` クレートをインポートしているが実際のパッケージ名は `game_physics`。ベンチマークがコンパイルできない状態。
+  > 対象ファイル: `native/game_physics/benches/chase_ai_bench.rs`（L5-8）
 
-### 今回の改善で解決された問題
+- **#[cfg(target_arch = "x86_64")] の pub use 漏れ（非x86_64でリンクエラー）** `-2`
+  > ARM/WASMでコンパイルするとリンクエラーになる。
+  > 対象ファイル: `native/game_physics/src/game_logic/mod.rs`（L9）
 
-| 前回の問題 | 解決状況 |
-|:---|:---:|
-| `game_network.ex` が完全な空スタブ（-5） | ✅ 完全実装済み |
-| CI/CD パイプラインが存在しない（-4） | ✅ GitHub Actions 5 ジョブ追加 |
-| `GameEvents` が 697 行・複数責務（-3） | ✅ 426行に削減・ディスパッチ専用化 |
-| NIF 内 `unwrap()` / `expect()` が BEAM VM をクラッシュさせうる（-3） | ✅ 除去済み |
-| Rust → Elixir メールボックスへのバックプレッシャーがない（-3） | ✅ IP-04 実装済み |
-| ヘッドレス/オフスクリーンレンダリングモードがない（-3） | ✅ IP-05 実装済み |
-
-### 残る主要課題（+116点 → +140点以上にするための優先アクション）
-
-1. **`GameEvents` / `SceneManager` / `EventBus` のテスト追加**（推定 +8点）
-   - `game_engine` アプリのテストカバレッジが事実上ゼロ
-   - バックプレッシャー機構の動作テストも必要
-
-2. **`LevelComponent` のアイテムドロップ重複バグ修正**（推定 +4点）
-   - `on_event({:entity_removed, ...})` と `on_frame_event({:enemy_killed, ...})` の両方でドロップが発生する潜在バグ
-   - `-3点` のバグが修正されれば `+1点` 加算
-
-3. **複数ルームの実動作実証**（推定 +3点）
-   - `GameServer.Application` で 2 ルームを起動し、OTP 隔離を実際の `GameEvents` プロセスで検証
-
-4. **描画層の技術的負債解消**（推定 +4点）
-   - 毎フレーム `Vec` アロケーション → `Renderer` フィールドに移動
-   - UV マジックナンバー → `assets/atlas.toml` データファイル化
-
-5. **NIF バージョニング・`create_world()` エラーハンドリング**（推定 +3点）
-   - 起動時の NIF ABI 互換性チェック
-   - `create_world()` の `NifResult` 対応
+**小計: +26 / -5 = +21点**
 
 ---
 
-*プラス点の詳細: `docs/evaluation/specific-strengths.md`*
-*マイナス点の詳細: `docs/evaluation/specific-weaknesses.md`*
-*改善提案書: `docs/task/improvement-plan.md`*
+### native/game_render（描画パイプライン・シェーダー・補間）
+
+#### ✅ プラス点
+
+- **wgpu インスタンス描画（1 draw_indexed で全スプライト）** `+4`
+  > `#[repr(C)] + bytemuck::Pod` でGPUバッファへのゼロコピー転送。MAX_INSTANCES 14510の全スプライトを1回の `draw_indexed` で描画。
+  > 対象ファイル: `native/game_render/src/renderer/mod.rs`（L51-58, L991）
+
+- **CI 用ヘッドレスレンダラー** `+4`
+  > `mpsc::channel + map_async + poll(WaitForSubmissionIndex)` によるGPU読み出し同期化と行パディング除去まで実装。
+  > 対象ファイル: `native/game_render/src/headless.rs`
+
+- **RenderBridge トレイトによる疎結合** `+3`
+  > 描画スレッドとゲームロジックの疎結合。`OwnedEnv::send_and_clear` でElixirプロセスに非同期メッセージ送信。
+  > 対象ファイル: `native/game_render/src/window.rs`（L29-33）
+
+#### ❌ マイナス点
+
+- **build_instances 関数の重複（DRY 違反）** `-3`
+  > `renderer/mod.rs` と `headless.rs` にほぼ同一のスプライトUV・サイズ計算ロジックが重複。
+  > 対象ファイル: `native/game_render/src/renderer/mod.rs`（L719-906）, `headless.rs`（L556-715）
+
+- **Skeleton/Ghost の UV がプレースホルダー** `-2`
+  > 別エンティティとして存在するにもかかわらず視覚的に区別できない。
+  > 対象ファイル: `native/game_render/src/renderer/mod.rs`（L258-266）
+
+- **Vertex/VERTICES/INDICES 等の重複定義** `-2`
+  > `renderer/mod.rs` と `headless.rs` で同一の構造体・定数が重複定義されている。
+
+**小計: +11 / -7 = +4点**
+
+---
+
+### native/game_audio（非同期設計・フォールバック・アセット管理）
+
+#### ✅ プラス点
+
+- **コマンドパターン + mpsc::channel 非同期設計** `+3`
+  > デバイス不在時のグレースフルフォールバック・起動失敗時でも呼び出し側をクラッシュさせない設計。
+  > 対象ファイル: `native/game_audio/src/audio.rs`（L64-128）
+
+- **マクロ駆動アセット定義（Single Source of Truth）** `+3`
+  > `define_assets!` マクロでID・パス・埋め込みデータを一箇所に定義。コンパイル時バイナリ埋め込みと実行時ロードの2段階フォールバック。
+  > 対象ファイル: `native/game_audio/src/asset/mod.rs`（L7-41）
+
+**小計: +6 / 0 = +6点**
+
+---
+
+### native/game_nif（NIF設計・Elixir×Rust ブリッジ・SSoT一貫性）
+
+#### ✅ プラス点
+
+- **NIF 関数カテゴリ分類（ロック競合の予測可能性）** `+4`
+  > 7カテゴリへの分類でロック競合が予測可能。
+  > 対象ファイル: `native/game_nif/src/nif/`
+
+- **ResourceArc による GC 連動ライフタイム管理** `+4`
+  > `ResourceArc<GameWorld>` と `ResourceArc<GameLoopControl>` でElixir GCとRustのライフタイムを連動。
+  > 対象ファイル: `native/game_nif/src/nif/world_nif.rs`（L23-65）
+
+- **lock_metrics による RwLock 待機時間の可観測性** `+4`
+  > AtomicU64でロックフリーな累積統計。read lock > 300μs / write lock > 500μs で警告。
+  > 対象ファイル: `native/game_nif/src/lock_metrics.rs`
+
+- **push_tick の DirtyCpu スケジューラ指定** `+3`
+  > BEAMスケジューラをブロックしないDirty NIFとして実行。
+  > 対象ファイル: `native/game_nif/src/nif/push_tick_nif.rs`（L18-66）
+
+- **サブフレーム補間（lerp）のロック外計算** `+4`
+  > prev/curr tick_ms で α 計算・clamp 保護・60fps物理と高フレームレート描画の分離。
+  > 対象ファイル: `native/game_nif/src/render_snapshot.rs`（L197-210）
+
+#### ❌ マイナス点
+
+- **spawn_elite_enemy の脆弱なスロット特定ロジック** `-3`
+  > free_list再利用スロットを捕捉できず、既存エネミーのHPを誤変更する可能性がある。
+  > 対象ファイル: `native/game_nif/src/nif/action_nif.rs`（L182-194）
+
+- **FrameEvent::PlayerDamaged の u32 オーバーフローリスク** `-2`
+  > `(damage * 1000.0) as u32` で大きな値の場合に意図しない結果になる。
+  > 対象ファイル: `native/game_nif/src/nif/events.rs`（L21）
+
+**小計: +19 / -5 = +14点**
+
+---
+
+## 横断評価層
+
+---
+
+### テスト戦略
+
+#### ✅ プラス点
+
+- **SIMD/スカラー一致テスト（許容誤差 0.05）** `+4`
+  > `_mm_rsqrt_ps` の近似精度誤差を考慮した許容誤差設定が正確。
+  > 対象ファイル: `native/game_physics/src/game_logic/chase_ai.rs`（L321-417）
+
+- **StubRoom による NIF 依存の完全排除** `+4`
+  > NIF を起動せずに `GameEngine.RoomRegistry` に登録できる軽量スタブ。
+  > 対象ファイル: `apps/game_network/test/support/room_stubs.ex`
+
+- **純粋関数テストの徹底** `+3`
+  > `game_content` の7テストファイルが全て純粋関数・ロジック部分のみをテスト。
+
+#### ❌ マイナス点
+
+- **プロパティベーステスト・ファジングが完全に存在しない** `-3`
+  > `StreamData` / `ExUnitProperties` / `PropCheck` の使用がゼロ。Rustのファズターゲットも存在しない。
+
+- **game_nif・game_render・game_audio の Rust テストがゼロ** `-3`
+  > NIF ブリッジ・描画パイプライン・オーディオの Rust テストが一切存在しない。`game_nif` のデコードロジックはGPU不要でテスト可能。
+
+- **E2E テストがゼロ** `-2`
+  > ゲームループ全体を通したテストが存在しない。
+
+**小計: +11 / -8 = +3点**
+
+---
+
+### 可観測性・デバッグ容易性
+
+#### ✅ プラス点
+
+- **Telemetry イベントの体系的な設計** `+3`
+- **StressMonitor によるフレームバジェット監視** `+3`
+- **lock_metrics による RwLock 待機時間の可観測性（再掲）** — 既にgame_nifで計上
+
+#### ❌ マイナス点
+
+- **[:game, :session_end] が metrics/0 に未登録** `-2`
+  > 発火されているが ConsoleReporter に表示されない。
+  > 対象ファイル: `apps/game_engine/lib/game_engine/telemetry.ex`
+
+- **:telemetry.attach の呼び出しがゼロ（外部監視ツールへの接続口なし）** `-2`
+  > ConsoleReporter のみで外部監視ツールへの接続口がない。
+
+**小計: +6 / -4 = +2点**
+
+---
+
+### エラーハンドリング戦略
+
+#### ✅ プラス点
+
+- **オーディオ・NIF・ネットワーク各層のフォールバック戦略** `+3`
+  > `game_audio` のデバイス不在フォールバック・`game_nif` の `lock_poisoned_err()` / `params_not_loaded_err()` フェイルファスト・`game_network` の UDP 起動失敗時の `Logger.error` が揃っている。
+
+- **OTP Supervisor 再起動戦略の明示的な設計** `+2`
+  > `one_for_one` 戦略で `StressMonitor` がクラッシュしてもゲームが継続する設計がコメントで明示されている。
+
+**小計: +5 / 0 = +5点**
+
+---
+
+### 変更容易性・保守性
+
+#### ✅ プラス点
+
+- **マジックナンバーの集約（constants.rs）** `+3`
+- **pending-issues.md による課題の一元管理** `+3`
+
+#### ❌ マイナス点
+
+- **Stats GenServer の二重集計リスク** `-1`
+- **lock_metrics.rs の閾値定数が constants.rs に含まれていない** `-1`
+
+**小計: +6 / -2 = +4点**
+
+---
+
+### 開発者体験（DX）
+
+#### ✅ プラス点
+
+- **bin/ci.bat と GitHub Actions の完全同期** `+4`
+- **ベンチマーク回帰テスト（bench-regression ジョブ）** `+4`
+- **CI キャッシュ戦略（NIF変更時の確実な再ビルド）** `+3`
+
+#### ❌ マイナス点
+
+- **CI の pull_request トリガーが未設定** `-2`
+  > PRへの自動チェックが走らない。
+  > 対象ファイル: `.github/workflows/ci.yml`
+
+- **bench-regression のローカル実行スクリプトが存在しない** `-1`
+- **README の Contributing セクションがプレースホルダー** `-1`
+
+**小計: +11 / -4 = +7点**
+
+---
+
+### ゲームプレイ完成度
+
+#### ❌ マイナス点
+
+- **ゲームループの完結性が未確認（E2Eテストなし）** `-2`
+- **視覚的完成度（Skeleton/Ghost のスプライト未実装）** `-2`
+
+**小計: 0 / -4 = -4点**
+
+---
+
+### セキュリティ・配布可能性
+
+#### ❌ マイナス点
+
+- **WebSocket 認証・認可が未実装（再掲）** `-3`
+- **mix audit / cargo audit の CI 組み込みなし** `-2`
+- **ビルド成果物の配布手順が未整備** `-2`
+
+**小計: 0 / -7 = -7点**
+
+---
+
+### プロジェクト全体設計
+
+#### ✅ プラス点
+
+- **ドキュメントの品質・網羅性・コードとの一致度** `+5`
+  > 6ドキュメント合計2000行超・全てMermaidダイアグラム付き・コードとの一致度が高い。
+  > 対象ファイル: `docs/`
+
+- **vision.md による設計哲学の明文化** `+4`
+  > 「エンジンがこの概念を知る必要があるか？」という設計判断基準が明文化されている。
+  > 対象ファイル: `docs/vision.md`
+
+- **improvement-plan.md による自己評価サイクル** `+3`
+  > スコアカードと未解決課題の優先順位が記録されており、自己改善サイクルが機能している。
+  > 対象ファイル: `docs/task/improvement-plan.md`
+
+**小計: +12 / 0 = +12点**
+
+---
+
+## 総合スコア集計
+
+| 評価観点 | プラス | マイナス | 小計 |
+|:---|:---:|:---:|:---:|
+| apps/game_engine | +24 | -11 | **+13** |
+| apps/game_content | +11 | -8 | **+3** |
+| apps/game_network | +8 | -7 | **+1** |
+| apps/game_server | +3 | 0 | **+3** |
+| native/game_physics | +26 | -5 | **+21** |
+| native/game_render | +11 | -7 | **+4** |
+| native/game_audio | +6 | 0 | **+6** |
+| native/game_nif | +19 | -5 | **+14** |
+| テスト戦略 | +11 | -8 | **+3** |
+| 可観測性・デバッグ容易性 | +6 | -4 | **+2** |
+| エラーハンドリング戦略 | +5 | 0 | **+5** |
+| 変更容易性・保守性 | +6 | -2 | **+4** |
+| 開発者体験（DX） | +11 | -4 | **+7** |
+| ゲームプレイ完成度 | 0 | -4 | **-4** |
+| セキュリティ・配布可能性 | 0 | -7 | **-7** |
+| プロジェクト全体設計 | +12 | 0 | **+12** |
+| **合計** | **+159** | **-72** | **+87** |
+
+> ※ 一部の項目は複数の評価観点で言及されているが、スコアは重複計上しない。実際の集計は各観点の小計の合算。
+
+---
+
+## 総括
+
+### このプロジェクトが突出している点
+
+**Rust物理演算層の設計品質**は、個人プロジェクトの水準を大きく超えている。SoA構造・free_list・SIMD・rayon・空間ハッシュ・決定論的乱数の全てが統一された設計思想で実装されており、Bevy の ECS と比較しても設計の明確さで遜色ない。
+
+**ContentBehaviour のオプショナルコールバック設計**とバックプレッシャー設計は、「ゲームエンジンとは何か」という問いに対して明確な答えを持った設計であり、同規模の個人プロジェクトでは見たことがないレベルの卓越した実装である。
+
+**ドキュメントの品質**は突出している。2000行超のドキュメントがMermaidダイアグラム付きで整備されており、`vision.md` が設計哲学の共通言語として機能している。
+
+### 最も改善が必要な点（優先順位順）
+
+1. **Elixirテストカバレッジの致命的な欠如** — エンジンコア全体にテストがなく、リファクタリングの安全網がない
+2. **game_network が実質スタブ** — プロジェクトの価値命題（「なぜElixir + Rustか」）がコードで証明されていない
+3. **WebSocket 認証未実装** — 本番運用不可能な状態
+4. **bench/chase_ai_bench.rs のコンパイル不可** — ベンチマーク回帰CIが機能していない可能性
+5. **spawn_elite_enemy の脆弱なスロット特定ロジック** — バグを引き起こしうる設計上の欠陥
+
+### 比較軸
+
+| 比較対象 | 比較観点 | 評価 |
+|:---|:---|:---|
+| Bevy 0.13 | ECS設計 | SoA・free_list・SIMD の設計思想は同等。Bevy は型安全性が高いが、AlchemyEngine はElixir統合という独自の価値がある |
+| Godot 4 | コンテンツ分離 | ContentBehaviour の設計はGodotの「ノードとシーン」哲学と同等の明確さ |
+| Phoenix LiveView | OTP活用 | バックプレッシャー設計はLiveViewのdiff更新と同等の思想。ただしLiveViewはテストが充実している |
+| PICO-8 | ゲームプレイ完成度 | PICO-8のような「すぐ遊べる」完成度には達していない |

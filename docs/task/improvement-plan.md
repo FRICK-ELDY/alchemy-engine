@@ -1,450 +1,197 @@
 # AlchemyEngine — 改善提案書
 
-> 2026-03-01 の評価（第2回、総合スコア +116点）に基づく改善提案。
-> 各項目は `docs/evaluation/specific-weaknesses.md` の対応するマイナス点にマッピングされている。
-> 期待スコア改善幅の大きい順に並べている。
+> 最終更新: 2026-03-01  
+> 前回評価スコア: +87点（2026-03-01 evaluation）
 
 ---
 
-## 優先度マトリクス
+## スコアカード
 
-| ID | タイトル | 期待改善幅 | 工数 | 優先度 |
-|:---|:---|:---:|:---:|:---:|
-| IP-01 | Elixir コアモジュールのテスト追加 | +8 | 中 | 🔴 最高 |
-| IP-02 | `LevelComponent` アイテムドロップ重複バグ修正 | +4 | 小 | 🔴 最高 |
-| IP-03 | 複数ルームの実動作実証 | +3 | 小 | 🟡 高 |
-| IP-04 | 描画層の技術的負債解消（アロケーション・UV） | +4 | 中 | 🟡 高 |
-| IP-05 | NIF バージョニング・`create_world()` エラーハンドリング | +3 | 小 | 🟡 高 |
-| IP-06 | ゲーム内設定 UI の実装 | +2 | 中 | 🟢 中 |
-| IP-07 | リプレイ録画・再生システムの実装 | +1 | 大 | 🟢 中 |
-| IP-08 | 空間オーディオ（距離減衰）の実装 | +1 | 中 | 🟢 中 |
-| IP-09 | ボイスリミット・優先度システムの実装 | +2 | 小 | 🟢 中 |
-| IP-10 | フラスタムカリングの実装 | +2 | 小 | 🟢 中 |
-| IP-11 | エンドツーエンド NIF ラウンドトリップベンチマークの追加 | +2 | 小 | 🟢 中 |
-| IP-12 | セーブ形式を JSON / MessagePack に移行 | +2 | 中 | 🟢 中 |
-| IP-13 | WebSocket 認証の実装 | +2 | 中 | 🟢 中 |
-| IP-14 | 物理ステップ実行順序のドキュメント化 | +1 | 小 | 🟢 中 |
-| IP-15 | プロセス辞書ダーティフラグの State 管理への移行 | +1 | 小 | 🟢 中 |
+| カテゴリ | 前回 | 現在 |
+|:---|:---:|:---:|
+| Rust 物理演算・SoA 設計 | 9/10 | 9/10 |
+| Rust SIMD 最適化 | 9/10 | 9/10 |
+| Rust 並行性設計 | 8/10 | 8/10 |
+| Rust 安全性 | 8/10 | 7/10 ↓ |
+| Elixir OTP 設計 | 8/10 | 8/10 |
+| Elixir 耐障害性 | 6/10 | 6/10 |
+| Elixir 並行性・分散 | 1/10 | 1/10 |
+| Elixir ビヘイビア活用 | 7/10 | 8/10 ↑ |
+| アーキテクチャ（ビジョン一致度） | 7/10 | 7/10 |
+| テスト | 6/10 | 5/10 ↓ |
+| セキュリティ | — | 3/10 |
+| **総合** | **7/10** | **7/10** |
 
----
-
-## 詳細提案
+> Rust 安全性が 8→7 に低下: `spawn_elite_enemy` の脆弱なスロット特定ロジック・`FrameEvent::PlayerDamaged` の u32 オーバーフローリスク・`bench/chase_ai_bench.rs` のコンパイル不可が新たに発見された。  
+> テストが 6→5 に低下: `game_nif`・`game_render`・`game_audio` の Rust テストがゼロであることが改めて確認された。
 
 ---
 
-### IP-01: Elixir コアモジュールのテスト追加
+## 未解決課題
 
-**対応するマイナス点**: `GameEvents` テストゼロ（-3）、`SceneManager` / `EventBus` / 全シーンテストゼロ（-2）
+### I-A: bench/chase_ai_bench.rs のクレート名不一致（優先度: 緊急）
 
-**テスト対象と方針**
+**問題:** ベンチマークが `game_simulation` クレートをインポートしているが、`Cargo.toml` のパッケージ名は `game_physics`。ベンチマークがコンパイルできない状態であり、`bench-regression` CIジョブが機能していない可能性がある。
 
-```elixir
-# GameEngine.SceneManager — シーン遷移ロジック
-test "push でシーンがスタックに追加される" do
-  {:ok, sm} = SceneManager.start_link([])
-  SceneManager.push(sm, MyScene, %{})
-  assert SceneManager.current(sm) == MyScene
-end
+**影響ファイル:**
+- `native/game_physics/benches/chase_ai_bench.rs`（L5-8）
 
-test "pop で前のシーンに戻る" do
-  {:ok, sm} = SceneManager.start_link([])
-  SceneManager.push(sm, SceneA, %{})
-  SceneManager.push(sm, SceneB, %{})
-  SceneManager.pop(sm)
-  assert SceneManager.current(sm) == SceneA
-end
-
-# GameEngine.EventBus — サブスクライバー配信
-test "サブスクライバーがイベントを受信する" do
-  {:ok, bus} = EventBus.start_link([])
-  EventBus.subscribe(bus, self())
-  EventBus.broadcast(bus, {:item_pickup, %{exp: 10}})
-  assert_receive {:item_pickup, %{exp: 10}}
-end
-
-test "死亡したサブスクライバーが自動的に購読解除される" do
-  {:ok, bus} = EventBus.start_link([])
-  pid = spawn(fn -> receive do _ -> :ok end end)
-  EventBus.subscribe(bus, pid)
-  Process.exit(pid, :kill)
-  Process.sleep(10)
-  # ブロードキャストがクラッシュしないことを確認
-  EventBus.broadcast(bus, :test_event)
-end
-
-# GameEngine.GameEvents — バックプレッシャー機構
-test "メールボックス深度が閾値を超えた場合にフレームをドロップする" do
-  # Mox を使用して NIF をモック
-  # メールボックスを人工的に埋めてバックプレッシャーが発動することを確認
-end
-```
-
-**受け入れ基準**:
-- `mix test --cover` で `game_engine` アプリのカバレッジ > 60%
-- すべてのシーン遷移パス（push / pop / replace）に最低 1 件のテストが存在する
-- バックプレッシャー機構の動作テストが存在する
+**作業ステップ:**
+1. `use game_simulation::` を `use game_physics::` に変更する
+2. `cargo bench -p game_physics` でコンパイルを確認する
+3. `bench-regression` CIジョブが正常に動作することを確認する
 
 ---
 
-### IP-02: `LevelComponent` アイテムドロップ重複バグ修正
+### I-B: spawn_elite_enemy の脆弱なスロット特定ロジック（優先度: 高）
 
-**対応するマイナス点**: アイテムドロップ重複ロジック（-3）
+**問題:** `spawn` が `free_list` を使ってスロットを再利用する場合、`before_len..after_len` の範囲外のスロットが使われる。`i >= before_len` の条件では `free_list` 再利用スロットを捕捉できず、同じ `kind_id` の既存エネミーが `base_max_hp` と同じ HP を持つ場合、誤って既存エネミーの HP を変更する可能性がある。
 
-**問題の詳細**
+**影響ファイル:**
+- `native/game_nif/src/nif/action_nif.rs`（L182-194）
 
-`on_event({:entity_removed, ...})` と `on_frame_event({:enemy_killed, ...})` の両方でアイテムドロップが発生する可能性がある。1回の敵撃破でアイテムが2個ドロップするバグが潜在している。
-
-**修正方針**
-
-`on_event({:entity_removed, ...})` のアイテムドロップロジックを削除し、`on_frame_event({:enemy_killed, ...})` のみでドロップを処理する。または逆に、`on_frame_event` 側を削除して `on_event` 側に統一する。どちらのイベントが先に発火するかを確認した上で統一する。
-
-```elixir
-# 修正前: 2箇所にドロップロジックが存在
-def on_event({:entity_removed, world_ref, kind_id, x, y}, _context) do
-  # ← この重複ドロップを削除
-  roll = :rand.uniform(100)
-  cond do
-    roll <= @drop_magnet_threshold -> ...
-  end
-end
-
-# 修正後: on_frame_event のみでドロップを処理
-def on_event({:entity_removed, _world_ref, _kind_id, _x, _y}, _context) do
-  :ok  # ドロップは on_frame_event({:enemy_killed, ...}) で処理
-end
-```
-
-**受け入れ基準**:
-- 敵を 100 体撃破してアイテムドロップ数が 100 個以下であることを確認
-- `entity_removed` と `enemy_killed` の両方が発火するケースのテストを追加
+**作業ステップ:**
+1. `EnemyWorld::spawn` が使用したスロットインデックスを返すよう変更する（`pub fn spawn(...) -> Vec<usize>`）
+2. `action_nif.rs` の `spawn_elite_enemy` が返されたインデックスを直接使用するよう変更する
+3. テストで `free_list` 再利用ケース（既存エネミーを kill してから spawn）を検証する
 
 ---
 
-### IP-03: 複数ルームの実動作実証
+### I-C: FrameEvent::PlayerDamaged の u32 オーバーフローリスク（優先度: 高）
 
-**対応するマイナス点**: 複数ルームの同時起動が実証されていない（-2）
+**問題:** `(damage * 1000.0) as u32` キャストで `damage` が大きい場合（ボスの接触ダメージ等）に `u32` オーバーフローが発生する。Rustの `as u32` キャストは飽和変換ではなく切り捨て変換のため、意図しない結果になる。
 
-**実装方針**
+**影響ファイル:**
+- `native/game_nif/src/nif/events.rs`（L21）
 
-`GameServer.Application.start/2` で `:main` ルームに加えて `:sub` ルームを起動し、両ルームが独立して 60Hz で動作することを確認する。
-
-```elixir
-# apps/game_server/lib/game_server/application.ex
-children = [
-  ...
-  GameEngine.RoomSupervisor,
-  ...
-]
-
-# start/2 の末尾で
-{:ok, _} = GameEngine.RoomSupervisor.start_room(:main)
-{:ok, _} = GameEngine.RoomSupervisor.start_room(:sub)  # ← 追加
-GameNetwork.Local.connect_rooms(:main, :sub)             # ← 接続
-```
-
-**受け入れ基準**:
-- 2 ルームが同時起動し、一方がクラッシュしても他方が継続することを確認
-- `GameNetwork.Local.list_rooms/0` が 2 ルームを返すことを確認
+**作業ステップ:**
+1. `(damage * 1000.0) as u32` を `(damage * 1000.0).clamp(0.0, u32::MAX as f32) as u32` に変更する
+2. 同様のパターンが他の `FrameEvent` 変換にないか確認する
 
 ---
 
-### IP-04: 描画層の技術的負債解消
+### I-D: #[cfg(target_arch = "x86_64")] の pub use 漏れ（優先度: 中）
 
-**対応するマイナス点**: 毎フレーム `Vec` アロケーション（-2）、UV マジックナンバー（-2）
+**問題:** `game_logic/mod.rs` で `update_chase_ai_simd` が非 x86_64 環境でも `pub use` でエクスポートされているが、実際の定義は `#[cfg(target_arch = "x86_64")]` で条件付きのため、ARM/WASMでコンパイルするとリンクエラーになる。
 
-**4-a: 毎フレームアロケーションの解消**
+**影響ファイル:**
+- `native/game_physics/src/game_logic/mod.rs`（L9）
 
-```rust
-// 修正前: 毎フレーム Vec を生成
-fn update_instances(&self, frame: &RenderFrame) -> Vec<SpriteInstance> {
-    let mut instances = Vec::with_capacity(MAX_INSTANCES);
-    // ...
-    instances
-}
-
-// 修正後: Renderer フィールドに Vec を保持して再利用
-pub struct Renderer {
-    // ...
-    instances: Vec<SpriteInstance>,  // ← 追加
-}
-
-fn update_instances(&mut self, frame: &RenderFrame) {
-    self.instances.clear();
-    // self.instances.push(...) で再利用
-}
-```
-
-**4-b: UV マジックナンバーのデータファイル化**
-
-`assets/atlas.toml` を作成:
-
-```toml
-[sprites]
-player_idle = { x = 0,   y = 0, w = 16, h = 16, frames = 4 }
-enemy_basic = { x = 64,  y = 0, w = 16, h = 16, frames = 3 }
-ghost       = { x = 112, y = 0, w = 16, h = 16, frames = 2 }
-```
-
-起動時にロードして UV ルックアップテーブルを生成。`renderer/mod.rs` のハードコードされたピクセルオフセットをすべて削除。
+**作業ステップ:**
+1. `pub use chase_ai::update_chase_ai_simd;` を `#[cfg(target_arch = "x86_64")] pub use chase_ai::update_chase_ai_simd;` に変更する
+2. ARM/WASM ターゲットでのコンパイルを確認する（`cargo check --target aarch64-unknown-linux-gnu`）
 
 ---
 
-### IP-05: NIF バージョニング・`create_world()` エラーハンドリング
+### I-E: game_network が実質スタブ（優先度: 高）
 
-**対応するマイナス点**: NIF バージョニングなし（-2）、`create_world()` NifResult 未対応（-2）
+**問題:** `game_network.ex` は実装なしのスタブ。「なぜElixir + Rustか」というプロジェクトの価値命題の核心（OTPによる分散・耐障害性）がコードで証明されていない。
 
-**5-a: NIF バージョニング**
+**影響ファイル:**
+- `apps/game_network/lib/game_network.ex`
 
-```rust
-// native/game_nif/src/nif/load.rs
-pub const NIF_VERSION: u32 = 1;
-```
-
-```elixir
-# lib/game_engine/nif_bridge.ex
-@expected_nif_version 1
-
-def check_version! do
-  case nif_version() do
-    @expected_nif_version -> :ok
-    v -> raise "NIF バージョン不一致: 期待 #{@expected_nif_version}, 実際 #{v}"
-  end
-end
-```
-
-**5-b: `create_world()` エラーハンドリング**
-
-```rust
-// native/game_nif/src/nif/world_nif.rs
-#[rustler::nif]
-pub fn create_world() -> NifResult<ResourceArc<GameWorld>> {
-    // エラー時は Err(rustler::Error::Term(...)) を返す
-}
-```
-
-```elixir
-# apps/game_server/lib/game_server/application.ex
-case GameEngine.NifBridge.create_world() do
-  {:ok, world_ref} -> world_ref
-  {:error, reason} -> {:error, reason}  # raise ではなく error タプルを返す
-end
-```
+**作業ステップ:**
+1. `game_network.ex` に `open_room/1`・`close_room/1`・`broadcast/2` 等の公開APIを定義する
+2. `libcluster` を追加し、複数ノード間でのルーム管理を実装する
+3. ノードクラッシュ時のルーム移行シナリオをテストで検証する
 
 ---
 
-### IP-06: ゲーム内設定 UI の実装
+### I-F: Elixir 側テストがほぼ未整備（優先度: 中）
 
-**対応するマイナス点**: ゲーム内設定 UI なし（-2）
+**問題:** `GameEngine.SceneManager`・`GameEvents`・`EventBus`・`SaveManager` のテストが存在しない。エンジンコアのリグレッションを検出する手段がない。
 
-`SceneBehaviour` を実装した `GameEngine.Scenes.Settings` モジュールを作成:
+**影響ファイル:**
+- `apps/game_engine/test/`（存在しない）
 
-- BGM 音量スライダー（`set_bgm_volume` NIF を呼び出す）
-- SE 音量スライダー
-- フルスクリーン切り替え（`winit` ウィンドウモード変更）
-- キーバインド表示（v1 は読み取り専用）
-
-タイトル画面から push で遷移し、戻るで pop する。
-
----
-
-### IP-07: リプレイ録画・再生システムの実装
-
-**対応するマイナス点**: 決定論的乱数があるにもかかわらずリプレイ未実装（-1）
-
-初期 RNG シードと全プレイヤー入力イベント（フレームタイムスタンプ付き）を記録。再生時は記録済み入力を `InputHandler` に注入する。決定論的物理が同一ゲームを再現する。
-
-```elixir
-defmodule GameEngine.ReplayRecorder do
-  def start_recording(seed) :: {:ok, recorder}
-  def record_input(recorder, frame_id, input) :: :ok
-  def save_replay(recorder, path) :: :ok
-  def load_replay(path) :: {:ok, replay_data}
-end
-```
+**作業ステップ:**
+1. `apps/game_engine/test/game_engine/scene_manager_test.exs` を作成し、シーン遷移（push/pop/replace）をテストする
+2. `apps/game_engine/test/game_engine/save_manager_test.exs` を作成し、セーブ/ロード・HMAC検証をテストする
+3. `apps/game_engine/test/game_engine/event_bus_test.exs` を作成し、サブスクライバー配信をテストする
+4. `GameEngine.NifBridgeMock`（`apps/game_engine/test/support/mocks.ex` に既に定義済み）を使ってNIF依存を排除する
 
 ---
 
-### IP-08: 空間オーディオ（距離減衰）の実装
+### I-G: WebSocket 認証・認可が未実装（優先度: 高）
 
-**対応するマイナス点**: 空間オーディオ未実装（-1）
+**問題:** `channel.ex` の `join/3` でルームIDの存在確認のみを行い、認証・認可のロジックがない。誰でも任意のルームに参加できる状態。
 
-```rust
-pub enum AudioCommand {
-    PlaySeAtPosition(AssetId, f32, f32),  // x, y ワールド座標
-}
-```
+**影響ファイル:**
+- `apps/game_network/lib/game_network/channel.ex`
 
-オーディオスレッドでプレイヤー位置との距離を計算し、線形または逆二乗減衰を適用する。
-
----
-
-### IP-09: ボイスリミット・優先度システムの実装
-
-**対応するマイナス点**: ボイスリミットなし（-2）
-
-```rust
-struct AudioMixer {
-    active_voices: Vec<ActiveVoice>,
-    max_voices: usize,  // 例: 32
-}
-
-impl AudioMixer {
-    fn play(&mut self, cmd: AudioCommand, priority: u8) {
-        if self.active_voices.len() >= self.max_voices {
-            // 最低優先度のボイスをドロップ
-        }
-    }
-}
-```
+**作業ステップ:**
+1. `Phoenix.Token.sign/3` でサーバーサイドトークンを生成するエンドポイントを追加する
+2. `channel.ex` の `join/3` で `Phoenix.Token.verify/4` を使ってトークンを検証する
+3. トークンの有効期限・ルームIDのスコープ制限を実装する
+4. 認証テストを `game_network_channel_test.exs` に追加する
 
 ---
 
-### IP-10: フラスタムカリングの実装
+### I-H: EntityParams の Single Source of Truth 化（優先度: 中）
 
-**対応するマイナス点**: フラスタムカリングなし（-2）
+**問題:** `entity_params.ex`・`spawn_component.ex` の `boss_params/0`・Rust側の値の3箇所に同じ値が散在している。
 
-`render_snapshot.rs` のスナップショット構築ループ内で、カメラビューポート外のエンティティをフィルタリング:
+**影響ファイル:**
+- `apps/game_content/lib/game_content/entity_params.ex`
+- `apps/game_content/lib/game_content/vampire_survivor/spawn_component.ex`
 
-```rust
-let in_view = |x: f32, y: f32| {
-    let (cx, cy) = camera_offset;
-    x >= cx - HALF_W - MARGIN && x <= cx + HALF_W + MARGIN &&
-    y >= cy - HALF_H - MARGIN && y <= cy + HALF_H + MARGIN
-};
-```
-
-O(n) で既存のスナップショットループと統合可能。
+**作業ステップ:**
+1. `spawn_component.ex` の `boss_params/0` を削除し、`EntityParams.boss_params/0` を呼び出すよう変更する
+2. `EntityParams` が `boss_params/0` を公開APIとして提供するよう整理する
+3. Rust側の値が `set_entity_params` NIF経由でのみ設定されることを確認する
 
 ---
 
-### IP-11: エンドツーエンド NIF ラウンドトリップベンチマークの追加
+### I-I: CI の pull_request トリガー追加（優先度: 中）
 
-**対応するマイナス点**: フルラウンドトリップベンチマークなし（-2）
+**問題:** `.github/workflows/ci.yml` が `push` イベントのみをトリガーとしており、PRへの自動チェックが走らない。
 
-```elixir
-# apps/game_engine/bench/nif_roundtrip_bench.exs
-Benchee.run(%{
-  "フルフレームサイクル" => fn ->
-    NifBridge.set_hud_state(world, hud_state)
-    NifBridge.physics_step(world)
-    NifBridge.drain_frame_events(world)
-  end
-})
-```
+**影響ファイル:**
+- `.github/workflows/ci.yml`
 
-結果を `docs/benchmarks/nif-roundtrip.md` に記録。
+**作業ステップ:**
+1. `on:` セクションに `pull_request: { branches: [main] }` を追加する
+2. `concurrency` の `group` を `${{ github.workflow }}-${{ github.ref }}` に変更してPRとpushで独立したキャンセルが動作するようにする
 
 ---
 
-### IP-12: セーブ形式を JSON / MessagePack に移行
+### I-J: game_render の build_instances 重複解消（優先度: 低）
 
-**対応するマイナス点**: Erlang バイナリ term（非ポータブル）（-2）
+**問題:** `renderer/mod.rs` の `update_instances` と `headless.rs` の `build_instances` にほぼ同一のスプライトUV・サイズ計算ロジックが重複している。
 
-`SaveManager` の `:erlang.term_to_binary` / `:erlang.binary_to_term` を `Jason.encode!` / `Jason.decode!` に置き換え。HMAC 署名は維持。バージョンフィールドを追加:
+**影響ファイル:**
+- `native/game_render/src/renderer/mod.rs`（L719-906）
+- `native/game_render/src/headless.rs`（L556-715）
 
-```json
-{ "version": 1, "score": 12345, "level": 7, "elapsed_ms": 300000 }
-```
-
----
-
-### IP-13: WebSocket 認証の実装
-
-**対応するマイナス点**: WebSocket 認証が未実装（-2）
-
-```elixir
-# apps/game_network/lib/game_network/user_socket.ex
-def connect(%{"token" => token}, socket, _connect_info) do
-  case verify_token(token) do
-    {:ok, user_id} -> {:ok, assign(socket, :user_id, user_id)}
-    {:error, _} -> :error
-  end
-end
-```
-
-JWT 検証または Phoenix.Token を使用したトークン検証を実装。
+**作業ステップ:**
+1. スプライト種別ごとのUV・サイズ計算ロジックを `pub(crate) fn build_sprite_instance(...)` として `renderer/mod.rs` に切り出す
+2. `headless.rs` の `build_instances` がこの共有関数を呼び出すよう変更する
+3. スプライト種別を追加した際に1箇所のみ変更すればよいことをテストで確認する
 
 ---
 
-### IP-14: 物理ステップ実行順序のドキュメント化
+### I-K: Skeleton/Ghost のスプライト実装（優先度: 低）
 
-**対応するマイナス点**: 物理ステップ順序が暗黙的（-1）
+**問題:** Skeleton と Ghost が Golem と Bat の UV を流用しており、視覚的に区別できない。
 
-`physics_step.rs` の先頭にコメントブロックを追加:
+**影響ファイル:**
+- `native/game_render/src/renderer/mod.rs`（L258-266）
 
-```rust
-/// 物理ステップ実行順序（60Hz 毎フレーム）:
-///
-/// 1. プレイヤー移動    — 障害物押し出しの前に確定させる
-/// 2. 障害物押し出し    — プレイヤー移動後、AI 前に実行
-/// 3. Chase AI          — プレイヤー位置が確定した後に読む
-/// 4. 敵分離            — AI 速度更新後に実行
-/// 5. 衝突判定          — 最終位置で実行
-/// 6. 武器攻撃          — 衝突結果を読む
-/// 7. パーティクル      — 独立、順序不問
-/// 8. アイテム          — プレイヤー位置を読む
-/// 9. 弾丸              — 衝突結果を読む
-/// 10. ボス             — プレイヤー位置を読み、ボス状態を書く
-```
+**作業ステップ:**
+1. テクスチャアトラスに Skeleton・Ghost 専用のスプライトスロットを確保する
+2. `skeleton_anim_uv` と `ghost_anim_uv` を専用UVに変更する
+3. TODO コメントを削除する
 
 ---
 
-### IP-15: プロセス辞書ダーティフラグの State 管理への移行
+## 完了済みタスク（フェーズ1・1.5）
 
-**対応するマイナス点**: プロセス辞書によるダーティフラグ管理（-1）
-
-`LevelComponent` と `BossComponent` の `Process.put/get` によるダーティフラグを、コンポーネント state に移動する:
-
-```elixir
-# 修正前
-defp sync_hud_state(world_ref, playing_state) do
-  prev = Process.get({__MODULE__, :last_hud_state})
-  # ...
-  Process.put({__MODULE__, :last_hud_state}, new_val)
-end
-
-# 修正後: on_nif_sync/1 の state に prev_hud を持たせる
-def on_nif_sync(%{prev_hud: prev_hud} = state) do
-  new_hud = {state.score, state.kill_count}
-  if new_hud != prev_hud do
-    NifBridge.set_hud_state(state.world_ref, state.score, state.kill_count)
-    %{state | prev_hud: new_hud}
-  else
-    state
-  end
-end
-```
-
----
-
-## 実装ロードマップ
-
-```
-フェーズ1 — バグ修正・品質向上（1〜2週間）
-  IP-02  アイテムドロップ重複バグ修正
-  IP-05  NIF バージョニング・エラーハンドリング
-  IP-14  物理ステップ順序ドキュメント化
-  IP-15  プロセス辞書ダーティフラグ移行
-
-フェーズ2 — テスト・実証（3〜5週間）
-  IP-01  Elixir コアテスト追加
-  IP-03  複数ルームの実動作実証
-  IP-11  エンドツーエンドベンチマーク
-
-フェーズ3 — 描画・パフォーマンス（6〜8週間）
-  IP-04  描画層技術的負債解消
-  IP-10  フラスタムカリング
-
-フェーズ4 — 機能追加（9〜16週間）
-  IP-06  ゲーム内設定 UI
-  IP-07  リプレイシステム
-  IP-08  空間オーディオ
-  IP-09  ボイスリミット
-  IP-12  セーブ形式移行
-  IP-13  WebSocket 認証
-```
-
----
-
-*このドキュメントは `docs/evaluation/evaluation-2026-03-01.md`（第2回）の評価に基づいて生成された。*
-*項目が完了したら `docs/evaluation/completed-improvements.md` に移動すること。*
+~~I-G: HUD 型修正~~  
+~~I-H: SIMD alive_mask テスト追加~~  
+~~I-I: 命名明確化（EnemyWorld.alive を Vec<u8> に変更）~~  
+~~I-J: rayon 並列化閾値の定数化（RAYON_THRESHOLD）~~  
+~~I-K: lock_metrics の AtomicU64 実装~~  
+~~I-L: DirtyCpu スケジューラ指定~~  
+~~I-M: ResourceArc GC 連動実装~~  
+~~I-N: Ghost・Skeleton の UV に TODO コメント追加~~  
+~~I-O: ベンチマーク回帰 CI ジョブ追加~~
