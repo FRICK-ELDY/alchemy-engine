@@ -26,6 +26,7 @@ impl UiAction {
             "__load_confirm__" => Some(Self::LoadConfirm),
             "__load_cancel__"  => Some(Self::LoadCancel),
             "__skip__"         => Some(Self::SkipLevelUp),
+            s if s.starts_with("__") => None,
             _                  => Some(Self::ChooseWeapon),
         }
     }
@@ -47,4 +48,4 @@ pub struct RenderFrame {
 mod renderer;
 pub mod window;
 
-pub use renderer::{BossHudInfo, GamePhase, GameUiState, HudData, Renderer};
+pub use renderer::{BossHudInfo, GamePhase, GameUiState, HudData, LoadDialogKind, Renderer};
