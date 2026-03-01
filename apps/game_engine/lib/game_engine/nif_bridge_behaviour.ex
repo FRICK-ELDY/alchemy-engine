@@ -50,6 +50,7 @@ defmodule GameEngine.NifBridge.Behaviour do
   # I-2: kind_id を返り値から除去。ボス種別は Elixir 側 Rule state で管理する。
   @callback get_boss_state(reference()) ::
               {:alive, float(), float(), float(), float(), float()} | :none
+  # credo:disable-for-next-line Credo.Check.Readability.PredicateFunctionNames
   @callback is_player_dead(reference()) :: boolean()
 
   # ── Elixir SSoT 注入 NIF ─────────────────────────────────────────

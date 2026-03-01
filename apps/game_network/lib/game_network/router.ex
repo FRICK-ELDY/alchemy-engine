@@ -46,10 +46,8 @@ defmodule GameNetwork.Router do
   # GameNetwork.Local がダウンしている場合（プロセス不在・タイムアウト・TOCTOU）は
   # {:error, reason} を返す。:exit は GenServer.call が失敗する全ケースをカバーする。
   defp fetch_rooms do
-    try do
-      {:ok, GameNetwork.Local.list_rooms()}
-    catch
-      :exit, reason -> {:error, reason}
-    end
+    {:ok, GameNetwork.Local.list_rooms()}
+  catch
+    :exit, reason -> {:error, reason}
   end
 end
