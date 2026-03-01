@@ -10,25 +10,23 @@
 
 | ID | タイトル | 期待改善幅 | 工数 | 優先度 |
 |:---|:---|:---:|:---:|:---:|
-| IP-01 | `GameNetwork.Local` フェーズ3（実装済み） | +9 | 大 | ✅ 完了 |
-| IP-02 | CI/CD パイプラインの追加 | +5 | 小 | 🔴 最優先 |
-| IP-03 | `GameEvents` GenServer の分解 | +4 | 中 | 🟡 高 |
-| IP-04 | Elixir コアモジュールのテスト追加 | +4 | 中 | 🟡 高 |
-| IP-05 | NIF の `unwrap()` / `expect()` を `NifResult<T>` に統一 | +2 | 小 | 🟡 高 |
-| IP-06 | Rust → Elixir メールボックスへのバックプレッシャー実装 | +2 | 小 | 🟡 高 |
-| IP-07 | ヘッドレス/オフスクリーンレンダリングモードの追加 | +2 | 中 | 🟡 高 |
-| IP-08 | ゲーム内設定 UI の実装 | +1 | 中 | 🟢 中 |
-| IP-09 | リプレイ録画・再生システムの実装 | +1 | 大 | 🟢 中 |
-| IP-10 | 空間オーディオ（距離減衰）の実装 | +1 | 中 | 🟢 中 |
-| IP-11 | ボイスリミット・優先度システムの実装 | +1 | 小 | 🟢 中 |
-| IP-12 | フラスタムカリングの実装 | +1 | 小 | 🟢 中 |
-| IP-13 | スプライトアトラスメタデータのデータファイル化 | +1 | 小 | 🟢 中 |
-| IP-14 | エンドツーエンド NIF ラウンドトリップベンチマークの追加 | +1 | 小 | 🟢 中 |
-| IP-15 | セーブ形式を JSON / MessagePack に移行 | +1 | 中 | 🟢 中 |
-| IP-16 | `set_hud_state` へのダーティフラグ追加 | +1 | 小 | 🟢 中 |
-| IP-17 | 物理ステップ実行順序のドキュメント化 | +1 | 小 | 🟢 中 |
-| IP-18 | NIF バージョニング・互換性チェックの追加 | +1 | 小 | 🟢 中 |
-| IP-19 | 完了済み改善項目のアーカイブ化 | +1 | 小 | 🟢 中 |
+| IP-01 | `GameEvents` GenServer の分解 | +4 | 中 | 🟡 高 |
+| IP-02 | Elixir コアモジュールのテスト追加 | +4 | 中 | 🟡 高 |
+| IP-03 | NIF の `unwrap()` / `expect()` を `NifResult<T>` に統一 | +2 | 小 | 🟡 高 |
+| IP-04 | Rust → Elixir メールボックスへのバックプレッシャー実装 | +2 | 小 | 🟡 高 |
+| IP-05 | ヘッドレス/オフスクリーンレンダリングモードの追加 | +2 | 中 | 🟡 高 |
+| IP-06 | ゲーム内設定 UI の実装 | +1 | 中 | 🟢 中 |
+| IP-07 | リプレイ録画・再生システムの実装 | +1 | 大 | 🟢 中 |
+| IP-08 | 空間オーディオ（距離減衰）の実装 | +1 | 中 | 🟢 中 |
+| IP-09 | ボイスリミット・優先度システムの実装 | +1 | 小 | 🟢 中 |
+| IP-10 | フラスタムカリングの実装 | +1 | 小 | 🟢 中 |
+| IP-11 | スプライトアトラスメタデータのデータファイル化 | +1 | 小 | 🟢 中 |
+| IP-12 | エンドツーエンド NIF ラウンドトリップベンチマークの追加 | +1 | 小 | 🟢 中 |
+| IP-13 | セーブ形式を JSON / MessagePack に移行 | +1 | 中 | 🟢 中 |
+| IP-14 | `set_hud_state` へのダーティフラグ追加 | +1 | 小 | 🟢 中 |
+| IP-15 | 物理ステップ実行順序のドキュメント化 | +1 | 小 | 🟢 中 |
+| IP-16 | NIF バージョニング・互換性チェックの追加 | +1 | 小 | 🟢 中 |
+| IP-17 | 完了済み改善項目のアーカイブ化 | +1 | 小 | 🟢 中 |
 
 ---
 
@@ -36,84 +34,7 @@
 
 ---
 
-### IP-01: `GameNetwork.Local` フェーズ3の実装（✅ 完了）
-
-**対応するマイナス点**: ネットワーク層 0% 実装（-3）、複数ルーム未起動（-2）
-
-> フェーズ1〜3 すべて実装済み。
-> - **フェーズ1** `GameNetwork.Local` GenServer: 同一 BEAM ノード内での複数ルーム起動・OTP 隔離・イベントルーティング
-> - **フェーズ2** `GameNetwork.Channel` / `GameNetwork.Endpoint`: WebSocket `/socket` 経由でブラウザから接続可能
-> - **フェーズ3** `GameNetwork.UDP` / `GameNetwork.UDP.Protocol`: `:gen_udp` による UDP トランスポート（デフォルトポート 4001）
-
-**フェーズ3 実装内容**:
-
-- `GameNetwork.UDP.Protocol` — バイナリパケットのエンコード・デコード・zlib デルタ圧縮
-  - パケット種別: `join` / `join_ack` / `leave` / `input` / `action` / `frame` / `ping` / `pong` / `error`
-  - `compress_events/1` / `decompress_events/1`: `:erlang.term_to_binary` + `:zlib.compress`
-- `GameNetwork.UDP` GenServer — `:gen_udp` ソケット管理・セッション管理・パケットルーティング
-  - JOIN: `GameNetwork.Local.register_room/1` + セッション登録 → JOIN_ACK 返送
-  - INPUT: `GameEngine.RoomRegistry.get_loop/1` → `send(pid, {:move_input, dx, dy})`
-  - ACTION: `send(pid, {:ui_action, name})`
-  - PING → PONG（タイムスタンプ付き）
-  - `broadcast_frame/2`: 同一ルームの全 UDP クライアントにフレームを配信
-- `GameNetwork.Application` に `GameNetwork.UDP` を追加（起動順: PubSub → Local → Endpoint → UDP）
-- `config/config.exs` に UDP ポート設定（デフォルト 4001）、`config/runtime.exs` に `GAME_NETWORK_UDP_PORT` 対応
-
-**受け入れ基準（達成済み）**:
-- 異なる OS プロセスから同一ルームに 2 プレイヤーが参加できる（UDP JOIN/INPUT テストで検証）
-- ルームのクラッシュが他のルームに影響しない（OTP `:one_for_one` 隔離）
-- localhost でのフレームイベント配信レイテンシ < 5ms（UDP + zlib 圧縮で達成可能）
-
----
-
-### IP-02: CI/CD パイプラインの追加
-
-**対応するマイナス点**: CI/CD なし（-3）
-
-**問題の本質**
-
-充実したドキュメントと自己認識的な弱点管理を持つプロジェクトが、自動テストを一切実行していない。品質意識とプロセスが矛盾している。
-
-**実装内容**
-
-`.github/workflows/ci.yml` を作成:
-
-```yaml
-name: CI
-on: [push, pull_request]
-
-jobs:
-  elixir:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: erlef/setup-beam@v1
-        with:
-          elixir-version: '1.19'
-          otp-version: '27'
-      - run: mix deps.get
-      - run: mix compile --warnings-as-errors
-      - run: mix test
-      - run: mix credo --strict
-
-  rust:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-      - run: cargo test --workspace --features nif
-      - run: cargo clippy --workspace -- -D warnings
-```
-
-**受け入れ基準**:
-- すべての PR で `mix test` と `cargo test` が自動実行される
-- `mix credo` と `cargo clippy` がゼロ警告で通過する
-
----
-
-### IP-03: `GameEvents` GenServer の分解
+### IP-01: `GameEvents` GenServer の分解
 
 **対応するマイナス点**: `GameEvents` 697 行・複数責務（-2）
 
@@ -141,7 +62,7 @@ jobs:
 
 ---
 
-### IP-04: Elixir コアモジュールのテスト追加
+### IP-02: Elixir コアモジュールのテスト追加
 
 **対応するマイナス点**: `GameEvents` テストゼロ（-2）、`SceneManager` / `EventBus` / 全シーンテストゼロ（-2）
 
@@ -185,7 +106,7 @@ end
 
 ---
 
-### IP-05: NIF の `unwrap()` / `expect()` を `NifResult<T>` に統一
+### IP-03: NIF の `unwrap()` / `expect()` を `NifResult<T>` に統一
 
 **対応するマイナス点**: NIF パニックが BEAM VM をクラッシュさせうる（-2）
 
@@ -218,7 +139,7 @@ pub fn get_player_hp(world: ResourceArc<GameWorld>) -> NifResult<f32> {
 
 ---
 
-### IP-06: Rust → Elixir メールボックスへのバックプレッシャー実装
+### IP-04: Rust → Elixir メールボックスへのバックプレッシャー実装
 
 **対応するマイナス点**: バックプレッシャーなし（-2）
 
@@ -250,7 +171,7 @@ end
 
 ---
 
-### IP-07: ヘッドレス/オフスクリーンレンダリングモードの追加
+### IP-05: ヘッドレス/オフスクリーンレンダリングモードの追加
 
 **対応するマイナス点**: ヘッドレスモードなし（-2）
 
@@ -279,7 +200,7 @@ CI では `cargo test --features headless` でレンダリングの回帰テス�
 
 ---
 
-### IP-08: ゲーム内設定 UI の実装
+### IP-06: ゲーム内設定 UI の実装
 
 **対応するマイナス点**: ゲーム内設定 UI なし（-1）
 
@@ -296,7 +217,7 @@ CI では `cargo test --features headless` でレンダリングの回帰テス�
 
 ---
 
-### IP-09: リプレイ録画・再生システムの実装
+### IP-07: リプレイ録画・再生システムの実装
 
 **対応するマイナス点**: 決定論的乱数があるにもかかわらずリプレイ未実装（-1）
 
@@ -315,7 +236,7 @@ end
 
 ---
 
-### IP-10: 空間オーディオ（距離減衰）の実装
+### IP-08: 空間オーディオ（距離減衰）の実装
 
 **対応するマイナス点**: 空間オーディオ未実装（-1）
 
@@ -332,7 +253,7 @@ pub enum AudioCommand {
 
 ---
 
-### IP-11: ボイスリミット・優先度システムの実装
+### IP-09: ボイスリミット・優先度システムの実装
 
 **対応するマイナス点**: ボイスリミットなし（-1）
 
@@ -355,7 +276,7 @@ impl AudioMixer {
 
 ---
 
-### IP-12: フラスタムカリングの実装
+### IP-10: フラスタムカリングの実装
 
 **対応するマイナス点**: フラスタムカリングなし（-1）
 
@@ -375,7 +296,7 @@ O(n) で既存のスナップショットループと統合可能。
 
 ---
 
-### IP-13: スプライトアトラスメタデータのデータファイル化
+### IP-11: スプライトアトラスメタデータのデータファイル化
 
 **対応するマイナス点**: UV マジックナンバーが散在（-1）
 
@@ -394,7 +315,7 @@ ghost       = { x = 112, y = 0, w = 16, h = 16, frames = 2 }
 
 ---
 
-### IP-14: エンドツーエンド NIF ラウンドトリップベンチマークの追加
+### IP-12: エンドツーエンド NIF ラウンドトリップベンチマークの追加
 
 **対応するマイナス点**: フルラウンドトリップベンチマークなし（-1）
 
@@ -415,7 +336,7 @@ Benchee.run(%{
 
 ---
 
-### IP-15: セーブ形式を JSON / MessagePack に移行
+### IP-13: セーブ形式を JSON / MessagePack に移行
 
 **対応するマイナス点**: Erlang バイナリ term（非ポータブル）（-1）
 
@@ -429,7 +350,28 @@ Benchee.run(%{
 
 ---
 
-### IP-16: 物理ステップ実行順序のドキュメント化
+### IP-14: `set_hud_state` へのダーティフラグ追加
+
+**対応するマイナス点**: 毎フレーム write lock 取得（-1）
+
+**実装方針**
+
+```elixir
+defp maybe_inject_hud(world, hud_state, prev_hud) do
+  if hud_state != prev_hud do
+    NifBridge.set_hud_state(world, hud_state)
+    hud_state
+  else
+    prev_hud
+  end
+end
+```
+
+`GameEvents` の state に `prev_hud` フィールドを追加。レベルアップは低頻度なので、大半のフレームで write lock を回避できる。
+
+---
+
+### IP-15: 物理ステップ実行順序のドキュメント化
 
 **対応するマイナス点**: 物理ステップ順序が暗黙的（-1）
 
@@ -456,7 +398,7 @@ Benchee.run(%{
 
 ---
 
-### IP-17: NIF バージョニング・互換性チェックの追加
+### IP-16: NIF バージョニング・互換性チェックの追加
 
 **対応するマイナス点**: NIF バージョニングなし（-1）
 
@@ -483,28 +425,7 @@ end
 
 ---
 
-### IP-18: `set_hud_state` へのダーティフラグ追加
-
-**対応するマイナス点**: 毎フレーム write lock 取得（-1）
-
-**実装方針**
-
-```elixir
-defp maybe_inject_hud(world, hud_state, prev_hud) do
-  if hud_state != prev_hud do
-    NifBridge.set_hud_state(world, hud_state)
-    hud_state
-  else
-    prev_hud
-  end
-end
-```
-
-`GameEvents` の state に `prev_hud` フィールドを追加。レベルアップは低頻度なので、大半のフレームで write lock を回避できる。
-
----
-
-### IP-19: 完了済み改善項目のアーカイブ化
+### IP-17: 完了済み改善項目のアーカイブ化
 
 **対応するマイナス点**: `improvement-plan.md` が完了済みと進行中を混在（-1）
 
@@ -521,31 +442,27 @@ end
 
 ```
 フェーズ1 — 基盤整備（1〜2週間）
-  IP-02  CI/CD パイプライン
-  IP-05  NIF unwrap() 統一
-  IP-06  バックプレッシャー実装
-  IP-16  物理ステップ順序ドキュメント化
-  IP-17  NIF バージョニング
-  IP-18  set_hud_state ダーティフラグ
-  IP-19  完了済み項目アーカイブ
+  IP-03  NIF unwrap() 統一
+  IP-04  バックプレッシャー実装
+  IP-14  set_hud_state ダーティフラグ
+  IP-15  物理ステップ順序ドキュメント化
+  IP-16  NIF バージョニング
+  IP-17  完了済み項目アーカイブ
 
 フェーズ2 — 品質向上（3〜5週間）
-  IP-03  GameEvents 分解
-  IP-04  Elixir コアテスト追加
-  IP-07  ヘッドレスレンダリングモード
-  IP-13  スプライトアトラスメタデータ化
-  IP-14  エンドツーエンドベンチマーク
+  IP-01  GameEvents 分解
+  IP-02  Elixir コアテスト追加
+  IP-05  ヘッドレスレンダリングモード
+  IP-11  スプライトアトラスメタデータ化
+  IP-12  エンドツーエンドベンチマーク
 
 フェーズ3 — 機能追加（6〜12週間）
-  IP-08  ゲーム内設定 UI
-  IP-09  リプレイシステム
-  IP-10  空間オーディオ
-  IP-11  ボイスリミット
-  IP-12  フラスタムカリング
-  IP-15  セーブ形式移行
-
-フェーズ4 — ネットワーク（13〜24週間）
-  IP-01  GameNetwork.Local フェーズ1〜3（✅ 完了）
+  IP-06  ゲーム内設定 UI
+  IP-07  リプレイシステム
+  IP-08  空間オーディオ
+  IP-09  ボイスリミット
+  IP-10  フラスタムカリング
+  IP-13  セーブ形式移行
 ```
 
 ---
