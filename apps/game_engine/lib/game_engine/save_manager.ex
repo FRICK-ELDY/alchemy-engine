@@ -83,7 +83,13 @@ defmodule GameEngine.SaveManager do
 
   def load_high_scores do
     case read_json(high_scores_path()) do
+      # 現行フォーマット: エンベロープ構造 %{version, saved_at, state: %{scores: [...]}}
+      {:ok, %{"state" => %{"scores" => scores}}} when is_list(scores) ->
+        scores
+
+      # 旧フォーマット: scores が直下にある場合（後方互換）
       {:ok, %{"scores" => scores}} when is_list(scores) ->
+        Logger.info("[SAVE] Loaded high scores from legacy format (no envelope)")
         scores
 
       :not_found ->

@@ -19,7 +19,8 @@ config :game_network, GameNetwork.UDP,
 # ── 使用するコンテンツを指定する。
 # GameContent.VampireSurvivor — ヴァンパイアサバイバークローン
 # GameContent.AsteroidArena   — 小惑星シューター（武器・ボスなし）
-config :game_server, :current, GameContent.VampireSurvivor
+# GameContent.SimpleBox3D     — シンプルな3Dゲーム（Phase R-6 動作検証用）
+config :game_server, :current, GameContent.SimpleBox3D
 config :game_server, :map, :plain
 
 # セーブデータの HMAC 署名鍵（デフォルト値）。
