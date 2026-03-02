@@ -38,6 +38,14 @@ rustler::atoms! {
     ui_action,
     // フェーズ5: 移動入力用アトム
     move_input,
+    // 入力イベント用アトム
+    mouse_delta,
+    sprint,
+    key_pressed,
+    escape,
+    // カーソルグラブ制御アトム
+    grab,
+    release,
     // Phase R-3: 汎用エンティティ操作 NIF 用アトム
     boss,
     enemy,

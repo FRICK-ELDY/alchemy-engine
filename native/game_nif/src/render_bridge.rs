@@ -15,7 +15,7 @@ use crate::render_frame_buffer::RenderFrameBuffer;
 use game_audio::AssetLoader;
 use game_physics::constants::{PLAYER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use game_physics::world::GameWorld;
-use game_render::window::{run_render_loop, RenderBridge, RendererInit, WindowConfig};
+use game_render::window::{run_render_loop, KeyCode, RenderBridge, RendererInit, WindowConfig};
 use game_render::RenderFrame;
 use rustler::env::OwnedEnv;
 use rustler::{Encoder, LocalPid, ResourceArc};
@@ -89,7 +89,11 @@ impl RenderBridge for NativeRenderBridge {
             copy_interpolation_data(&guard)
         };
 
-        if interp_data.curr_tick_ms > 0 {
+        // 補間は Camera2D 専用。Camera3D の場合は Elixir 側がカメラを毎フレーム計算して
+        // push するため、ここでの上書きは不要かつ有害。
+        let is_2d = matches!(frame.camera, game_render::CameraParams::Camera2D { .. });
+
+        if is_2d && interp_data.curr_tick_ms > 0 {
             let now_ms = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap_or_default()
@@ -138,6 +142,33 @@ impl RenderBridge for NativeRenderBridge {
         let mut env = OwnedEnv::new();
         let _ = env.send_and_clear(&self.elixir_pid, |env| {
             (crate::ui_action(), action).encode(env)
+        });
+    }
+
+    fn on_mouse_delta(&self, dx: f32, dy: f32) {
+        let mut env = OwnedEnv::new();
+        let _ = env.send_and_clear(&self.elixir_pid, |env| {
+            (crate::mouse_delta(), dx as f64, dy as f64).encode(env)
+        });
+    }
+
+    fn on_sprint(&self, pressed: bool) {
+        let mut env = OwnedEnv::new();
+        let _ = env.send_and_clear(&self.elixir_pid, |env| {
+            (crate::sprint(), pressed).encode(env)
+        });
+    }
+
+    fn on_key_pressed(&self, key: KeyCode) {
+        // 転送対象キー（window.rs 側でフィルタ済み）:
+        //   - Escape
+        let key_atom = match key {
+            KeyCode::Escape => crate::escape(),
+            _ => return,
+        };
+        let mut env = OwnedEnv::new();
+        let _ = env.send_and_clear(&self.elixir_pid, |env| {
+            (crate::key_pressed(), key_atom).encode(env)
         });
     }
 }

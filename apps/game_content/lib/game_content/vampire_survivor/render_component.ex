@@ -575,7 +575,7 @@ defmodule GameContent.VampireSurvivor.RenderComponent do
 
   defp world_text_node(wx, wy, text, {r, g, b, a}, lifetime, max_lifetime) do
     {:node, {:top_left, {0.0, 0.0}, :wrap},
-     {:world_text, wx, wy, text, {r, g, b, a}, lifetime, max_lifetime}, []}
+     {:world_text, wx, wy, 0.0, text, {r, g, b, a}, {lifetime, max_lifetime}}, []}
   end
 
   defp vertical_panel(children, opts) do

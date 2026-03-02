@@ -61,7 +61,7 @@ pub fn create_render_frame_buffer() -> ResourceArc<RenderFrameBuffer> {
 ///   - 各色は `{r,g,b,a}`、末尾5要素は内部タプルにまとめる（Rustler の7要素制約のため）
 /// - `:separator`
 /// - `{:spacing, amount}`
-/// - `{:world_text, world_x, world_y, text, {r,g,b,a}, lifetime, max_lifetime}`
+/// - `{:world_text, world_x, world_y, world_z, text, {r,g,b,a}, {lifetime, max_lifetime}}`
 /// - `{:screen_flash, {r,g,b,a}}`
 #[rustler::nif]
 pub fn push_render_frame(
@@ -69,12 +69,19 @@ pub fn push_render_frame(
     commands: Term,
     camera: Term,
     ui: Term,
+    cursor_grab: Term,
 ) -> NifResult<Atom> {
     let commands = decode_commands(commands)?;
     let camera = decode_camera(camera)?;
     let ui = decode_ui_canvas(ui)?;
+    let cursor_grab = decode_cursor_grab(cursor_grab)?;
 
-    buf.push(RenderFrame { commands, camera, ui });
+    buf.push(RenderFrame {
+        commands,
+        camera,
+        ui,
+        cursor_grab,
+    });
 
     Ok(ok())
 }
@@ -555,25 +562,26 @@ fn decode_ui_component(term: Term) -> NifResult<UiComponent> {
                 corner_radius: corner_radius as f32,
             })
         }
-        // {:world_text, world_x, world_y, text, {r,g,b,a}, lifetime, max_lifetime}
+        // {:world_text, world_x, world_y, world_z, text, {r,g,b,a}, {lifetime, max_lifetime}}
         "world_text" => {
-            let (_, world_x, world_y, text, color_t, lifetime, max_lifetime): (
+            let (_, world_x, world_y, world_z, text, color_t, (lifetime, max_lifetime)): (
                 Atom,
+                f64,
                 f64,
                 f64,
                 String,
                 Term,
-                f64,
-                f64,
+                (f64, f64),
             ) = term.decode().map_err(|_| {
                 NifError::Term(Box::new(
-                    "world_text: expected {:world_text, wx, wy, text, {r,g,b,a}, lifetime, max_lifetime}",
+                    "world_text: expected {:world_text, wx, wy, wz, text, {r,g,b,a}, {lifetime, max_lifetime}}",
                 ))
             })?;
             let color = decode_color(color_t)?;
             Ok(UiComponent::WorldText {
                 world_x: world_x as f32,
                 world_y: world_y as f32,
+                world_z: world_z as f32,
                 text,
                 color,
                 lifetime: lifetime as f32,
@@ -629,4 +637,24 @@ fn decode_optional_border(term: Term) -> NifResult<Option<([f32; 4], f32)>> {
         .map_err(|_| NifError::Term(Box::new("border: expected {{r,g,b,a}, width}")))?;
     let color = decode_color(color_t)?;
     Ok(Some((color, width as f32)))
+}
+
+/// カーソルグラブ要求をデコードする。
+/// - `:grab`      → `Some(true)`
+/// - `:release`   → `Some(false)`
+/// - `:no_change` → `None`
+fn decode_cursor_grab(term: Term) -> NifResult<Option<bool>> {
+    let s = atom_str(term).map_err(|_| {
+        NifError::Term(Box::new(
+            "cursor_grab: expected :grab | :release | :no_change",
+        ))
+    })?;
+    match s.as_str() {
+        "grab" => Ok(Some(true)),
+        "release" => Ok(Some(false)),
+        "no_change" => Ok(None),
+        other => Err(NifError::Term(Box::new(format!(
+            "cursor_grab: unknown atom '{other}'"
+        )))),
+    }
 }
