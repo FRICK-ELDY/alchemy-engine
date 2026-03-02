@@ -2,6 +2,7 @@
 //! Summary: wgpu によるスプライト描画・パイプライン・テクスチャ管理
 //! 1.8: game_native から game_render へ分離移設。
 
+use crate::DrawCommand;
 use game_physics::constants::{BG_B, BG_G, BG_R, SPRITE_SIZE};
 use game_physics::item::{RENDER_KIND_GEM, RENDER_KIND_MAGNET, RENDER_KIND_POTION};
 use std::sync::Arc;
@@ -303,8 +304,6 @@ pub struct HudData {
     pub weapon_levels: Vec<(String, u32)>,
     pub magnet_timer: f32,
     pub item_count: usize,
-    pub camera_x: f32,
-    pub camera_y: f32,
     /// 1.2.9: ボス情報（ボスが存在しない場合は None）
     pub boss_info: Option<BossHudInfo>,
     // 1.2.10
@@ -343,8 +342,6 @@ impl Default for HudData {
             weapon_levels: Vec::new(),
             magnet_timer: 0.0,
             item_count: 0,
-            camera_x: 0.0,
-            camera_y: 0.0,
             boss_info: None,
             phase: GamePhase::Title,
             screen_flash_alpha: 0.0,
@@ -710,193 +707,17 @@ impl Renderer {
         self.egui_winit.on_window_event(window, event).consumed
     }
 
-    /// ゲーム状態からインスタンスリストを構築して GPU バッファを更新する
-    /// render_data: [(x, y, kind, anim_frame)] kind: 0=player, 1=slime, 2=bat, 3=golem, 4=bullet
-    /// particle_data: [(x, y, r, g, b, alpha, size)]
-    /// item_data: [(x, y, kind)] kind: 5=gem, 6=potion, 7=magnet
-    /// obstacle_data: [(x, y, radius, kind)] kind: 0=木, 1=岩（1.5.2）
-    /// camera_offset: (cam_x, cam_y) カメラのワールド座標オフセット（1.2.5）
-    pub fn update_instances(
-        &mut self,
-        render_data: &[(f32, f32, u8, u8)],
-        particle_data: &[(f32, f32, f32, f32, f32, f32, f32)],
-        item_data: &[(f32, f32, u8)],
-        obstacle_data: &[(f32, f32, f32, u8)],
-        camera_offset: (f32, f32),
-    ) {
-        // 1.2.5: カメラ Uniform を更新
-        let cam_uniform = CameraUniform::new(camera_offset.0, camera_offset.1);
+    /// `RenderFrame` の `DrawCommand` リストからインスタンスを構築して GPU バッファを更新する。
+    pub fn update_instances(&mut self, frame: &crate::RenderFrame) {
+        let (offset_x, offset_y) = frame.camera.offset_xy();
+        let cam_uniform = CameraUniform::new(offset_x, offset_y);
         self.queue.write_buffer(
             &self.camera_uniform_buf,
             0,
             bytemuck::bytes_of(&cam_uniform),
         );
-        let (bullet_uv_off, bullet_uv_sz) = bullet_uv();
-        let (fireball_uv_off, fireball_uv_sz) = fireball_uv();
-        let (lightning_uv_off, lightning_uv_sz) = lightning_bullet_uv();
-        let (whip_uv_off, whip_uv_sz) = whip_uv();
-        let (particle_uv_off, particle_uv_sz) = particle_uv();
-        let (gem_uv_off, gem_uv_sz) = gem_uv();
-        let (potion_uv_off, potion_uv_sz) = potion_uv();
-        let (magnet_uv_off, magnet_uv_sz) = magnet_uv();
-        let (rock_uv_off, rock_uv_sz) = rock_bullet_uv();
 
-        let mut instances: Vec<SpriteInstance> = Vec::with_capacity(
-            render_data.len() + particle_data.len() + item_data.len() + obstacle_data.len(),
-        );
-
-        for &(x, y, kind, anim_frame) in render_data {
-            let inst = match kind {
-                // 1.2.8: プレイヤーはアニメーションフレームに応じた UV を使用
-                0 => {
-                    let (uv_off, uv_sz) = player_anim_uv(anim_frame);
-                    SpriteInstance {
-                        position: [x, y],
-                        size: [SPRITE_SIZE, SPRITE_SIZE],
-                        uv_offset: uv_off,
-                        uv_size: uv_sz,
-                        color_tint: [1.0, 1.0, 1.0, 1.0],
-                    }
-                }
-                // 1.2.8: 敵タイプ: 1=slime, 2=bat, 3=golem（アニメーションフレーム対応）
-                1..=3 => {
-                    let sz = enemy_sprite_size(kind);
-                    let (uv_off, uv_sz) = enemy_anim_uv(kind, anim_frame);
-                    SpriteInstance {
-                        position: [x, y],
-                        size: [sz, sz],
-                        uv_offset: uv_off,
-                        uv_size: uv_sz,
-                        color_tint: [1.0, 1.0, 1.0, 1.0],
-                    }
-                }
-                // 1.2.10: エリート敵（kind = base_kind + ELITE_RENDER_KIND_OFFSET）: 赤みがかった色で描画
-                21..=23 => {
-                    let base = kind - ELITE_RENDER_KIND_OFFSET;
-                    let sz = enemy_sprite_size(base) * ELITE_SIZE_MULTIPLIER;
-                    let (uv_off, uv_sz) = enemy_anim_uv(base, anim_frame);
-                    SpriteInstance {
-                        position: [x - sz * 0.1, y - sz * 0.1],
-                        size: [sz, sz],
-                        uv_offset: uv_off,
-                        uv_size: uv_sz,
-                        color_tint: [1.0, 0.4, 0.4, 1.0],
-                    }
-                }
-                // 通常弾（MagicWand / Axe / Cross）: 黄色い円 16px
-                crate::BULLET_KIND_NORMAL => SpriteInstance {
-                    position: [x - 8.0, y - 8.0],
-                    size: [16.0, 16.0],
-                    uv_offset: bullet_uv_off,
-                    uv_size: bullet_uv_sz,
-                    color_tint: [1.0, 1.0, 1.0, 1.0],
-                },
-                // Fireball: 赤橙の炎球 22px（通常弾より大きめ）
-                crate::BULLET_KIND_FIREBALL => SpriteInstance {
-                    position: [x - 11.0, y - 11.0],
-                    size: [22.0, 22.0],
-                    uv_offset: fireball_uv_off,
-                    uv_size: fireball_uv_sz,
-                    color_tint: [1.0, 1.0, 1.0, 1.0],
-                },
-                // Lightning 弾丸: 水色の電撃球 18px
-                crate::BULLET_KIND_LIGHTNING => SpriteInstance {
-                    position: [x - 9.0, y - 9.0],
-                    size: [18.0, 18.0],
-                    uv_offset: lightning_uv_off,
-                    uv_size: lightning_uv_sz,
-                    color_tint: [1.0, 1.0, 1.0, 1.0],
-                },
-                // Whip エフェクト弾: 黄緑の横長楕円 40x20px
-                crate::BULLET_KIND_WHIP => SpriteInstance {
-                    position: [x - 20.0, y - 10.0],
-                    size: [40.0, 20.0],
-                    uv_offset: whip_uv_off,
-                    uv_size: whip_uv_sz,
-                    color_tint: [1.0, 1.0, 1.0, 1.0],
-                },
-                // 1.2.9: ボス本体（11=SlimeKing, 12=BatLord, 13=StoneGolem）
-                11..=13 => {
-                    let sz = enemy_sprite_size(kind);
-                    let (uv_off, uv_sz) = enemy_anim_uv(kind, 0);
-                    SpriteInstance {
-                        position: [x, y],
-                        size: [sz, sz],
-                        uv_offset: uv_off,
-                        uv_size: uv_sz,
-                        color_tint: [1.0, 1.0, 1.0, 1.0],
-                    }
-                }
-                // 1.2.9: 岩弾（Stone Golem の範囲攻撃）: 灰色の岩 28px
-                crate::BULLET_KIND_ROCK => SpriteInstance {
-                    position: [x - 14.0, y - 14.0],
-                    size: [28.0, 28.0],
-                    uv_offset: rock_uv_off,
-                    uv_size: rock_uv_sz,
-                    color_tint: [1.0, 1.0, 1.0, 1.0],
-                },
-                _ => continue,
-            };
-            instances.push(inst);
-            if instances.len() >= MAX_INSTANCES {
-                break;
-            }
-        }
-
-        // パーティクルを描画（スプライトサイズはパーティクルの size に合わせる）
-        for &(x, y, r, g, b, alpha, size) in particle_data {
-            if instances.len() >= MAX_INSTANCES {
-                break;
-            }
-            instances.push(SpriteInstance {
-                position: [x - size / 2.0, y - size / 2.0],
-                size: [size, size],
-                uv_offset: particle_uv_off,
-                uv_size: particle_uv_sz,
-                color_tint: [r, g, b, alpha],
-            });
-        }
-
-        // 1.5.2: 障害物を描画（木=緑褐色、岩=灰色の円）
-        for &(x, y, radius, kind) in obstacle_data {
-            if instances.len() >= MAX_INSTANCES {
-                break;
-            }
-            let (r, g, b) = if kind == 0 {
-                (0.35, 0.55, 0.2) // 木
-            } else {
-                (0.45, 0.45, 0.5) // 岩
-            };
-            let sz = radius * 2.0;
-            instances.push(SpriteInstance {
-                position: [x - radius, y - radius],
-                size: [sz, sz],
-                uv_offset: particle_uv_off,
-                uv_size: particle_uv_sz,
-                color_tint: [r, g, b, 1.0],
-            });
-        }
-
-        // 1.2.4: アイテムを描画
-        for &(x, y, kind) in item_data {
-            if instances.len() >= MAX_INSTANCES {
-                break;
-            }
-            let (uv_off, uv_sz, sz) = match kind {
-                RENDER_KIND_GEM => (gem_uv_off, gem_uv_sz, 20.0_f32),
-                RENDER_KIND_POTION => (potion_uv_off, potion_uv_sz, 24.0_f32),
-                RENDER_KIND_MAGNET => (magnet_uv_off, magnet_uv_sz, 28.0_f32),
-                _ => continue,
-            };
-            instances.push(SpriteInstance {
-                position: [x - sz / 2.0, y - sz / 2.0],
-                size: [sz, sz],
-                uv_offset: uv_off,
-                uv_size: uv_sz,
-                color_tint: [1.0, 1.0, 1.0, 1.0],
-            });
-        }
-
+        let instances = build_sprite_instances(&frame.commands);
         self.instance_count = instances.len() as u32;
 
         if !instances.is_empty() {
@@ -927,6 +748,7 @@ impl Renderer {
         &mut self,
         window: &Window,
         hud: &HudData,
+        camera: &crate::CameraParams,
         ui_state: &mut GameUiState,
     ) -> Option<String> {
         // ─── FPS 計測 ────────────────────────────────────────────
@@ -996,7 +818,7 @@ impl Renderer {
         let raw_input = self.egui_winit.take_egui_input(window);
         let mut chosen_weapon: Option<String> = None;
         let full_output = self.egui_ctx.run(raw_input, |ctx| {
-            chosen_weapon = ui::build_hud_ui(ctx, hud, self.current_fps, ui_state);
+            chosen_weapon = ui::build_hud_ui(ctx, hud, camera, self.current_fps, ui_state);
         });
 
         self.egui_winit
@@ -1052,5 +874,186 @@ impl Renderer {
         output.present();
 
         chosen_weapon
+    }
+}
+
+/// `DrawCommand` リストから `SpriteInstance` リストを構築する。
+/// `Renderer::update_instances` と `HeadlessRenderer::render_frame_offscreen` の両方から使用する。
+pub(crate) fn build_sprite_instances(commands: &[DrawCommand]) -> Vec<SpriteInstance> {
+    let mut instances: Vec<SpriteInstance> = Vec::with_capacity(commands.len());
+
+    for cmd in commands {
+        if instances.len() >= MAX_INSTANCES {
+            break;
+        }
+        let Some(inst) = sprite_instance_from_command(cmd) else {
+            continue;
+        };
+        instances.push(inst);
+    }
+
+    instances
+}
+
+/// `DrawCommand` 1件を `SpriteInstance` に変換する。
+/// 描画対象外のコマンド（未知の kind_id 等）は `None` を返す。
+fn sprite_instance_from_command(cmd: &DrawCommand) -> Option<SpriteInstance> {
+    match *cmd {
+        DrawCommand::PlayerSprite {
+            x,
+            y,
+            frame: anim_frame,
+        } => {
+            let (uv_off, uv_sz) = player_anim_uv(anim_frame);
+            Some(SpriteInstance {
+                position: [x, y],
+                size: [SPRITE_SIZE, SPRITE_SIZE],
+                uv_offset: uv_off,
+                uv_size: uv_sz,
+                color_tint: [1.0, 1.0, 1.0, 1.0],
+            })
+        }
+        DrawCommand::Sprite {
+            x,
+            y,
+            kind_id: kind,
+            frame: anim_frame,
+        } => match kind {
+            1..=3 => {
+                let sz = enemy_sprite_size(kind);
+                let (uv_off, uv_sz) = enemy_anim_uv(kind, anim_frame);
+                Some(SpriteInstance {
+                    position: [x, y],
+                    size: [sz, sz],
+                    uv_offset: uv_off,
+                    uv_size: uv_sz,
+                    color_tint: [1.0, 1.0, 1.0, 1.0],
+                })
+            }
+            21..=23 => {
+                let base = kind - ELITE_RENDER_KIND_OFFSET;
+                let sz = enemy_sprite_size(base) * ELITE_SIZE_MULTIPLIER;
+                let (uv_off, uv_sz) = enemy_anim_uv(base, anim_frame);
+                Some(SpriteInstance {
+                    position: [x - sz * 0.1, y - sz * 0.1],
+                    size: [sz, sz],
+                    uv_offset: uv_off,
+                    uv_size: uv_sz,
+                    color_tint: [1.0, 0.4, 0.4, 1.0],
+                })
+            }
+            crate::BULLET_KIND_NORMAL => {
+                let (uv_off, uv_sz) = bullet_uv();
+                Some(SpriteInstance {
+                    position: [x - 8.0, y - 8.0],
+                    size: [16.0, 16.0],
+                    uv_offset: uv_off,
+                    uv_size: uv_sz,
+                    color_tint: [1.0, 1.0, 1.0, 1.0],
+                })
+            }
+            crate::BULLET_KIND_FIREBALL => {
+                let (uv_off, uv_sz) = fireball_uv();
+                Some(SpriteInstance {
+                    position: [x - 11.0, y - 11.0],
+                    size: [22.0, 22.0],
+                    uv_offset: uv_off,
+                    uv_size: uv_sz,
+                    color_tint: [1.0, 1.0, 1.0, 1.0],
+                })
+            }
+            crate::BULLET_KIND_LIGHTNING => {
+                let (uv_off, uv_sz) = lightning_bullet_uv();
+                Some(SpriteInstance {
+                    position: [x - 9.0, y - 9.0],
+                    size: [18.0, 18.0],
+                    uv_offset: uv_off,
+                    uv_size: uv_sz,
+                    color_tint: [1.0, 1.0, 1.0, 1.0],
+                })
+            }
+            crate::BULLET_KIND_WHIP => {
+                let (uv_off, uv_sz) = whip_uv();
+                Some(SpriteInstance {
+                    position: [x - 20.0, y - 10.0],
+                    size: [40.0, 20.0],
+                    uv_offset: uv_off,
+                    uv_size: uv_sz,
+                    color_tint: [1.0, 1.0, 1.0, 1.0],
+                })
+            }
+            11..=13 => {
+                let sz = enemy_sprite_size(kind);
+                let (uv_off, uv_sz) = enemy_anim_uv(kind, 0);
+                Some(SpriteInstance {
+                    position: [x, y],
+                    size: [sz, sz],
+                    uv_offset: uv_off,
+                    uv_size: uv_sz,
+                    color_tint: [1.0, 1.0, 1.0, 1.0],
+                })
+            }
+            crate::BULLET_KIND_ROCK => {
+                let (uv_off, uv_sz) = rock_bullet_uv();
+                Some(SpriteInstance {
+                    position: [x - 14.0, y - 14.0],
+                    size: [28.0, 28.0],
+                    uv_offset: uv_off,
+                    uv_size: uv_sz,
+                    color_tint: [1.0, 1.0, 1.0, 1.0],
+                })
+            }
+            _ => None,
+        },
+        DrawCommand::Particle {
+            x,
+            y,
+            r,
+            g,
+            b,
+            alpha,
+            size,
+        } => {
+            let (uv_off, uv_sz) = particle_uv();
+            Some(SpriteInstance {
+                position: [x - size / 2.0, y - size / 2.0],
+                size: [size, size],
+                uv_offset: uv_off,
+                uv_size: uv_sz,
+                color_tint: [r, g, b, alpha],
+            })
+        }
+        DrawCommand::Obstacle { x, y, radius, kind } => {
+            let (r, g, b) = if kind == 0 {
+                (0.35_f32, 0.55_f32, 0.2_f32)
+            } else {
+                (0.45_f32, 0.45_f32, 0.5_f32)
+            };
+            let sz = radius * 2.0;
+            let (uv_off, uv_sz) = particle_uv();
+            Some(SpriteInstance {
+                position: [x - radius, y - radius],
+                size: [sz, sz],
+                uv_offset: uv_off,
+                uv_size: uv_sz,
+                color_tint: [r, g, b, 1.0],
+            })
+        }
+        DrawCommand::Item { x, y, kind } => {
+            let (uv, sz) = match kind {
+                RENDER_KIND_GEM => (gem_uv(), 20.0_f32),
+                RENDER_KIND_POTION => (potion_uv(), 24.0_f32),
+                RENDER_KIND_MAGNET => (magnet_uv(), 28.0_f32),
+                _ => return None,
+            };
+            let (uv_off, uv_sz) = uv;
+            Some(SpriteInstance {
+                position: [x - sz / 2.0, y - sz / 2.0],
+                size: [sz, sz],
+                uv_offset: uv_off,
+                uv_size: uv_sz,
+                color_tint: [1.0, 1.0, 1.0, 1.0],
+            })
+        }
     }
 }

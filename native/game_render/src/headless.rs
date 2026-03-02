@@ -5,15 +5,10 @@
 //! PNG バイト列を返す。CI でのレンダリング回帰テストに使用する。
 
 use crate::{
-    renderer::{
-        bullet_uv, enemy_anim_uv, enemy_sprite_size, fireball_uv, gem_uv, lightning_bullet_uv,
-        magnet_uv, particle_uv, player_anim_uv, potion_uv, rock_bullet_uv, whip_uv, SpriteInstance,
-        ELITE_RENDER_KIND_OFFSET, ELITE_SIZE_MULTIPLIER, MAX_INSTANCES,
-    },
+    renderer::{build_sprite_instances, SpriteInstance, MAX_INSTANCES},
     RenderFrame,
 };
-use game_physics::constants::{BG_B, BG_G, BG_R, SPRITE_SIZE};
-use game_physics::item::{RENDER_KIND_GEM, RENDER_KIND_MAGNET, RENDER_KIND_POTION};
+use game_physics::constants::{BG_B, BG_G, BG_R};
 use image::{ImageBuffer, Rgba};
 use wgpu::util::DeviceExt;
 
@@ -385,9 +380,9 @@ impl HeadlessRenderer {
     /// # エラー
     /// GPU バッファのマップ失敗や PNG エンコード失敗時にエラー文字列を返す。
     pub fn render_frame_offscreen(&mut self, frame: &RenderFrame) -> Result<Vec<u8>, String> {
-        // カメラ Uniform を更新
+        let (offset_x, offset_y) = frame.camera.offset_xy();
         let cam_uniform = CameraUniform {
-            offset: [frame.camera_offset.0, frame.camera_offset.1],
+            offset: [offset_x, offset_y],
             _pad: [0.0; 2],
         };
         self.queue.write_buffer(
@@ -396,8 +391,7 @@ impl HeadlessRenderer {
             bytemuck::bytes_of(&cam_uniform),
         );
 
-        // インスタンスリストを構築（通常レンダラーと共有の関数を使用）
-        let instances = build_instances(frame);
+        let instances = build_sprite_instances(&frame.commands);
         let instance_count = instances.len() as u32;
         if !instances.is_empty() {
             self.queue
@@ -540,169 +534,4 @@ impl HeadlessRenderer {
 
         Ok(png_bytes)
     }
-}
-
-/// `RenderFrame` からスプライトインスタンスリストを構築する。
-///
-/// スプライト種別ごとの UV・サイズ計算は通常レンダラー（`renderer/mod.rs`）と
-/// 共有の `pub(crate)` 関数を使用しており、二重管理を排除している。
-fn build_instances(frame: &RenderFrame) -> Vec<SpriteInstance> {
-    let (bullet_uv_off, bullet_uv_sz) = bullet_uv();
-    let (fireball_uv_off, fireball_uv_sz) = fireball_uv();
-    let (lightning_uv_off, lightning_uv_sz) = lightning_bullet_uv();
-    let (whip_uv_off, whip_uv_sz) = whip_uv();
-    let (particle_uv_off, particle_uv_sz) = particle_uv();
-    let (gem_uv_off, gem_uv_sz) = gem_uv();
-    let (potion_uv_off, potion_uv_sz) = potion_uv();
-    let (magnet_uv_off, magnet_uv_sz) = magnet_uv();
-    let (rock_uv_off, rock_uv_sz) = rock_bullet_uv();
-
-    let mut instances: Vec<SpriteInstance> = Vec::with_capacity(
-        frame.render_data.len()
-            + frame.particle_data.len()
-            + frame.item_data.len()
-            + frame.obstacle_data.len(),
-    );
-
-    for &(x, y, kind, anim_frame) in &frame.render_data {
-        let inst = match kind {
-            0 => {
-                let (uv_off, uv_sz) = player_anim_uv(anim_frame);
-                SpriteInstance {
-                    position: [x, y],
-                    size: [SPRITE_SIZE, SPRITE_SIZE],
-                    uv_offset: uv_off,
-                    uv_size: uv_sz,
-                    color_tint: [1.0, 1.0, 1.0, 1.0],
-                }
-            }
-            1..=3 => {
-                let sz = enemy_sprite_size(kind);
-                let (uv_off, uv_sz) = enemy_anim_uv(kind, anim_frame);
-                SpriteInstance {
-                    position: [x, y],
-                    size: [sz, sz],
-                    uv_offset: uv_off,
-                    uv_size: uv_sz,
-                    color_tint: [1.0, 1.0, 1.0, 1.0],
-                }
-            }
-            21..=23 => {
-                let base = kind - ELITE_RENDER_KIND_OFFSET;
-                let sz = enemy_sprite_size(base) * ELITE_SIZE_MULTIPLIER;
-                let (uv_off, uv_sz) = enemy_anim_uv(base, anim_frame);
-                SpriteInstance {
-                    position: [x - sz * 0.1, y - sz * 0.1],
-                    size: [sz, sz],
-                    uv_offset: uv_off,
-                    uv_size: uv_sz,
-                    color_tint: [1.0, 0.4, 0.4, 1.0],
-                }
-            }
-            crate::BULLET_KIND_NORMAL => SpriteInstance {
-                position: [x - 8.0, y - 8.0],
-                size: [16.0, 16.0],
-                uv_offset: bullet_uv_off,
-                uv_size: bullet_uv_sz,
-                color_tint: [1.0, 1.0, 1.0, 1.0],
-            },
-            crate::BULLET_KIND_FIREBALL => SpriteInstance {
-                position: [x - 11.0, y - 11.0],
-                size: [22.0, 22.0],
-                uv_offset: fireball_uv_off,
-                uv_size: fireball_uv_sz,
-                color_tint: [1.0, 1.0, 1.0, 1.0],
-            },
-            crate::BULLET_KIND_LIGHTNING => SpriteInstance {
-                position: [x - 9.0, y - 9.0],
-                size: [18.0, 18.0],
-                uv_offset: lightning_uv_off,
-                uv_size: lightning_uv_sz,
-                color_tint: [1.0, 1.0, 1.0, 1.0],
-            },
-            crate::BULLET_KIND_WHIP => SpriteInstance {
-                position: [x - 20.0, y - 10.0],
-                size: [40.0, 20.0],
-                uv_offset: whip_uv_off,
-                uv_size: whip_uv_sz,
-                color_tint: [1.0, 1.0, 1.0, 1.0],
-            },
-            11..=13 => {
-                let sz = enemy_sprite_size(kind);
-                let (uv_off, uv_sz) = enemy_anim_uv(kind, 0);
-                SpriteInstance {
-                    position: [x, y],
-                    size: [sz, sz],
-                    uv_offset: uv_off,
-                    uv_size: uv_sz,
-                    color_tint: [1.0, 1.0, 1.0, 1.0],
-                }
-            }
-            crate::BULLET_KIND_ROCK => SpriteInstance {
-                position: [x - 14.0, y - 14.0],
-                size: [28.0, 28.0],
-                uv_offset: rock_uv_off,
-                uv_size: rock_uv_sz,
-                color_tint: [1.0, 1.0, 1.0, 1.0],
-            },
-            _ => continue,
-        };
-        instances.push(inst);
-        if instances.len() >= MAX_INSTANCES {
-            break;
-        }
-    }
-
-    for &(x, y, r, g, b, alpha, size) in &frame.particle_data {
-        if instances.len() >= MAX_INSTANCES {
-            break;
-        }
-        instances.push(SpriteInstance {
-            position: [x - size / 2.0, y - size / 2.0],
-            size: [size, size],
-            uv_offset: particle_uv_off,
-            uv_size: particle_uv_sz,
-            color_tint: [r, g, b, alpha],
-        });
-    }
-
-    for &(x, y, radius, kind) in &frame.obstacle_data {
-        if instances.len() >= MAX_INSTANCES {
-            break;
-        }
-        let (r, g, b) = if kind == 0 {
-            (0.35, 0.55, 0.2)
-        } else {
-            (0.45, 0.45, 0.5)
-        };
-        let sz = radius * 2.0;
-        instances.push(SpriteInstance {
-            position: [x - radius, y - radius],
-            size: [sz, sz],
-            uv_offset: particle_uv_off,
-            uv_size: particle_uv_sz,
-            color_tint: [r, g, b, 1.0],
-        });
-    }
-
-    for &(x, y, kind) in &frame.item_data {
-        if instances.len() >= MAX_INSTANCES {
-            break;
-        }
-        let (uv_off, uv_sz, sz) = match kind {
-            RENDER_KIND_GEM => (gem_uv_off, gem_uv_sz, 20.0_f32),
-            RENDER_KIND_POTION => (potion_uv_off, potion_uv_sz, 24.0_f32),
-            RENDER_KIND_MAGNET => (magnet_uv_off, magnet_uv_sz, 28.0_f32),
-            _ => continue,
-        };
-        instances.push(SpriteInstance {
-            position: [x - sz / 2.0, y - sz / 2.0],
-            size: [sz, sz],
-            uv_offset: uv_off,
-            uv_size: uv_sz,
-            color_tint: [1.0, 1.0, 1.0, 1.0],
-        });
-    }
-
-    instances
 }

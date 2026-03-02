@@ -1,4 +1,5 @@
 use super::{GamePhase, GameUiState, HudData, LoadDialogKind};
+use crate::CameraParams;
 
 /// HUD を描画し、ボタン操作があった場合はアクション文字列を返す。
 /// - レベルアップ選択: 武器名
@@ -8,6 +9,7 @@ use super::{GamePhase, GameUiState, HudData, LoadDialogKind};
 pub fn build_hud_ui(
     ctx: &egui::Context,
     hud: &HudData,
+    camera: &CameraParams,
     fps: f32,
     ui_state: &mut GameUiState,
 ) -> Option<String> {
@@ -43,7 +45,7 @@ pub fn build_hud_ui(
                 let _ = build_game_over_ui(ctx, hud);
             }
             GamePhase::Playing => {
-                let _ = build_playing_ui(ctx, hud, fps, ui_state);
+                let _ = build_playing_ui(ctx, hud, camera, fps, ui_state);
             }
         }
         ui_state.pending_action = None;
@@ -58,7 +60,7 @@ pub fn build_hud_ui(
     let mut chosen = match hud.phase {
         GamePhase::Title => build_title_ui(ctx),
         GamePhase::GameOver => build_game_over_ui(ctx, hud),
-        GamePhase::Playing => build_playing_ui(ctx, hud, fps, ui_state),
+        GamePhase::Playing => build_playing_ui(ctx, hud, camera, fps, ui_state),
     };
 
     // ロードダイアログ（モーダル）
@@ -307,11 +309,12 @@ fn build_save_toast(ctx: &egui::Context, msg: &str) {
 fn build_playing_ui(
     ctx: &egui::Context,
     hud: &HudData,
+    camera: &CameraParams,
     fps: f32,
     ui_state: &mut GameUiState,
 ) -> Option<String> {
     build_screen_flash_ui(ctx, hud);
-    build_score_popups_ui(ctx, hud);
+    build_score_popups_ui(ctx, hud, camera);
     build_playing_hud_ui(ctx, hud, fps, ui_state);
     build_boss_hp_bar_ui(ctx, hud);
     build_level_up_ui(ctx, hud)
@@ -337,18 +340,19 @@ fn build_screen_flash_ui(ctx: &egui::Context, hud: &HudData) {
 }
 
 /// スコアポップアップ（ワールド座標 → スクリーン座標変換して描画）
-fn build_score_popups_ui(ctx: &egui::Context, hud: &HudData) {
+fn build_score_popups_ui(ctx: &egui::Context, hud: &HudData, camera: &CameraParams) {
     if hud.score_popups.is_empty() {
         return;
     }
+    let (cam_x, cam_y) = camera.offset_xy();
     egui::Area::new(egui::Id::new("score_popups"))
         .anchor(egui::Align2::LEFT_TOP, egui::vec2(0.0, 0.0))
         .order(egui::Order::Foreground)
         .show(ctx, |ui| {
             let painter = ui.painter();
             for &(wx, wy, value, lifetime) in &hud.score_popups {
-                let sx = wx - hud.camera_x;
-                let sy = wy - hud.camera_y;
+                let sx = wx - cam_x;
+                let sy = wy - cam_y;
                 let alpha = (lifetime / 0.8).clamp(0.0, 1.0);
                 let color =
                     egui::Color32::from_rgba_unmultiplied(255, 230, 50, (alpha * 220.0) as u8);
@@ -521,13 +525,6 @@ fn build_playing_hud_ui(ctx: &egui::Context, hud: &HudData, fps: f32, ui_state: 
                     ui.label(
                         egui::RichText::new(format!("Items: {}", hud.item_count))
                             .color(egui::Color32::from_rgb(150, 230, 150)),
-                    );
-                    ui.label(
-                        egui::RichText::new(format!(
-                            "Cam: ({:.0}, {:.0})",
-                            hud.camera_x, hud.camera_y
-                        ))
-                        .color(egui::Color32::from_rgb(180, 180, 255)),
                     );
                     if hud.magnet_timer > 0.0 {
                         ui.label(
