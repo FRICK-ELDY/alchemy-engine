@@ -46,9 +46,21 @@ defmodule GameEngine.GameEvents.Diagnostics do
     high_scores =
       if render_type == :game_over, do: GameEngine.SaveManager.load_high_scores(), else: nil
 
-    enemy_count = GameEngine.NifBridge.get_enemy_count(state.world_ref)
-    bullet_count = GameEngine.NifBridge.get_bullet_count(state.world_ref)
+    nif_enemy_count = GameEngine.NifBridge.get_enemy_count(state.world_ref)
+    nif_bullet_count = GameEngine.NifBridge.get_bullet_count(state.world_ref)
     physics_ms = GameEngine.NifBridge.get_frame_time_ms(state.world_ref)
+
+    # Rust ECS を使わないコンテンツ（BulletHell3D 等）は NIF が 0 を返すため、
+    # Playing シーン state のリストから補完する。
+    enemy_count =
+      if nif_enemy_count == 0,
+        do: playing_state |> Map.get(:enemies, []) |> length(),
+        else: nif_enemy_count
+
+    bullet_count =
+      if nif_bullet_count == 0,
+        do: playing_state |> Map.get(:bullets, []) |> length(),
+        else: nif_bullet_count
 
     GameEngine.FrameCache.put(
       enemy_count,
