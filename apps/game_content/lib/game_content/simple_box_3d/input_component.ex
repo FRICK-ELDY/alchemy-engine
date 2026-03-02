@@ -10,7 +10,8 @@ defmodule GameContent.SimpleBox3D.InputComponent do
   @behaviour GameEngine.Component
 
   @impl GameEngine.Component
-  def on_event({:move_input, dx, dy}, _context) do
+  # dx, dy は Rust の on_move_input が f64 としてエンコードするため float で届く。
+  def on_event({:move_input, dx, dy}, _context) when is_float(dx) and is_float(dy) do
     GameEngine.SceneManager.update_by_module(
       GameContent.SimpleBox3D.Scenes.Playing,
       fn state -> Map.put(state, :move_input, {dx, dy}) end

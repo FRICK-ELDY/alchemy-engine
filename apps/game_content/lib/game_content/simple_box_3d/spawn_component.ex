@@ -8,10 +8,11 @@ defmodule GameContent.SimpleBox3D.SpawnComponent do
   """
   @behaviour GameEngine.Component
 
-  # Rust 物理エンジンの PLAYER_SIZE は 64.0 px。
-  # map_width - PLAYER_SIZE が負にならないよう、十分大きな値を設定する。
-  # SimpleBox3D は物理エンジンを実際には使わないが、ループは常に動いているため
-  # clamp(0.0, map_size - PLAYER_SIZE) がパニックしないよう最低 128.0 以上が必要。
+  # SimpleBox3D は Rust 物理エンジンを使わないが、エンジンループは常に動いている。
+  # game_physics の physics_step.rs が `clamp(0.0, map_width - PLAYER_SIZE)` を呼ぶため、
+  # map_size < PLAYER_SIZE になるとパニックする（PLAYER_SIZE は Rust 側の定数で現在 64.0 px）。
+  # この値は Rust 側の定数変更に追従できないため、将来的には NIF 経由で定数を取得するか
+  # Rust 側でフォールバック処理を追加することが望ましい（残課題）。
   @map_size 2048.0
 
   @impl GameEngine.Component

@@ -51,8 +51,9 @@ defmodule GameContent.SimpleBox3D.Scenes.Playing do
   @impl GameEngine.SceneBehaviour
   def update(_context, state) do
     if Map.get(state, :alive, true) do
-      {dx, dz} = Map.get(state, :move_input, {0, 0})
-      new_state = tick(state, dx * 1.0, dz * 1.0)
+      # move_input は Rust の on_move_input が f64 としてエンコードするため float で届く。
+      {dx, dz} = Map.get(state, :move_input, {0.0, 0.0})
+      new_state = tick(state, dx, dz)
       {:continue, new_state}
     else
       {:transition, {:replace, GameContent.SimpleBox3D.Scenes.GameOver, %{}}, state}

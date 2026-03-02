@@ -181,7 +181,20 @@ defmodule GameEngine.GameEvents do
   # ── インフォ: 移動入力 ────────────────────────────────────────────
 
   def handle_info({:move_input, dx, dy}, state) do
-    GameEngine.NifBridge.set_player_input(state.world_ref, dx * 1.0, dy * 1.0)
+    # physics_scenes に含まれるシーンが現在アクティブな場合のみ Rust 物理エンジンに入力を渡す。
+    # Rust 物理エンジンを使わないコンテンツ（SimpleBox3D 等）では不要な NIF 呼び出しを避ける。
+    content = current_content()
+
+    case GameEngine.SceneManager.current() do
+      {:ok, %{module: mod}} ->
+        if mod in content.physics_scenes() do
+          GameEngine.NifBridge.set_player_input(state.world_ref, dx * 1.0, dy * 1.0)
+        end
+
+      _ ->
+        :ok
+    end
+
     now = now_ms()
     context = build_context(state, now, now - state.start_ms)
     dispatch_event_to_components({:move_input, dx, dy}, context)

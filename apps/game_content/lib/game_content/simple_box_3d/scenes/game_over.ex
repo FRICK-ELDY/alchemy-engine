@@ -8,7 +8,7 @@ defmodule GameContent.SimpleBox3D.Scenes.GameOver do
   @behaviour GameEngine.SceneBehaviour
 
   @impl GameEngine.SceneBehaviour
-  def init(init_arg), do: {:ok, init_arg || %{}}
+  def init(init_arg), do: {:ok, init_arg}
 
   @impl GameEngine.SceneBehaviour
   def render_type, do: :game_over
