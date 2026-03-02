@@ -1,7 +1,9 @@
 //! Path: native/game_nif/src/nif/render_nif.rs
 //! Summary: 描画スレッド起動 NIF
 //!
-//! Phase R-2: start_render_thread が RenderFrameBuffer も受け取るよう変更した。
+//! Elixir 側からウィンドウタイトルとアトラスのファイルパスを受け取り、
+//! 描画スレッドを起動する。アトラスの実際のロードは Rust 側（render_bridge）で行う。
+//! この NIF は起動時に一度だけ呼ばれる。
 
 use crate::render_bridge::run_render_thread;
 use crate::render_frame_buffer::RenderFrameBuffer;
@@ -17,12 +19,14 @@ pub fn start_render_thread(
     world: ResourceArc<GameWorld>,
     render_buf: ResourceArc<RenderFrameBuffer>,
     pid: LocalPid,
+    title: String,
+    atlas_path: String,
 ) -> NifResult<Atom> {
     let world_clone = world.clone();
     let render_buf_clone = render_buf.clone();
     thread::spawn(move || {
         if let Err(e) = std::panic::catch_unwind(AssertUnwindSafe(move || {
-            run_render_thread(world_clone, render_buf_clone, pid);
+            run_render_thread(world_clone, render_buf_clone, pid, title, atlas_path);
         })) {
             eprintln!("Render thread panicked: {:?}", e);
         }

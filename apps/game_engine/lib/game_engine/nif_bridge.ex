@@ -54,9 +54,12 @@ defmodule GameEngine.NifBridge do
   def create_game_loop_control, do: :erlang.nif_error(:nif_not_loaded)
   def start_rust_game_loop(_world, _control, _pid), do: :erlang.nif_error(:nif_not_loaded)
 
-  # Phase R-2: RenderFrameBuffer を作成し、start_render_thread に渡す
   def create_render_frame_buffer, do: :erlang.nif_error(:nif_not_loaded)
-  def start_render_thread(_world, _render_buf, _pid), do: :erlang.nif_error(:nif_not_loaded)
+
+  # title: ウィンドウタイトル文字列
+  # atlas_path: アトラス PNG のファイルパス（Rust 側でロード、存在しない場合は埋め込みフォールバック）
+  def start_render_thread(_world, _render_buf, _pid, _title, _atlas_path),
+    do: :erlang.nif_error(:nif_not_loaded)
 
   # Phase R-2: Elixir 側から DrawCommand リストを RenderFrameBuffer に push する
   # commands: DrawCommand タプルのリスト（例: {:player_sprite, x, y, frame}）

@@ -287,6 +287,19 @@ R-5〜R-6 が新機能追加となる。
 
 ### Phase R-3: コンテンツ固有NIFをElixir側に吸収する ✅
 
+### Phase R-4: `render_bridge.rs` のゲーム固有設定を外部化する ✅
+
+**実装内容:**
+
+1. `native/game_nif/src/nif/render_nif.rs` の `start_render_thread` NIF に `title: String` / `atlas_path: String` 引数を追加
+2. `native/game_nif/src/render_bridge.rs` の `run_render_thread` に同引数を追加し、`"AlchemyEngine - Vampire Survivor"` ハードコードを削除
+   - アトラスのロードは `load_atlas_png(path)` 関数で行う（ファイル不在時は `AssetLoader` 埋め込みフォールバック）
+   - Elixir 側はパス文字列のみを渡し、ファイルの実態（バイナリ）は持たない
+3. `apps/game_engine/lib/game_engine/game_events.ex` に `build_window_title/1` / `resolve_atlas_path/1` ヘルパーを追加
+   - `content.title/0` からウィンドウタイトルを組み立てる（`title/0` 未実装時は `"AlchemyEngine"` のみ）
+   - `content.assets_path/0`（ゲーム別サブディレクトリ名）と `GAME_ASSETS_PATH` 環境変数からパスを解決する
+4. `apps/game_engine/lib/game_engine/nif_bridge.ex` / `nif_bridge_behaviour.ex` / `game_engine.ex` のシグネチャを更新（引数 3→5）
+
 **実装内容:**
 
 1. `native/game_nif/src/nif/action_nif.rs` に汎用NIF追加:
