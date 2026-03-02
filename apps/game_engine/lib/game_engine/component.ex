@@ -18,12 +18,13 @@ defmodule GameEngine.Component do
 
   `context` マップには以下のフィールドが含まれる：
 
-  - `context.world_ref`    — Rust ワールドへの参照
-  - `context.now`          — 現在時刻（monotonic ms）
-  - `context.elapsed`      — ゲーム開始からの経過 ms
-  - `context.frame_count`  — フレームカウンタ
-  - `context.tick_ms`      — 目標フレーム時間（ms）
-  - `context.start_ms`     — ゲーム開始時刻（monotonic ms）
+  - `context.world_ref`       — Rust ワールドへの参照
+  - `context.render_buf_ref`  — RenderFrameBuffer への参照（push_render_frame NIF に渡す）
+  - `context.now`             — 現在時刻（monotonic ms）
+  - `context.elapsed`         — ゲーム開始からの経過 ms
+  - `context.frame_count`     — フレームカウンタ
+  - `context.tick_ms`         — 目標フレーム時間（ms）
+  - `context.start_ms`        — ゲーム開始時刻（monotonic ms）
 
   シーン遷移 API：
 

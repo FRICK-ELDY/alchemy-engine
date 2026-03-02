@@ -7,6 +7,23 @@ defmodule GameEngine.NifBridge.Behaviour do
   このビヘイビアを `@behaviour` として宣言する必要はない。
   """
 
+  # ── Phase R-2: push_render_frame 引数の型エイリアス ──────────────
+  @type draw_command ::
+          {:player_sprite, float(), float(), non_neg_integer()}
+          | {:sprite, float(), float(), non_neg_integer(), non_neg_integer()}
+          | {:particle, float(), float(), float(), float(), float(), {float(), float()}}
+          | {:item, float(), float(), non_neg_integer()}
+          | {:obstacle, float(), float(), float(), non_neg_integer()}
+
+  @type camera_params :: {:camera_2d, float(), float()}
+
+  @type hud_data ::
+          {{float(), float(), non_neg_integer(), float(), non_neg_integer(), non_neg_integer(),
+            non_neg_integer()}, {non_neg_integer(), non_neg_integer(), float(), boolean()},
+           {[String.t()], [[String.t()]], [{String.t(), non_neg_integer()}]},
+           {float(), non_neg_integer(), :none | {String.t(), float(), float()}, atom(), float(),
+            [{float(), float(), non_neg_integer(), float()}], non_neg_integer()}}
+
   # ── control ───────────────────────────────────────────────────────
   @callback create_world() :: reference()
   @callback set_map_obstacles(reference(), list()) :: :ok
@@ -34,7 +51,9 @@ defmodule GameEngine.NifBridge.Behaviour do
             ) :: :ok
   @callback create_game_loop_control() :: reference()
   @callback start_rust_game_loop(reference(), reference(), pid()) :: :ok
-  @callback start_render_thread(reference(), pid()) :: :ok
+  @callback create_render_frame_buffer() :: reference()
+  @callback start_render_thread(reference(), reference(), pid()) :: :ok
+  @callback push_render_frame(reference(), [draw_command()], camera_params(), hud_data()) :: :ok
   @callback pause_physics(reference()) :: :ok
   @callback resume_physics(reference()) :: :ok
 
@@ -73,6 +92,9 @@ defmodule GameEngine.NifBridge.Behaviour do
 
   # ── Push 型同期 NIF ────────────────────────────────────────────
   @callback push_tick(reference(), float(), float(), non_neg_integer()) :: :ok
+
+  # ── Phase R-2: 描画用エンティティスナップショット ──────────────────
+  @callback get_render_entities(reference()) :: tuple()
 
   # ── 移行検証用 ───────────────────────────────────────────────────
   @callback get_full_game_state(reference()) :: map()

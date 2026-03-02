@@ -12,7 +12,8 @@ defmodule GameContent.VampireSurvivor do
     [
       GameContent.VampireSurvivor.SpawnComponent,
       GameContent.VampireSurvivor.LevelComponent,
-      GameContent.VampireSurvivor.BossComponent
+      GameContent.VampireSurvivor.BossComponent,
+      GameContent.VampireSurvivor.RenderComponent
     ]
   end
 

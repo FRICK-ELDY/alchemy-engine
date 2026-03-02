@@ -281,4 +281,18 @@ R-5〜R-6 が新機能追加となる。
 
 ## 完了済みタスク
 
-（なし）
+### Phase R-1: `RenderFrame` を描画命令ベースに変える ✅
+
+### Phase R-2: `render_snapshot.rs` を `game_content` 側に移す ✅
+
+**実装内容:**
+
+1. `native/game_nif/src/render_frame_buffer.rs` を追加 — `Arc<RwLock<RenderFrame>>` を薄くラップした `RenderFrameBuffer` リソース
+2. `native/game_nif/src/nif/render_frame_nif.rs` を追加 — `create_render_frame_buffer` / `push_render_frame` NIF
+3. `native/game_nif/src/nif/read_nif.rs` に `get_render_entities` / `get_weapon_upgrade_descs` NIF を追加
+4. `native/game_nif/src/render_bridge.rs` を変更 — `next_frame()` が `RenderFrameBuffer` を参照するよう変更。補間ロジックは `render_bridge.rs` 内に移動
+5. `native/game_nif/src/render_snapshot.rs` を削除
+6. `apps/game_engine/lib/game_engine/nif_bridge.ex` に新 NIF を追加
+7. `apps/game_engine/lib/game_engine/game_events.ex` で `RenderFrameBuffer` を作成・保持し、`context.render_buf_ref` として各コンポーネントに渡す
+8. `apps/game_content/lib/game_content/vampire_survivor/render_component.ex` を新規作成 — `on_nif_sync` で DrawCommand リストを組み立てて `push_render_frame` を呼ぶ
+9. `VampireSurvivor.components/0` に `RenderComponent` を追加

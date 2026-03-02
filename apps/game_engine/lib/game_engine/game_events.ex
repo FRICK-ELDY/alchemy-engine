@@ -56,9 +56,11 @@ defmodule GameEngine.GameEvents do
 
     GameEngine.NifBridge.start_rust_game_loop(world_ref, control_ref, self())
 
+    render_buf_ref = GameEngine.NifBridge.create_render_frame_buffer()
+
     render_started =
       if room_id == :main do
-        GameEngine.NifBridge.start_render_thread(world_ref, self())
+        GameEngine.NifBridge.start_render_thread(world_ref, render_buf_ref, self())
         true
       else
         false
@@ -69,6 +71,7 @@ defmodule GameEngine.GameEvents do
        room_id: room_id,
        world_ref: world_ref,
        control_ref: control_ref,
+       render_buf_ref: render_buf_ref,
        last_tick: start_ms,
        frame_count: 0,
        start_ms: start_ms,
@@ -345,6 +348,7 @@ defmodule GameEngine.GameEvents do
     base = %{
       tick_ms: @tick_ms,
       world_ref: state.world_ref,
+      render_buf_ref: state.render_buf_ref,
       now: now,
       elapsed: elapsed,
       frame_count: state.frame_count,
