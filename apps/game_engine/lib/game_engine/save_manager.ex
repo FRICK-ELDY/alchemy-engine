@@ -83,7 +83,7 @@ defmodule GameEngine.SaveManager do
 
   def load_high_scores do
     case read_json(high_scores_path()) do
-      {:ok, %{"scores" => scores}} when is_list(scores) ->
+      {:ok, %{"state" => %{"scores" => scores}}} when is_list(scores) ->
         scores
 
       :not_found ->

@@ -168,12 +168,6 @@ defmodule GameEngine.GameEvents do
         "__load_cancel__" ->
           state
 
-        "__start__" ->
-          state
-
-        "__retry__" ->
-          state
-
         _ ->
           now = now_ms()
           context = build_context(state, now, now - state.start_ms)
@@ -188,6 +182,9 @@ defmodule GameEngine.GameEvents do
 
   def handle_info({:move_input, dx, dy}, state) do
     GameEngine.NifBridge.set_player_input(state.world_ref, dx * 1.0, dy * 1.0)
+    now = now_ms()
+    context = build_context(state, now, now - state.start_ms)
+    dispatch_event_to_components({:move_input, dx, dy}, context)
     {:noreply, state}
   end
 

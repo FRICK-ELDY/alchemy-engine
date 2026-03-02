@@ -235,26 +235,47 @@ Elixir側（`game_content`）がアトラスパスとタイトルを指定する
 
 ---
 
-### Phase R-6: シンプルな3Dゲームコンテンツの追加
-
-**前提**: Phase R-5 完了後に着手する
+### Phase R-6: シンプルな3Dゲームコンテンツの追加 ✅
 
 **影響アプリ**: `game_content`
 
-`apps/game_content/lib/game_content/` に `SimpleBox3D` コンテンツを追加する。
+**実装内容:**
 
-仕様:
-- 青いボックス = プレイヤー（WASD移動）
-- 赤いボックス = 敵（プレイヤーを追跡）
-- グリッド地面
-- スカイボックス（空色グラデーション）
-- 固定カメラ（斜め上から俯瞰）
+1. `apps/game_content/lib/game_content/simple_box_3d.ex` を作成
+   - `components/0`・`initial_scenes/0`・`physics_scenes/0` 等のコンテンツ定義
+   - `title/0` = `"Simple Box 3D"`、`assets_path/0` = `nil`（アトラス不要）
+   - `wave_label/1` を実装（`Diagnostics` ログ用）
+2. `apps/game_content/lib/game_content/simple_box_3d/scenes/playing.ex` を作成
+   - Elixir 側でプレイヤー・敵の3D座標（x, y, z）を `state` として管理
+   - `state.move_input` から WASD 入力を取得してプレイヤー移動（`InputComponent` 経由）
+   - 敵はプレイヤーを追跡（速度 2.5 単位/秒）
+   - 衝突判定でゲームオーバー遷移
+3. `apps/game_content/lib/game_content/simple_box_3d/scenes/game_over.ex` を作成
+   - `state.retry` フラグを検知して `{:transition, {:replace, Playing, %{}}}` でリスタート
+4. `apps/game_content/lib/game_content/simple_box_3d/render_component.ex` を作成
+   - `on_nif_sync/1` でシーン state から DrawCommand リストを組み立て
+   - `{:skybox, top_color, bottom_color}` — 空色グラデーション
+   - `{:grid_plane, size, divisions, color}` — XZ 平面グリッド地面（20×20）
+   - `{:box_3d, x, y, z, hw, hh, {hd, r, g, b, a}}` — プレイヤー（青）・敵（赤）
+   - `{:camera_3d, eye, target, up, {fov, near, far}}` — 斜め上から俯瞰カメラ
+   - `SceneManager.current()` で現在シーンを判定して HUD `phase` を正しく設定
+   - `push_render_frame/4` で RenderFrameBuffer に書き込み
+5. `apps/game_content/lib/game_content/simple_box_3d/spawn_component.ex` を作成
+   - `on_ready/1` で `set_world_size(world_ref, 2048.0, 2048.0)` を呼び出し
+   - Rust 物理エンジンは使用しないが `map_size - PLAYER_SIZE` が負にならないよう十分大きな値が必要
+6. `apps/game_content/lib/game_content/simple_box_3d/input_component.ex` を作成
+   - `on_event({:move_input, dx, dy})` で `Playing` シーン state に `move_input` を書き込む
+   - `on_event({:ui_action, "__retry__"})` で `GameOver` シーン state に `retry: true` を書き込む
+7. `config/config.exs` に `GameContent.SimpleBox3D` のコメントを追加
+   - `config :game_server, :current, GameContent.SimpleBox3D` に変更することで起動可能
 
-**作業ステップ:**
-1. `game_content/simple_box_3d.ex` を作成する（`WorldBehaviour` / `RuleBehaviour` 実装）
-2. Elixir側で3D座標（x, y, z）を管理する `SimpleBox3DWorld` を定義する
-3. フレームごとに `DrawCommand::Box3D` / `GridPlane` / `Skybox` を組み立てて `push_render_frame` に送る
-4. `game_server` の設定から `SimpleBox3D` コンテンツを起動できるようにする
+**エンジン側の修正（副産物）:**
+
+- `apps/game_engine/lib/game_engine/game_events.ex`
+  - `handle_info({:move_input, dx, dy})` に `dispatch_event_to_components` を追加（入力をコンポーネントの `on_event` にも配信）
+  - `handle_info({:ui_action, "__retry__"})` / `"__start__"` の専用節を削除し `_` 節に統合（`dispatch_event_to_components` が呼ばれるよう修正）
+- `apps/game_engine/lib/game_engine/save_manager.ex`
+  - `load_high_scores/0` のパターンマッチを `%{"state" => %{"scores" => scores}}` に修正（エンベロープ構造を正しく剥がす）
 
 ---
 
@@ -366,3 +387,75 @@ R-5〜R-6 が新機能追加となる。
 7. `apps/game_engine/lib/game_engine/game_events.ex` で `RenderFrameBuffer` を作成・保持し、`context.render_buf_ref` として各コンポーネントに渡す
 8. `apps/game_content/lib/game_content/vampire_survivor/render_component.ex` を新規作成 — `on_nif_sync` で DrawCommand リストを組み立てて `push_render_frame` を呼ぶ
 9. `VampireSurvivor.components/0` に `RenderComponent` を追加
+
+---
+
+## 残課題
+
+### 課題 E-1: `game_engine` 層への依存を排除する
+
+Phase R-6 の実装中に、`game_content` だけでは完結できない問題が2件発生し、
+暫定的に `game_engine` 層を修正した。これらは本来エンジンが汎用的に提供すべき
+機能であり、設計として整理する必要がある。
+
+#### E-1-1: `move_input` イベントがコンポーネントに届かない
+
+**現状の問題:**
+
+`GameEvents.handle_info({:move_input, dx, dy})` は Rust NIF を呼ぶだけで、
+`dispatch_event_to_components` を呼んでいなかった。
+Rust 物理エンジンを使わないコンテンツ（`SimpleBox3D`）では、
+コンポーネントの `on_event` で移動入力を受け取る手段がなかった。
+
+**暫定対処:**
+
+`game_events.ex` の `handle_info({:move_input, dx, dy})` に
+`dispatch_event_to_components({:move_input, dx, dy}, context)` を追加した。
+
+**本来あるべき設計:**
+
+`move_input` は Rust 物理エンジン専用の副作用（`set_player_input` NIF）と、
+コンテンツへのイベント配信を分離すべき。
+`on_event` への配信は常に行い、Rust NIF 呼び出しは `physics_scenes` に
+いる場合のみ行う、という整理が望ましい。
+
+#### E-1-2: `__retry__` / `__start__` UI アクションがコンポーネントに届かない
+
+**現状の問題:**
+
+`GameEvents.handle_info({:ui_action, action})` の `case` 文に
+`"__retry__"` / `"__start__"` の専用節があり、`dispatch_event_to_components`
+を呼ばずに `state` をそのまま返していた。
+`VampireSurvivor` はこれらを `on_event` で処理していないため問題が顕在化して
+いなかったが、`SimpleBox3D` の `InputComponent` が `__retry__` を受け取れなかった。
+
+**暫定対処:**
+
+`"__retry__"` / `"__start__"` の専用節を削除し、`_` 節（`dispatch_event_to_components`
+を呼ぶ）に統合した。
+
+**本来あるべき設計:**
+
+UI アクションは原則すべてコンポーネントに配信すべき。
+エンジンが特定のアクション文字列を知っている必要はなく、
+`__save__` / `__load__` 等のエンジン固有アクションのみ専用節で処理し、
+残りはすべて `dispatch_event_to_components` に渡す設計が正しい。
+
+#### E-1-3: `SaveManager.load_high_scores/0` のバグ
+
+**現状の問題:**
+
+`load_high_scores/0` のパターンマッチが `%{"scores" => scores}` だったが、
+`read_json` はエンベロープ全体 `%{"version" => ..., "state" => %{"scores" => ...}}`
+を返すため、`CaseClauseError` でクラッシュしていた。
+`VampireSurvivor` では `game_over` 遷移が発生しにくく顕在化していなかった。
+
+**暫定対処:**
+
+パターンマッチを `%{"state" => %{"scores" => scores}}` に修正した。
+
+**本来あるべき設計:**
+
+これは純粋なバグ修正であり、設計変更は不要。
+ただし `save_manager.ex` のテストが存在しないため、
+ハイスコアの保存・読み込みのユニットテストを追加することが望ましい。
