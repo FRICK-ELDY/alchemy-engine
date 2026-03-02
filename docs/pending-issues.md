@@ -465,5 +465,57 @@ Rust ECS を使わないコンテンツでは NIF が常に 0 を返すため、
 
 ---
 
+### 課題18: `game_render` がコンテンツ固有の概念を知っている
+
+**優先度**: 高
+
+**発見の経緯**
+
+`RollingBall` コンテンツを実装する際、ステージクリア・エンディングという
+コンテンツ固有のシーン遷移に対応するために、以下の変更が必要になった：
+
+- `GamePhase` 列挙型に `StageClear` / `Ending` を追加（`native/game_render/src/renderer/mod.rs`）
+- NIF の `decode_game_phase` に `:stage_clear` / `:ending` を追加（`native/game_nif/src/nif/render_frame_nif.rs`）
+- `ui.rs` に `build_stage_clear_ui` / `build_ending_ui` 関数を追加（ボタンラベル・色・アクション文字列を含む）
+
+これは `game_render` がコンテンツの「ステージクリア」「エンディング」という概念を直接知ることになり、
+`implementation.mdc` の「固有の概念を扱っていないか？」原則に違反している。
+
+同様に `build_title_ui` の説明文（"Survive as long as possible!"）や操作説明（"1/2/3: Choose weapon"）も
+VampireSurvivor 固有の知識を `game_render` がハードコードしている。
+
+**本来あるべき設計**
+
+`game_render` は「どんな UI を表示するか」を知らず、
+Elixir 側から渡された汎用データを描画するだけにすべき。
+
+具体的には以下の方向性が考えられる：
+
+1. **`HudData` にオーバーレイテキスト・ボタン定義を追加する**
+   Elixir 側が `%{overlay: %{title: "STAGE CLEAR!", buttons: [%{label: "NEXT STAGE", action: "__next_stage__"}]}}` を渡し、
+   `game_render` はそれを汎用的に描画する。コンテンツ固有の文言・色はすべて Elixir 側が決める。
+
+2. **`GamePhase` を廃止して汎用フェーズ識別子にする**
+   `StageClear` / `Ending` のような固有概念を持たせず、
+   `:overlay` / `:playing` / `:game_over` のような汎用的な状態のみを `game_render` に伝える。
+
+**同様の問題: `game_physics` と `game_audio`**
+
+`game_physics` は現状コンテンツ固有のパラメータ（武器・敵の種類等）を
+NIF 経由で注入する設計になっており、コンテンツを直接知らない構造を維持している。
+
+`game_audio` も同様に、コンテンツ固有のサウンドキューを知らない設計にすべきであり、
+Elixir 側から「再生するサウンド ID」を渡す汎用インターフェースが必要になる。
+
+**影響ファイル**
+
+- `native/game_render/src/renderer/mod.rs` — `GamePhase` の汎用化
+- `native/game_render/src/renderer/ui.rs` — 汎用オーバーレイ UI の実装
+- `native/game_nif/src/nif/render_frame_nif.rs` — `HudData` デコードの拡張
+- `apps/game_engine/lib/game_engine/nif_bridge.ex` — `push_render_frame` の引数変更
+- 全コンテンツの `RenderComponent` — 新しい `HudData` 形式への対応
+
+---
+
 *このドキュメントは `vision.md` の思想に基づいて管理すること。*
 *各課題の詳細な改善方針・作業ステップは [`improvement-plan.md`](./improvement-plan.md) を参照すること。*

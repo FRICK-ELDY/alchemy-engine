@@ -412,7 +412,9 @@ fn decode_game_phase(term: Term) -> NifResult<GamePhase> {
     match s.as_str() {
         "title" => Ok(GamePhase::Title),
         "playing" => Ok(GamePhase::Playing),
+        "stage_clear" => Ok(GamePhase::StageClear),
         "game_over" => Ok(GamePhase::GameOver),
+        "ending" => Ok(GamePhase::Ending),
         other => Err(NifError::Term(Box::new(format!(
             "GamePhase: unknown '{other}'"
         )))),
