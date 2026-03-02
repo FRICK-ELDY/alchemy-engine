@@ -427,5 +427,43 @@ UI アクションは原則すべてコンポーネントに配信すべき。
 
 ---
 
+### 課題17: `Diagnostics` がコンテンツ固有の知識を持っている
+
+**優先度**: 中
+
+**発見の経緯**
+
+`BulletHell3D`（Rust ECS 不使用コンテンツ）を実装した際、
+`GameEngine.GameEvents.Diagnostics` の `do_log_and_cache/3` が
+`GameEngine.NifBridge.get_enemy_count/1` / `get_bullet_count/1` から敵数・弾数を取得していることが判明した。
+Rust ECS を使わないコンテンツでは NIF が常に 0 を返すため、ログ・`StressMonitor` に実態が反映されない。
+
+暫定対処として「NIF が 0 のとき Playing シーンの state から補完する」コードを追加したが、
+これは `Diagnostics` がコンテンツの内部構造（`:enemies` / `:bullets` キーの存在）を知ることになり、
+エンジン層がコンテンツ固有の知識を持つ構造になっている。
+
+**本来あるべき設計**
+
+コンテンツが「現在の敵数・弾数」を自分で報告する仕組みを用意し、
+`Diagnostics` はその報告値を受け取るだけにすべき。
+
+具体的には以下のいずれかの方向性が考えられる：
+
+1. **コンテンツ定義に `diagnostics/0` コールバックを追加する**
+   コンテンツモジュールが `%{enemy_count: integer, bullet_count: integer}` を返す関数を実装し、
+   `Diagnostics` はそれを呼ぶ。NIF 値との使い分けはコンテンツ側が決める。
+
+2. **`FrameCache` への書き込みをコンテンツ側に委譲する**
+   `RenderComponent.on_nif_sync/1` など適切なタイミングで
+   コンテンツ側が `FrameCache.put_entity_counts/2` を呼ぶ。
+
+**影響ファイル**
+
+- `apps/game_engine/lib/game_engine/game_events/diagnostics.ex` — 暫定コードの除去・コールバック呼び出しへの置き換え
+- `apps/game_content/lib/game_content/bullet_hell_3d.ex` — `diagnostics/0` コールバック実装（方向性1の場合）
+- `apps/game_engine/lib/game_engine/content_behaviour.ex` — コールバック定義追加（方向性1の場合）
+
+---
+
 *このドキュメントは `vision.md` の思想に基づいて管理すること。*
 *各課題の詳細な改善方針・作業ステップは [`improvement-plan.md`](./improvement-plan.md) を参照すること。*
