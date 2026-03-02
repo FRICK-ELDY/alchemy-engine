@@ -172,7 +172,8 @@ defmodule GameContent.VampireSurvivor.RenderComponent do
       {hp, max_hp, score, elapsed_seconds, level, exp, exp_to_next},
       {enemy_count, bullet_count, 0.0, level_up_pending},
       {weapon_choices, weapon_upgrade_descs, weapon_levels},
-      {magnet_timer, 0, boss_info, :playing, screen_flash_alpha, score_popups, kill_count}
+      {magnet_timer, 0, boss_info, :playing, screen_flash_alpha, score_popups, kill_count},
+      {:none, :none}
     }
   end
 
@@ -189,11 +190,22 @@ defmodule GameContent.VampireSurvivor.RenderComponent do
 
   defp build_boss_info({:none, _, _, _, _}, _playing_state), do: :none
 
+  @weapon_display_names %{
+    "magic_wand" => "Magic Wand",
+    "axe" => "Axe",
+    "cross" => "Cross",
+    "whip" => "Whip",
+    "fireball" => "Fireball",
+    "lightning" => "Lightning"
+  }
+
   defp build_weapon_levels(playing_state) do
     weapon_levels = Map.get(playing_state, :weapon_levels, %{})
 
     Enum.map(weapon_levels, fn {weapon_name, level} ->
-      {"weapon_#{weapon_name}", level}
+      name = "weapon_#{weapon_name}"
+      display_name = Map.get(@weapon_display_names, to_string(weapon_name), name)
+      {name, display_name, level}
     end)
   end
 

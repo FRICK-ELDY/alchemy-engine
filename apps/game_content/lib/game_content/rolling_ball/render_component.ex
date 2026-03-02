@@ -45,6 +45,17 @@ defmodule GameContent.RollingBall.RenderComponent do
   # 障害物：ボールより少し大きい立方体
   @obstacle_half 0.65
 
+  # タイトル画面データ（静的・コンパイル時定数）
+  @title_overlay {
+    "Rolling Ball",
+    {0.3, 0.8, 1.0, 1.0},
+    "Roll the ball to the goal!",
+    ["WASD / Arrow Keys: Move", "Reach the green goal to clear the stage"],
+    {0.02, 0.02, 0.08, 0.9},
+    {0.39, 0.63, 1.0, 1.0},
+    [{"  START GAME  ", "__start__", {0.16, 0.39, 0.78, 1.0}}]
+  }
+
   @impl GameEngine.Component
   def on_nif_sync(context) do
     content = GameEngine.Config.current()
@@ -172,21 +183,56 @@ defmodule GameContent.RollingBall.RenderComponent do
     stage = Map.get(playing_state, :stage, 1)
     retries_left = Map.get(playing_state, :retries_left, 3)
 
-    phase =
+    {phase, overlay} =
       cond do
-        current_scene == GameContent.RollingBall.Scenes.Title -> :title
-        current_scene == GameContent.RollingBall.Scenes.StageClear -> :stage_clear
-        current_scene == GameContent.RollingBall.Scenes.Ending -> :ending
-        current_scene == content.game_over_scene() -> :game_over
-        true -> :playing
+        current_scene == GameContent.RollingBall.Scenes.Title ->
+          {:title, :none}
+
+        current_scene == GameContent.RollingBall.Scenes.StageClear ->
+          overlay = build_stage_clear_overlay(stage)
+          {:overlay, overlay}
+
+        current_scene == GameContent.RollingBall.Scenes.Ending ->
+          overlay = build_ending_overlay()
+          {:overlay, overlay}
+
+        current_scene == content.game_over_scene() ->
+          {:game_over, :none}
+
+        true ->
+          {:playing, :none}
       end
 
-    # score フィールドにステージ番号を流用（StageClear UI の "Stage N Complete" 表示に使う）
+    title_overlay = if phase == :title, do: @title_overlay, else: :none
+
     {
       {100.0, 100.0, stage, 0.0, retries_left, 0, 10},
       {0, 0, 0.0, false},
       {[], [], []},
-      {0.0, 0, :none, phase, 0.0, [], 0}
+      {0.0, 0, :none, phase, 0.0, [], 0},
+      {overlay, title_overlay}
+    }
+  end
+
+  defp build_stage_clear_overlay(stage) do
+    {
+      "STAGE CLEAR!",
+      {0.39, 1.0, 0.47, 1.0},
+      "Stage #{stage} Complete",
+      {0.02, 0.12, 0.04, 0.9},
+      {0.31, 0.86, 0.39, 1.0},
+      [{"  NEXT STAGE  ", "__next_stage__", {0.12, 0.55, 0.24, 1.0}}]
+    }
+  end
+
+  defp build_ending_overlay do
+    {
+      "CONGRATULATIONS!",
+      {1.0, 0.86, 0.31, 1.0},
+      "All stages cleared!",
+      {0.08, 0.04, 0.16, 0.92},
+      {0.86, 0.71, 0.31, 1.0},
+      [{"  BACK TO TITLE  ", "__back_to_title__", {0.47, 0.31, 0.08, 1.0}}]
     }
   end
 end

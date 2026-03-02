@@ -135,7 +135,8 @@ defmodule GameContent.SimpleBox3D.RenderComponent do
        @hud_dummy_exp, @hud_dummy_exp_to_next},
       {0, 0, 0.0, false},
       {[], [], []},
-      {0.0, 0, :none, phase, 0.0, [], 0}
+      {0.0, 0, :none, phase, 0.0, [], 0},
+      {:none, :none}
     }
   end
 end

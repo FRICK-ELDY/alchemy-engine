@@ -87,6 +87,20 @@ pub enum DrawCommand {
         top_color: [f32; 4],
         bottom_color: [f32; 4],
     },
+    /// 汎用スプライト描画（UV・サイズをコンテンツ側が直接指定する）。
+    /// `Sprite` の kind_id → UV/サイズ変換テーブルを持たない新コンテンツ向け。
+    SpriteRaw {
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        /// アトラス UV オフセット（0.0〜1.0）
+        uv_offset: [f32; 2],
+        /// アトラス UV サイズ（0.0〜1.0）
+        uv_size: [f32; 2],
+        /// RGBA 乗算カラー
+        color_tint: [f32; 4],
+    },
 }
 
 /// カメラパラメータ。
@@ -136,7 +150,10 @@ pub struct RenderFrame {
 pub(crate) mod renderer;
 pub mod window;
 
-pub use renderer::{BossHudInfo, GamePhase, GameUiState, HudData, LoadDialogKind, Renderer};
+pub use renderer::{
+    BossHudInfo, GamePhase, GameUiState, HudData, LoadDialogKind, OverlayButton, OverlayData,
+    Renderer, TitleOverlayData, WeaponSlotInfo,
+};
 
 #[cfg(feature = "headless")]
 pub mod headless;
