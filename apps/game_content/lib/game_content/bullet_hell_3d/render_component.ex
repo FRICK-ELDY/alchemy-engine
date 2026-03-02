@@ -57,13 +57,13 @@ defmodule GameContent.BulletHell3D.RenderComponent do
 
     commands = build_commands(playing_state)
     camera = build_camera()
-    hud = build_hud(current_scene, content, playing_state, game_over_state)
+    ui = build_ui(current_scene, content, playing_state, game_over_state)
 
     GameEngine.NifBridge.push_render_frame(
       context.render_buf_ref,
       commands,
       camera,
-      hud
+      ui
     )
 
     :ok
@@ -110,7 +110,6 @@ defmodule GameContent.BulletHell3D.RenderComponent do
     [skybox_cmd, grid_cmd, player_cmd] ++ enemy_cmds ++ bullet_cmds
   end
 
-  # 無敵時間中はプレイヤーを点滅させる（フレーム番号で交互に薄くする）
   defp build_player_cmd({px, py, pz}, invincible_ms) do
     {pr, pg, pb, _pa} = @color_player
 
@@ -137,36 +136,65 @@ defmodule GameContent.BulletHell3D.RenderComponent do
      {@camera_fov, @camera_near, @camera_far}}
   end
 
-  # ── HUD 組み立て ───────────────────────────────────────────────────
-  #
-  # push_render_frame の hud 引数フォーマット:
-  #   { {hp, max_hp, score, elapsed_sec, level, exp, exp_to_next},
-  #     {enemy_count, bullet_count, fps, level_up_pending},
-  #     {weapon_choices, weapon_upgrade_descs, weapon_levels},
-  #     {magnet_timer, item_count, boss_info, phase, flash_alpha, score_popups, kill_count} }
-  #
-  # BulletHell3D で使わないフィールドはゼロ・空リスト・:none で埋める。
-  # HP と elapsed_sec は実際の値を渡して HUD に表示させる。
+  # ── UiCanvas 組み立て ─────────────────────────────────────────────
 
-  defp build_hud(current_scene, content, playing_state, game_over_state) do
-    phase = if current_scene == content.game_over_scene(), do: :game_over, else: :playing
+  defp build_ui(current_scene, content, playing_state, game_over_state) do
+    is_game_over = current_scene == content.game_over_scene()
 
     hp = Map.get(playing_state, :hp, @max_hp)
     elapsed_sec = Map.get(playing_state, :elapsed_sec, 0.0)
-
-    # ゲームオーバー画面では最後の生存時間を表示する
     final_elapsed = Map.get(game_over_state, :elapsed_sec, elapsed_sec)
-    display_elapsed = if phase == :game_over, do: final_elapsed, else: elapsed_sec
+    display_elapsed = if is_game_over, do: final_elapsed, else: elapsed_sec
 
-    enemy_count = playing_state |> Map.get(:enemies, []) |> length()
-    bullet_count = playing_state |> Map.get(:bullets, []) |> length()
+    elapsed_s = trunc(display_elapsed)
+    m = div(elapsed_s, 60)
+    s = rem(elapsed_s, 60)
 
-    {
-      {hp * 1.0, @max_hp * 1.0, 0, display_elapsed, 1, 0, 1},
-      {enemy_count, bullet_count, 0.0, false},
-      {[], [], []},
-      {0.0, 0, :none, phase, 0.0, [], 0},
-      {:none, :none}
-    }
+    nodes =
+      if is_game_over do
+        [
+          {:node, {:center, {0.0, 0.0}, :wrap},
+           {:rect, {0.08, 0.02, 0.02, 0.92}, 16.0, {{0.78, 0.24, 0.24, 1.0}, 2.0}},
+           [
+             {:node, {:top_left, {0.0, 0.0}, :wrap},
+              {:vertical_layout, 8.0, {50.0, 35.0, 50.0, 35.0}},
+              [
+                {:node, {:top_left, {0.0, 0.0}, :wrap},
+                 {:text, "GAME OVER", {1.0, 0.31, 0.31, 1.0}, 40.0, true}, []},
+                {:node, {:top_left, {0.0, 0.0}, :wrap},
+                 {:text,
+                  "Survived: #{String.pad_leading(to_string(m), 2, "0")}:#{String.pad_leading(to_string(s), 2, "0")}",
+                  {0.86, 0.86, 1.0, 1.0}, 18.0, false}, []},
+                {:node, {:top_left, {0.0, 0.0}, :wrap},
+                 {:button, "  RETRY  ", "__retry__", {0.63, 0.16, 0.16, 1.0}, 160.0, 44.0}, []}
+              ]}
+           ]}
+        ]
+      else
+        [
+          {:node, {:top_left, {8.0, 8.0}, :wrap}, {:rect, {0.0, 0.0, 0.0, 0.71}, 6.0, :none},
+           [
+             {:node, {:top_left, {0.0, 0.0}, :wrap},
+              {:horizontal_layout, 8.0, {12.0, 8.0, 12.0, 8.0}},
+              [
+                {:node, {:top_left, {0.0, 0.0}, :wrap},
+                 {:text, "HP", {1.0, 0.39, 0.39, 1.0}, 14.0, true}, []},
+                {:node, {:top_left, {0.0, 0.0}, :wrap},
+                 {:progress_bar, hp * 1.0, @max_hp * 1.0, 120.0, 18.0,
+                  {{0.31, 0.86, 0.31, 1.0}, {0.86, 0.71, 0.0, 1.0}, {0.86, 0.24, 0.24, 1.0},
+                   {0.24, 0.08, 0.08, 1.0}, 4.0}}, []},
+                {:node, {:top_left, {0.0, 0.0}, :wrap},
+                 {:text, "#{hp}/#{@max_hp}", {1.0, 1.0, 1.0, 1.0}, 13.0, false}, []},
+                {:node, {:top_left, {0.0, 0.0}, :wrap}, :separator, []},
+                {:node, {:top_left, {0.0, 0.0}, :wrap},
+                 {:text,
+                  "#{String.pad_leading(to_string(m), 2, "0")}:#{String.pad_leading(to_string(s), 2, "0")}",
+                  {1.0, 1.0, 1.0, 1.0}, 14.0, false}, []}
+              ]}
+           ]}
+        ]
+      end
+
+    {:canvas, nodes}
   end
 end

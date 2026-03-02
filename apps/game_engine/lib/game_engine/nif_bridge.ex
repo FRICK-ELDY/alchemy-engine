@@ -69,17 +69,26 @@ defmodule GameEngine.NifBridge do
   #   {:particle, x, y, r, g, b, {alpha, size}}
   #   {:item, x, y, kind}
   #   {:obstacle, x, y, radius, kind}
-  # camera:   {:camera_2d, offset_x, offset_y}
-  # hud:      ネストタプル形式（render_frame_nif.rs の decode_hud を参照）
-  #           { {hp, max_hp, score, elapsed_sec, level, exp, exp_to_next},
-  #             {enemy_count, bullet_count, fps, level_up_pending},
-  #             {weapon_choices, weapon_upgrade_descs, weapon_levels},
-  #             {magnet_timer, item_count, boss_info, phase, flash_alpha, score_popups, kill_count},
-  #             {overlay, title_overlay} }
-  #   phase: :title | :playing | :overlay | :game_over
-  #   overlay: :none | {title, title_color, subtitle, bg_color, border_color, buttons}
-  #   title_overlay: :none | {game_title, title_color, description, instructions, bg_color, border_color, buttons}
-  def push_render_frame(_render_buf, _commands, _camera, _hud),
+  # camera: {:camera_2d, offset_x, offset_y} | {:camera_3d, ...}
+  # ui: UiCanvas ツリー形式（render_frame_nif.rs の decode_ui_canvas を参照）
+  #   {:canvas, [node]}
+  #   node: {:node, rect, component, [children]}
+  #   rect: {anchor, {offset_x, offset_y}, size}
+  #     anchor: :top_left | :top_center | :top_right | :middle_left | :center |
+  #             :middle_right | :bottom_left | :bottom_center | :bottom_right
+  #     size: :wrap | {:fixed, w, h}
+  #   component:
+  #     {:vertical_layout, spacing, {pad_left, pad_top, pad_right, pad_bottom}}
+  #     {:horizontal_layout, spacing, {pad_left, pad_top, pad_right, pad_bottom}}
+  #     {:rect, {r,g,b,a}, corner_radius, border}
+  #       border: :none | {{r,g,b,a}, width}
+  #     {:text, text, {r,g,b,a}, size, bold}
+  #     {:button, label, action, {r,g,b,a}, min_width, min_height}
+  #     {:progress_bar, value, max, width, height, {fg_high, fg_mid, fg_low, bg, corner_radius}}
+  #     :separator
+  #     {:world_text, world_x, world_y, text, {r,g,b,a}, lifetime, max_lifetime}
+  #     {:screen_flash, {r,g,b,a}}
+  def push_render_frame(_render_buf, _commands, _camera, _ui),
     do: :erlang.nif_error(:nif_not_loaded)
 
   def pause_physics(_control), do: :erlang.nif_error(:nif_not_loaded)

@@ -1,5 +1,6 @@
-use super::{GamePhase, GameUiState, HudData, LoadDialogKind, OverlayData, WeaponSlotInfo};
-use crate::CameraParams;
+use crate::{CameraParams, UiAnchor, UiCanvas, UiComponent, UiNode, UiSize};
+
+use super::{GameUiState, LoadDialogKind};
 
 /// `[f32; 4]` の RGBA 値（0.0〜1.0）を egui の Color32 に変換するヘルパー。
 fn to_color32(rgba: [f32; 4]) -> egui::Color32 {
@@ -12,18 +13,30 @@ fn to_color32(rgba: [f32; 4]) -> egui::Color32 {
     )
 }
 
-/// `[f32; 4]` の RGBA 値（0.0〜1.0）を egui の Color32（アルファ無視）に変換するヘルパー。
 fn to_color32_rgb(rgba: [f32; 4]) -> egui::Color32 {
     let [r, g, b, _] = rgba;
     egui::Color32::from_rgb((r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8)
 }
 
-/// HUD を描画し、ボタン操作があった場合はアクション文字列を返す。
-/// アクション文字列はコンテンツ側が定義する（例: "__start__", "__retry__" 等）。
-/// セーブ/ロード関連: "__save__" / "__load__" / "__load_confirm__" / "__load_cancel__"
-pub fn build_hud_ui(
+fn anchor_to_align2(anchor: UiAnchor) -> egui::Align2 {
+    match anchor {
+        UiAnchor::TopLeft => egui::Align2::LEFT_TOP,
+        UiAnchor::TopCenter => egui::Align2::CENTER_TOP,
+        UiAnchor::TopRight => egui::Align2::RIGHT_TOP,
+        UiAnchor::MiddleLeft => egui::Align2::LEFT_CENTER,
+        UiAnchor::Center => egui::Align2::CENTER_CENTER,
+        UiAnchor::MiddleRight => egui::Align2::RIGHT_CENTER,
+        UiAnchor::BottomLeft => egui::Align2::LEFT_BOTTOM,
+        UiAnchor::BottomCenter => egui::Align2::CENTER_BOTTOM,
+        UiAnchor::BottomRight => egui::Align2::RIGHT_BOTTOM,
+    }
+}
+
+/// UiCanvas を描画し、ボタンが押された場合はアクション文字列を返す。
+/// ui_state でセーブ/ロードダイアログ・トーストを制御する。
+pub fn render_ui_canvas(
     ctx: &egui::Context,
-    hud: &HudData,
+    canvas: &UiCanvas,
     camera: &CameraParams,
     fps: f32,
     ui_state: &mut GameUiState,
@@ -42,29 +55,11 @@ pub fn build_hud_ui(
         let chosen = Some(action);
 
         // ロードダイアログが開いている場合は描画せずに閉じる。
-        // build_load_dialog を呼び出すと egui がクリック判定を行い、
-        // 同フレームでダイアログボタンが押された場合に load_dialog が
-        // 次フレームも残り続ける原因となるため、ここで直接 None にリセットする。
         ui_state.load_dialog = None;
 
-        // 各フェーズの UI を描画する。戻り値（ボタンクリック結果）は意図的に捨てる。
-        // pending_action が Save/Load ボタン由来の場合、同フレームで
-        // レベルアップ選択等が押されても pending_action を優先するのが正しい挙動。
-        // また build_playing_hud_ui 内の Save/Load ボタンが再クリックされた場合、
-        // ui_state.pending_action が再セットされる可能性があるため、描画後に破棄する。
-        match hud.phase {
-            GamePhase::Title => {
-                let _ = build_title_ui(ctx, hud);
-            }
-            GamePhase::Overlay => {
-                let _ = build_overlay_ui(ctx, hud.overlay.as_ref());
-            }
-            GamePhase::GameOver => {
-                let _ = build_game_over_ui(ctx, hud);
-            }
-            GamePhase::Playing => {
-                let _ = build_playing_ui(ctx, hud, camera, fps, ui_state);
-            }
+        // 各ノードを描画する。戻り値は捨てる（pending_action 優先）。
+        for (idx, node) in canvas.nodes.iter().enumerate() {
+            render_node(ctx, node, idx, camera, fps, ui_state);
         }
         ui_state.pending_action = None;
 
@@ -75,12 +70,15 @@ pub fn build_hud_ui(
         return chosen;
     }
 
-    let mut chosen = match hud.phase {
-        GamePhase::Title => build_title_ui(ctx, hud),
-        GamePhase::Overlay => build_overlay_ui(ctx, hud.overlay.as_ref()),
-        GamePhase::GameOver => build_game_over_ui(ctx, hud),
-        GamePhase::Playing => build_playing_ui(ctx, hud, camera, fps, ui_state),
-    };
+    let mut chosen: Option<String> = None;
+
+    for (idx, node) in canvas.nodes.iter().enumerate() {
+        if let Some(action) = render_node(ctx, node, idx, camera, fps, ui_state) {
+            if chosen.is_none() {
+                chosen = Some(action);
+            }
+        }
+    }
 
     // ロードダイアログ（モーダル）
     if ui_state.load_dialog.is_some() {
@@ -97,176 +95,382 @@ pub fn build_hud_ui(
     chosen
 }
 
-/// タイトル画面（HudData.title_overlay のデータを描画する）
-fn build_title_ui(ctx: &egui::Context, hud: &HudData) -> Option<String> {
-    let Some(ref title_data) = hud.title_overlay else {
-        return None;
+/// ノードを描画する。ボタンが押された場合はアクション文字列を返す。
+/// `node_idx` は `canvas.nodes` 内のトップレベルインデックスで、
+/// `egui::Area` の ID 生成に使用する（同一アンカー・オフセットのノードが複数あっても衝突しない）。
+fn render_node(
+    ctx: &egui::Context,
+    node: &UiNode,
+    node_idx: usize,
+    camera: &CameraParams,
+    fps: f32,
+    ui_state: &mut GameUiState,
+) -> Option<String> {
+    match &node.component {
+        UiComponent::ScreenFlash { color } => {
+            render_screen_flash(ctx, *color);
+            None
+        }
+        UiComponent::WorldText {
+            world_x,
+            world_y,
+            text,
+            color,
+            lifetime,
+            max_lifetime,
+        } => {
+            render_world_text(ctx, camera, *world_x, *world_y, text, *color, *lifetime, *max_lifetime);
+            None
+        }
+        _ => render_node_as_area(ctx, node, node_idx, camera, fps, ui_state),
+    }
+}
+
+/// egui::Area を使ってノードを描画する。`node_idx` は呼び出し元の `render_node` から渡される。
+fn render_node_as_area(
+    ctx: &egui::Context,
+    node: &UiNode,
+    node_idx: usize,
+    camera: &CameraParams,
+    fps: f32,
+    ui_state: &mut GameUiState,
+) -> Option<String> {
+    let align = anchor_to_align2(node.rect.anchor);
+    let offset = egui::vec2(node.rect.offset[0], node.rect.offset[1]);
+
+    let id_str = format!("node_{node_idx}_{:?}", node.rect.anchor);
+
+    let mut result: Option<String> = None;
+
+    let mut area = egui::Area::new(egui::Id::new(id_str))
+        .anchor(align, offset)
+        .order(egui::Order::Foreground);
+
+    if let UiSize::Fixed(w, h) = node.rect.size {
+        area = area.default_size(egui::vec2(w, h));
+    }
+
+    area.show(ctx, |ui| {
+        result = render_component_in_ui(ui, &node.component, &node.children, camera, fps, ui_state);
+    });
+
+    result
+}
+
+/// egui::Ui 内でコンポーネントを描画する（レイアウトコンテナ内の再帰描画でも使用）。
+fn render_component_in_ui(
+    ui: &mut egui::Ui,
+    component: &UiComponent,
+    children: &[UiNode],
+    camera: &CameraParams,
+    fps: f32,
+    ui_state: &mut GameUiState,
+) -> Option<String> {
+    match component {
+        UiComponent::VerticalLayout { spacing, padding } => {
+            render_vertical_layout(ui, children, *spacing, *padding, camera, fps, ui_state)
+        }
+        UiComponent::HorizontalLayout { spacing, padding } => {
+            render_horizontal_layout(ui, children, *spacing, *padding, camera, fps, ui_state)
+        }
+        UiComponent::Rect {
+            color,
+            corner_radius,
+            border,
+        } => {
+            render_rect_component(ui, children, *color, *corner_radius, *border, camera, fps, ui_state)
+        }
+        UiComponent::Text { text, color, size, bold } => {
+            render_text(ui, text, *color, *size, *bold);
+            None
+        }
+        UiComponent::Button {
+            label,
+            action,
+            color,
+            min_width,
+            min_height,
+        } => render_button(ui, label, action, *color, *min_width, *min_height, ui_state),
+        UiComponent::ProgressBar {
+            value,
+            max,
+            width,
+            height,
+            fg_color_high,
+            fg_color_mid,
+            fg_color_low,
+            bg_color,
+            corner_radius,
+        } => {
+            render_progress_bar(
+                ui,
+                *value,
+                *max,
+                *width,
+                *height,
+                *fg_color_high,
+                *fg_color_mid,
+                *fg_color_low,
+                *bg_color,
+                *corner_radius,
+            );
+            None
+        }
+        UiComponent::Separator => {
+            ui.separator();
+            None
+        }
+        UiComponent::Spacing { amount } => {
+            // add_space は egui の現在のレイアウト方向に従う。
+            // VerticalLayout 内では垂直スペース、HorizontalLayout 内では水平スペースとして機能する。
+            ui.add_space(*amount);
+            None
+        }
+        UiComponent::ScreenFlash { .. } | UiComponent::WorldText { .. } => {
+            // これらは render_node で先に処理される
+            None
+        }
+    }
+}
+
+/// `f32` の padding 値を `egui::Margin` の `i8` フィールドに安全に変換する。
+/// `as i8` は 128.0 以上でオーバーフローするため、`clamp` で [-128, 127] に収める。
+fn padding_to_margin(p: [f32; 4]) -> egui::Margin {
+    egui::Margin {
+        left: p[0].clamp(i8::MIN as f32, i8::MAX as f32) as i8,
+        top: p[1].clamp(i8::MIN as f32, i8::MAX as f32) as i8,
+        right: p[2].clamp(i8::MIN as f32, i8::MAX as f32) as i8,
+        bottom: p[3].clamp(i8::MIN as f32, i8::MAX as f32) as i8,
+    }
+}
+
+fn render_vertical_layout(
+    ui: &mut egui::Ui,
+    children: &[UiNode],
+    spacing: f32,
+    padding: [f32; 4],
+    camera: &CameraParams,
+    fps: f32,
+    ui_state: &mut GameUiState,
+) -> Option<String> {
+    // padding: [left, top, right, bottom]
+    let margin = padding_to_margin(padding);
+    let mut result: Option<String> = None;
+    egui::Frame::new().inner_margin(margin).show(ui, |ui| {
+        ui.spacing_mut().item_spacing.y = spacing;
+        ui.vertical(|ui| {
+            for child in children {
+                let action = render_component_in_ui(
+                    ui,
+                    &child.component,
+                    &child.children,
+                    camera,
+                    fps,
+                    ui_state,
+                );
+                if result.is_none() {
+                    result = action;
+                }
+            }
+        });
+    });
+    result
+}
+
+fn render_horizontal_layout(
+    ui: &mut egui::Ui,
+    children: &[UiNode],
+    spacing: f32,
+    padding: [f32; 4],
+    camera: &CameraParams,
+    fps: f32,
+    ui_state: &mut GameUiState,
+) -> Option<String> {
+    // padding: [left, top, right, bottom]
+    let margin = padding_to_margin(padding);
+    let mut result: Option<String> = None;
+    egui::Frame::new().inner_margin(margin).show(ui, |ui| {
+        ui.spacing_mut().item_spacing.x = spacing;
+        ui.horizontal(|ui| {
+            for child in children {
+                let action = render_component_in_ui(
+                    ui,
+                    &child.component,
+                    &child.children,
+                    camera,
+                    fps,
+                    ui_state,
+                );
+                if result.is_none() {
+                    result = action;
+                }
+            }
+        });
+    });
+    result
+}
+
+fn render_rect_component(
+    ui: &mut egui::Ui,
+    children: &[UiNode],
+    color: [f32; 4],
+    corner_radius: f32,
+    border: Option<([f32; 4], f32)>,
+    camera: &CameraParams,
+    fps: f32,
+    ui_state: &mut GameUiState,
+) -> Option<String> {
+    let mut frame = egui::Frame::new()
+        .fill(to_color32(color))
+        .corner_radius(corner_radius);
+
+    if let Some((border_color, border_width)) = border {
+        frame = frame.stroke(egui::Stroke::new(border_width, to_color32_rgb(border_color)));
+    }
+
+    let mut result: Option<String> = None;
+    frame.show(ui, |ui| {
+        for child in children {
+            let action = render_component_in_ui(
+                ui,
+                &child.component,
+                &child.children,
+                camera,
+                fps,
+                ui_state,
+            );
+            if result.is_none() {
+                result = action;
+            }
+        }
+    });
+    result
+}
+
+fn render_text(ui: &mut egui::Ui, text: &str, color: [f32; 4], size: f32, bold: bool) {
+    let mut rich = egui::RichText::new(text).color(to_color32(color)).size(size);
+    if bold {
+        rich = rich.strong();
+    }
+    ui.label(rich);
+}
+
+fn render_button(
+    ui: &mut egui::Ui,
+    label: &str,
+    action: &str,
+    color: [f32; 4],
+    min_width: f32,
+    min_height: f32,
+    ui_state: &mut GameUiState,
+) -> Option<String> {
+    let btn = egui::Button::new(egui::RichText::new(label).strong())
+        .fill(to_color32_rgb(color))
+        .min_size(egui::vec2(min_width, min_height));
+
+    if ui.add(btn).clicked() {
+        // Save/Load ボタンは pending_action 経由で処理する
+        match action {
+            "__save__" | "__load__" => {
+                ui_state.pending_action = Some(action.to_string());
+                None
+            }
+            _ => Some(action.to_string()),
+        }
+    } else {
+        None
+    }
+}
+
+fn render_progress_bar(
+    ui: &mut egui::Ui,
+    value: f32,
+    max: f32,
+    width: f32,
+    height: f32,
+    fg_color_high: [f32; 4],
+    fg_color_mid: [f32; 4],
+    fg_color_low: [f32; 4],
+    bg_color: [f32; 4],
+    corner_radius: f32,
+) {
+    let ratio = if max > 0.0 {
+        (value / max).clamp(0.0, 1.0)
+    } else {
+        0.0
     };
-    let mut chosen = None;
-    egui::Area::new(egui::Id::new("title"))
-        .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
-        .order(egui::Order::Foreground)
-        .show(ctx, |ui| {
-            egui::Frame::new()
-                .fill(to_color32(title_data.bg_color))
-                .inner_margin(egui::Margin::symmetric(60, 40))
-                .corner_radius(16.0)
-                .stroke(egui::Stroke::new(2.0, to_color32_rgb(title_data.border_color)))
-                .show(ui, |ui| {
-                    ui.vertical_centered(|ui| {
-                        ui.label(
-                            egui::RichText::new(&title_data.game_title)
-                                .color(to_color32_rgb(title_data.title_color))
-                                .size(36.0)
-                                .strong(),
-                        );
-                        if let Some(ref desc) = title_data.description {
-                            ui.add_space(8.0);
-                            ui.label(
-                                egui::RichText::new(desc.as_str())
-                                    .color(egui::Color32::from_rgb(180, 200, 220))
-                                    .size(16.0),
-                            );
-                        }
-                        if !title_data.instructions.is_empty() {
-                            ui.add_space(4.0);
-                            for line in &title_data.instructions {
-                                ui.label(
-                                    egui::RichText::new(line.as_str())
-                                        .color(egui::Color32::from_rgb(150, 170, 190))
-                                        .size(13.0),
-                                );
-                            }
-                        }
-                        ui.add_space(24.0);
-                        for (i, btn_def) in title_data.buttons.iter().enumerate() {
-                            if i > 0 {
-                                ui.add_space(8.0);
-                            }
-                            let btn = egui::Button::new(
-                                egui::RichText::new(&btn_def.label).size(22.0).strong(),
-                            )
-                            .fill(to_color32_rgb(btn_def.color))
-                            .min_size(egui::vec2(200.0, 50.0));
-                            if ui.add(btn).clicked() {
-                                chosen = Some(btn_def.action.clone());
-                            }
-                        }
-                    });
-                });
-        });
-    chosen
-}
 
-/// 汎用オーバーレイ画面（OverlayData の内容を描画する）
-fn build_overlay_ui(ctx: &egui::Context, overlay: Option<&OverlayData>) -> Option<String> {
-    let Some(data) = overlay else {
-        return None;
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(width, height), egui::Sense::hover());
+    let painter = ui.painter();
+    painter.rect_filled(rect, corner_radius, to_color32(bg_color));
+
+    let fill_color = if ratio > 0.5 {
+        to_color32(fg_color_high)
+    } else if ratio > 0.25 {
+        to_color32(fg_color_mid)
+    } else {
+        to_color32(fg_color_low)
     };
-    let mut chosen = None;
-    egui::Area::new(egui::Id::new("overlay"))
-        .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
-        .order(egui::Order::Foreground)
-        .show(ctx, |ui| {
-            egui::Frame::new()
-                .fill(to_color32(data.bg_color))
-                .inner_margin(egui::Margin::symmetric(60, 40))
-                .corner_radius(16.0)
-                .stroke(egui::Stroke::new(2.0, to_color32_rgb(data.border_color)))
-                .show(ui, |ui| {
-                    ui.vertical_centered(|ui| {
-                        ui.label(
-                            egui::RichText::new(&data.title)
-                                .color(to_color32_rgb(data.title_color))
-                                .size(40.0)
-                                .strong(),
-                        );
-                        if let Some(ref sub) = data.subtitle {
-                            ui.add_space(12.0);
-                            ui.label(
-                                egui::RichText::new(sub.as_str())
-                                    .color(egui::Color32::from_rgb(200, 220, 200))
-                                    .size(18.0),
-                            );
-                        }
-                        ui.add_space(24.0);
-                        for (i, btn_def) in data.buttons.iter().enumerate() {
-                            if i > 0 {
-                                ui.add_space(8.0);
-                            }
-                            let btn = egui::Button::new(
-                                egui::RichText::new(&btn_def.label).size(22.0).strong(),
-                            )
-                            .fill(to_color32_rgb(btn_def.color))
-                            .min_size(egui::vec2(200.0, 50.0));
-                            if ui.add(btn).clicked() {
-                                chosen = Some(btn_def.action.clone());
-                            }
-                        }
-                    });
-                });
-        });
-    chosen
+
+    let fill_rect =
+        egui::Rect::from_min_size(rect.min, egui::vec2(rect.width() * ratio, rect.height()));
+    painter.rect_filled(fill_rect, corner_radius, fill_color);
 }
 
-/// ゲームオーバー画面（スコア・生存時間・撃破数 + RETRY ボタン）
-fn build_game_over_ui(ctx: &egui::Context, hud: &HudData) -> Option<String> {
-    let mut chosen = None;
-    egui::Area::new(egui::Id::new("gameover"))
-        .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
-        .order(egui::Order::Foreground)
+fn render_screen_flash(ctx: &egui::Context, color: [f32; 4]) {
+    if color[3] <= 0.0 {
+        return;
+    }
+    egui::Area::new(egui::Id::new("screen_flash"))
+        .anchor(egui::Align2::LEFT_TOP, egui::vec2(0.0, 0.0))
+        .order(egui::Order::Background)
         .show(ctx, |ui| {
-            egui::Frame::new()
-                .fill(egui::Color32::from_rgba_unmultiplied(20, 5, 5, 235))
-                .inner_margin(egui::Margin::symmetric(50, 35))
-                .corner_radius(16.0)
-                .stroke(egui::Stroke::new(2.0, egui::Color32::from_rgb(200, 60, 60)))
-                .show(ui, |ui| {
-                    ui.vertical_centered(|ui| {
-                        ui.label(
-                            egui::RichText::new("GAME OVER")
-                                .color(egui::Color32::from_rgb(255, 80, 80))
-                                .size(40.0)
-                                .strong(),
-                        );
-                        ui.add_space(16.0);
-                        let total_s = hud.elapsed_seconds as u32;
-                        let (m, s) = (total_s / 60, total_s % 60);
-                        for (text, color) in &[
-                            (
-                                format!("Survived:  {:02}:{:02}", m, s),
-                                egui::Color32::from_rgb(220, 220, 255),
-                            ),
-                            (
-                                format!("Score:     {}", hud.score),
-                                egui::Color32::from_rgb(255, 220, 80),
-                            ),
-                            (
-                                format!("Kills:     {}", hud.kill_count),
-                                egui::Color32::from_rgb(200, 230, 200),
-                            ),
-                            (
-                                format!("Level:     {}", hud.level),
-                                egui::Color32::from_rgb(180, 200, 255),
-                            ),
-                        ] {
-                            ui.label(egui::RichText::new(text).color(*color).size(18.0));
-                        }
-                        ui.add_space(20.0);
-                        let btn =
-                            egui::Button::new(egui::RichText::new("  RETRY  ").size(20.0).strong())
-                                .fill(egui::Color32::from_rgb(160, 40, 40))
-                                .min_size(egui::vec2(160.0, 44.0));
-                        if ui.add(btn).clicked() {
-                            chosen = Some("__retry__".to_string());
-                        }
-                    });
-                });
+            let screen_rect = ui.ctx().screen_rect();
+            ui.painter()
+                .rect_filled(screen_rect, 0.0, to_color32(color));
         });
-    chosen
 }
 
-/// 1.5.3: ロード確認ダイアログ
+fn render_world_text(
+    ctx: &egui::Context,
+    camera: &CameraParams,
+    world_x: f32,
+    world_y: f32,
+    text: &str,
+    color: [f32; 4],
+    lifetime: f32,
+    max_lifetime: f32,
+) {
+    let (cam_x, cam_y) = camera.offset_xy();
+    let sx = world_x - cam_x;
+    let sy = world_y - cam_y;
+    let alpha = if max_lifetime > 0.0 {
+        (lifetime / max_lifetime).clamp(0.0, 1.0)
+    } else {
+        1.0
+    };
+
+    let mut faded = color;
+    faded[3] *= alpha;
+
+    // lifetime をIDに含めることで、同座標に複数のポップアップが存在する場合の衝突を軽減する。
+    let id_bits = ((world_x.to_bits() as u64) << 32) | (world_y.to_bits() as u64);
+    let lifetime_bits = lifetime.to_bits() as u64;
+    egui::Area::new(egui::Id::new(("world_text", id_bits ^ lifetime_bits)))
+        .anchor(egui::Align2::LEFT_TOP, egui::vec2(0.0, 0.0))
+        .order(egui::Order::Foreground)
+        .show(ctx, |ui| {
+            ui.painter().text(
+                egui::pos2(sx, sy),
+                egui::Align2::CENTER_CENTER,
+                text,
+                egui::FontId::proportional(14.0),
+                to_color32(faded),
+            );
+        });
+}
+
+/// セーブ/ロード確認ダイアログ
 fn build_load_dialog(ctx: &egui::Context, ui_state: &mut GameUiState) -> Option<String> {
     let dialog_kind = ui_state.load_dialog?;
     let mut result = None;
@@ -303,7 +507,8 @@ fn build_load_dialog(ctx: &egui::Context, ui_state: &mut GameUiState) -> Option<
                                 if ui
                                     .add(
                                         egui::Button::new(
-                                            egui::RichText::new("Load").color(egui::Color32::WHITE),
+                                            egui::RichText::new("Load")
+                                                .color(egui::Color32::WHITE),
                                         )
                                         .fill(egui::Color32::from_rgb(60, 120, 200))
                                         .min_size(egui::vec2(100.0, 36.0)),
@@ -355,7 +560,7 @@ fn build_load_dialog(ctx: &egui::Context, ui_state: &mut GameUiState) -> Option<
     result
 }
 
-/// 1.5.3: セーブトースト（画面上部中央に数秒表示）
+/// セーブトースト（画面上部中央に数秒表示）
 fn build_save_toast(ctx: &egui::Context, msg: &str) {
     egui::Area::new(egui::Id::new("save_toast"))
         .anchor(egui::Align2::CENTER_TOP, egui::vec2(0.0, 80.0))
@@ -379,495 +584,3 @@ fn build_save_toast(ctx: &egui::Context, msg: &str) {
                 });
         });
 }
-
-/// プレイ中の全 HUD（フラッシュ・ポップアップ・ステータスバー・ボス HP・レベルアップ・セーブ/ロード）
-fn build_playing_ui(
-    ctx: &egui::Context,
-    hud: &HudData,
-    camera: &CameraParams,
-    fps: f32,
-    ui_state: &mut GameUiState,
-) -> Option<String> {
-    build_screen_flash_ui(ctx, hud);
-    build_score_popups_ui(ctx, hud, camera);
-    build_playing_hud_ui(ctx, hud, fps, ui_state);
-    build_boss_hp_bar_ui(ctx, hud);
-    build_level_up_ui(ctx, hud)
-}
-
-/// 画面フラッシュ（プレイヤーダメージ時に赤いオーバーレイ）
-fn build_screen_flash_ui(ctx: &egui::Context, hud: &HudData) {
-    if hud.screen_flash_alpha <= 0.0 {
-        return;
-    }
-    let alpha = (hud.screen_flash_alpha * 255.0) as u8;
-    egui::Area::new(egui::Id::new("screen_flash"))
-        .anchor(egui::Align2::LEFT_TOP, egui::vec2(0.0, 0.0))
-        .order(egui::Order::Background)
-        .show(ctx, |ui| {
-            let screen_rect = ui.ctx().screen_rect();
-            ui.painter().rect_filled(
-                screen_rect,
-                0.0,
-                egui::Color32::from_rgba_unmultiplied(200, 30, 30, alpha),
-            );
-        });
-}
-
-/// スコアポップアップ（ワールド座標 → スクリーン座標変換して描画）
-fn build_score_popups_ui(ctx: &egui::Context, hud: &HudData, camera: &CameraParams) {
-    if hud.score_popups.is_empty() {
-        return;
-    }
-    let (cam_x, cam_y) = camera.offset_xy();
-    egui::Area::new(egui::Id::new("score_popups"))
-        .anchor(egui::Align2::LEFT_TOP, egui::vec2(0.0, 0.0))
-        .order(egui::Order::Foreground)
-        .show(ctx, |ui| {
-            let painter = ui.painter();
-            for &(wx, wy, value, lifetime) in &hud.score_popups {
-                let sx = wx - cam_x;
-                let sy = wy - cam_y;
-                let alpha = (lifetime / 0.8).clamp(0.0, 1.0);
-                let color =
-                    egui::Color32::from_rgba_unmultiplied(255, 230, 50, (alpha * 220.0) as u8);
-                painter.text(
-                    egui::pos2(sx, sy),
-                    egui::Align2::CENTER_CENTER,
-                    format!("+{}", value),
-                    egui::FontId::proportional(14.0),
-                    color,
-                );
-            }
-        });
-}
-
-/// 上部ステータスバー（HP・EXP・スコア・タイマー・武器）と右上デバッグ情報
-fn build_playing_hud_ui(ctx: &egui::Context, hud: &HudData, fps: f32, ui_state: &mut GameUiState) {
-    // 上部 HUD バー
-    egui::Area::new(egui::Id::new("hud_top"))
-        .anchor(egui::Align2::LEFT_TOP, egui::vec2(8.0, 8.0))
-        .order(egui::Order::Foreground)
-        .show(ctx, |ui| {
-            egui::Frame::new()
-                .fill(egui::Color32::from_rgba_unmultiplied(0, 0, 0, 180))
-                .inner_margin(egui::Margin::symmetric(12, 8))
-                .corner_radius(6.0)
-                .show(ui, |ui| {
-                    ui.horizontal(|ui| {
-                        // HP バー
-                        let hp_ratio = if hud.max_hp > 0.0 {
-                            (hud.hp / hud.max_hp).clamp(0.0, 1.0)
-                        } else {
-                            0.0
-                        };
-                        ui.label(
-                            egui::RichText::new("HP")
-                                .color(egui::Color32::from_rgb(255, 100, 100))
-                                .strong(),
-                        );
-                        let (rect, _) =
-                            ui.allocate_exact_size(egui::vec2(160.0, 18.0), egui::Sense::hover());
-                        let painter = ui.painter();
-                        painter.rect_filled(rect, 4.0, egui::Color32::from_rgb(60, 20, 20));
-                        let fill_w = rect.width() * hp_ratio;
-                        let fill_rect =
-                            egui::Rect::from_min_size(rect.min, egui::vec2(fill_w, rect.height()));
-                        let hp_color = if hp_ratio > 0.5 {
-                            egui::Color32::from_rgb(80, 220, 80)
-                        } else if hp_ratio > 0.25 {
-                            egui::Color32::from_rgb(220, 180, 0)
-                        } else {
-                            egui::Color32::from_rgb(220, 60, 60)
-                        };
-                        painter.rect_filled(fill_rect, 4.0, hp_color);
-                        ui.label(
-                            egui::RichText::new(format!("{:.0}/{:.0}", hud.hp, hud.max_hp))
-                                .color(egui::Color32::WHITE),
-                        );
-
-                        ui.separator();
-
-                        // EXP バー
-                        // exp_to_next は「残り EXP」なので exp + exp_to_next = 次レベル必要総 EXP
-                        let exp_total = hud.exp + hud.exp_to_next;
-                        let exp_ratio = if exp_total > 0 {
-                            (hud.exp as f32 / exp_total as f32).clamp(0.0, 1.0)
-                        } else {
-                            0.0
-                        };
-                        ui.label(
-                            egui::RichText::new(format!("Lv.{}", hud.level))
-                                .color(egui::Color32::from_rgb(255, 220, 50))
-                                .strong(),
-                        );
-                        let (exp_rect, _) =
-                            ui.allocate_exact_size(egui::vec2(100.0, 18.0), egui::Sense::hover());
-                        let painter = ui.painter();
-                        painter.rect_filled(exp_rect, 4.0, egui::Color32::from_rgb(20, 20, 60));
-                        let exp_fill = egui::Rect::from_min_size(
-                            exp_rect.min,
-                            egui::vec2(exp_rect.width() * exp_ratio, exp_rect.height()),
-                        );
-                        painter.rect_filled(exp_fill, 4.0, egui::Color32::from_rgb(80, 120, 255));
-                        ui.label(
-                            egui::RichText::new(format!("EXP {}", hud.exp))
-                                .color(egui::Color32::from_rgb(180, 200, 255)),
-                        );
-
-                        ui.separator();
-
-                        // スコア・タイマー
-                        let total_s = hud.elapsed_seconds as u32;
-                        let (m, s) = (total_s / 60, total_s % 60);
-                        ui.label(
-                            egui::RichText::new(format!("Score: {}", hud.score))
-                                .color(egui::Color32::from_rgb(255, 220, 100))
-                                .strong(),
-                        );
-                        ui.label(
-                            egui::RichText::new(format!("{:02}:{:02}", m, s))
-                                .color(egui::Color32::WHITE),
-                        );
-
-                        // 武器スロット
-                        if !hud.weapon_levels.is_empty() {
-                            ui.separator();
-                            for slot in &hud.weapon_levels {
-                                ui.label(
-                                    egui::RichText::new(format!(
-                                        "[{}] Lv.{}",
-                                        slot.display_name, slot.level
-                                    ))
-                                    .color(egui::Color32::from_rgb(180, 230, 255))
-                                    .strong(),
-                                );
-                            }
-                        }
-
-                        // 1.5.3: セーブ・ロードボタン
-                        ui.separator();
-                        if ui
-                            .add(
-                                egui::Button::new(
-                                    egui::RichText::new("Save")
-                                        .color(egui::Color32::from_rgb(100, 220, 100)),
-                                )
-                                .min_size(egui::vec2(50.0, 22.0)),
-                            )
-                            .clicked()
-                        {
-                            ui_state.pending_action = Some("__save__".to_string());
-                        }
-                        if ui
-                            .add(
-                                egui::Button::new(
-                                    egui::RichText::new("Load")
-                                        .color(egui::Color32::from_rgb(100, 180, 255)),
-                                )
-                                .min_size(egui::vec2(50.0, 22.0)),
-                            )
-                            .clicked()
-                        {
-                            ui_state.pending_action = Some("__load__".to_string());
-                        }
-                    });
-                });
-        });
-
-    // 右上: デバッグ情報
-    egui::Area::new(egui::Id::new("hud_debug"))
-        .anchor(egui::Align2::RIGHT_TOP, egui::vec2(-8.0, 8.0))
-        .order(egui::Order::Foreground)
-        .show(ctx, |ui| {
-            egui::Frame::new()
-                .fill(egui::Color32::from_rgba_unmultiplied(0, 0, 0, 140))
-                .inner_margin(egui::Margin::symmetric(8, 6))
-                .corner_radius(6.0)
-                .show(ui, |ui| {
-                    ui.label(
-                        egui::RichText::new(format!("FPS: {fps:.0}"))
-                            .color(egui::Color32::from_rgb(100, 255, 100)),
-                    );
-                    ui.label(
-                        egui::RichText::new(format!("Enemies: {}", hud.enemy_count))
-                            .color(egui::Color32::from_rgb(255, 150, 100)),
-                    );
-                    ui.label(
-                        egui::RichText::new(format!("Bullets: {}", hud.bullet_count))
-                            .color(egui::Color32::from_rgb(200, 200, 255)),
-                    );
-                    ui.label(
-                        egui::RichText::new(format!("Items: {}", hud.item_count))
-                            .color(egui::Color32::from_rgb(150, 230, 150)),
-                    );
-                    if hud.magnet_timer > 0.0 {
-                        ui.label(
-                            egui::RichText::new(format!("MAGNET {:.1}s", hud.magnet_timer))
-                                .color(egui::Color32::from_rgb(255, 230, 50))
-                                .strong(),
-                        );
-                    }
-                });
-        });
-}
-
-/// ボス HP バー（画面上部中央）
-fn build_boss_hp_bar_ui(ctx: &egui::Context, hud: &HudData) {
-    let Some(ref boss) = hud.boss_info else {
-        return;
-    };
-    let boss_ratio = if boss.max_hp > 0.0 {
-        (boss.hp / boss.max_hp).clamp(0.0, 1.0)
-    } else {
-        0.0
-    };
-    egui::Area::new(egui::Id::new("boss_hp_bar"))
-        .anchor(egui::Align2::CENTER_TOP, egui::vec2(0.0, 8.0))
-        .order(egui::Order::Foreground)
-        .show(ctx, |ui| {
-            egui::Frame::new()
-                .fill(egui::Color32::from_rgba_unmultiplied(20, 0, 30, 220))
-                .inner_margin(egui::Margin::symmetric(16, 10))
-                .corner_radius(8.0)
-                .stroke(egui::Stroke::new(2.0, egui::Color32::from_rgb(200, 0, 255)))
-                .show(ui, |ui| {
-                    ui.vertical_centered(|ui| {
-                        ui.label(
-                            egui::RichText::new(format!("👹 {}", boss.name))
-                                .color(egui::Color32::from_rgb(255, 80, 80))
-                                .size(18.0)
-                                .strong(),
-                        );
-                        ui.add_space(4.0);
-                        let (bar_rect, _) =
-                            ui.allocate_exact_size(egui::vec2(360.0, 22.0), egui::Sense::hover());
-                        let painter = ui.painter();
-                        painter.rect_filled(bar_rect, 6.0, egui::Color32::from_rgb(40, 10, 10));
-                        let fill_w = bar_rect.width() * boss_ratio;
-                        let fill_rect = egui::Rect::from_min_size(
-                            bar_rect.min,
-                            egui::vec2(fill_w, bar_rect.height()),
-                        );
-                        let bar_color = if boss_ratio > 0.5 {
-                            egui::Color32::from_rgb(180, 0, 220)
-                        } else if boss_ratio > 0.25 {
-                            egui::Color32::from_rgb(220, 60, 60)
-                        } else {
-                            egui::Color32::from_rgb(255, 30, 30)
-                        };
-                        painter.rect_filled(fill_rect, 6.0, bar_color);
-                        ui.label(
-                            egui::RichText::new(format!("{:.0} / {:.0}", boss.hp, boss.max_hp))
-                                .color(egui::Color32::from_rgb(255, 200, 255))
-                                .size(12.0),
-                        );
-                    });
-                });
-        });
-}
-
-/// レベルアップ選択画面
-fn build_level_up_ui(ctx: &egui::Context, hud: &HudData) -> Option<String> {
-    if !hud.level_up_pending {
-        return None;
-    }
-
-    // キーボードショートカット（Esc / 1 / 2 / 3）
-    if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
-        return Some("__skip__".to_string());
-    }
-    if !hud.weapon_choices.is_empty() {
-        let selected_index = ctx.input(|i| {
-            if i.key_pressed(egui::Key::Num1) {
-                Some(0usize)
-            } else if i.key_pressed(egui::Key::Num2) {
-                Some(1usize)
-            } else if i.key_pressed(egui::Key::Num3) {
-                Some(2usize)
-            } else {
-                None
-            }
-        });
-        if let Some(idx) = selected_index {
-            if let Some(choice) = hud.weapon_choices.get(idx) {
-                return Some(choice.clone());
-            }
-        }
-    }
-
-    let mut chosen = None;
-    egui::Area::new(egui::Id::new("level_up"))
-        .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
-        .order(egui::Order::Foreground)
-        .show(ctx, |ui| {
-            egui::Frame::new()
-                .fill(egui::Color32::from_rgba_unmultiplied(10, 10, 40, 240))
-                .inner_margin(egui::Margin::symmetric(40, 30))
-                .corner_radius(12.0)
-                .stroke(egui::Stroke::new(
-                    2.0,
-                    egui::Color32::from_rgb(255, 220, 50),
-                ))
-                .show(ui, |ui| {
-                    ui.vertical_centered(|ui| {
-                        ui.label(
-                            egui::RichText::new(format!("*** LEVEL UP!  Lv.{} ***", hud.level))
-                                .color(egui::Color32::from_rgb(255, 220, 50))
-                                .size(28.0)
-                                .strong(),
-                        );
-                        ui.add_space(8.0);
-                        let result = if hud.weapon_choices.is_empty() {
-                            build_max_level_ui(ui)
-                        } else {
-                            build_weapon_choice_ui(ui, hud)
-                        };
-                        if result.is_some() {
-                            chosen = result;
-                        }
-                    });
-                });
-        });
-    chosen
-}
-
-/// 全武器がMaxLvの場合のUI（「Continue [Esc]」ボタンのみ）
-fn build_max_level_ui(ui: &mut egui::Ui) -> Option<String> {
-    ui.label(
-        egui::RichText::new("All weapons are at MAX level!")
-            .color(egui::Color32::from_rgb(255, 180, 50))
-            .size(16.0)
-            .strong(),
-    );
-    ui.add_space(16.0);
-    let btn = egui::Button::new(egui::RichText::new("Continue  [Esc]").size(16.0).strong())
-        .fill(egui::Color32::from_rgb(80, 80, 80))
-        .min_size(egui::vec2(160.0, 36.0));
-    if ui.add(btn).clicked() {
-        Some("__skip__".to_string())
-    } else {
-        None
-    }
-}
-
-/// 武器選択肢がある場合のUI（武器カード × N + 「Skip [Esc]」ボタン）
-fn build_weapon_choice_ui(ui: &mut egui::Ui, hud: &HudData) -> Option<String> {
-    let mut chosen: Option<String> = None;
-
-    ui.label(
-        egui::RichText::new("Choose a weapon")
-            .color(egui::Color32::WHITE)
-            .size(16.0),
-    );
-    ui.add_space(16.0);
-
-    ui.horizontal(|ui| {
-        for (i, choice) in hud.weapon_choices.iter().enumerate() {
-            let slot: Option<&WeaponSlotInfo> =
-                hud.weapon_levels.iter().find(|s| &s.name == choice);
-            let current_lv = slot.map(|s| s.level).unwrap_or(0);
-            let display_name = slot.map(|s| s.display_name.as_str()).unwrap_or(choice.as_str());
-            let upgrade_desc = hud
-                .weapon_upgrade_descs
-                .get(i)
-                .map(|v| v.as_slice())
-                .unwrap_or(&[]);
-            if build_weapon_card(ui, display_name, current_lv, upgrade_desc).is_some() {
-                chosen = Some(choice.clone());
-            }
-            ui.add_space(12.0);
-        }
-    });
-
-    ui.add_space(12.0);
-    let skip_btn = egui::Button::new(egui::RichText::new("Skip  [Esc]").size(12.0))
-        .fill(egui::Color32::from_rgba_unmultiplied(60, 60, 60, 200))
-        .min_size(egui::vec2(90.0, 24.0));
-    if ui.add(skip_btn).clicked() {
-        chosen = Some("__skip__".to_string());
-    }
-
-    chosen
-}
-
-/// 武器1枚分のカードUIを描画し、選択されたら `Some(())` を返す
-fn build_weapon_card(
-    ui: &mut egui::Ui,
-    display_name: &str,
-    current_lv: u32,
-    upgrade_desc: &[String],
-) -> Option<()> {
-    let is_upgrade = current_lv > 0;
-    let next_lv = current_lv + 1;
-
-    let border_color = if is_upgrade {
-        egui::Color32::from_rgb(255, 180, 50)
-    } else {
-        egui::Color32::from_rgb(100, 180, 255)
-    };
-    let bg_color = if is_upgrade {
-        egui::Color32::from_rgb(50, 35, 10)
-    } else {
-        egui::Color32::from_rgb(15, 30, 60)
-    };
-
-    let frame = egui::Frame::new()
-        .fill(bg_color)
-        .inner_margin(egui::Margin::symmetric(16, 14))
-        .corner_radius(10.0)
-        .stroke(egui::Stroke::new(2.0, border_color));
-
-    let response = frame.show(ui, |ui| {
-        ui.set_min_width(140.0);
-        ui.vertical_centered(|ui| {
-            ui.label(
-                egui::RichText::new(display_name)
-                    .color(egui::Color32::from_rgb(220, 230, 255))
-                    .size(16.0)
-                    .strong(),
-            );
-            ui.add_space(4.0);
-
-            let lv_text = if is_upgrade {
-                format!("Lv.{current_lv} -> Lv.{next_lv}")
-            } else {
-                "NEW!".to_string()
-            };
-            let lv_color = if is_upgrade {
-                egui::Color32::from_rgb(255, 200, 80)
-            } else {
-                egui::Color32::from_rgb(100, 255, 150)
-            };
-            ui.label(
-                egui::RichText::new(lv_text)
-                    .color(lv_color)
-                    .size(13.0)
-                    .strong(),
-            );
-            ui.add_space(6.0);
-
-            for line in upgrade_desc {
-                ui.label(
-                    egui::RichText::new(line)
-                        .color(egui::Color32::from_rgb(180, 200, 180))
-                        .size(11.0),
-                );
-            }
-            ui.add_space(8.0);
-
-            let btn = egui::Button::new(egui::RichText::new("Select  [1/2/3]").size(13.0).strong())
-                .fill(border_color)
-                .min_size(egui::vec2(110.0, 28.0));
-            ui.add(btn)
-        })
-        .inner
-    });
-
-    if response.inner.clicked() {
-        Some(())
-    } else {
-        None
-    }
-}
-

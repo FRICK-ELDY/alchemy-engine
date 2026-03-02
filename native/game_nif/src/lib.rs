@@ -60,7 +60,7 @@ pub use game_physics::world::{
     ParticleWorld, PlayerState, BULLET_KIND_FIREBALL, BULLET_KIND_LIGHTNING, BULLET_KIND_NORMAL,
     BULLET_KIND_ROCK, BULLET_KIND_WHIP,
 };
-pub use game_render::{BossHudInfo, GamePhase, HudData, RenderFrame};
+pub use game_render::RenderFrame;
 pub use nif::{SaveSnapshot, WeaponSlotSave};
 
 #[cfg(feature = "umbrella")]

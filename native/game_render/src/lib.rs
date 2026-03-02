@@ -4,33 +4,132 @@ pub const BULLET_KIND_LIGHTNING: u8 = 9;
 pub const BULLET_KIND_WHIP: u8 = 10;
 pub const BULLET_KIND_ROCK: u8 = 14;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum UiAction {
-    Start,
-    Retry,
-    Save,
-    Load,
-    LoadConfirm,
-    LoadCancel,
-    SkipLevelUp,
-    ChooseWeapon,
+// ── UI Canvas ────────────────────────────────────────────────────────
+
+/// 1フレーム分の UI 全体。コンテンツ側が組み立てて渡す。
+/// game_render はこのツリーを走査して描画するだけで、内容の意味を知らない。
+#[derive(Clone, Default, Debug)]
+pub struct UiCanvas {
+    pub nodes: Vec<UiNode>,
 }
 
-impl UiAction {
-    pub fn from_action_key(action: &str) -> Option<Self> {
-        match action {
-            "__start__" => Some(Self::Start),
-            "__retry__" => Some(Self::Retry),
-            "__save__" => Some(Self::Save),
-            "__load__" => Some(Self::Load),
-            "__load_confirm__" => Some(Self::LoadConfirm),
-            "__load_cancel__" => Some(Self::LoadCancel),
-            "__skip__" => Some(Self::SkipLevelUp),
-            s if s.starts_with("__") => None,
-            _ => Some(Self::ChooseWeapon),
+/// UI ツリーの1ノード。位置・コンポーネント・子ノードを持つ。
+#[derive(Clone, Debug)]
+pub struct UiNode {
+    pub rect: UiRect,
+    pub component: UiComponent,
+    pub children: Vec<UiNode>,
+}
+
+/// ノードの位置・サイズ定義。
+#[derive(Clone, Debug)]
+pub struct UiRect {
+    pub anchor: UiAnchor,
+    /// アンカー基点からのピクセルオフセット (x, y)
+    pub offset: [f32; 2],
+    pub size: UiSize,
+}
+
+/// アンカー（基準点）。egui の Align2 に対応する。
+#[derive(Clone, Copy, Debug)]
+pub enum UiAnchor {
+    TopLeft,
+    TopCenter,
+    TopRight,
+    MiddleLeft,
+    Center,
+    MiddleRight,
+    BottomLeft,
+    BottomCenter,
+    BottomRight,
+}
+
+/// ノードのサイズ指定。
+#[derive(Clone, Debug)]
+pub enum UiSize {
+    /// ピクセル固定サイズ
+    Fixed(f32, f32),
+    /// 子ノード・コンテンツに合わせて自動調整
+    WrapContent,
+}
+
+/// UI コンポーネント。各ノードが持つ描画・レイアウト指示。
+#[derive(Clone, Debug)]
+pub enum UiComponent {
+    /// 子ノードを横方向に並べるレイアウト
+    HorizontalLayout {
+        spacing: f32,
+        padding: [f32; 4],
+    },
+    /// 子ノードを縦方向に並べるレイアウト
+    VerticalLayout {
+        spacing: f32,
+        padding: [f32; 4],
+    },
+    /// テキストラベル
+    Text {
+        text: String,
+        color: [f32; 4],
+        size: f32,
+        bold: bool,
+    },
+    /// 単色矩形（背景・枠など）
+    Rect {
+        color: [f32; 4],
+        corner_radius: f32,
+        /// 枠線 `(RGBA, 幅)`。`None` なら枠線なし
+        border: Option<([f32; 4], f32)>,
+    },
+    /// プログレスバー
+    ProgressBar {
+        value: f32,
+        max: f32,
+        width: f32,
+        height: f32,
+        fg_color_high: [f32; 4],
+        fg_color_mid: [f32; 4],
+        fg_color_low: [f32; 4],
+        bg_color: [f32; 4],
+        corner_radius: f32,
+    },
+    /// ボタン。クリック時にアクション文字列を返す。
+    Button {
+        label: String,
+        action: String,
+        color: [f32; 4],
+        min_width: f32,
+        min_height: f32,
+    },
+    /// セパレータ（水平区切り線）
+    Separator,
+    /// 空白スペーサー（縦方向レイアウト内では高さ、横方向では幅として機能）
+    Spacing { amount: f32 },
+    /// ワールド座標上に浮かぶポップアップテキスト（スコア表示等）
+    WorldText {
+        world_x: f32,
+        world_y: f32,
+        text: String,
+        color: [f32; 4],
+        lifetime: f32,
+        max_lifetime: f32,
+    },
+    /// 画面全体を覆うフラッシュオーバーレイ
+    ScreenFlash {
+        color: [f32; 4],
+    },
+}
+
+impl Default for UiRect {
+    fn default() -> Self {
+        Self {
+            anchor: UiAnchor::TopLeft,
+            offset: [0.0, 0.0],
+            size: UiSize::WrapContent,
         }
     }
 }
+
+// ── DrawCommand ──────────────────────────────────────────────────────
 
 /// 1フレーム分の描画命令。
 /// Elixir 側（`game_content`）が組み立てて `push_render_frame` NIF 経由で送る。
@@ -103,6 +202,8 @@ pub enum DrawCommand {
     },
 }
 
+// ── CameraParams ─────────────────────────────────────────────────────
+
 /// カメラパラメータ。
 #[derive(Clone, Debug)]
 pub enum CameraParams {
@@ -140,20 +241,19 @@ impl CameraParams {
     }
 }
 
+// ── RenderFrame ──────────────────────────────────────────────────────
+
 #[derive(Clone, Default)]
 pub struct RenderFrame {
     pub commands: Vec<DrawCommand>,
     pub camera: CameraParams,
-    pub hud: HudData,
+    pub ui: UiCanvas,
 }
 
 pub(crate) mod renderer;
 pub mod window;
 
-pub use renderer::{
-    BossHudInfo, GamePhase, GameUiState, HudData, LoadDialogKind, OverlayButton, OverlayData,
-    Renderer, TitleOverlayData, WeaponSlotInfo,
-};
+pub use renderer::{GameUiState, LoadDialogKind, Renderer};
 
 #[cfg(feature = "headless")]
 pub mod headless;

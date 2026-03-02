@@ -37,12 +37,8 @@ defmodule GameContent.SimpleBox3D.RenderComponent do
 
   @impl GameEngine.Component
   def on_nif_sync(context) do
-    # Config.current() は Application.get_env（ETS ルックアップ）なので毎フレーム呼んでも軽量。
-    # ただし同一フレーム内で複数回参照しないよう、ここで一度だけ取得する。
     content = GameEngine.Config.current()
 
-    # Playing → GameOver に replace 遷移した後、playing_scene() の state は %{} になるため
-    # SceneManager.current() で現在シーンを判定して phase を正しく設定する。
     current_scene =
       case GameEngine.SceneManager.current() do
         {:ok, %{module: mod}} -> mod
@@ -53,13 +49,13 @@ defmodule GameContent.SimpleBox3D.RenderComponent do
 
     commands = build_commands(playing_state)
     camera = build_camera()
-    hud = build_hud(current_scene, content)
+    ui = build_ui(current_scene, content)
 
     GameEngine.NifBridge.push_render_frame(
       context.render_buf_ref,
       commands,
       camera,
-      hud
+      ui
     )
 
     :ok
@@ -85,8 +81,6 @@ defmodule GameContent.SimpleBox3D.RenderComponent do
 
     {px, py, pz} = player
 
-    # NIF 側は Rustler の最大 7 要素制約のため、末尾 5 要素 {half_d, r, g, b, a} を
-    # 内部タプルにまとめている。half_d は色ではなく奥行き方向の半サイズ。
     player_cmd =
       {:box_3d, px, py + @half_size, pz, @half_size, @half_size, {@half_size, pr, pg, pb, pa}}
 
@@ -109,34 +103,29 @@ defmodule GameContent.SimpleBox3D.RenderComponent do
      {@camera_fov, @camera_near, @camera_far}}
   end
 
-  # ── HUD 組み立て ───────────────────────────────────────────────────
-  #
-  # SimpleBox3D は HUD 表示を最小限にする。
-  # push_render_frame の hud 引数は NifBridge のコメントに記載された固定フォーマット:
-  #   { {hp, max_hp, score, elapsed_sec, level, exp, exp_to_next},
-  #     {enemy_count, bullet_count, fps, level_up_pending},
-  #     {weapon_choices, weapon_upgrade_descs, weapon_levels},
-  #     {magnet_timer, item_count, boss_info, phase, flash_alpha, score_popups, kill_count} }
-  # SimpleBox3D で使わないフィールドはゼロ・空リスト・:none で埋める。
+  # ── UiCanvas 組み立て ─────────────────────────────────────────────
 
-  @hud_dummy_hp 100.0
-  @hud_dummy_max_hp 100.0
-  @hud_dummy_score 0
-  @hud_dummy_elapsed 0.0
-  @hud_dummy_level 1
-  @hud_dummy_exp 0
-  @hud_dummy_exp_to_next 10
+  defp build_ui(current_scene, content) do
+    nodes =
+      if current_scene == content.game_over_scene() do
+        [
+          {:node, {:center, {0.0, 0.0}, :wrap},
+           {:rect, {0.08, 0.02, 0.02, 0.92}, 16.0, {{0.78, 0.24, 0.24, 1.0}, 2.0}},
+           [
+             {:node, {:top_left, {0.0, 0.0}, :wrap},
+              {:vertical_layout, 8.0, {50.0, 35.0, 50.0, 35.0}},
+              [
+                {:node, {:top_left, {0.0, 0.0}, :wrap},
+                 {:text, "GAME OVER", {1.0, 0.31, 0.31, 1.0}, 40.0, true}, []},
+                {:node, {:top_left, {0.0, 0.0}, :wrap},
+                 {:button, "  RETRY  ", "__retry__", {0.63, 0.16, 0.16, 1.0}, 160.0, 44.0}, []}
+              ]}
+           ]}
+        ]
+      else
+        []
+      end
 
-  defp build_hud(current_scene, content) do
-    phase = if current_scene == content.game_over_scene(), do: :game_over, else: :playing
-
-    {
-      {@hud_dummy_hp, @hud_dummy_max_hp, @hud_dummy_score, @hud_dummy_elapsed, @hud_dummy_level,
-       @hud_dummy_exp, @hud_dummy_exp_to_next},
-      {0, 0, 0.0, false},
-      {[], [], []},
-      {0.0, 0, :none, phase, 0.0, [], 0},
-      {:none, :none}
-    }
+    {:canvas, nodes}
   end
 end

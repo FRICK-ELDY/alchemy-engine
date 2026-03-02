@@ -9,7 +9,6 @@ defmodule GameContent.RollingBall.RenderComponent do
   @behaviour GameEngine.Component
 
   # カメラ設定（斜め上から俯瞰）
-  # フロアが最大 10×2=20 ユニット幅になるため、少し引いて全体が見えるようにする
   @camera_eye {0.0, 28.0, 22.0}
   @camera_target {0.0, 0.0, 0.0}
   @camera_up {0.0, 1.0, 0.0}
@@ -18,43 +17,20 @@ defmodule GameContent.RollingBall.RenderComponent do
   @camera_far 150.0
 
   # 色定義
-  # 夕焼け：上が深い赤紫、下が明るいオレンジ
   @color_sky_top {0.55, 0.15, 0.10, 1.0}
   @color_sky_bottom {1.0, 0.55, 0.15, 1.0}
-  # フロア：明るいグレー（穴との対比を出す）
   @color_floor {0.55, 0.55, 0.60, 1.0}
-  # ボール：明るい白
   @color_ball {1.0, 1.0, 1.0, 1.0}
-  # ゴール：鮮やかな黄緑
   @color_goal {0.1, 0.95, 0.3, 1.0}
-  # 静的障害物：赤
   @color_obstacle {0.95, 0.15, 0.15, 1.0}
-  # 動く障害物：オレンジ
   @color_moving_obstacle {1.0, 0.55, 0.05, 1.0}
 
-  # タイルの半サイズ（tile_size=2.0 に合わせる）
-  # XZ は 0.98 にして隙間を作り、穴の場所が暗く見えるようにする
   @tile_half_xz 0.98
   @tile_half_y 0.08
-
-  # ボール：大きく・フロアより上に浮かせる
   @ball_half 0.55
-  # ゴール：目立つ柱状（高さ 1.0）
   @goal_half_xz 0.7
   @goal_half_y 1.0
-  # 障害物：ボールより少し大きい立方体
   @obstacle_half 0.65
-
-  # タイトル画面データ（静的・コンパイル時定数）
-  @title_overlay {
-    "Rolling Ball",
-    {0.3, 0.8, 1.0, 1.0},
-    "Roll the ball to the goal!",
-    ["WASD / Arrow Keys: Move", "Reach the green goal to clear the stage"],
-    {0.02, 0.02, 0.08, 0.9},
-    {0.39, 0.63, 1.0, 1.0},
-    [{"  START GAME  ", "__start__", {0.16, 0.39, 0.78, 1.0}}]
-  }
 
   @impl GameEngine.Component
   def on_nif_sync(context) do
@@ -70,13 +46,13 @@ defmodule GameContent.RollingBall.RenderComponent do
 
     commands = build_commands(playing_state, current_scene)
     camera = build_camera()
-    hud = build_hud(playing_state, current_scene, content)
+    ui = build_ui(playing_state, current_scene, content)
 
     GameEngine.NifBridge.push_render_frame(
       context.render_buf_ref,
       commands,
       camera,
-      hud
+      ui
     )
 
     :ok
@@ -92,8 +68,6 @@ defmodule GameContent.RollingBall.RenderComponent do
       {:skybox, {sky_top_r, sky_top_g, sky_top_b, sky_top_a},
        {sky_bot_r, sky_bot_g, sky_bot_b, sky_bot_a}}
 
-    # Title シーンはスカイボックスのみ（Playing シーンがスタックにないため）。
-    # StageClear / GameOver / Ending は Playing シーンの state を使って描画を継続する。
     title_scenes = [
       GameContent.RollingBall.Scenes.Title,
       GameContent.RollingBall.Scenes.Ending
@@ -108,7 +82,6 @@ defmodule GameContent.RollingBall.RenderComponent do
       moving_obstacle_cmds = build_moving_obstacle_cmds(scene_state)
       ball_cmd = build_ball_cmd(scene_state)
 
-      # 描画順：スカイボックス → フロア → ゴール → 障害物 → ボール（手前に来るように最後）
       [skybox_cmd | floor_cmds] ++
         goal_cmds ++ obstacle_cmds ++ moving_obstacle_cmds ++ [ball_cmd]
     end
@@ -159,7 +132,6 @@ defmodule GameContent.RollingBall.RenderComponent do
   end
 
   defp build_ball_cmd(scene_state) do
-    # ボールの Y 座標はフロア上面（tile_half_y * 2）+ ボール半径
     default_y = @tile_half_y * 2 + @ball_half
     {bx, by, bz} = Map.get(scene_state, :ball, {0.0, default_y, 0.0})
     {r, g, b, a} = @color_ball
@@ -177,62 +149,121 @@ defmodule GameContent.RollingBall.RenderComponent do
      {@camera_fov, @camera_near, @camera_far}}
   end
 
-  # ── HUD 組み立て ───────────────────────────────────────────────────
+  # ── UiCanvas 組み立て ─────────────────────────────────────────────
 
-  defp build_hud(playing_state, current_scene, content) do
+  defp build_ui(playing_state, current_scene, content) do
     stage = Map.get(playing_state, :stage, 1)
     retries_left = Map.get(playing_state, :retries_left, 3)
 
-    {phase, overlay} =
+    nodes =
       cond do
         current_scene == GameContent.RollingBall.Scenes.Title ->
-          {:title, :none}
+          [build_title_panel()]
 
         current_scene == GameContent.RollingBall.Scenes.StageClear ->
-          overlay = build_stage_clear_overlay(stage)
-          {:overlay, overlay}
+          [build_stage_clear_panel(stage)]
 
         current_scene == GameContent.RollingBall.Scenes.Ending ->
-          overlay = build_ending_overlay()
-          {:overlay, overlay}
+          [build_ending_panel()]
 
         current_scene == content.game_over_scene() ->
-          {:game_over, :none}
+          [build_game_over_panel(stage, retries_left)]
 
         true ->
-          {:playing, :none}
+          [build_playing_hud(stage, retries_left)]
       end
 
-    title_overlay = if phase == :title, do: @title_overlay, else: :none
-
-    {
-      {100.0, 100.0, stage, 0.0, retries_left, 0, 10},
-      {0, 0, 0.0, false},
-      {[], [], []},
-      {0.0, 0, :none, phase, 0.0, [], 0},
-      {overlay, title_overlay}
-    }
+    {:canvas, nodes}
   end
 
-  defp build_stage_clear_overlay(stage) do
-    {
-      "STAGE CLEAR!",
-      {0.39, 1.0, 0.47, 1.0},
-      "Stage #{stage} Complete",
-      {0.02, 0.12, 0.04, 0.9},
-      {0.31, 0.86, 0.39, 1.0},
-      [{"  NEXT STAGE  ", "__next_stage__", {0.12, 0.55, 0.24, 1.0}}]
-    }
+  defp build_title_panel do
+    children = [
+      {:node, {:top_left, {0.0, 0.0}, :wrap},
+       {:text, "Rolling Ball", {0.3, 0.8, 1.0, 1.0}, 36.0, true}, []},
+      {:node, {:top_left, {0.0, 0.0}, :wrap},
+       {:text, "Roll the ball to the goal!", {0.71, 0.78, 0.86, 1.0}, 16.0, false}, []},
+      {:node, {:top_left, {0.0, 0.0}, :wrap},
+       {:text, "WASD / Arrow Keys: Move", {0.59, 0.67, 0.75, 1.0}, 13.0, false}, []},
+      {:node, {:top_left, {0.0, 0.0}, :wrap},
+       {:text, "Reach the green goal to clear the stage", {0.59, 0.67, 0.75, 1.0}, 13.0, false},
+       []},
+      {:node, {:top_left, {0.0, 0.0}, :wrap},
+       {:button, "  START GAME  ", "__start__", {0.16, 0.39, 0.78, 1.0}, 200.0, 50.0}, []}
+    ]
+
+    {:node, {:center, {0.0, 0.0}, :wrap},
+     {:rect, {0.02, 0.02, 0.08, 0.9}, 16.0, {{0.39, 0.63, 1.0, 1.0}, 2.0}},
+     [
+       {:node, {:top_left, {0.0, 0.0}, :wrap}, {:vertical_layout, 8.0, {60.0, 40.0, 60.0, 40.0}},
+        children}
+     ]}
   end
 
-  defp build_ending_overlay do
-    {
-      "CONGRATULATIONS!",
-      {1.0, 0.86, 0.31, 1.0},
-      "All stages cleared!",
-      {0.08, 0.04, 0.16, 0.92},
-      {0.86, 0.71, 0.31, 1.0},
-      [{"  BACK TO TITLE  ", "__back_to_title__", {0.47, 0.31, 0.08, 1.0}}]
-    }
+  defp build_stage_clear_panel(stage) do
+    children = [
+      {:node, {:top_left, {0.0, 0.0}, :wrap},
+       {:text, "STAGE CLEAR!", {0.39, 1.0, 0.47, 1.0}, 40.0, true}, []},
+      {:node, {:top_left, {0.0, 0.0}, :wrap},
+       {:text, "Stage #{stage} Complete", {0.78, 0.86, 0.78, 1.0}, 18.0, false}, []},
+      {:node, {:top_left, {0.0, 0.0}, :wrap},
+       {:button, "  NEXT STAGE  ", "__next_stage__", {0.12, 0.55, 0.24, 1.0}, 200.0, 50.0}, []}
+    ]
+
+    {:node, {:center, {0.0, 0.0}, :wrap},
+     {:rect, {0.02, 0.12, 0.04, 0.9}, 16.0, {{0.31, 0.86, 0.39, 1.0}, 2.0}},
+     [
+       {:node, {:top_left, {0.0, 0.0}, :wrap}, {:vertical_layout, 12.0, {60.0, 40.0, 60.0, 40.0}},
+        children}
+     ]}
+  end
+
+  defp build_ending_panel do
+    children = [
+      {:node, {:top_left, {0.0, 0.0}, :wrap},
+       {:text, "CONGRATULATIONS!", {1.0, 0.86, 0.31, 1.0}, 40.0, true}, []},
+      {:node, {:top_left, {0.0, 0.0}, :wrap},
+       {:text, "All stages cleared!", {0.86, 0.78, 0.59, 1.0}, 18.0, false}, []},
+      {:node, {:top_left, {0.0, 0.0}, :wrap},
+       {:button, "  BACK TO TITLE  ", "__back_to_title__", {0.47, 0.31, 0.08, 1.0}, 200.0, 50.0},
+       []}
+    ]
+
+    {:node, {:center, {0.0, 0.0}, :wrap},
+     {:rect, {0.08, 0.04, 0.16, 0.92}, 16.0, {{0.86, 0.71, 0.31, 1.0}, 2.0}},
+     [
+       {:node, {:top_left, {0.0, 0.0}, :wrap}, {:vertical_layout, 12.0, {60.0, 40.0, 60.0, 40.0}},
+        children}
+     ]}
+  end
+
+  defp build_game_over_panel(_stage, _retries_left) do
+    children = [
+      {:node, {:top_left, {0.0, 0.0}, :wrap},
+       {:text, "GAME OVER", {1.0, 0.31, 0.31, 1.0}, 40.0, true}, []},
+      {:node, {:top_left, {0.0, 0.0}, :wrap},
+       {:button, "  RETRY  ", "__retry__", {0.63, 0.16, 0.16, 1.0}, 160.0, 44.0}, []}
+    ]
+
+    {:node, {:center, {0.0, 0.0}, :wrap},
+     {:rect, {0.08, 0.02, 0.02, 0.92}, 16.0, {{0.78, 0.24, 0.24, 1.0}, 2.0}},
+     [
+       {:node, {:top_left, {0.0, 0.0}, :wrap}, {:vertical_layout, 16.0, {50.0, 35.0, 50.0, 35.0}},
+        children}
+     ]}
+  end
+
+  defp build_playing_hud(stage, retries_left) do
+    children = [
+      {:node, {:top_left, {0.0, 0.0}, :wrap},
+       {:text, "Stage #{stage}", {1.0, 0.86, 0.31, 1.0}, 14.0, true}, []},
+      {:node, {:top_left, {0.0, 0.0}, :wrap},
+       {:text, "Lives: #{retries_left}", {1.0, 0.59, 0.59, 1.0}, 14.0, false}, []}
+    ]
+
+    {:node, {:top_left, {8.0, 8.0}, :wrap}, {:rect, {0.0, 0.0, 0.0, 0.71}, 6.0, :none},
+     [
+       {:node, {:top_left, {0.0, 0.0}, :wrap}, {:horizontal_layout, 8.0, {12.0, 8.0, 12.0, 8.0}},
+        children}
+     ]}
   end
 end
