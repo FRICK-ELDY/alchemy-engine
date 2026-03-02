@@ -66,14 +66,24 @@ impl RenderBridge for NativeRenderBridge {
             let alpha = calc_interpolation_alpha(&interp_data, now_ms);
             let (interp_x, interp_y) = interpolate_player_pos(&interp_data, alpha);
 
-            frame.player_pos = (interp_x, interp_y);
-            if let Some(entry) = frame.render_data.first_mut() {
-                entry.0 = interp_x;
-                entry.1 = interp_y;
+            if let Some(game_render::DrawCommand::PlayerSprite {
+                ref mut x,
+                ref mut y,
+                ..
+            }) = frame
+                .commands
+                .iter_mut()
+                .find(|c| matches!(c, game_render::DrawCommand::PlayerSprite { .. }))
+            {
+                *x = interp_x;
+                *y = interp_y;
             }
             let cam_x = interp_x + PLAYER_SIZE / 2.0 - SCREEN_WIDTH / 2.0;
             let cam_y = interp_y + PLAYER_SIZE / 2.0 - SCREEN_HEIGHT / 2.0;
-            frame.camera_offset = (cam_x, cam_y);
+            frame.camera = game_render::CameraParams::Camera2D {
+                offset_x: cam_x,
+                offset_y: cam_y,
+            };
         }
 
         frame

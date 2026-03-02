@@ -167,14 +167,10 @@ impl<B: RenderBridge> ApplicationHandler for RenderApp<B> {
             WindowEvent::RedrawRequested => {
                 if let (Some(renderer), Some(window)) = (&mut self.renderer, &self.window) {
                     let frame = self.bridge.next_frame();
-                    renderer.update_instances(
-                        &frame.render_data,
-                        &frame.particle_data,
-                        &frame.item_data,
-                        &frame.obstacle_data,
-                        frame.camera_offset,
-                    );
-                    if let Some(action) = renderer.render(window, &frame.hud, &mut self.ui_state) {
+                    renderer.update_instances(&frame);
+                    if let Some(action) =
+                        renderer.render(window, &frame.hud, &frame.camera, &mut self.ui_state)
+                    {
                         self.bridge.on_ui_action(action);
                     }
                     window.request_redraw();

@@ -4,25 +4,37 @@
 use game_physics::constants::{INVINCIBLE_DURATION, PLAYER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use game_physics::weapon::weapon_upgrade_desc;
 use game_physics::world::GameWorldInner;
-use game_render::{BossHudInfo, GamePhase, HudData, RenderFrame};
+use game_render::{BossHudInfo, CameraParams, DrawCommand, GamePhase, HudData, RenderFrame};
 
 /// `GameWorldInner` から `RenderFrame` を構築する。
-/// `get_render_data` / `get_particle_data` / `get_item_data` / `get_frame_metadata` 相当のロジックを集約。
+/// Phase R-2 以降でこの関数は Elixir 側（game_content）に移行する。
 pub fn build_render_frame(w: &GameWorldInner) -> RenderFrame {
     let anim_frame = ((w.frame_id / 4) % 4) as u8;
-    let mut render_data =
-        Vec::with_capacity(1 + w.boss.is_some() as usize + w.enemies.count + w.bullets.count);
+    // alive フラグで絞り込まれるため実際の push 数より多い場合があるが、
+    // 上限見積もりとして過剰確保しておき再アロケーションを避ける。
+    let mut commands = Vec::with_capacity(
+        1 + w.boss.is_some() as usize
+            + w.enemies.count
+            + w.bullets.count
+            + w.particles.count
+            + w.items.count
+            + w.collision.obstacles.len(),
+    );
 
-    render_data.push((w.player.x, w.player.y, 0, anim_frame));
+    commands.push(DrawCommand::PlayerSprite {
+        x: w.player.x,
+        y: w.player.y,
+        frame: anim_frame,
+    });
 
     if let Some(ref boss) = w.boss {
         let boss_sprite_size = boss.radius * 2.0;
-        render_data.push((
-            boss.x - boss_sprite_size / 2.0,
-            boss.y - boss_sprite_size / 2.0,
-            boss.render_kind,
-            0,
-        ));
+        commands.push(DrawCommand::Sprite {
+            x: boss.x - boss_sprite_size / 2.0,
+            y: boss.y - boss_sprite_size / 2.0,
+            kind_id: boss.render_kind,
+            frame: 0,
+        });
     }
 
     for i in 0..w.enemies.len() {
@@ -33,65 +45,64 @@ pub fn build_render_frame(w: &GameWorldInner) -> RenderFrame {
                 .get(w.enemies.kind_ids[i] as usize)
                 .map(|ep| ep.render_kind)
                 .unwrap_or(1);
-            render_data.push((
-                w.enemies.positions_x[i],
-                w.enemies.positions_y[i],
-                base_kind,
-                anim_frame,
-            ));
+            commands.push(DrawCommand::Sprite {
+                x: w.enemies.positions_x[i],
+                y: w.enemies.positions_y[i],
+                kind_id: base_kind,
+                frame: anim_frame,
+            });
         }
     }
 
     for i in 0..w.bullets.len() {
         if w.bullets.alive[i] {
-            render_data.push((
-                w.bullets.positions_x[i],
-                w.bullets.positions_y[i],
-                w.bullets.render_kind[i],
-                0,
-            ));
+            commands.push(DrawCommand::Sprite {
+                x: w.bullets.positions_x[i],
+                y: w.bullets.positions_y[i],
+                kind_id: w.bullets.render_kind[i],
+                frame: 0,
+            });
         }
     }
 
-    let mut particle_data = Vec::with_capacity(w.particles.count);
     for i in 0..w.particles.len() {
         if !w.particles.alive[i] {
             continue;
         }
         let alpha = (w.particles.lifetime[i] / w.particles.max_lifetime[i]).clamp(0.0, 1.0);
         let c = w.particles.color[i];
-        particle_data.push((
-            w.particles.positions_x[i],
-            w.particles.positions_y[i],
-            c[0],
-            c[1],
-            c[2],
+        commands.push(DrawCommand::Particle {
+            x: w.particles.positions_x[i],
+            y: w.particles.positions_y[i],
+            r: c[0],
+            g: c[1],
+            b: c[2],
             alpha,
-            w.particles.size[i],
-        ));
+            size: w.particles.size[i],
+        });
     }
 
-    let mut item_data = Vec::with_capacity(w.items.count);
     for i in 0..w.items.len() {
         if w.items.alive[i] {
-            item_data.push((
-                w.items.positions_x[i],
-                w.items.positions_y[i],
-                w.items.kinds[i].render_kind(),
-            ));
+            commands.push(DrawCommand::Item {
+                x: w.items.positions_x[i],
+                y: w.items.positions_y[i],
+                kind: w.items.kinds[i].render_kind(),
+            });
         }
     }
 
-    let obstacle_data: Vec<(f32, f32, f32, u8)> = w
-        .collision
-        .obstacles
-        .iter()
-        .map(|o| (o.x, o.y, o.radius, o.kind))
-        .collect();
+    for o in &w.collision.obstacles {
+        commands.push(DrawCommand::Obstacle {
+            x: o.x,
+            y: o.y,
+            radius: o.radius,
+            kind: o.kind,
+        });
+    }
 
     let cam_x = w.player.x + PLAYER_SIZE / 2.0 - SCREEN_WIDTH / 2.0;
     let cam_y = w.player.y + PLAYER_SIZE / 2.0 - SCREEN_HEIGHT / 2.0;
-    let camera_offset = (cam_x, cam_y);
 
     let boss_info = w.boss.as_ref().map(|b| BossHudInfo {
         name: "Boss".to_string(),
@@ -112,7 +123,6 @@ pub fn build_render_frame(w: &GameWorldInner) -> RenderFrame {
         .hud_weapon_choices
         .iter()
         .map(|choice| {
-            // "weapon_N" 形式から kind_id を取得
             let kind_id_opt = choice
                 .strip_prefix("weapon_")
                 .and_then(|s| s.parse::<u8>().ok());
@@ -154,8 +164,6 @@ pub fn build_render_frame(w: &GameWorldInner) -> RenderFrame {
         weapon_levels,
         magnet_timer: w.magnet_timer,
         item_count: w.items.count,
-        camera_x: cam_x,
-        camera_y: cam_y,
         boss_info,
         phase: GamePhase::Playing,
         screen_flash_alpha,
@@ -164,12 +172,11 @@ pub fn build_render_frame(w: &GameWorldInner) -> RenderFrame {
     };
 
     RenderFrame {
-        render_data,
-        particle_data,
-        item_data,
-        obstacle_data,
-        camera_offset,
-        player_pos: (w.player.x, w.player.y),
+        commands,
+        camera: CameraParams::Camera2D {
+            offset_x: cam_x,
+            offset_y: cam_y,
+        },
         hud,
     }
 }
