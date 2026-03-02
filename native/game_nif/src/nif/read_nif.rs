@@ -175,7 +175,7 @@ pub fn get_full_game_state(world: ResourceArc<GameWorld>) -> NifResult<(u32, f64
 /// }
 /// ```
 /// - `enemy_count` / `bullet_count`: SoA の `count` フィールドから O(1) で取得した生存数。
-///   Elixir 側で `length/1` を使わずに HudData を組み立てるために提供する。
+///   Elixir 側で `length/1` を使わずに UiCanvas を組み立てるために提供する。
 /// - enemies:     `[{x, y, kind_id}]`
 /// - bullets:     `[{x, y, render_kind}]`
 /// - particles:   `[{x, y, r, g, b, alpha, size}]`
@@ -285,7 +285,7 @@ pub fn get_render_entities(world: ResourceArc<GameWorld>) -> NifResult<RenderEnt
 /// Phase R-2: 武器アップグレード説明文を返す汎用 NIF。
 ///
 /// `weapon_choices` の各武器名に対応するアップグレード説明文を返す。
-/// Elixir 側（game_content）が HudData の `weapon_upgrade_descs` を組み立てるために使用する。
+/// Elixir 側（game_content）が UiCanvas のレベルアップモーダルを組み立てるために使用する。
 ///
 /// # 引数
 /// - `world`: ゲームワールド（`params` フィールドを参照する）

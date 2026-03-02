@@ -170,7 +170,7 @@ impl<B: RenderBridge> ApplicationHandler for RenderApp<B> {
                     renderer.update_instances(&frame);
                     if let Some(action) = renderer.render(
                         window,
-                        &frame.hud,
+                        &frame.ui,
                         &frame.camera,
                         &frame.commands,
                         &mut self.ui_state,

@@ -11,37 +11,6 @@ use winit::window::Window;
 mod ui;
 pub(crate) mod pipeline_3d;
 
-// 1.7.2: game_window の main.rs から renderer 専用に定義を移行
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub enum GamePhase {
-    Title,
-    Playing,
-    /// コンテンツが任意のオーバーレイ UI を表示したい状態。
-    /// 表示内容は HudData.overlay フィールドで渡す。
-    Overlay,
-    GameOver,
-}
-
-/// コンテンツ側が組み立てるオーバーレイ UI の定義。
-/// game_render はこのデータを汎用的に描画するだけで、内容を知らない。
-#[derive(Clone)]
-pub struct OverlayData {
-    pub title: String,
-    pub title_color: [f32; 4],
-    pub subtitle: Option<String>,
-    pub bg_color: [f32; 4],
-    pub border_color: [f32; 4],
-    pub buttons: Vec<OverlayButton>,
-}
-
-/// オーバーレイ内のボタン定義。
-#[derive(Clone)]
-pub struct OverlayButton {
-    pub label: String,
-    /// ボタンが押されたときに返すアクション文字列。
-    pub action: String,
-    pub color: [f32; 4],
-}
 
 pub(crate) const ELITE_RENDER_KIND_OFFSET: u8 = 20;
 pub(crate) const ELITE_SIZE_MULTIPLIER: f32 = 1.2;
@@ -305,110 +274,6 @@ pub(crate) fn enemy_anim_uv(kind: u8, frame: u8) -> ([f32; 2], [f32; 2]) {
     }
 }
 
-// ─── HUD データ ────────────────────────────────────────────────
-
-#[derive(Clone)]
-pub struct HudData {
-    pub hp: f32,
-    pub max_hp: f32,
-    pub score: u32,
-    pub elapsed_seconds: f32,
-    pub level: u32,
-    pub exp: u32,
-    /// 次レベルまでの残り EXP（= 次レベル必要総 EXP − 現在 EXP）。
-    /// EXP バーの計算では `exp + exp_to_next` が「次レベル必要総 EXP」になる。
-    pub exp_to_next: u32,
-    pub enemy_count: usize,
-    pub bullet_count: usize,
-    #[allow(dead_code)]
-    pub fps: f32,
-    pub level_up_pending: bool,
-    pub weapon_choices: Vec<String>,
-    /// `weapon_choices` と同順のアップグレード説明文。`render_snapshot` で事前生成される。
-    pub weapon_upgrade_descs: Vec<Vec<String>>,
-    pub weapon_levels: Vec<WeaponSlotInfo>,
-    pub magnet_timer: f32,
-    pub item_count: usize,
-    /// 1.2.9: ボス情報（ボスが存在しない場合は None）
-    pub boss_info: Option<BossHudInfo>,
-    // 1.2.10
-    pub phase: GamePhase,
-    /// 画面フラッシュのアルファ値（0.0=なし, 0.5=最大）
-    pub screen_flash_alpha: f32,
-    /// スコアポップアップ [(world_x, world_y, value, lifetime)]
-    pub score_popups: Vec<(f32, f32, u32, f32)>,
-    pub kill_count: u32,
-    /// Overlay フェーズで表示するオーバーレイ UI データ。
-    /// phase が Overlay のときのみ参照される。
-    pub overlay: Option<OverlayData>,
-    /// Title フェーズで表示するタイトル画面データ。
-    /// phase が Title のときのみ参照される。
-    pub title_overlay: Option<TitleOverlayData>,
-}
-
-/// 武器スロット情報。コンテンツ側が表示名を決める。
-#[derive(Clone)]
-pub struct WeaponSlotInfo {
-    /// コンテンツ内部の武器識別子（例: "magic_wand"）。
-    pub name: String,
-    /// UI に表示する名前（例: "Magic Wand"）。コンテンツ側が設定する。
-    pub display_name: String,
-    pub level: u32,
-}
-
-/// コンテンツ側が組み立てるタイトル画面の定義。
-#[derive(Clone)]
-pub struct TitleOverlayData {
-    /// ゲームタイトル文字列。
-    pub game_title: String,
-    pub title_color: [f32; 4],
-    /// タイトル下に表示するキャッチコピー（省略可）。
-    pub description: Option<String>,
-    /// 操作説明行のリスト（省略可）。
-    pub instructions: Vec<String>,
-    pub bg_color: [f32; 4],
-    pub border_color: [f32; 4],
-    /// タイトル画面のボタン定義。コンテンツ側がアクション文字列を決める。
-    pub buttons: Vec<OverlayButton>,
-}
-
-/// 1.2.9: HUD に表示するボス情報
-#[derive(Clone)]
-pub struct BossHudInfo {
-    pub name: String,
-    pub hp: f32,
-    pub max_hp: f32,
-}
-
-impl Default for HudData {
-    fn default() -> Self {
-        Self {
-            hp: 0.0,
-            max_hp: 100.0,
-            score: 0,
-            elapsed_seconds: 0.0,
-            level: 1,
-            exp: 0,
-            exp_to_next: 10,
-            enemy_count: 0,
-            bullet_count: 0,
-            fps: 0.0,
-            level_up_pending: false,
-            weapon_choices: Vec::new(),
-            weapon_upgrade_descs: Vec::new(),
-            weapon_levels: Vec::new(),
-            magnet_timer: 0.0,
-            item_count: 0,
-            boss_info: None,
-            phase: GamePhase::Title,
-            screen_flash_alpha: 0.0,
-            score_popups: Vec::new(),
-            kill_count: 0,
-            overlay: None,
-            title_overlay: None,
-        }
-    }
-}
 
 /// ロードダイアログの種別
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -817,13 +682,13 @@ impl Renderer {
         self.pipeline_3d.resize(new_width, new_height);
     }
 
-    /// HUD を描画し、レベルアップ画面でボタンが押された場合は選択された武器名を返す。
-    /// 1.5.3: ui_state でセーブ/ロードダイアログ・トーストを制御する。
+    /// UI を描画し、ボタンが押された場合はアクション文字列を返す。
+    /// ui_state でセーブ/ロードダイアログ・トーストを制御する。
     /// R-5: `CameraParams::Camera3D` の場合は 3D パイプラインを使用する。
     pub fn render(
         &mut self,
         window: &Window,
-        hud: &HudData,
+        ui: &crate::UiCanvas,
         camera: &crate::CameraParams,
         commands: &[DrawCommand],
         ui_state: &mut GameUiState,
@@ -900,7 +765,7 @@ impl Renderer {
         let raw_input = self.egui_winit.take_egui_input(window);
         let mut chosen_weapon: Option<String> = None;
         let full_output = self.egui_ctx.run(raw_input, |ctx| {
-            chosen_weapon = ui::build_hud_ui(ctx, hud, camera, self.current_fps, ui_state);
+            chosen_weapon = ui::render_ui_canvas(ctx, ui, camera, self.current_fps, ui_state);
         });
 
         self.egui_winit
