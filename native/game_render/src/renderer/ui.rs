@@ -41,8 +41,14 @@ pub fn build_hud_ui(
             GamePhase::Title => {
                 let _ = build_title_ui(ctx);
             }
+            GamePhase::StageClear => {
+                let _ = build_stage_clear_ui(ctx, hud);
+            }
             GamePhase::GameOver => {
                 let _ = build_game_over_ui(ctx, hud);
+            }
+            GamePhase::Ending => {
+                let _ = build_ending_ui(ctx);
             }
             GamePhase::Playing => {
                 let _ = build_playing_ui(ctx, hud, camera, fps, ui_state);
@@ -59,7 +65,9 @@ pub fn build_hud_ui(
 
     let mut chosen = match hud.phase {
         GamePhase::Title => build_title_ui(ctx),
+        GamePhase::StageClear => build_stage_clear_ui(ctx, hud),
         GamePhase::GameOver => build_game_over_ui(ctx, hud),
+        GamePhase::Ending => build_ending_ui(ctx),
         GamePhase::Playing => build_playing_ui(ctx, hud, camera, fps, ui_state),
     };
 
@@ -127,6 +135,94 @@ fn build_title_ui(ctx: &egui::Context) -> Option<String> {
                         .min_size(egui::vec2(200.0, 50.0));
                         if ui.add(btn).clicked() {
                             chosen = Some("__start__".to_string());
+                        }
+                    });
+                });
+        });
+    chosen
+}
+
+/// ステージクリア画面（NEXT STAGE ボタン）
+fn build_stage_clear_ui(ctx: &egui::Context, hud: &HudData) -> Option<String> {
+    let mut chosen = None;
+    egui::Area::new(egui::Id::new("stage_clear"))
+        .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+        .order(egui::Order::Foreground)
+        .show(ctx, |ui| {
+            egui::Frame::new()
+                .fill(egui::Color32::from_rgba_unmultiplied(5, 30, 10, 230))
+                .inner_margin(egui::Margin::symmetric(60, 40))
+                .corner_radius(16.0)
+                .stroke(egui::Stroke::new(
+                    2.0,
+                    egui::Color32::from_rgb(80, 220, 100),
+                ))
+                .show(ui, |ui| {
+                    ui.vertical_centered(|ui| {
+                        ui.label(
+                            egui::RichText::new("STAGE CLEAR!")
+                                .color(egui::Color32::from_rgb(100, 255, 120))
+                                .size(40.0)
+                                .strong(),
+                        );
+                        ui.add_space(12.0);
+                        ui.label(
+                            egui::RichText::new(format!("Stage {} Complete", hud.score))
+                                .color(egui::Color32::from_rgb(200, 240, 200))
+                                .size(18.0),
+                        );
+                        ui.add_space(24.0);
+                        let btn = egui::Button::new(
+                            egui::RichText::new("  NEXT STAGE  ").size(22.0).strong(),
+                        )
+                        .fill(egui::Color32::from_rgb(30, 140, 60))
+                        .min_size(egui::vec2(200.0, 50.0));
+                        if ui.add(btn).clicked() {
+                            chosen = Some("__next_stage__".to_string());
+                        }
+                    });
+                });
+        });
+    chosen
+}
+
+/// エンディング画面（全ステージクリア + TITLE ボタン）
+fn build_ending_ui(ctx: &egui::Context) -> Option<String> {
+    let mut chosen = None;
+    egui::Area::new(egui::Id::new("ending"))
+        .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+        .order(egui::Order::Foreground)
+        .show(ctx, |ui| {
+            egui::Frame::new()
+                .fill(egui::Color32::from_rgba_unmultiplied(20, 10, 40, 235))
+                .inner_margin(egui::Margin::symmetric(60, 40))
+                .corner_radius(16.0)
+                .stroke(egui::Stroke::new(
+                    2.0,
+                    egui::Color32::from_rgb(220, 180, 80),
+                ))
+                .show(ui, |ui| {
+                    ui.vertical_centered(|ui| {
+                        ui.label(
+                            egui::RichText::new("CONGRATULATIONS!")
+                                .color(egui::Color32::from_rgb(255, 220, 80))
+                                .size(36.0)
+                                .strong(),
+                        );
+                        ui.add_space(8.0);
+                        ui.label(
+                            egui::RichText::new("All stages cleared!")
+                                .color(egui::Color32::from_rgb(200, 200, 220))
+                                .size(18.0),
+                        );
+                        ui.add_space(24.0);
+                        let btn = egui::Button::new(
+                            egui::RichText::new("  BACK TO TITLE  ").size(20.0).strong(),
+                        )
+                        .fill(egui::Color32::from_rgb(120, 80, 20))
+                        .min_size(egui::vec2(200.0, 50.0));
+                        if ui.add(btn).clicked() {
+                            chosen = Some("__back_to_title__".to_string());
                         }
                     });
                 });

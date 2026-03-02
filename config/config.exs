@@ -21,7 +21,7 @@ config :game_network, GameNetwork.UDP,
 # GameContent.AsteroidArena   — 小惑星シューター（武器・ボスなし）
 # GameContent.SimpleBox3D     — シンプルな3Dゲーム（Phase R-6 動作検証用）
 # GameContent.BulletHell3D    — 3D 弾幕避けゲーム
-config :game_server, :current, GameContent.BulletHell3D
+config :game_server, :current, GameContent.RollingBall
 config :game_server, :map, :plain
 
 # セーブデータの HMAC 署名鍵（デフォルト値）。

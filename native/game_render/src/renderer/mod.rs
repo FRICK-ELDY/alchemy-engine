@@ -16,7 +16,9 @@ pub(crate) mod pipeline_3d;
 pub enum GamePhase {
     Title,
     Playing,
+    StageClear,
     GameOver,
+    Ending,
 }
 
 pub(crate) const ELITE_RENDER_KIND_OFFSET: u8 = 20;
