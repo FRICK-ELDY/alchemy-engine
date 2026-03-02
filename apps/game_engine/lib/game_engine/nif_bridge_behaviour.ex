@@ -64,7 +64,8 @@ defmodule GameEngine.NifBridge.Behaviour do
   @callback create_game_loop_control() :: reference()
   @callback start_rust_game_loop(reference(), reference(), pid()) :: :ok
   @callback create_render_frame_buffer() :: reference()
-  @callback start_render_thread(reference(), reference(), pid()) :: :ok
+  # atlas_path: アトラス PNG のファイルパス。Rust 側でロードし、存在しない場合は埋め込みフォールバックを使用する。
+  @callback start_render_thread(reference(), reference(), pid(), String.t(), String.t()) :: :ok
   @callback push_render_frame(reference(), [draw_command()], camera_params(), hud_data()) :: :ok
   @callback pause_physics(reference()) :: :ok
   @callback resume_physics(reference()) :: :ok

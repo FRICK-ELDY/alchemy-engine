@@ -60,7 +60,18 @@ defmodule GameEngine.GameEvents do
 
     render_started =
       if room_id == :main do
-        GameEngine.NifBridge.start_render_thread(world_ref, render_buf_ref, self())
+        content = current_content()
+        window_title = build_window_title(content)
+        atlas_path = resolve_atlas_path(content)
+
+        GameEngine.NifBridge.start_render_thread(
+          world_ref,
+          render_buf_ref,
+          self(),
+          window_title,
+          atlas_path
+        )
+
         true
       else
         false
@@ -429,4 +440,44 @@ defmodule GameEngine.GameEvents do
   defp now_ms, do: System.monotonic_time(:millisecond)
 
   defp current_content, do: GameEngine.Config.current()
+
+  defp build_window_title(content) do
+    if function_exported?(content, :title, 0) do
+      "AlchemyEngine - #{content.title()}"
+    else
+      "AlchemyEngine"
+    end
+  end
+
+  # アトラス PNG のファイルパスを解決して返す。
+  # Elixir 側はパス文字列のみを持ち、ファイルの実態（バイナリ）は持たない。
+  # 実際のロードは Rust 側（render_bridge）で行う。
+  #
+  # パス解決の優先順位:
+  #   1. $GAME_ASSETS_PATH/assets/{game_assets_id}/sprites/atlas.png
+  #   2. assets/{game_assets_id}/sprites/atlas.png（カレントディレクトリ基準）
+  #   3. $GAME_ASSETS_PATH/assets/sprites/atlas.png
+  #   4. assets/sprites/atlas.png（カレントディレクトリ基準）
+  #
+  # ファイルが存在しない場合は Rust 側の埋め込みフォールバックが使用される。
+  #
+  # `assets_path/0` が返す値はゲーム別サブディレクトリ名（例: "vampire_survivor"）。
+  # 環境変数 GAME_ASSETS_PATH が空文字列の場合はカレントディレクトリと同等に扱う。
+  defp resolve_atlas_path(content) do
+    game_assets_id =
+      if function_exported?(content, :assets_path, 0), do: content.assets_path(), else: nil
+
+    base =
+      case System.get_env("GAME_ASSETS_PATH") do
+        nil -> "."
+        "" -> "."
+        path -> path
+      end
+
+    if game_assets_id do
+      Path.join([base, "assets", game_assets_id, "sprites", "atlas.png"])
+    else
+      Path.join([base, "assets", "sprites", "atlas.png"])
+    end
+  end
 end

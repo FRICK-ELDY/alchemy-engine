@@ -4,6 +4,11 @@
 //! Phase R-2: RenderBridge::next_frame() が GameWorldInner を直接読む代わりに
 //! RenderFrameBuffer を参照するよう変更した。
 //! プレイヤー補間のみ GameWorld から補間データを読み取って適用する。
+//!
+//! Phase R-4: ウィンドウタイトルとアトラスパスを引数として受け取るよう変更した。
+//! Elixir 側はパス文字列のみを渡し、ファイルの実態（バイナリ）は持たない。
+//! アトラスのロードはこの関数内で行い、ファイルが存在しない場合は
+//! AssetLoader の埋め込みフォールバックを使用する。
 
 use crate::lock_metrics::record_read_wait;
 use crate::render_frame_buffer::RenderFrameBuffer;
@@ -20,25 +25,38 @@ pub fn run_render_thread(
     world: ResourceArc<GameWorld>,
     render_buf: ResourceArc<RenderFrameBuffer>,
     elixir_pid: LocalPid,
+    title: String,
+    atlas_path: String,
 ) {
     let bridge = NativeRenderBridge {
         world,
         render_buf,
         elixir_pid,
     };
-    let loader = AssetLoader::new();
+
+    let atlas_png = load_atlas_png(&atlas_path);
 
     let config = WindowConfig {
-        title: "AlchemyEngine - Vampire Survivor".to_string(),
+        title,
         width: SCREEN_WIDTH as u32,
         height: SCREEN_HEIGHT as u32,
-        renderer_init: RendererInit {
-            atlas_png: loader.load_sprite_atlas(),
-        },
+        renderer_init: RendererInit { atlas_png },
     };
 
     if let Err(e) = run_render_loop(bridge, config) {
         eprintln!("Render thread: {e}");
+    }
+}
+
+/// アトラス PNG をファイルから読み込む。
+/// ファイルが存在しない場合は AssetLoader の埋め込みデータにフォールバックする。
+fn load_atlas_png(path: &str) -> Vec<u8> {
+    match std::fs::read(path) {
+        Ok(data) => data,
+        Err(e) => {
+            log::warn!("atlas not found at '{path}': {e} — falling back to embedded atlas");
+            AssetLoader::new().load_sprite_atlas()
+        }
     }
 }
 
