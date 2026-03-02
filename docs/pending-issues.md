@@ -352,5 +352,80 @@ pub fn create_world() -> NifResult<ResourceArc<GameWorld>> {
 
 ---
 
+### 課題16: `game_engine` 層への依存を排除する（NIF・レンダーリファクタリングの残課題）
+
+Phase R-6（SimpleBox3D 実装）中に、`game_content` だけでは完結できない問題が2件発生し、
+暫定的に `game_engine` 層を修正した。これらは本来エンジンが汎用的に提供すべき
+機能であり、設計として整理する必要がある。
+
+#### E-1-1: `move_input` イベントがコンポーネントに届かない
+
+**現状の問題:**
+
+`GameEvents.handle_info({:move_input, dx, dy})` は Rust NIF を呼ぶだけで、
+`dispatch_event_to_components` を呼んでいなかった。
+Rust 物理エンジンを使わないコンテンツ（`SimpleBox3D`）では、
+コンポーネントの `on_event` で移動入力を受け取る手段がなかった。
+
+**暫定対処:**
+
+`game_events.ex` の `handle_info({:move_input, dx, dy})` に
+`dispatch_event_to_components({:move_input, dx, dy}, context)` を追加した。
+
+**本来あるべき設計:**
+
+`move_input` は Rust 物理エンジン専用の副作用（`set_player_input` NIF）と、
+コンテンツへのイベント配信を分離すべき。
+`on_event` への配信は常に行い、Rust NIF 呼び出しは `physics_scenes` に
+いる場合のみ行う、という整理が望ましい。
+
+#### E-1-2: `__retry__` / `__start__` UI アクションがコンポーネントに届かない
+
+**現状の問題:**
+
+`GameEvents.handle_info({:ui_action, action})` の `case` 文に
+`"__retry__"` / `"__start__"` の専用節があり、`dispatch_event_to_components`
+を呼ばずに `state` をそのまま返していた。
+`VampireSurvivor` はこれらを `on_event` で処理していないため問題が顕在化して
+いなかったが、`SimpleBox3D` の `InputComponent` が `__retry__` を受け取れなかった。
+
+**暫定対処:**
+
+`"__retry__"` / `"__start__"` の専用節を削除し、`_` 節（`dispatch_event_to_components`
+を呼ぶ）に統合した。
+
+**本来あるべき設計:**
+
+UI アクションは原則すべてコンポーネントに配信すべき。
+エンジンが特定のアクション文字列を知っている必要はなく、
+`__save__` / `__load__` 等のエンジン固有アクションのみ専用節で処理し、
+残りはすべて `dispatch_event_to_components` に渡す設計が正しい。
+
+#### E-1-3: `SaveManager.load_high_scores/0` のバグ
+
+**現状の問題:**
+
+`load_high_scores/0` のパターンマッチが `%{"scores" => scores}` だったが、
+`read_json` はエンベロープ全体 `%{"version" => ..., "state" => %{"scores" => ...}}`
+を返すため、`CaseClauseError` でクラッシュしていた。
+`VampireSurvivor` では `game_over` 遷移が発生しにくく顕在化していなかった。
+
+**暫定対処:**
+
+パターンマッチを `%{"state" => %{"scores" => scores}}` に修正した。
+
+**本来あるべき設計:**
+
+これは純粋なバグ修正であり、設計変更は不要。
+ただし `save_manager.ex` のテストが存在しないため、
+ハイスコアの保存・読み込みのユニットテストを追加することが望ましい。
+
+**影響ファイル**
+
+- `apps/game_engine/lib/game_engine/game_events.ex` — `move_input` / UI アクションの配信整理
+- `apps/game_engine/lib/game_engine/save_manager.ex` — ハイスコア保存・読み込みのユニットテスト追加
+
+---
+
 *このドキュメントは `vision.md` の思想に基づいて管理すること。*
 *各課題の詳細な改善方針・作業ステップは [`improvement-plan.md`](./improvement-plan.md) を参照すること。*
