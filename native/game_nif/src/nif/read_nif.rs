@@ -9,6 +9,24 @@ use crate::{alive, none};
 
 type FrameMetadata = ((f64, f64, u32, f64), (usize, usize, f64), (bool, f64, f64));
 
+type RenderEntitiesPlayer = (f64, f64, u32, usize, usize);
+type RenderEntitiesMoving = (
+    Vec<(f64, f64, u32)>,
+    Vec<(f64, f64, u32)>,
+    Vec<(f64, f64, f64, f64, f64, f64, f64)>,
+);
+type RenderEntitiesWorld = (
+    Vec<(f64, f64, u32)>,
+    Vec<(f64, f64, f64, u32)>,
+    (Atom, f64, f64, f64, u32),
+    Vec<(f64, f64, u32, f64)>,
+);
+type RenderEntities = (
+    RenderEntitiesPlayer,
+    RenderEntitiesMoving,
+    RenderEntitiesWorld,
+);
+
 #[rustler::nif]
 pub fn get_player_pos(world: ResourceArc<GameWorld>) -> NifResult<(f64, f64)> {
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;
@@ -135,4 +153,169 @@ pub fn get_full_game_state(world: ResourceArc<GameWorld>) -> NifResult<(u32, f64
         w.elapsed_seconds as f64,
         w.kill_count,
     ))
+}
+
+/// Phase R-2: 描画に必要なエンティティスナップショットを返す汎用 NIF。
+///
+/// コンテンツ固有の知識を持たず、物理ワールドの描画用データのみを返す。
+/// Elixir 側（game_content）がこのデータを使って DrawCommand リストを組み立てる。
+///
+/// 戻り値（ネストタプル）:
+/// ```
+/// {
+///   {player_x, player_y, frame_id, enemy_count, bullet_count},
+///   {enemies, bullets, particles},
+///   {items, obstacles, boss, score_popups}
+/// }
+/// ```
+/// - `enemy_count` / `bullet_count`: SoA の `count` フィールドから O(1) で取得した生存数。
+///   Elixir 側で `length/1` を使わずに HudData を組み立てるために提供する。
+/// - enemies:     `[{x, y, kind_id}]`
+/// - bullets:     `[{x, y, render_kind}]`
+/// - particles:   `[{x, y, r, g, b, alpha, size}]`
+/// - items:       `[{x, y, render_kind}]`
+/// - obstacles:   `[{x, y, radius, kind}]`
+/// - boss:        `{:none, 0, 0, 0, 0}` または `{:alive, x, y, radius, render_kind}`
+/// - score_popups:`[{x, y, value, lifetime}]`
+#[rustler::nif]
+pub fn get_render_entities(world: ResourceArc<GameWorld>) -> NifResult<RenderEntities> {
+    let w = world.0.read().map_err(|_| lock_poisoned_err())?;
+
+    let enemies: Vec<(f64, f64, u32)> = (0..w.enemies.len())
+        .filter(|&i| w.enemies.alive[i] != 0)
+        .map(|i| {
+            let kind_id = w
+                .params
+                .enemies
+                .get(w.enemies.kind_ids[i] as usize)
+                .map(|ep| ep.render_kind as u32)
+                .unwrap_or(1);
+            (
+                w.enemies.positions_x[i] as f64,
+                w.enemies.positions_y[i] as f64,
+                kind_id,
+            )
+        })
+        .collect();
+
+    let bullets: Vec<(f64, f64, u32)> = (0..w.bullets.len())
+        .filter(|&i| w.bullets.alive[i])
+        .map(|i| {
+            (
+                w.bullets.positions_x[i] as f64,
+                w.bullets.positions_y[i] as f64,
+                w.bullets.render_kind[i] as u32,
+            )
+        })
+        .collect();
+
+    let particles: Vec<(f64, f64, f64, f64, f64, f64, f64)> = (0..w.particles.len())
+        .filter(|&i| w.particles.alive[i])
+        .map(|i| {
+            let alpha =
+                (w.particles.lifetime[i] / w.particles.max_lifetime[i]).clamp(0.0, 1.0) as f64;
+            let c = w.particles.color[i];
+            (
+                w.particles.positions_x[i] as f64,
+                w.particles.positions_y[i] as f64,
+                c[0] as f64,
+                c[1] as f64,
+                c[2] as f64,
+                alpha,
+                w.particles.size[i] as f64,
+            )
+        })
+        .collect();
+
+    let items: Vec<(f64, f64, u32)> = (0..w.items.len())
+        .filter(|&i| w.items.alive[i])
+        .map(|i| {
+            (
+                w.items.positions_x[i] as f64,
+                w.items.positions_y[i] as f64,
+                w.items.kinds[i].render_kind() as u32,
+            )
+        })
+        .collect();
+
+    let obstacles: Vec<(f64, f64, f64, u32)> = w
+        .collision
+        .obstacles
+        .iter()
+        .map(|o| (o.x as f64, o.y as f64, o.radius as f64, o.kind as u32))
+        .collect();
+
+    let boss = match &w.boss {
+        Some(b) => (
+            alive(),
+            b.x as f64,
+            b.y as f64,
+            b.radius as f64,
+            b.render_kind as u32,
+        ),
+        None => (none(), 0.0, 0.0, 0.0, 0),
+    };
+
+    let score_popups: Vec<(f64, f64, u32, f64)> = w
+        .score_popups
+        .iter()
+        .map(|&(x, y, v, lt)| (x as f64, y as f64, v, lt as f64))
+        .collect();
+
+    Ok((
+        (
+            w.player.x as f64,
+            w.player.y as f64,
+            w.frame_id,
+            w.enemies.count,
+            w.bullets.count,
+        ),
+        (enemies, bullets, particles),
+        (items, obstacles, boss, score_popups),
+    ))
+}
+
+/// Phase R-2: 武器アップグレード説明文を返す汎用 NIF。
+///
+/// `weapon_choices` の各武器名に対応するアップグレード説明文を返す。
+/// Elixir 側（game_content）が HudData の `weapon_upgrade_descs` を組み立てるために使用する。
+///
+/// # 引数
+/// - `world`: ゲームワールド（`params` フィールドを参照する）
+/// - `weapon_choices`: 武器名文字列のリスト（例: `["weapon_0", "weapon_2"]`）
+/// - `weapon_slots`: 現在の武器スロット `[{kind_id, level}]`
+///
+/// # 戻り値
+/// `[[desc_string]]` — `weapon_choices` と同順の説明文リスト
+#[rustler::nif]
+pub fn get_weapon_upgrade_descs(
+    world: ResourceArc<GameWorld>,
+    weapon_choices: Vec<String>,
+    weapon_slots: Vec<(u32, u32)>,
+) -> NifResult<Vec<Vec<String>>> {
+    use game_physics::weapon::weapon_upgrade_desc;
+
+    let w = world.0.read().map_err(|_| lock_poisoned_err())?;
+
+    let descs = weapon_choices
+        .iter()
+        .map(|choice| {
+            let kind_id_opt = choice
+                .strip_prefix("weapon_")
+                .and_then(|s| s.parse::<u8>().ok());
+            match kind_id_opt {
+                Some(kind_id) => {
+                    let current_lv = weapon_slots
+                        .iter()
+                        .find(|&&(id, _)| id == kind_id as u32)
+                        .map(|&(_, lv)| lv)
+                        .unwrap_or(0);
+                    weapon_upgrade_desc(kind_id, current_lv, &w.params)
+                }
+                None => vec!["Upgrade weapon".to_string()],
+            }
+        })
+        .collect();
+
+    Ok(descs)
 }

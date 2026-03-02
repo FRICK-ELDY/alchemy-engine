@@ -1,6 +1,7 @@
 //! Path: native/game_nif/src/nif/load.rs
 //! Summary: NIF ローダー（パニックフック・リソース登録・アトム事前登録）
 
+use crate::render_frame_buffer::RenderFrameBuffer;
 use game_physics::world::{GameLoopControl, GameWorld};
 
 #[cfg(debug_assertions)]
@@ -21,6 +22,9 @@ pub fn load(env: rustler::Env, _: rustler::Term) -> bool {
         return false;
     }
     if env.register::<GameLoopControl>().is_err() {
+        return false;
+    }
+    if env.register::<RenderFrameBuffer>().is_err() {
         return false;
     }
     let _ = crate::ok();

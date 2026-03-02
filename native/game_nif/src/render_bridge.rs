@@ -1,10 +1,12 @@
 //! Path: native/game_nif/src/render_bridge.rs
 //! Summary: game_render の RenderBridge 実装
+//!
+//! Phase R-2: RenderBridge::next_frame() が GameWorldInner を直接読む代わりに
+//! RenderFrameBuffer を参照するよう変更した。
+//! プレイヤー補間のみ GameWorld から補間データを読み取って適用する。
 
 use crate::lock_metrics::record_read_wait;
-use crate::render_snapshot::{
-    build_render_frame, calc_interpolation_alpha, copy_interpolation_data, interpolate_player_pos,
-};
+use crate::render_frame_buffer::RenderFrameBuffer;
 use game_audio::AssetLoader;
 use game_physics::constants::{PLAYER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use game_physics::world::GameWorld;
@@ -14,8 +16,16 @@ use rustler::env::OwnedEnv;
 use rustler::{Encoder, LocalPid, ResourceArc};
 use std::time::Instant;
 
-pub fn run_render_thread(world: ResourceArc<GameWorld>, elixir_pid: LocalPid) {
-    let bridge = NativeRenderBridge { world, elixir_pid };
+pub fn run_render_thread(
+    world: ResourceArc<GameWorld>,
+    render_buf: ResourceArc<RenderFrameBuffer>,
+    elixir_pid: LocalPid,
+) {
+    let bridge = NativeRenderBridge {
+        world,
+        render_buf,
+        elixir_pid,
+    };
     let loader = AssetLoader::new();
 
     let config = WindowConfig {
@@ -34,14 +44,19 @@ pub fn run_render_thread(world: ResourceArc<GameWorld>, elixir_pid: LocalPid) {
 
 struct NativeRenderBridge {
     world: ResourceArc<GameWorld>,
+    render_buf: ResourceArc<RenderFrameBuffer>,
     elixir_pid: LocalPid,
 }
 
 impl RenderBridge for NativeRenderBridge {
     fn next_frame(&self) -> RenderFrame {
-        let wait_start = Instant::now();
+        // RenderFrameBuffer から最新フレームを取得する
+        let mut frame = self.render_buf.get();
 
-        let (interp_data, mut frame) = {
+        // プレイヤー補間: GameWorld から補間データを読み取り、
+        // PlayerSprite コマンドの座標と Camera2D オフセットを更新する
+        let wait_start = Instant::now();
+        let interp_data = {
             let guard = match self.world.0.read() {
                 Ok(guard) => {
                     record_read_wait("render.next_frame", wait_start.elapsed());
@@ -53,9 +68,7 @@ impl RenderBridge for NativeRenderBridge {
                     e.into_inner()
                 }
             };
-            let interp = copy_interpolation_data(&guard);
-            let frame = build_render_frame(&guard);
-            (interp, frame)
+            copy_interpolation_data(&guard)
         };
 
         if interp_data.curr_tick_ms > 0 {
@@ -66,14 +79,21 @@ impl RenderBridge for NativeRenderBridge {
             let alpha = calc_interpolation_alpha(&interp_data, now_ms);
             let (interp_x, interp_y) = interpolate_player_pos(&interp_data, alpha);
 
+            // RenderComponent は PlayerSprite を commands の先頭に配置する規約のため、
+            // O(1) で直接書き換える。先頭が PlayerSprite でない場合（空フレーム等）は
+            // 線形探索にフォールバックして安全性を保つ。
+            let player_cmd = match frame.commands.first_mut() {
+                Some(c @ game_render::DrawCommand::PlayerSprite { .. }) => Some(c),
+                _ => frame
+                    .commands
+                    .iter_mut()
+                    .find(|c| matches!(c, game_render::DrawCommand::PlayerSprite { .. })),
+            };
             if let Some(game_render::DrawCommand::PlayerSprite {
                 ref mut x,
                 ref mut y,
                 ..
-            }) = frame
-                .commands
-                .iter_mut()
-                .find(|c| matches!(c, game_render::DrawCommand::PlayerSprite { .. }))
+            }) = player_cmd
             {
                 *x = interp_x;
                 *y = interp_y;
@@ -102,4 +122,41 @@ impl RenderBridge for NativeRenderBridge {
             (crate::ui_action(), action).encode(env)
         });
     }
+}
+
+// ── 補間ヘルパー（render_snapshot.rs から移動）────────────────────────
+
+struct InterpolationData {
+    prev_player_x: f32,
+    prev_player_y: f32,
+    curr_player_x: f32,
+    curr_player_y: f32,
+    prev_tick_ms: u64,
+    curr_tick_ms: u64,
+}
+
+fn copy_interpolation_data(w: &game_physics::world::GameWorldInner) -> InterpolationData {
+    InterpolationData {
+        prev_player_x: w.prev_player_x,
+        prev_player_y: w.prev_player_y,
+        curr_player_x: w.player.x,
+        curr_player_y: w.player.y,
+        prev_tick_ms: w.prev_tick_ms,
+        curr_tick_ms: w.curr_tick_ms,
+    }
+}
+
+fn calc_interpolation_alpha(data: &InterpolationData, now_ms: u64) -> f32 {
+    let tick_duration = data.curr_tick_ms.saturating_sub(data.prev_tick_ms);
+    if tick_duration == 0 {
+        return 1.0;
+    }
+    let elapsed = now_ms.saturating_sub(data.prev_tick_ms);
+    (elapsed as f32 / tick_duration as f32).clamp(0.0, 1.0)
+}
+
+fn interpolate_player_pos(data: &InterpolationData, alpha: f32) -> (f32, f32) {
+    let x = data.prev_player_x + (data.curr_player_x - data.prev_player_x) * alpha;
+    let y = data.prev_player_y + (data.curr_player_y - data.prev_player_y) * alpha;
+    (x, y)
 }

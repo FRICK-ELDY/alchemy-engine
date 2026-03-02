@@ -43,7 +43,7 @@ rustler::atoms! {
 mod lock_metrics;
 mod nif;
 mod render_bridge;
-mod render_snapshot;
+mod render_frame_buffer;
 
 pub use game_audio::{
     start_audio_thread, AssetId, AssetLoader, AudioCommand, AudioCommandSender, AudioManager,

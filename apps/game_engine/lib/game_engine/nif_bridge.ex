@@ -46,7 +46,22 @@ defmodule GameEngine.NifBridge do
 
   def create_game_loop_control, do: :erlang.nif_error(:nif_not_loaded)
   def start_rust_game_loop(_world, _control, _pid), do: :erlang.nif_error(:nif_not_loaded)
-  def start_render_thread(_world, _pid), do: :erlang.nif_error(:nif_not_loaded)
+
+  # Phase R-2: RenderFrameBuffer を作成し、start_render_thread に渡す
+  def create_render_frame_buffer, do: :erlang.nif_error(:nif_not_loaded)
+  def start_render_thread(_world, _render_buf, _pid), do: :erlang.nif_error(:nif_not_loaded)
+
+  # Phase R-2: Elixir 側から DrawCommand リストを RenderFrameBuffer に push する
+  # commands: DrawCommand タプルのリスト（例: {:player_sprite, x, y, frame}）
+  # camera:   {:camera_2d, offset_x, offset_y}
+  # hud:      ネストタプル形式（render_frame_nif.rs の decode_hud を参照）
+  #           { {hp, max_hp, score, elapsed_sec, level, exp, exp_to_next},
+  #             {enemy_count, bullet_count, fps, level_up_pending},
+  #             {weapon_choices, weapon_upgrade_descs, weapon_levels},
+  #             {magnet_timer, item_count, boss_info, phase, flash_alpha, score_popups, kill_count} }
+  def push_render_frame(_render_buf, _commands, _camera, _hud),
+    do: :erlang.nif_error(:nif_not_loaded)
+
   def pause_physics(_control), do: :erlang.nif_error(:nif_not_loaded)
   def resume_physics(_control), do: :erlang.nif_error(:nif_not_loaded)
 
@@ -87,6 +102,18 @@ defmodule GameEngine.NifBridge do
 
   # ── Push 型同期 NIF ────────────────────────────────────────────
   def push_tick(_world, _dx, _dy, _delta_ms), do: :erlang.nif_error(:nif_not_loaded)
+
+  # ── Phase R-2: 描画用エンティティスナップショット ──────────────────
+  # 戻り値: {player_x, player_y, frame_id, enemies, bullets, particles,
+  #          items, obstacles, boss, score_popups}
+  def get_render_entities(_world), do: :erlang.nif_error(:nif_not_loaded)
+
+  # Phase R-2: 武器アップグレード説明文を返す NIF
+  # weapon_choices: ["weapon_0", "weapon_2", ...]
+  # weapon_slots: [{kind_id, level}]
+  # 戻り値: [[desc_string]]
+  def get_weapon_upgrade_descs(_world, _weapon_choices, _weapon_slots),
+    do: :erlang.nif_error(:nif_not_loaded)
 
   # ── 移行検証用（フェーズ0）───────────────────────────────────────
   def get_full_game_state(_world), do: :erlang.nif_error(:nif_not_loaded)
