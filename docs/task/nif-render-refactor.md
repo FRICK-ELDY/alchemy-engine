@@ -287,6 +287,37 @@ R-5〜R-6 が新機能追加となる。
 
 ### Phase R-3: コンテンツ固有NIFをElixir側に吸収する ✅
 
+### Phase R-5: 3Dレンダリングパイプラインの追加 ✅
+
+**実装内容:**
+
+1. `native/game_render/src/lib.rs` に3D用 `DrawCommand` バリアントを追加
+   - `Box3D { x, y, z, half_w, half_h, half_d, color }` — 軸平行ボックス描画
+   - `GridPlane { size, divisions, color }` — XZ 平面グリッドライン描画
+   - `Skybox { top_color, bottom_color }` — 単色グラデーションスカイボックス描画
+   - `CameraParams::Camera3D { eye, target, up, fov_deg, near, far }` — 3D カメラパラメータ
+2. `native/game_render/src/renderer/shaders/mesh.wgsl` を新規作成 — MVP 行列 Uniform + 頂点カラーシェーダー
+3. `native/game_render/src/renderer/pipeline_3d.rs` を新規作成
+   - `Pipeline3D` 構造体：メッシュ・グリッド・スカイボックスの3パイプラインと深度テクスチャを保持
+   - `MvpUniform`：ビュー行列・透視投影行列の合成（行列演算は外部クレート不使用）
+   - `box_mesh()`：8頂点 × 6面 = 36インデックスのボックスメッシュ生成
+   - `grid_lines()`：XZ 平面グリッドラインのラインリスト生成
+   - `skybox_verts()`：クリップ空間直接指定のグラデーション矩形生成
+   - `Pipeline3D::render()`：スカイボックス → グリッド → ボックスの順で描画
+4. `native/game_render/src/renderer/mod.rs` を更新
+   - `Renderer` の `device` / `queue` を `Arc` でラップ（`Pipeline3D` との共有のため）
+   - `Renderer` に `pipeline_3d: Pipeline3D` フィールドを追加
+   - `Renderer::resize()` で `pipeline_3d.resize()` を呼び出し深度テクスチャを再生成
+   - `Renderer::render()` に `commands: &[DrawCommand]` 引数を追加し、`Camera3D` 時に3Dパスを実行
+   - `sprite_instance_from_command()` に `Box3D / GridPlane / Skybox → None` アームを追加
+5. `native/game_render/src/window.rs` を更新 — `render()` 呼び出しに `&frame.commands` を追加
+6. `native/game_nif/src/nif/render_frame_nif.rs` を更新
+   - `decode_command()` に `box_3d` / `grid_plane` / `skybox` タグのデコードを追加
+   - `decode_camera()` に `camera_3d` タグのデコードを追加（`{:camera_3d, {ex,ey,ez}, {tx,ty,tz}, {ux,uy,uz}, {fov,near,far}}` 形式）
+   - `decode_command()` に `grid_plane` の `color` フィールドを追加（`{:grid_plane, size, divisions, {r,g,b,a}}` 形式）
+
+---
+
 ### Phase R-4: `render_bridge.rs` のゲーム固有設定を外部化する ✅
 
 **実装内容:**

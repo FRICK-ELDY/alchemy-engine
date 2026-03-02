@@ -9,6 +9,7 @@ use std::sync::Arc;
 use wgpu::util::DeviceExt;
 use winit::window::Window;
 mod ui;
+pub(crate) mod pipeline_3d;
 
 // 1.7.2: game_window の main.rs から renderer 専用に定義を移行
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -376,8 +377,8 @@ pub struct GameUiState {
 
 pub struct Renderer {
     surface: wgpu::Surface<'static>,
-    device: wgpu::Device,
-    queue: wgpu::Queue,
+    device: Arc<wgpu::Device>,
+    queue: Arc<wgpu::Queue>,
     config: wgpu::SurfaceConfiguration,
     render_pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
@@ -390,6 +391,8 @@ pub struct Renderer {
     // 1.2.5: カメラ Uniform
     camera_uniform_buf: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
+    // R-5: 3D パイプライン
+    pipeline_3d: pipeline_3d::Pipeline3D,
     // egui
     egui_ctx: egui::Context,
     egui_renderer: egui_wgpu::Renderer,
@@ -418,10 +421,12 @@ impl Renderer {
             .await
             .expect("アダプターの取得に失敗しました");
 
-        let (device, queue) = adapter
+        let (device_raw, queue_raw) = adapter
             .request_device(&wgpu::DeviceDescriptor::default(), None)
             .await
             .expect("デバイスとキューの取得に失敗しました");
+        let device = Arc::new(device_raw);
+        let queue = Arc::new(queue_raw);
 
         let size = window.inner_size();
         let config = surface
@@ -674,6 +679,15 @@ impl Renderer {
             None,
         );
 
+        // ─── R-5: 3D パイプライン初期化 ──────────────────────────
+        let pipeline_3d = pipeline_3d::Pipeline3D::new(
+            Arc::clone(&device),
+            Arc::clone(&queue),
+            config.format,
+            size.width,
+            size.height,
+        );
+
         Self {
             surface,
             device,
@@ -689,6 +703,7 @@ impl Renderer {
             screen_bind_group,
             camera_uniform_buf,
             camera_bind_group,
+            pipeline_3d,
             egui_ctx,
             egui_renderer,
             egui_winit,
@@ -740,15 +755,19 @@ impl Renderer {
             0,
             bytemuck::bytes_of(&screen_uniform),
         );
+
+        self.pipeline_3d.resize(new_width, new_height);
     }
 
     /// HUD を描画し、レベルアップ画面でボタンが押された場合は選択された武器名を返す。
     /// 1.5.3: ui_state でセーブ/ロードダイアログ・トーストを制御する。
+    /// R-5: `CameraParams::Camera3D` の場合は 3D パイプラインを使用する。
     pub fn render(
         &mut self,
         window: &Window,
         hud: &HudData,
         camera: &crate::CameraParams,
+        commands: &[DrawCommand],
         ui_state: &mut GameUiState,
     ) -> Option<String> {
         // ─── FPS 計測 ────────────────────────────────────────────
@@ -813,6 +832,11 @@ impl Renderer {
                 pass.draw_indexed(0..INDICES.len() as u32, 0, 0..self.instance_count);
             }
         }
+
+        // ─── R-5: 3D パス ────────────────────────────────────────
+        // Camera3D 以外が渡された場合は pipeline_3d.render() 内で早期リターンする。
+        self.pipeline_3d
+            .render(&mut encoder, &view, commands, camera);
 
         // ─── egui HUD パス ───────────────────────────────────────
         let raw_input = self.egui_winit.take_egui_input(window);
@@ -1054,6 +1078,10 @@ fn sprite_instance_from_command(cmd: &DrawCommand) -> Option<SpriteInstance> {
                 uv_size: uv_sz,
                 color_tint: [1.0, 1.0, 1.0, 1.0],
             })
+        }
+        // 3D コマンドはスプライトパイプラインでは描画しない
+        DrawCommand::Box3D { .. } | DrawCommand::GridPlane { .. } | DrawCommand::Skybox { .. } => {
+            None
         }
     }
 }
