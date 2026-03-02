@@ -168,6 +168,60 @@ fn decode_command(term: Term) -> NifResult<DrawCommand> {
                 kind: kind as u8,
             })
         }
+        // {:box_3d, x, y, z, half_w, half_h, {half_d, r, g, b, a}}
+        // Rustler のタプルデコードは最大 7 要素まで対応しているため、
+        // 8 要素になる末尾 5 要素（half_d, r, g, b, a）を内部タプルにまとめている。
+        "box_3d" => {
+            let (_, x, y, z, half_w, half_h, (half_d, r, g, b, a)): (
+                Atom,
+                f64,
+                f64,
+                f64,
+                f64,
+                f64,
+                (f64, f64, f64, f64, f64),
+            ) = term.decode().map_err(|_| {
+                NifError::Term(Box::new(
+                    "box_3d: expected {:box_3d, x, y, z, half_w, half_h, {half_d, r, g, b, a}}",
+                ))
+            })?;
+            Ok(DrawCommand::Box3D {
+                x: x as f32,
+                y: y as f32,
+                z: z as f32,
+                half_w: half_w as f32,
+                half_h: half_h as f32,
+                half_d: half_d as f32,
+                color: [r as f32, g as f32, b as f32, a as f32],
+            })
+        }
+        // {:grid_plane, size, divisions, {r, g, b, a}}
+        "grid_plane" => {
+            let (_, size, divisions, color): (Atom, f64, u32, (f64, f64, f64, f64)) =
+                term.decode().map_err(|_| {
+                    NifError::Term(Box::new(
+                        "grid_plane: expected {:grid_plane, size, divisions, {r, g, b, a}}",
+                    ))
+                })?;
+            Ok(DrawCommand::GridPlane {
+                size: size as f32,
+                divisions,
+                color: [color.0 as f32, color.1 as f32, color.2 as f32, color.3 as f32],
+            })
+        }
+        // {:skybox, {top_r, top_g, top_b, top_a}, {bot_r, bot_g, bot_b, bot_a}}
+        "skybox" => {
+            let (_, top, bot): (Atom, (f64, f64, f64, f64), (f64, f64, f64, f64)) =
+                term.decode().map_err(|_| {
+                    NifError::Term(Box::new(
+                        "skybox: expected {:skybox, {r,g,b,a}, {r,g,b,a}}",
+                    ))
+                })?;
+            Ok(DrawCommand::Skybox {
+                top_color: [top.0 as f32, top.1 as f32, top.2 as f32, top.3 as f32],
+                bottom_color: [bot.0 as f32, bot.1 as f32, bot.2 as f32, bot.3 as f32],
+            })
+        }
         other => Err(NifError::Term(Box::new(format!(
             "DrawCommand: unknown tag '{other}'"
         )))),
@@ -175,19 +229,45 @@ fn decode_command(term: Term) -> NifResult<DrawCommand> {
 }
 
 fn decode_camera(term: Term) -> NifResult<CameraParams> {
-    let (tag, offset_x, offset_y): (Atom, f64, f64) = term.decode().map_err(|_| {
-        NifError::Term(Box::new(
-            "CameraParams: expected {:camera_2d, offset_x, offset_y}",
-        ))
-    })?;
-
-    let tag_str = atom_str(tag.to_term(term.get_env()))?;
+    let tag_str = tag_of(term)?;
 
     match tag_str.as_str() {
-        "camera_2d" => Ok(CameraParams::Camera2D {
-            offset_x: offset_x as f32,
-            offset_y: offset_y as f32,
-        }),
+        // {:camera_2d, offset_x, offset_y}
+        "camera_2d" => {
+            let (_, offset_x, offset_y): (Atom, f64, f64) = term.decode().map_err(|_| {
+                NifError::Term(Box::new(
+                    "CameraParams: expected {:camera_2d, offset_x, offset_y}",
+                ))
+            })?;
+            Ok(CameraParams::Camera2D {
+                offset_x: offset_x as f32,
+                offset_y: offset_y as f32,
+            })
+        }
+        // {:camera_3d, {eye_x, eye_y, eye_z}, {target_x, target_y, target_z}, {up_x, up_y, up_z}, {fov_deg, near, far}}
+        // Rustler のタプルデコードは最大 7 要素まで対応しているため、
+        // 末尾 3 要素（fov_deg, near, far）を内部タプルにまとめている。
+        "camera_3d" => {
+            let (_, eye, target, up, (fov_deg, near, far)): (
+                Atom,
+                (f64, f64, f64),
+                (f64, f64, f64),
+                (f64, f64, f64),
+                (f64, f64, f64),
+            ) = term.decode().map_err(|_| {
+                NifError::Term(Box::new(
+                    "CameraParams: expected {:camera_3d, {ex,ey,ez}, {tx,ty,tz}, {ux,uy,uz}, {fov,near,far}}",
+                ))
+            })?;
+            Ok(CameraParams::Camera3D {
+                eye: [eye.0 as f32, eye.1 as f32, eye.2 as f32],
+                target: [target.0 as f32, target.1 as f32, target.2 as f32],
+                up: [up.0 as f32, up.1 as f32, up.2 as f32],
+                fov_deg: fov_deg as f32,
+                near: near as f32,
+                far: far as f32,
+            })
+        }
         other => Err(NifError::Term(Box::new(format!(
             "CameraParams: unknown tag '{other}'"
         )))),

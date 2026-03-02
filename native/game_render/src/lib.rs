@@ -33,9 +33,7 @@ impl UiAction {
 }
 
 /// 1フレーム分の描画命令。
-/// コンテンツ固有の概念（スプライト種別・パーティクル等）を
-/// `game_nif` 層が知らなくて済むよう、将来的には Elixir 側が組み立てて送る。
-/// Phase R-1 では `render_snapshot.rs` がこれを生成する（既存の動作を維持）。
+/// Elixir 側（`game_content`）が組み立てて `push_render_frame` NIF 経由で送る。
 #[derive(Clone, Debug)]
 pub enum DrawCommand {
     /// プレイヤースプライト描画。
@@ -68,12 +66,44 @@ pub enum DrawCommand {
         radius: f32,
         kind: u8,
     },
+    /// 3D ボックス描画（R-5）
+    Box3D {
+        x: f32,
+        y: f32,
+        z: f32,
+        half_w: f32,
+        half_h: f32,
+        half_d: f32,
+        color: [f32; 4],
+    },
+    /// グリッド地面描画（R-5）
+    GridPlane {
+        size: f32,
+        divisions: u32,
+        color: [f32; 4],
+    },
+    /// スカイボックス（単色グラデーション）描画（R-5）
+    Skybox {
+        top_color: [f32; 4],
+        bottom_color: [f32; 4],
+    },
 }
 
-/// カメラパラメータ。Phase R-1 では 2D のみ使用。
+/// カメラパラメータ。
 #[derive(Clone, Debug)]
 pub enum CameraParams {
     Camera2D { offset_x: f32, offset_y: f32 },
+    /// 3D カメラ（R-5）
+    Camera3D {
+        eye: [f32; 3],
+        target: [f32; 3],
+        up: [f32; 3],
+        fov_deg: f32,
+        /// ニアクリップ面（デフォルト 0.1）
+        near: f32,
+        /// ファークリップ面（デフォルト 1000.0）
+        far: f32,
+    },
 }
 
 impl Default for CameraParams {
@@ -86,12 +116,12 @@ impl Default for CameraParams {
 }
 
 impl CameraParams {
-    /// カメラのワールド座標オフセットを返す。
-    /// 2D カメラでは (offset_x, offset_y)。将来 3D バリアントが追加された場合は
-    /// 投影後の 2D オフセットに相当する値を返すよう拡張する。
+    /// 2D カメラのワールド座標オフセットを返す。
+    /// 3D カメラの場合は (0, 0) を返す（3D パイプラインは MVP 行列で処理するため不使用）。
     pub fn offset_xy(&self) -> (f32, f32) {
         match self {
             Self::Camera2D { offset_x, offset_y } => (*offset_x, *offset_y),
+            Self::Camera3D { .. } => (0.0, 0.0),
         }
     }
 }
