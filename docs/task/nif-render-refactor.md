@@ -285,6 +285,32 @@ R-5〜R-6 が新機能追加となる。
 
 ### Phase R-2: `render_snapshot.rs` を `game_content` 側に移す ✅
 
+### Phase R-3: コンテンツ固有NIFをElixir側に吸収する ✅
+
+**実装内容:**
+
+1. `native/game_nif/src/nif/action_nif.rs` に汎用NIF追加:
+   - `set_entity_velocity(world, entity_id, vx, vy)` — `:boss` エンティティの速度設定
+   - `set_entity_flag(world, entity_id, flag, value)` — `:boss` の `:invincible` フラグ設定
+   - `set_entity_hp(world, entity_id, hp)` — `:boss` または `{:enemy, index}` のHP設定
+   - `spawn_projectile(world, x, y, vx, vy, damage, lifetime, kind)` — 汎用弾丸スポーン
+2. `spawn_boss` → `spawn_special_entity` にリネーム（ボスという概念をNIF層から排除）
+3. `spawn_elite_enemy` → `spawn_enemies_with_hp_multiplier` にリネーム（エリートという概念をNIF層から排除）
+4. `set_boss_velocity` / `set_boss_invincible` / `set_boss_phase_timer` / `fire_boss_projectile` を廃止
+5. `set_hud_state` / `set_hud_level_state` / `set_boss_hp` を廃止（`push_render_frame` のHudDataに統合済み）
+6. `native/game_nif/src/lib.rs` に `:boss`, `:enemy`, `:invincible` アトムを追加
+7. `native/game_nif/src/nif/read_nif.rs` の `get_render_entities` 戻り値に `magnet_timer`, `invincible_timer` を追加
+8. `apps/game_content/lib/game_content/vampire_survivor/boss_component.ex` を汎用NIFを使うよう書き換え
+   - `phase_timer` をElixir側プロセス辞書で管理（Rust NIF なし）
+   - `fire_boss_projectile` → `spawn_projectile` に変更
+9. `apps/game_content/lib/game_content/vampire_survivor/level_component.ex` から `set_hud_state` / `set_hud_level_state` の呼び出しを削除
+10. `apps/game_content/lib/game_content/vampire_survivor/render_component.ex` を更新
+    - `magnet_timer` / `invincible_timer` を `get_render_entities` から取得して `push_render_frame` に反映
+    - `build_commands` の引数を9→4に削減（Credoの引数数制限に対応）
+11. `apps/game_content/lib/game_content/vampire_survivor/scenes/boss_alert.ex` の `spawn_boss` → `spawn_special_entity` に変更
+12. `apps/game_engine/lib/game_engine/game_events.ex` の `handle_info({:boss_dash_end, ...})` を汎用NIFに変更
+13. `apps/game_engine/lib/game_engine/nif_bridge.ex` / `nif_bridge_behaviour.ex` の公開APIを整理
+
 **実装内容:**
 
 1. `native/game_nif/src/render_frame_buffer.rs` を追加 — `Arc<RwLock<RenderFrame>>` を薄くラップした `RenderFrameBuffer` リソース

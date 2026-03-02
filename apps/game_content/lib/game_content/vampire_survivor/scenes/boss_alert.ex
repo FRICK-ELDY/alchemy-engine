@@ -27,7 +27,7 @@ defmodule GameContent.VampireSurvivor.Scenes.BossAlert do
         GameContent.VampireSurvivor.entity_registry().bosses[boss_kind] ||
           raise "Unknown boss kind: #{inspect(boss_kind)}"
 
-      GameEngine.NifBridge.spawn_boss(world_ref, kind_id)
+      GameEngine.NifBridge.spawn_special_entity(world_ref, kind_id)
       Logger.info("[BOSS] Spawned: #{boss_name}")
       {:transition, :pop, state}
     else

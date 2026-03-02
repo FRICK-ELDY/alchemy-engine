@@ -26,9 +26,11 @@ defmodule GameEngine.NifBridge do
   # I-2: 武器スロットを Elixir 側から毎フレーム注入する NIF（add_weapon の代替）
   # slots: [{kind_id, level}] のリスト
   def set_weapon_slots(_world, _slots), do: :erlang.nif_error(:nif_not_loaded)
-  def spawn_boss(_world, _kind), do: :erlang.nif_error(:nif_not_loaded)
+  # Phase R-3: spawn_boss を汎用化（ボスという概念を NIF 層から排除）
+  def spawn_special_entity(_world, _kind_id), do: :erlang.nif_error(:nif_not_loaded)
 
-  def spawn_elite_enemy(_world, _kind, _count, _hp_multiplier),
+  # Phase R-3: spawn_elite_enemy を汎用化（エリートという概念を NIF 層から排除）
+  def spawn_enemies_with_hp_multiplier(_world, _kind_id, _count, _hp_multiplier),
     do: :erlang.nif_error(:nif_not_loaded)
 
   # Phase 3-C: スコアポップアップを描画用バッファに追加する NIF
@@ -36,12 +38,17 @@ defmodule GameEngine.NifBridge do
   # Phase 3-B: Elixir 側のルールがアイテムドロップを制御するための NIF
   # kind: 0=Gem, 1=Potion, 2=Magnet
   def spawn_item(_world, _x, _y, _kind, _value), do: :erlang.nif_error(:nif_not_loaded)
-  # Phase 3-B: ボスAI制御 NIF
-  def set_boss_velocity(_world, _vx, _vy), do: :erlang.nif_error(:nif_not_loaded)
-  def set_boss_invincible(_world, _invincible), do: :erlang.nif_error(:nif_not_loaded)
-  def set_boss_phase_timer(_world, _timer), do: :erlang.nif_error(:nif_not_loaded)
 
-  def fire_boss_projectile(_world, _dx, _dy, _speed, _damage, _lifetime),
+  # Phase R-3: 汎用エンティティ操作 NIF
+  # entity_id: :boss
+  def set_entity_velocity(_world, _entity_id, _vx, _vy), do: :erlang.nif_error(:nif_not_loaded)
+  # entity_id: :boss, flag: :invincible
+  def set_entity_flag(_world, _entity_id, _flag, _value), do: :erlang.nif_error(:nif_not_loaded)
+  # entity_id: :boss または {:enemy, index}
+  def set_entity_hp(_world, _entity_id, _hp), do: :erlang.nif_error(:nif_not_loaded)
+
+  # x/y は発射座標、vx/vy は速度ベクトル（正規化済み × speed）、kind は BULLET_KIND_* 定数
+  def spawn_projectile(_world, _x, _y, _vx, _vy, _damage, _lifetime, _kind),
     do: :erlang.nif_error(:nif_not_loaded)
 
   def create_game_loop_control, do: :erlang.nif_error(:nif_not_loaded)
@@ -82,14 +89,7 @@ defmodule GameEngine.NifBridge do
 
   # ── Elixir SSoT 注入 NIF（毎フレーム呼ばれる）──────────────────────
   def set_player_hp(_world, _hp), do: :erlang.nif_error(:nif_not_loaded)
-  # Phase 3-B: HUD 描画用レベル・EXP 状態を Rust に注入する NIF
-  # weapon_choices: レベルアップ選択肢の武器名リスト（空リストなら選択肢なし）
-  def set_hud_level_state(_world, _level, _exp, _exp_to_next, _level_up_pending, _weapon_choices),
-    do: :erlang.nif_error(:nif_not_loaded)
-
   def set_elapsed_seconds(_world, _elapsed), do: :erlang.nif_error(:nif_not_loaded)
-  def set_boss_hp(_world, _hp), do: :erlang.nif_error(:nif_not_loaded)
-  def set_hud_state(_world, _score, _kill_count), do: :erlang.nif_error(:nif_not_loaded)
 
   # ── Phase 3-A: World パラメータ注入 NIF ──────────────────────────
   # ワールド生成後に一度だけ呼び出す。

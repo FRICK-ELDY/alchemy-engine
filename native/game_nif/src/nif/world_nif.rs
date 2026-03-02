@@ -116,54 +116,10 @@ pub fn set_player_hp(world: ResourceArc<GameWorld>, hp: f64) -> NifResult<Atom> 
     Ok(ok())
 }
 
-/// Phase 3-B: HUD 描画用のレベル・EXP 状態を Elixir 側から注入する NIF。
-/// ゲームロジックには使用しない。レンダリングパイプラインのみが参照する。
-/// weapon_choices: レベルアップ選択肢の武器名リスト（空なら選択肢なし）
-#[rustler::nif]
-pub fn set_hud_level_state(
-    world: ResourceArc<GameWorld>,
-    level: u32,
-    exp: u32,
-    exp_to_next: u32,
-    level_up_pending: bool,
-    weapon_choices: Vec<String>,
-) -> NifResult<Atom> {
-    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
-    w.hud_level = level;
-    w.hud_exp = exp;
-    w.hud_exp_to_next = exp_to_next;
-    w.hud_level_up_pending = level_up_pending;
-    w.hud_weapon_choices = weapon_choices;
-    Ok(ok())
-}
-
 #[rustler::nif]
 pub fn set_elapsed_seconds(world: ResourceArc<GameWorld>, elapsed: f64) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
     w.elapsed_seconds = elapsed as f32;
-    Ok(ok())
-}
-
-#[rustler::nif]
-pub fn set_boss_hp(world: ResourceArc<GameWorld>, hp: f64) -> NifResult<Atom> {
-    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
-    if let Some(boss) = &mut w.boss {
-        boss.hp = hp as f32;
-    }
-    Ok(ok())
-}
-
-/// score と kill_count を Elixir 側から注入する（フェーズ1 SSoT 完結）。
-/// render_snapshot がこれらの値を HUD に反映するため、毎フレーム呼び出す。
-#[rustler::nif]
-pub fn set_hud_state(
-    world: ResourceArc<GameWorld>,
-    score: u32,
-    kill_count: u32,
-) -> NifResult<Atom> {
-    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
-    w.score = score;
-    w.kill_count = kill_count;
     Ok(ok())
 }
 

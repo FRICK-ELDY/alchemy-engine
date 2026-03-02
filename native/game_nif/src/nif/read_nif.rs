@@ -9,7 +9,12 @@ use crate::{alive, none};
 
 type FrameMetadata = ((f64, f64, u32, f64), (usize, usize, f64), (bool, f64, f64));
 
+/// プレイヤー座標・フレームID・カウント系（player_x, player_y, frame_id, enemy_count, bullet_count）
 type RenderEntitiesPlayer = (f64, f64, u32, usize, usize);
+/// ワールドレベルのタイマー状態（magnet_timer, invincible_timer）
+/// magnet_timer はアイテム効果、invincible_timer はプレイヤー無敵時間を表す。
+/// RenderEntitiesPlayer とは別タプルで返すことで意味的な境界を明確にする。
+type RenderEntitiesTimers = (f64, f64);
 type RenderEntitiesMoving = (
     Vec<(f64, f64, u32)>,
     Vec<(f64, f64, u32)>,
@@ -23,6 +28,7 @@ type RenderEntitiesWorld = (
 );
 type RenderEntities = (
     RenderEntitiesPlayer,
+    RenderEntitiesTimers,
     RenderEntitiesMoving,
     RenderEntitiesWorld,
 );
@@ -270,6 +276,7 @@ pub fn get_render_entities(world: ResourceArc<GameWorld>) -> NifResult<RenderEnt
             w.enemies.count,
             w.bullets.count,
         ),
+        (w.magnet_timer as f64, w.player.invincible_timer as f64),
         (enemies, bullets, particles),
         (items, obstacles, boss, score_popups),
     ))

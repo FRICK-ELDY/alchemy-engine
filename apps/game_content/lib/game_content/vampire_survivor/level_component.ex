@@ -65,10 +65,8 @@ defmodule GameContent.VampireSurvivor.LevelComponent do
     content = GameEngine.Config.current()
     playing_state = GameEngine.SceneManager.get_scene_state(content.playing_scene()) || %{}
 
-    sync_hud_state(context.world_ref, playing_state)
     sync_player_hp(context.world_ref, playing_state)
     sync_elapsed(context.world_ref, playing_state, context)
-    sync_hud_level(context.world_ref, playing_state)
     sync_weapon_slots(context.world_ref, content, playing_state)
 
     :ok
@@ -171,21 +169,6 @@ defmodule GameContent.VampireSurvivor.LevelComponent do
 
   # ── プライベート: NIF 同期 ────────────────────────────────────────
 
-  defp sync_hud_state(world_ref, playing_state) do
-    score = Map.get(playing_state, :score, 0)
-    kill_count = Map.get(playing_state, :kill_count, 0)
-    prev = Process.get({__MODULE__, :last_hud_state})
-    new_val = {score, kill_count}
-
-    if new_val != prev do
-      call_nif(:set_hud_state, fn ->
-        GameEngine.NifBridge.set_hud_state(world_ref, score, kill_count)
-      end)
-
-      Process.put({__MODULE__, :last_hud_state}, new_val)
-    end
-  end
-
   defp sync_player_hp(world_ref, playing_state) do
     player_hp = Map.get(playing_state, :player_hp, 100.0)
     prev = Process.get({__MODULE__, :last_player_hp})
@@ -215,43 +198,6 @@ defmodule GameContent.VampireSurvivor.LevelComponent do
 
       Process.put({__MODULE__, :last_elapsed_ms}, elapsed_ms)
     end
-  end
-
-  defp sync_hud_level(world_ref, playing_state) do
-    case Map.get(playing_state, :level) do
-      nil ->
-        :ok
-
-      level ->
-        exp = Map.get(playing_state, :exp, 0)
-        exp_to_next = Map.get(playing_state, :exp_to_next, 10)
-        level_up_pending = Map.get(playing_state, :level_up_pending, false)
-        weapon_choices = Map.get(playing_state, :weapon_choices, []) |> Enum.map(&to_string/1)
-        new_val = {level, exp, exp_to_next, level_up_pending, weapon_choices}
-        prev = Process.get({__MODULE__, :last_hud_level_state})
-        maybe_push_hud_level_state(world_ref, new_val, prev)
-    end
-  end
-
-  defp maybe_push_hud_level_state(_world_ref, same, same), do: :ok
-
-  defp maybe_push_hud_level_state(
-         world_ref,
-         {level, exp, exp_to_next, level_up_pending, weapon_choices} = new_val,
-         _prev
-       ) do
-    call_nif(:set_hud_level_state, fn ->
-      GameEngine.NifBridge.set_hud_level_state(
-        world_ref,
-        level,
-        exp,
-        exp_to_next,
-        level_up_pending,
-        weapon_choices
-      )
-    end)
-
-    Process.put({__MODULE__, :last_hud_level_state}, new_val)
   end
 
   defp sync_weapon_slots(world_ref, content, playing_state) do
