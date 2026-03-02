@@ -165,7 +165,8 @@ defmodule GameContent.BulletHell3D.RenderComponent do
       {hp * 1.0, @max_hp * 1.0, 0, display_elapsed, 1, 0, 1},
       {enemy_count, bullet_count, 0.0, false},
       {[], [], []},
-      {0.0, 0, :none, phase, 0.0, [], 0}
+      {0.0, 0, :none, phase, 0.0, [], 0},
+      {:none, :none}
     }
   end
 end

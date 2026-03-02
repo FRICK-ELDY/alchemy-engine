@@ -62,13 +62,23 @@ defmodule GameEngine.NifBridge do
     do: :erlang.nif_error(:nif_not_loaded)
 
   # Phase R-2: Elixir 側から DrawCommand リストを RenderFrameBuffer に push する
-  # commands: DrawCommand タプルのリスト（例: {:player_sprite, x, y, frame}）
+  # commands: DrawCommand タプルのリスト
+  #   {:player_sprite, x, y, frame}
+  #   {:sprite, x, y, kind_id, frame}
+  #   {:sprite_raw, x, y, width, height, {{uv_ox, uv_oy}, {uv_sx, uv_sy}, {r, g, b, a}}}
+  #   {:particle, x, y, r, g, b, {alpha, size}}
+  #   {:item, x, y, kind}
+  #   {:obstacle, x, y, radius, kind}
   # camera:   {:camera_2d, offset_x, offset_y}
   # hud:      ネストタプル形式（render_frame_nif.rs の decode_hud を参照）
   #           { {hp, max_hp, score, elapsed_sec, level, exp, exp_to_next},
   #             {enemy_count, bullet_count, fps, level_up_pending},
   #             {weapon_choices, weapon_upgrade_descs, weapon_levels},
-  #             {magnet_timer, item_count, boss_info, phase, flash_alpha, score_popups, kill_count} }
+  #             {magnet_timer, item_count, boss_info, phase, flash_alpha, score_popups, kill_count},
+  #             {overlay, title_overlay} }
+  #   phase: :title | :playing | :overlay | :game_over
+  #   overlay: :none | {title, title_color, subtitle, bg_color, border_color, buttons}
+  #   title_overlay: :none | {game_title, title_color, description, instructions, bg_color, border_color, buttons}
   def push_render_frame(_render_buf, _commands, _camera, _hud),
     do: :erlang.nif_error(:nif_not_loaded)
 

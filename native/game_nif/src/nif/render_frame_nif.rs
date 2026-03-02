@@ -5,7 +5,10 @@
 //! push_render_frame NIF 経由でバッファに書き込む。
 
 use crate::render_frame_buffer::RenderFrameBuffer;
-use game_render::{BossHudInfo, CameraParams, DrawCommand, GamePhase, HudData, RenderFrame};
+use game_render::{
+    BossHudInfo, CameraParams, DrawCommand, GamePhase, HudData, OverlayButton, OverlayData,
+    RenderFrame, TitleOverlayData, WeaponSlotInfo,
+};
 use rustler::types::list::ListIterator;
 use rustler::types::tuple::get_tuple;
 use rustler::{Atom, Error as NifError, NifResult, ResourceArc, Term};
@@ -222,6 +225,38 @@ fn decode_command(term: Term) -> NifResult<DrawCommand> {
                 bottom_color: [bot.0 as f32, bot.1 as f32, bot.2 as f32, bot.3 as f32],
             })
         }
+        // {:sprite_raw, x, y, width, height, {{uv_ox, uv_oy}, {uv_sx, uv_sy}, {r, g, b, a}}}
+        // Rustler の最大 7 要素制約のため、UV・サイズ・カラーを末尾の内部タプルにまとめている。
+        "sprite_raw" => {
+            let (_, x, y, width, height, uvs_t): (Atom, f64, f64, f64, f64, Term) =
+                term.decode().map_err(|_| {
+                    NifError::Term(Box::new(
+                        "sprite_raw: expected {:sprite_raw, x, y, width, height, {{uv_ox, uv_oy}, {uv_sx, uv_sy}, {r, g, b, a}}}",
+                    ))
+                })?;
+            let (uv_offset_t, uv_size_t, color_t): (Term, Term, Term) =
+                uvs_t.decode().map_err(|_| {
+                    NifError::Term(Box::new(
+                        "sprite_raw: uvs expected {{uv_ox, uv_oy}, {uv_sx, uv_sy}, {r, g, b, a}}",
+                    ))
+                })?;
+            let (uv_ox, uv_oy): (f64, f64) = uv_offset_t.decode().map_err(|_| {
+                NifError::Term(Box::new("sprite_raw: uv_offset expected {f, f}"))
+            })?;
+            let (uv_sx, uv_sy): (f64, f64) = uv_size_t.decode().map_err(|_| {
+                NifError::Term(Box::new("sprite_raw: uv_size expected {f, f}"))
+            })?;
+            let color = decode_color(color_t)?;
+            Ok(DrawCommand::SpriteRaw {
+                x: x as f32,
+                y: y as f32,
+                width: width as f32,
+                height: height as f32,
+                uv_offset: [uv_ox as f32, uv_oy as f32],
+                uv_size: [uv_sx as f32, uv_sy as f32],
+                color_tint: color,
+            })
+        }
         other => Err(NifError::Term(Box::new(format!(
             "DrawCommand: unknown tag '{other}'"
         )))),
@@ -282,13 +317,22 @@ fn decode_camera(term: Term) -> NifResult<CameraParams> {
 ///   {hp, max_hp, score, elapsed_seconds, level, exp, exp_to_next},
 ///   {enemy_count, bullet_count, fps, level_up_pending},
 ///   {weapon_choices, weapon_upgrade_descs, weapon_levels},
-///   {magnet_timer, item_count, boss_info, phase, screen_flash_alpha, score_popups, kill_count}
+///   {magnet_timer, item_count, boss_info, phase, screen_flash_alpha, score_popups, kill_count},
+///   {overlay, title_overlay}
 /// }
 /// ```
+///
+/// - `phase`: `:title` | `:playing` | `:overlay` | `:game_over`
+/// - `overlay`: `:none` または `{title, title_color, subtitle, bg_color, border_color, buttons}`
+///   - `buttons`: `[{label, action, color}]`
+///   - `subtitle`: `:none` または バイナリ文字列
+/// - `title_overlay`: `:none` または `{game_title, title_color, description, instructions, bg_color, border_color}`
+///   - `description`: `:none` または バイナリ文字列
+///   - `instructions`: `[String]`
 fn decode_hud(term: Term) -> NifResult<HudData> {
-    let (basic, counts, weapons, misc): (Term, Term, Term, Term) = term
+    let (basic, counts, weapons, misc, extras): (Term, Term, Term, Term, Term) = term
         .decode()
-        .map_err(|_| NifError::Term(Box::new("HudData: expected 4-element nested tuple")))?;
+        .map_err(|_| NifError::Term(Box::new("HudData: expected 5-element nested tuple")))?;
 
     let (hp, max_hp, score, elapsed_seconds, level, exp, exp_to_next): (
         f64,
@@ -326,12 +370,20 @@ fn decode_hud(term: Term) -> NifResult<HudData> {
         ))
     })?;
 
+    let (overlay_term, title_overlay_term): (Term, Term) = extras.decode().map_err(|_| {
+        NifError::Term(Box::new(
+            "HudData.extras: expected {overlay, title_overlay}",
+        ))
+    })?;
+
     let weapon_choices = decode_string_list(weapon_choices_term)?;
     let weapon_upgrade_descs = decode_string_list_list(weapon_upgrade_descs_term)?;
     let weapon_levels = decode_weapon_levels(weapon_levels_term)?;
     let boss_info = decode_boss_info(boss_info_term)?;
     let phase = decode_game_phase(phase_term)?;
     let score_popups = decode_score_popups(score_popups_term)?;
+    let overlay = decode_overlay(overlay_term)?;
+    let title_overlay = decode_title_overlay(title_overlay_term)?;
 
     Ok(HudData {
         hp: hp as f32,
@@ -355,6 +407,8 @@ fn decode_hud(term: Term) -> NifResult<HudData> {
         screen_flash_alpha: screen_flash_alpha as f32,
         score_popups,
         kill_count,
+        overlay,
+        title_overlay,
     })
 }
 
@@ -372,24 +426,28 @@ fn decode_string_list_list(term: Term) -> NifResult<Vec<Vec<String>>> {
     iter.map(decode_string_list).collect()
 }
 
-fn decode_weapon_levels(term: Term) -> NifResult<Vec<(String, u32)>> {
+/// weapon_levels をデコードする。
+/// `[{name, display_name, level}]` 形式を受け取る。
+fn decode_weapon_levels(term: Term) -> NifResult<Vec<WeaponSlotInfo>> {
     let iter: ListIterator = term.decode()?;
     iter.map(|t| {
-        let (name, level): (String, u32) = t
-            .decode()
-            .map_err(|_| NifError::Term(Box::new("weapon_levels: expected {String, u32}")))?;
-        Ok((name, level))
+        let (name, display_name, level): (String, String, u32) = t.decode().map_err(|_| {
+            NifError::Term(Box::new(
+                "weapon_levels: expected {name, display_name, level}",
+            ))
+        })?;
+        Ok(WeaponSlotInfo {
+            name,
+            display_name,
+            level,
+        })
     })
     .collect()
 }
 
 fn decode_boss_info(term: Term) -> NifResult<Option<BossHudInfo>> {
-    // :none または {name, hp, max_hp}
-    if let Ok(atom) = term.decode::<Atom>() {
-        let s = atom_str(atom.to_term(term.get_env())).unwrap_or_default();
-        if s == "none" {
-            return Ok(None);
-        }
+    if is_none_atom(term) {
+        return Ok(None);
     }
 
     let (name, hp, max_hp): (String, f64, f64) = term
@@ -412,13 +470,139 @@ fn decode_game_phase(term: Term) -> NifResult<GamePhase> {
     match s.as_str() {
         "title" => Ok(GamePhase::Title),
         "playing" => Ok(GamePhase::Playing),
-        "stage_clear" => Ok(GamePhase::StageClear),
+        "overlay" => Ok(GamePhase::Overlay),
         "game_over" => Ok(GamePhase::GameOver),
-        "ending" => Ok(GamePhase::Ending),
         other => Err(NifError::Term(Box::new(format!(
             "GamePhase: unknown '{other}'"
         )))),
     }
+}
+
+/// term がアトム `:none` かどうかを厳密に判定する。
+/// アトム以外の term（タプル・バイナリ等）は `false` を返す。
+/// `:undefined` などの不正アトムも `false` を返す。
+fn is_none_atom(term: Term) -> bool {
+    term.decode::<Atom>()
+        .ok()
+        .and_then(|a| atom_str(a.to_term(term.get_env())).ok())
+        .map(|s| s == "none")
+        .unwrap_or(false)
+}
+
+/// OverlayData をデコードする。
+/// `:none` または `{title, title_color, subtitle, bg_color, border_color, buttons}` を受け取る。
+/// - `title_color` / `bg_color` / `border_color`: `{r, g, b, a}`
+/// - `subtitle`: `:none` または バイナリ文字列
+/// - `buttons`: `[{label, action, {r, g, b, a}}]`
+fn decode_overlay(term: Term) -> NifResult<Option<OverlayData>> {
+    if is_none_atom(term) {
+        return Ok(None);
+    }
+
+    let (title, title_color_t, subtitle_t, bg_color_t, border_color_t, buttons_t): (
+        String,
+        Term,
+        Term,
+        Term,
+        Term,
+        Term,
+    ) = term.decode().map_err(|_| {
+        NifError::Term(Box::new(
+            "OverlayData: expected :none or {title, title_color, subtitle, bg_color, border_color, buttons}",
+        ))
+    })?;
+
+    let title_color = decode_color(title_color_t)?;
+    let bg_color = decode_color(bg_color_t)?;
+    let border_color = decode_color(border_color_t)?;
+    let subtitle = decode_optional_string(subtitle_t)?;
+    let buttons = decode_overlay_buttons(buttons_t)?;
+
+    Ok(Some(OverlayData {
+        title,
+        title_color,
+        subtitle,
+        bg_color,
+        border_color,
+        buttons,
+    }))
+}
+
+/// TitleOverlayData をデコードする。
+/// `:none` または `{game_title, title_color, description, instructions, bg_color, border_color, buttons}` を受け取る。
+fn decode_title_overlay(term: Term) -> NifResult<Option<TitleOverlayData>> {
+    if is_none_atom(term) {
+        return Ok(None);
+    }
+
+    let (
+        game_title,
+        title_color_t,
+        description_t,
+        instructions_t,
+        bg_color_t,
+        border_color_t,
+        buttons_t,
+    ): (String, Term, Term, Term, Term, Term, Term) = term.decode().map_err(|_| {
+        NifError::Term(Box::new(
+            "TitleOverlayData: expected :none or {game_title, title_color, description, instructions, bg_color, border_color, buttons}",
+        ))
+    })?;
+
+    let title_color = decode_color(title_color_t)?;
+    let bg_color = decode_color(bg_color_t)?;
+    let border_color = decode_color(border_color_t)?;
+    let description = decode_optional_string(description_t)?;
+    let instructions = decode_string_list(instructions_t)?;
+    let buttons = decode_overlay_buttons(buttons_t)?;
+
+    Ok(Some(TitleOverlayData {
+        game_title,
+        title_color,
+        description,
+        instructions,
+        bg_color,
+        border_color,
+        buttons,
+    }))
+}
+
+/// `{r, g, b, a}` タプルを `[f32; 4]` にデコードする。
+fn decode_color(term: Term) -> NifResult<[f32; 4]> {
+    let (r, g, b, a): (f64, f64, f64, f64) = term
+        .decode()
+        .map_err(|_| NifError::Term(Box::new("color: expected {r, g, b, a}")))?;
+    Ok([r as f32, g as f32, b as f32, a as f32])
+}
+
+/// `:none` またはバイナリ文字列を `Option<String>` にデコードする。
+fn decode_optional_string(term: Term) -> NifResult<Option<String>> {
+    if is_none_atom(term) {
+        return Ok(None);
+    }
+    let s: String = term
+        .decode()
+        .map_err(|_| NifError::Term(Box::new("optional_string: expected :none or String")))?;
+    Ok(Some(s))
+}
+
+/// `[{label, action, {r, g, b, a}}]` を `Vec<OverlayButton>` にデコードする。
+fn decode_overlay_buttons(term: Term) -> NifResult<Vec<OverlayButton>> {
+    let iter: rustler::types::list::ListIterator = term.decode()?;
+    iter.map(|t| {
+        let (label, action, color_t): (String, String, Term) = t.decode().map_err(|_| {
+            NifError::Term(Box::new(
+                "OverlayButton: expected {label, action, {r, g, b, a}}",
+            ))
+        })?;
+        let color = decode_color(color_t)?;
+        Ok(OverlayButton {
+            label,
+            action,
+            color,
+        })
+    })
+    .collect()
 }
 
 fn decode_score_popups(term: Term) -> NifResult<Vec<(f32, f32, u32, f32)>> {

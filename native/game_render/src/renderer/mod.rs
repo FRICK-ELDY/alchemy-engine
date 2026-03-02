@@ -16,9 +16,31 @@ pub(crate) mod pipeline_3d;
 pub enum GamePhase {
     Title,
     Playing,
-    StageClear,
+    /// コンテンツが任意のオーバーレイ UI を表示したい状態。
+    /// 表示内容は HudData.overlay フィールドで渡す。
+    Overlay,
     GameOver,
-    Ending,
+}
+
+/// コンテンツ側が組み立てるオーバーレイ UI の定義。
+/// game_render はこのデータを汎用的に描画するだけで、内容を知らない。
+#[derive(Clone)]
+pub struct OverlayData {
+    pub title: String,
+    pub title_color: [f32; 4],
+    pub subtitle: Option<String>,
+    pub bg_color: [f32; 4],
+    pub border_color: [f32; 4],
+    pub buttons: Vec<OverlayButton>,
+}
+
+/// オーバーレイ内のボタン定義。
+#[derive(Clone)]
+pub struct OverlayButton {
+    pub label: String,
+    /// ボタンが押されたときに返すアクション文字列。
+    pub action: String,
+    pub color: [f32; 4],
 }
 
 pub(crate) const ELITE_RENDER_KIND_OFFSET: u8 = 20;
@@ -304,7 +326,7 @@ pub struct HudData {
     pub weapon_choices: Vec<String>,
     /// `weapon_choices` と同順のアップグレード説明文。`render_snapshot` で事前生成される。
     pub weapon_upgrade_descs: Vec<Vec<String>>,
-    pub weapon_levels: Vec<(String, u32)>,
+    pub weapon_levels: Vec<WeaponSlotInfo>,
     pub magnet_timer: f32,
     pub item_count: usize,
     /// 1.2.9: ボス情報（ボスが存在しない場合は None）
@@ -316,6 +338,38 @@ pub struct HudData {
     /// スコアポップアップ [(world_x, world_y, value, lifetime)]
     pub score_popups: Vec<(f32, f32, u32, f32)>,
     pub kill_count: u32,
+    /// Overlay フェーズで表示するオーバーレイ UI データ。
+    /// phase が Overlay のときのみ参照される。
+    pub overlay: Option<OverlayData>,
+    /// Title フェーズで表示するタイトル画面データ。
+    /// phase が Title のときのみ参照される。
+    pub title_overlay: Option<TitleOverlayData>,
+}
+
+/// 武器スロット情報。コンテンツ側が表示名を決める。
+#[derive(Clone)]
+pub struct WeaponSlotInfo {
+    /// コンテンツ内部の武器識別子（例: "magic_wand"）。
+    pub name: String,
+    /// UI に表示する名前（例: "Magic Wand"）。コンテンツ側が設定する。
+    pub display_name: String,
+    pub level: u32,
+}
+
+/// コンテンツ側が組み立てるタイトル画面の定義。
+#[derive(Clone)]
+pub struct TitleOverlayData {
+    /// ゲームタイトル文字列。
+    pub game_title: String,
+    pub title_color: [f32; 4],
+    /// タイトル下に表示するキャッチコピー（省略可）。
+    pub description: Option<String>,
+    /// 操作説明行のリスト（省略可）。
+    pub instructions: Vec<String>,
+    pub bg_color: [f32; 4],
+    pub border_color: [f32; 4],
+    /// タイトル画面のボタン定義。コンテンツ側がアクション文字列を決める。
+    pub buttons: Vec<OverlayButton>,
 }
 
 /// 1.2.9: HUD に表示するボス情報
@@ -350,6 +404,8 @@ impl Default for HudData {
             screen_flash_alpha: 0.0,
             score_popups: Vec::new(),
             kill_count: 0,
+            overlay: None,
+            title_overlay: None,
         }
     }
 }
@@ -1081,6 +1137,21 @@ fn sprite_instance_from_command(cmd: &DrawCommand) -> Option<SpriteInstance> {
                 color_tint: [1.0, 1.0, 1.0, 1.0],
             })
         }
+        DrawCommand::SpriteRaw {
+            x,
+            y,
+            width,
+            height,
+            uv_offset,
+            uv_size,
+            color_tint,
+        } => Some(SpriteInstance {
+            position: [x, y],
+            size: [width, height],
+            uv_offset,
+            uv_size,
+            color_tint,
+        }),
         // 3D コマンドはスプライトパイプラインでは描画しない
         DrawCommand::Box3D { .. } | DrawCommand::GridPlane { .. } | DrawCommand::Skybox { .. } => {
             None

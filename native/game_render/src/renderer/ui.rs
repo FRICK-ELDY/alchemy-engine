@@ -1,11 +1,26 @@
-use super::{GamePhase, GameUiState, HudData, LoadDialogKind};
+use super::{GamePhase, GameUiState, HudData, LoadDialogKind, OverlayData, WeaponSlotInfo};
 use crate::CameraParams;
 
+/// `[f32; 4]` の RGBA 値（0.0〜1.0）を egui の Color32 に変換するヘルパー。
+fn to_color32(rgba: [f32; 4]) -> egui::Color32 {
+    let [r, g, b, a] = rgba;
+    egui::Color32::from_rgba_unmultiplied(
+        (r * 255.0) as u8,
+        (g * 255.0) as u8,
+        (b * 255.0) as u8,
+        (a * 255.0) as u8,
+    )
+}
+
+/// `[f32; 4]` の RGBA 値（0.0〜1.0）を egui の Color32（アルファ無視）に変換するヘルパー。
+fn to_color32_rgb(rgba: [f32; 4]) -> egui::Color32 {
+    let [r, g, b, _] = rgba;
+    egui::Color32::from_rgb((r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8)
+}
+
 /// HUD を描画し、ボタン操作があった場合はアクション文字列を返す。
-/// - レベルアップ選択: 武器名
-/// - タイトル画面「Start」: "__start__"
-/// - ゲームオーバー「Retry」: "__retry__"
-/// - 1.5.3: セーブ「__save__」/ ロード「__load__」/ ロード確認「__load_confirm__」「__load_cancel__」
+/// アクション文字列はコンテンツ側が定義する（例: "__start__", "__retry__" 等）。
+/// セーブ/ロード関連: "__save__" / "__load__" / "__load_confirm__" / "__load_cancel__"
 pub fn build_hud_ui(
     ctx: &egui::Context,
     hud: &HudData,
@@ -39,16 +54,13 @@ pub fn build_hud_ui(
         // ui_state.pending_action が再セットされる可能性があるため、描画後に破棄する。
         match hud.phase {
             GamePhase::Title => {
-                let _ = build_title_ui(ctx);
+                let _ = build_title_ui(ctx, hud);
             }
-            GamePhase::StageClear => {
-                let _ = build_stage_clear_ui(ctx, hud);
+            GamePhase::Overlay => {
+                let _ = build_overlay_ui(ctx, hud.overlay.as_ref());
             }
             GamePhase::GameOver => {
                 let _ = build_game_over_ui(ctx, hud);
-            }
-            GamePhase::Ending => {
-                let _ = build_ending_ui(ctx);
             }
             GamePhase::Playing => {
                 let _ = build_playing_ui(ctx, hud, camera, fps, ui_state);
@@ -64,10 +76,9 @@ pub fn build_hud_ui(
     }
 
     let mut chosen = match hud.phase {
-        GamePhase::Title => build_title_ui(ctx),
-        GamePhase::StageClear => build_stage_clear_ui(ctx, hud),
+        GamePhase::Title => build_title_ui(ctx, hud),
+        GamePhase::Overlay => build_overlay_ui(ctx, hud.overlay.as_ref()),
         GamePhase::GameOver => build_game_over_ui(ctx, hud),
-        GamePhase::Ending => build_ending_ui(ctx),
         GamePhase::Playing => build_playing_ui(ctx, hud, camera, fps, ui_state),
     };
 
@@ -86,55 +97,60 @@ pub fn build_hud_ui(
     chosen
 }
 
-/// タイトル画面（操作説明 + START ボタン）
-fn build_title_ui(ctx: &egui::Context) -> Option<String> {
+/// タイトル画面（HudData.title_overlay のデータを描画する）
+fn build_title_ui(ctx: &egui::Context, hud: &HudData) -> Option<String> {
+    let Some(ref title_data) = hud.title_overlay else {
+        return None;
+    };
     let mut chosen = None;
     egui::Area::new(egui::Id::new("title"))
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
         .order(egui::Order::Foreground)
         .show(ctx, |ui| {
             egui::Frame::new()
-                .fill(egui::Color32::from_rgba_unmultiplied(5, 5, 20, 230))
+                .fill(to_color32(title_data.bg_color))
                 .inner_margin(egui::Margin::symmetric(60, 40))
                 .corner_radius(16.0)
-                .stroke(egui::Stroke::new(
-                    2.0,
-                    egui::Color32::from_rgb(100, 160, 255),
-                ))
+                .stroke(egui::Stroke::new(2.0, to_color32_rgb(title_data.border_color)))
                 .show(ui, |ui| {
                     ui.vertical_centered(|ui| {
                         ui.label(
-                            egui::RichText::new("Elixir x Rust Survivor")
-                                .color(egui::Color32::from_rgb(120, 200, 255))
+                            egui::RichText::new(&title_data.game_title)
+                                .color(to_color32_rgb(title_data.title_color))
                                 .size(36.0)
                                 .strong(),
                         );
-                        ui.add_space(8.0);
-                        ui.label(
-                            egui::RichText::new("Survive as long as possible!")
-                                .color(egui::Color32::from_rgb(180, 200, 220))
-                                .size(16.0),
-                        );
-                        ui.add_space(4.0);
-                        for line in &[
-                            "WASD / Arrow Keys: Move",
-                            "1/2/3: Choose weapon on level up",
-                            "Esc: Skip level up",
-                        ] {
+                        if let Some(ref desc) = title_data.description {
+                            ui.add_space(8.0);
                             ui.label(
-                                egui::RichText::new(*line)
-                                    .color(egui::Color32::from_rgb(150, 170, 190))
-                                    .size(13.0),
+                                egui::RichText::new(desc.as_str())
+                                    .color(egui::Color32::from_rgb(180, 200, 220))
+                                    .size(16.0),
                             );
                         }
+                        if !title_data.instructions.is_empty() {
+                            ui.add_space(4.0);
+                            for line in &title_data.instructions {
+                                ui.label(
+                                    egui::RichText::new(line.as_str())
+                                        .color(egui::Color32::from_rgb(150, 170, 190))
+                                        .size(13.0),
+                                );
+                            }
+                        }
                         ui.add_space(24.0);
-                        let btn = egui::Button::new(
-                            egui::RichText::new("  START GAME  ").size(22.0).strong(),
-                        )
-                        .fill(egui::Color32::from_rgb(40, 100, 200))
-                        .min_size(egui::vec2(200.0, 50.0));
-                        if ui.add(btn).clicked() {
-                            chosen = Some("__start__".to_string());
+                        for (i, btn_def) in title_data.buttons.iter().enumerate() {
+                            if i > 0 {
+                                ui.add_space(8.0);
+                            }
+                            let btn = egui::Button::new(
+                                egui::RichText::new(&btn_def.label).size(22.0).strong(),
+                            )
+                            .fill(to_color32_rgb(btn_def.color))
+                            .min_size(egui::vec2(200.0, 50.0));
+                            if ui.add(btn).clicked() {
+                                chosen = Some(btn_def.action.clone());
+                            }
                         }
                     });
                 });
@@ -142,87 +158,50 @@ fn build_title_ui(ctx: &egui::Context) -> Option<String> {
     chosen
 }
 
-/// ステージクリア画面（NEXT STAGE ボタン）
-fn build_stage_clear_ui(ctx: &egui::Context, hud: &HudData) -> Option<String> {
+/// 汎用オーバーレイ画面（OverlayData の内容を描画する）
+fn build_overlay_ui(ctx: &egui::Context, overlay: Option<&OverlayData>) -> Option<String> {
+    let Some(data) = overlay else {
+        return None;
+    };
     let mut chosen = None;
-    egui::Area::new(egui::Id::new("stage_clear"))
+    egui::Area::new(egui::Id::new("overlay"))
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
         .order(egui::Order::Foreground)
         .show(ctx, |ui| {
             egui::Frame::new()
-                .fill(egui::Color32::from_rgba_unmultiplied(5, 30, 10, 230))
+                .fill(to_color32(data.bg_color))
                 .inner_margin(egui::Margin::symmetric(60, 40))
                 .corner_radius(16.0)
-                .stroke(egui::Stroke::new(
-                    2.0,
-                    egui::Color32::from_rgb(80, 220, 100),
-                ))
+                .stroke(egui::Stroke::new(2.0, to_color32_rgb(data.border_color)))
                 .show(ui, |ui| {
                     ui.vertical_centered(|ui| {
                         ui.label(
-                            egui::RichText::new("STAGE CLEAR!")
-                                .color(egui::Color32::from_rgb(100, 255, 120))
+                            egui::RichText::new(&data.title)
+                                .color(to_color32_rgb(data.title_color))
                                 .size(40.0)
                                 .strong(),
                         );
-                        ui.add_space(12.0);
-                        ui.label(
-                            egui::RichText::new(format!("Stage {} Complete", hud.score))
-                                .color(egui::Color32::from_rgb(200, 240, 200))
-                                .size(18.0),
-                        );
-                        ui.add_space(24.0);
-                        let btn = egui::Button::new(
-                            egui::RichText::new("  NEXT STAGE  ").size(22.0).strong(),
-                        )
-                        .fill(egui::Color32::from_rgb(30, 140, 60))
-                        .min_size(egui::vec2(200.0, 50.0));
-                        if ui.add(btn).clicked() {
-                            chosen = Some("__next_stage__".to_string());
+                        if let Some(ref sub) = data.subtitle {
+                            ui.add_space(12.0);
+                            ui.label(
+                                egui::RichText::new(sub.as_str())
+                                    .color(egui::Color32::from_rgb(200, 220, 200))
+                                    .size(18.0),
+                            );
                         }
-                    });
-                });
-        });
-    chosen
-}
-
-/// エンディング画面（全ステージクリア + TITLE ボタン）
-fn build_ending_ui(ctx: &egui::Context) -> Option<String> {
-    let mut chosen = None;
-    egui::Area::new(egui::Id::new("ending"))
-        .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
-        .order(egui::Order::Foreground)
-        .show(ctx, |ui| {
-            egui::Frame::new()
-                .fill(egui::Color32::from_rgba_unmultiplied(20, 10, 40, 235))
-                .inner_margin(egui::Margin::symmetric(60, 40))
-                .corner_radius(16.0)
-                .stroke(egui::Stroke::new(
-                    2.0,
-                    egui::Color32::from_rgb(220, 180, 80),
-                ))
-                .show(ui, |ui| {
-                    ui.vertical_centered(|ui| {
-                        ui.label(
-                            egui::RichText::new("CONGRATULATIONS!")
-                                .color(egui::Color32::from_rgb(255, 220, 80))
-                                .size(36.0)
-                                .strong(),
-                        );
-                        ui.add_space(8.0);
-                        ui.label(
-                            egui::RichText::new("All stages cleared!")
-                                .color(egui::Color32::from_rgb(200, 200, 220))
-                                .size(18.0),
-                        );
                         ui.add_space(24.0);
-                        let btn = egui::Button::new(
-                            egui::RichText::new("  BACK TO TITLE  ").size(20.0).strong(),
-                        )
-                        .fill(egui::Color32::from_rgb(120, 80, 20))
-                        .min_size(egui::vec2(200.0, 50.0));
-                        if ui.add(btn).clicked() {
-                            chosen = Some("__back_to_title__".to_string());
+                        for (i, btn_def) in data.buttons.iter().enumerate() {
+                            if i > 0 {
+                                ui.add_space(8.0);
+                            }
+                            let btn = egui::Button::new(
+                                egui::RichText::new(&btn_def.label).size(22.0).strong(),
+                            )
+                            .fill(to_color32_rgb(btn_def.color))
+                            .min_size(egui::vec2(200.0, 50.0));
+                            if ui.add(btn).clicked() {
+                                chosen = Some(btn_def.action.clone());
+                            }
                         }
                     });
                 });
@@ -554,11 +533,11 @@ fn build_playing_hud_ui(ctx: &egui::Context, hud: &HudData, fps: f32, ui_state: 
                         // 武器スロット
                         if !hud.weapon_levels.is_empty() {
                             ui.separator();
-                            for (name, lv) in &hud.weapon_levels {
+                            for slot in &hud.weapon_levels {
                                 ui.label(
                                     egui::RichText::new(format!(
-                                        "[{}] Lv.{lv}",
-                                        weapon_short_name(name)
+                                        "[{}] Lv.{}",
+                                        slot.display_name, slot.level
                                     ))
                                     .color(egui::Color32::from_rgb(180, 230, 255))
                                     .strong(),
@@ -785,18 +764,16 @@ fn build_weapon_choice_ui(ui: &mut egui::Ui, hud: &HudData) -> Option<String> {
 
     ui.horizontal(|ui| {
         for (i, choice) in hud.weapon_choices.iter().enumerate() {
-            let current_lv = hud
-                .weapon_levels
-                .iter()
-                .find(|(n, _)| n == choice)
-                .map(|(_, lv)| *lv)
-                .unwrap_or(0);
+            let slot: Option<&WeaponSlotInfo> =
+                hud.weapon_levels.iter().find(|s| &s.name == choice);
+            let current_lv = slot.map(|s| s.level).unwrap_or(0);
+            let display_name = slot.map(|s| s.display_name.as_str()).unwrap_or(choice.as_str());
             let upgrade_desc = hud
                 .weapon_upgrade_descs
                 .get(i)
                 .map(|v| v.as_slice())
                 .unwrap_or(&[]);
-            if build_weapon_card(ui, choice, current_lv, upgrade_desc).is_some() {
+            if build_weapon_card(ui, display_name, current_lv, upgrade_desc).is_some() {
                 chosen = Some(choice.clone());
             }
             ui.add_space(12.0);
@@ -817,7 +794,7 @@ fn build_weapon_choice_ui(ui: &mut egui::Ui, hud: &HudData) -> Option<String> {
 /// 武器1枚分のカードUIを描画し、選択されたら `Some(())` を返す
 fn build_weapon_card(
     ui: &mut egui::Ui,
-    choice: &str,
+    display_name: &str,
     current_lv: u32,
     upgrade_desc: &[String],
 ) -> Option<()> {
@@ -845,7 +822,7 @@ fn build_weapon_card(
         ui.set_min_width(140.0);
         ui.vertical_centered(|ui| {
             ui.label(
-                egui::RichText::new(weapon_short_name(choice))
+                egui::RichText::new(display_name)
                     .color(egui::Color32::from_rgb(220, 230, 255))
                     .size(16.0)
                     .strong(),
@@ -894,14 +871,3 @@ fn build_weapon_card(
     }
 }
 
-fn weapon_short_name(name: &str) -> &str {
-    match name {
-        "magic_wand" => "Magic Wand",
-        "axe" => "Axe",
-        "cross" => "Cross",
-        "whip" => "Whip",
-        "fireball" => "Fireball",
-        "lightning" => "Lightning",
-        _ => name,
-    }
-}
