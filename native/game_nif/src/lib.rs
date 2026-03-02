@@ -38,6 +38,10 @@ rustler::atoms! {
     ui_action,
     // フェーズ5: 移動入力用アトム
     move_input,
+    // Phase R-3: 汎用エンティティ操作 NIF 用アトム
+    boss,
+    enemy,
+    invincible,
 }
 
 mod lock_metrics;

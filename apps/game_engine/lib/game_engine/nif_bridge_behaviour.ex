@@ -34,20 +34,32 @@ defmodule GameEngine.NifBridge.Behaviour do
   @callback spawn_enemies_at(reference(), non_neg_integer(), list()) :: :ok
   # I-2: add_weapon は廃止。set_weapon_slots で毎フレーム注入する。
   @callback set_weapon_slots(reference(), list()) :: :ok
-  @callback spawn_boss(reference(), non_neg_integer()) :: :ok
-  @callback spawn_elite_enemy(reference(), non_neg_integer(), non_neg_integer(), float()) :: :ok
+  # Phase R-3: spawn_boss を汎用化
+  @callback spawn_special_entity(reference(), non_neg_integer()) :: :ok
+  # Phase R-3: spawn_elite_enemy を汎用化
+  @callback spawn_enemies_with_hp_multiplier(
+              reference(),
+              non_neg_integer(),
+              non_neg_integer(),
+              float()
+            ) :: :ok
   @callback add_score_popup(reference(), float(), float(), non_neg_integer()) :: :ok
   @callback spawn_item(reference(), float(), float(), non_neg_integer(), non_neg_integer()) :: :ok
-  @callback set_boss_velocity(reference(), float(), float()) :: :ok
-  @callback set_boss_invincible(reference(), boolean()) :: :ok
-  @callback set_boss_phase_timer(reference(), float()) :: :ok
-  @callback fire_boss_projectile(
+  # Phase R-3: 汎用エンティティ操作 NIF
+  @callback set_entity_velocity(reference(), atom(), float(), float()) :: :ok
+  @callback set_entity_flag(reference(), atom(), atom(), boolean()) :: :ok
+  @callback set_entity_hp(reference(), term(), float()) :: :ok
+  # x, y, vx, vy, damage, lifetime, kind の順。
+  # is_player は常に false 固定（プレイヤー弾は weapon システム経由）のため引数に含まない。
+  @callback spawn_projectile(
               reference(),
               float(),
               float(),
               float(),
-              non_neg_integer(),
-              float()
+              float(),
+              integer(),
+              float(),
+              non_neg_integer()
             ) :: :ok
   @callback create_game_loop_control() :: reference()
   @callback start_rust_game_loop(reference(), reference(), pid()) :: :ok
@@ -66,7 +78,7 @@ defmodule GameEngine.NifBridge.Behaviour do
   @callback get_hud_data(reference()) :: map()
   @callback get_frame_metadata(reference()) :: map()
   @callback get_magnet_timer(reference()) :: float()
-  # I-2: kind_id を返り値から除去。ボス種別は Elixir 側 Rule state で管理する。
+  # Phase R-3: phase_timer は Elixir 側プロセス辞書で管理するため参照のみ（書き込みNIFなし）
   @callback get_boss_state(reference()) ::
               {:alive, float(), float(), float(), float(), float()} | :none
   # credo:disable-for-next-line Credo.Check.Readability.PredicateFunctionNames
@@ -74,17 +86,7 @@ defmodule GameEngine.NifBridge.Behaviour do
 
   # ── Elixir SSoT 注入 NIF ─────────────────────────────────────────
   @callback set_player_hp(reference(), float()) :: :ok
-  @callback set_hud_level_state(
-              reference(),
-              non_neg_integer(),
-              non_neg_integer(),
-              non_neg_integer(),
-              boolean(),
-              list()
-            ) :: :ok
   @callback set_elapsed_seconds(reference(), float()) :: :ok
-  @callback set_boss_hp(reference(), float()) :: :ok
-  @callback set_hud_state(reference(), non_neg_integer(), non_neg_integer()) :: :ok
 
   # ── Phase 3-A: World パラメータ注入 NIF ──────────────────────────
   @callback set_world_size(reference(), float(), float()) :: :ok

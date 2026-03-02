@@ -184,8 +184,8 @@ defmodule GameEngine.GameEvents do
 
   def handle_info({:boss_dash_end, world_ref}, state) do
     if state.world_ref == world_ref do
-      GameEngine.NifBridge.set_boss_invincible(world_ref, false)
-      GameEngine.NifBridge.set_boss_velocity(world_ref, 0.0, 0.0)
+      GameEngine.NifBridge.set_entity_flag(world_ref, :boss, :invincible, false)
+      GameEngine.NifBridge.set_entity_velocity(world_ref, :boss, 0.0, 0.0)
     end
 
     {:noreply, state}

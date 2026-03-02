@@ -16,7 +16,7 @@ defmodule GameEngine do
 
   def spawn_elite_enemy(world_ref, kind, count, hp_multiplier) do
     kind_id = resolve_enemy_id(kind)
-    NifBridge.spawn_elite_enemy(world_ref, kind_id, count, hp_multiplier)
+    NifBridge.spawn_enemies_with_hp_multiplier(world_ref, kind_id, count, hp_multiplier)
   end
 
   def get_enemy_count(world_ref) do

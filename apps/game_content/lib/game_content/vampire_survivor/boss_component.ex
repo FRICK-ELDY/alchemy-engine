@@ -32,6 +32,10 @@ defmodule GameContent.VampireSurvivor.BossComponent do
       %{state | boss_hp: max_hp, boss_max_hp: max_hp, boss_kind_id: boss_kind}
     end)
 
+    # phase_timer をリセットする（Elixir 側で管理）
+    bp = GameContent.EntityParams.boss_params_by_id(boss_kind)
+    Process.put({__MODULE__, :boss_phase_timer}, bp.special_interval)
+
     :ok
   end
 
@@ -117,9 +121,9 @@ defmodule GameContent.VampireSurvivor.BossComponent do
   defp push_boss_hp_to_nif(_world_ref, nil), do: :ok
 
   defp push_boss_hp_to_nif(world_ref, boss_hp) do
-    case GameEngine.NifBridge.set_boss_hp(world_ref, boss_hp) do
+    case GameEngine.NifBridge.set_entity_hp(world_ref, :boss, boss_hp) do
       {:error, reason} ->
-        Logger.error("[NIF ERROR] set_boss_hp failed: #{inspect(reason)}")
+        Logger.error("[NIF ERROR] set_entity_hp(:boss) failed: #{inspect(reason)}")
 
       _ ->
         :ok
@@ -140,14 +144,20 @@ defmodule GameContent.VampireSurvivor.BossComponent do
 
   # ── プライベート: ボス AI ─────────────────────────────────────────
 
-  defp update_boss_ai(context, {:alive, bx, by, _hp, _max_hp, phase_timer}, kind_id) do
+  # phase_timer は GameEvents GenServer のプロセス辞書で管理する。
+  # GameEvents は単一プロセスであり、BossComponent の on_physics_process は
+  # 常にその GenServer プロセス内で呼ばれるため、プロセス辞書の混在は発生しない。
+  defp update_boss_ai(context, {:alive, bx, by, _hp, _max_hp, _phase_timer}, kind_id) do
     world_ref = context.world_ref
     dt = context.tick_ms / 1000.0
     {px, py} = GameEngine.NifBridge.get_player_pos(world_ref)
     bp = GameContent.EntityParams.boss_params_by_id(kind_id)
 
     {vx, vy} = chase_velocity(px, py, bx, by, bp.speed)
-    GameEngine.NifBridge.set_boss_velocity(world_ref, vx, vy)
+    GameEngine.NifBridge.set_entity_velocity(world_ref, :boss, vx, vy)
+
+    # phase_timer は Elixir 側プロセス辞書で管理する（Rust への書き込み NIF なし）
+    phase_timer = Process.get({__MODULE__, :boss_phase_timer}, bp.special_interval)
 
     new_timer =
       if phase_timer - dt <= 0.0 do
@@ -157,7 +167,7 @@ defmodule GameContent.VampireSurvivor.BossComponent do
         phase_timer - dt
       end
 
-    GameEngine.NifBridge.set_boss_phase_timer(world_ref, new_timer)
+    Process.put({__MODULE__, :boss_phase_timer}, new_timer)
     :ok
   end
 
@@ -169,20 +179,22 @@ defmodule GameContent.VampireSurvivor.BossComponent do
 
   defp handle_boss_special_action(world_ref, @boss_bat_lord, px, py, bx, by, bp) do
     {dvx, dvy} = chase_velocity(px, py, bx, by, bp.dash_speed)
-    GameEngine.NifBridge.set_boss_velocity(world_ref, dvx, dvy)
-    GameEngine.NifBridge.set_boss_invincible(world_ref, true)
+    GameEngine.NifBridge.set_entity_velocity(world_ref, :boss, dvx, dvy)
+    GameEngine.NifBridge.set_entity_flag(world_ref, :boss, :invincible, true)
     Process.send_after(self(), {:boss_dash_end, world_ref}, bp.dash_duration_ms)
   end
 
-  defp handle_boss_special_action(world_ref, @boss_stone_golem, _px, _py, _bx, _by, bp) do
+  defp handle_boss_special_action(world_ref, @boss_stone_golem, _px, _py, boss_x, boss_y, bp) do
     for {dx, dy} <- [{1.0, 0.0}, {-1.0, 0.0}, {0.0, 1.0}, {0.0, -1.0}] do
-      GameEngine.NifBridge.fire_boss_projectile(
+      GameEngine.NifBridge.spawn_projectile(
         world_ref,
-        dx,
-        dy,
-        bp.projectile_speed,
+        boss_x,
+        boss_y,
+        dx * bp.projectile_speed,
+        dy * bp.projectile_speed,
         bp.projectile_damage,
-        bp.projectile_lifetime
+        bp.projectile_lifetime,
+        14
       )
     end
   end

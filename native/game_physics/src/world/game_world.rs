@@ -15,16 +15,24 @@ use super::FrameEvent;
 ///
 /// ## Elixir as SSoT 移行後の構造
 /// 以下のフィールドは Elixir 側が権威を持ち、毎フレーム NIF で注入される:
-/// - `player.hp`        → set_player_hp NIF（フェーズ2）
-/// - `player.input_dx/dy` → set_player_input NIF（フェーズ5）
-/// - `elapsed_seconds`  → set_elapsed_seconds NIF（フェーズ3）
-/// - `boss.hp`          → set_boss_hp NIF（フェーズ4）
-/// - `score`, `kill_count` → set_hud_state NIF（フェーズ1）
-/// - `params`           → set_entity_params NIF（Phase 3-A）
-/// - `map_width/height` → set_world_size NIF（Phase 3-A）
+/// - `player.hp`        → set_player_hp NIF
+/// - `player.input_dx/dy` → set_player_input NIF
+/// - `elapsed_seconds`  → set_elapsed_seconds NIF
+/// - `boss.hp`          → set_entity_hp(:boss) NIF（Phase R-3）
+/// - `boss.vx/vy`       → set_entity_velocity(:boss) NIF（Phase R-3）
+/// - `boss.invincible`  → set_entity_flag(:boss, :invincible) NIF（Phase R-3）
+/// - `params`           → set_entity_params NIF
+/// - `map_width/height` → set_world_size NIF
+/// - `weapon_slots`     → set_weapon_slots NIF
+///
+/// ## Phase R-3 以降のデッドフィールド
+/// 以下のフィールドは HUD データが push_render_frame 経由で直接 RenderFrameBuffer に
+/// 書き込まれるようになったため、Elixir からの注入 NIF が廃止された。
+/// Rust 側の物理演算では参照されないが、get_hud_data / get_frame_metadata / get_full_game_state
+/// NIF が後方互換のために参照する（常に初期値 0 を返す）。
+/// - `score`, `kill_count` — 旧 set_hud_state NIF（廃止）
 /// - `hud_level`, `hud_exp`, `hud_exp_to_next`, `hud_level_up_pending`, `hud_weapon_choices`
-///   → set_hud_level_state NIF（Phase 3-B: 描画専用）
-/// - `weapon_slots`     → set_weapon_slots NIF（I-2: 毎フレーム Elixir から注入）
+///   — 旧 set_hud_level_state NIF（廃止）
 pub struct GameWorldInner {
     pub frame_id: u32,
     pub player: PlayerState,
@@ -56,9 +64,9 @@ pub struct GameWorldInner {
     pub frame_events: Vec<FrameEvent>,
     /// 1.7.5: スコアポップアップ [(world_x, world_y, value, lifetime)]（描画用）
     pub score_popups: Vec<(f32, f32, u32, f32)>,
-    /// スコア - Elixir から毎フレーム注入（HUD 表示用）
+    /// スコア（Phase R-3 以降デッドフィールド: push_render_frame の HudData に移行）
     pub score: u32,
-    /// キル数 - Elixir から毎フレーム注入（HUD 表示用）
+    /// キル数（Phase R-3 以降デッドフィールド: push_render_frame の HudData に移行）
     pub kill_count: u32,
     /// 1.10.7: 補間用 - 前フレームのプレイヤー位置
     pub prev_player_x: f32,
@@ -72,8 +80,8 @@ pub struct GameWorldInner {
     /// Phase 3-A: マップサイズ（set_world_size NIF で注入）
     pub map_width: f32,
     pub map_height: f32,
-    /// Phase 3-B: HUD 描画専用フィールド（Elixir SSoT から毎フレーム注入）
-    /// ゲームロジックには使用しない。レンダリングパイプラインのみが参照する。
+    /// Phase R-3 以降デッドフィールド: push_render_frame の HudData に移行済み。
+    /// ゲームロジック・レンダリングパイプラインのいずれも参照しない。
     pub hud_level: u32,
     pub hud_exp: u32,
     pub hud_exp_to_next: u32,

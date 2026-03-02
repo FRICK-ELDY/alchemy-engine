@@ -27,27 +27,28 @@ defmodule GameContent.VampireSurvivor.RenderComponent do
     content = GameEngine.Config.current()
     playing_state = GameEngine.SceneManager.get_scene_state(content.playing_scene()) || %{}
 
-    {{player_x, player_y, frame_id, enemy_count, bullet_count}, {enemies, bullets, particles},
-     {items, obstacles, boss, score_popups}} =
+    {{player_x, player_y, frame_id, enemy_count, bullet_count}, {magnet_timer, invincible_timer},
+     {enemies, bullets, particles}, {items, obstacles, boss, score_popups}} =
       GameEngine.NifBridge.get_render_entities(context.world_ref)
 
     anim_frame = rem(div(frame_id, 4), 4)
 
-    commands =
-      build_commands(
-        player_x,
-        player_y,
-        anim_frame,
-        enemies,
-        bullets,
-        particles,
-        items,
-        obstacles,
-        boss
-      )
+    entities = {enemies, bullets, particles, items, obstacles, boss}
+    commands = build_commands(player_x, player_y, anim_frame, entities)
 
     camera = build_camera(player_x, player_y)
-    hud = build_hud(context, playing_state, enemy_count, bullet_count, boss, score_popups)
+
+    hud =
+      build_hud(
+        context,
+        playing_state,
+        enemy_count,
+        bullet_count,
+        boss,
+        score_popups,
+        magnet_timer,
+        invincible_timer
+      )
 
     GameEngine.NifBridge.push_render_frame(
       context.render_buf_ref,
@@ -61,17 +62,9 @@ defmodule GameContent.VampireSurvivor.RenderComponent do
 
   # ── DrawCommand 組み立て ──────────────────────────────────────────
 
-  defp build_commands(
-         player_x,
-         player_y,
-         anim_frame,
-         enemies,
-         bullets,
-         particles,
-         items,
-         obstacles,
-         boss
-       ) do
+  defp build_commands(player_x, player_y, anim_frame, entities) do
+    {enemies, bullets, particles, items, obstacles, boss} = entities
+
     []
     |> push_player(player_x, player_y, anim_frame)
     |> push_boss(boss)
@@ -134,7 +127,16 @@ defmodule GameContent.VampireSurvivor.RenderComponent do
 
   # ── HUD 組み立て ───────────────────────────────────────────────────
 
-  defp build_hud(context, playing_state, enemy_count, bullet_count, boss, score_popups) do
+  defp build_hud(
+         context,
+         playing_state,
+         enemy_count,
+         bullet_count,
+         boss,
+         score_popups,
+         magnet_timer,
+         invincible_timer
+       ) do
     hp = Map.get(playing_state, :player_hp, 100.0)
     max_hp = Map.get(playing_state, :player_max_hp, 100.0)
     score = Map.get(playing_state, :score, 0)
@@ -146,17 +148,10 @@ defmodule GameContent.VampireSurvivor.RenderComponent do
     level_up_pending = Map.get(playing_state, :level_up_pending, false)
     weapon_choices = Map.get(playing_state, :weapon_choices, []) |> Enum.map(&to_string/1)
     weapon_levels = build_weapon_levels(playing_state)
-    # TODO(Phase R-3): magnet_timer を get_render_entities の戻り値に含めるか、
-    # playing_state で管理して push_render_frame に渡す。
-    # 現状は磁石エフェクトの HUD 表示（残り時間バー）が機能しない。
-    magnet_timer = 0.0
     kill_count = Map.get(playing_state, :kill_count, 0)
 
-    # TODO(Phase R-3): screen_flash_alpha（無敵フラッシュ）は GameWorldInner.player.invincible_timer
-    # を参照していたが、get_render_entities に含まれていないため 0.0 固定。
-    # invincible_timer を get_render_entities に追加するか、Elixir 側で
-    # player_damaged イベントをトリガーにタイマーを管理する方針を決定する。
-    screen_flash_alpha = 0.0
+    # invincible_timer > 0 の間、画面フラッシュを表示する（最大 1.0 に正規化）
+    screen_flash_alpha = if invincible_timer > 0.0, do: min(invincible_timer, 1.0), else: 0.0
 
     boss_info = build_boss_info(boss, playing_state)
 
