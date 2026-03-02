@@ -86,9 +86,10 @@ defmodule GameEngine.NifBridge do
   #     {:button, label, action, {r,g,b,a}, min_width, min_height}
   #     {:progress_bar, value, max, width, height, {fg_high, fg_mid, fg_low, bg, corner_radius}}
   #     :separator
-  #     {:world_text, world_x, world_y, text, {r,g,b,a}, lifetime, max_lifetime}
+  #     {:world_text, world_x, world_y, world_z, text, {r,g,b,a}, {lifetime, max_lifetime}}
   #     {:screen_flash, {r,g,b,a}}
-  def push_render_frame(_render_buf, _commands, _camera, _ui),
+  # cursor_grab: :grab | :release | :no_change
+  def push_render_frame(_render_buf, _commands, _camera, _ui, _cursor_grab),
     do: :erlang.nif_error(:nif_not_loaded)
 
   def pause_physics(_control), do: :erlang.nif_error(:nif_not_loaded)

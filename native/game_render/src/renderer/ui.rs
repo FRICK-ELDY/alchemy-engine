@@ -114,12 +114,23 @@ fn render_node(
         UiComponent::WorldText {
             world_x,
             world_y,
+            world_z,
             text,
             color,
             lifetime,
             max_lifetime,
         } => {
-            render_world_text(ctx, camera, *world_x, *world_y, text, *color, *lifetime, *max_lifetime);
+            render_world_text(
+                ctx,
+                camera,
+                *world_x,
+                *world_y,
+                *world_z,
+                text,
+                *color,
+                *lifetime,
+                *max_lifetime,
+            );
             None
         }
         _ => render_node_as_area(ctx, node, node_idx, camera, fps, ui_state),
@@ -436,38 +447,151 @@ fn render_world_text(
     camera: &CameraParams,
     world_x: f32,
     world_y: f32,
+    world_z: f32,
     text: &str,
     color: [f32; 4],
     lifetime: f32,
     max_lifetime: f32,
 ) {
-    let (cam_x, cam_y) = camera.offset_xy();
-    let sx = world_x - cam_x;
-    let sy = world_y - cam_y;
     let alpha = if max_lifetime > 0.0 {
         (lifetime / max_lifetime).clamp(0.0, 1.0)
     } else {
         1.0
     };
-
     let mut faded = color;
     faded[3] *= alpha;
 
     // lifetime をIDに含めることで、同座標に複数のポップアップが存在する場合の衝突を軽減する。
     let id_bits = ((world_x.to_bits() as u64) << 32) | (world_y.to_bits() as u64);
     let lifetime_bits = lifetime.to_bits() as u64;
+
+    let screen_pos = match camera {
+        CameraParams::Camera3D {
+            eye,
+            target,
+            up,
+            fov_deg,
+            near,
+            far,
+        } => {
+            let screen_size = ctx.screen_rect();
+            let w = screen_size.width();
+            let h = screen_size.height();
+            if w <= 0.0 || h <= 0.0 {
+                return;
+            }
+            let aspect = w / h;
+            // MVP でワールド座標 → クリップ座標に変換
+            let mvp = world_text_mvp(*eye, *target, *up, fov_deg.to_radians(), aspect, *near, *far);
+            let clip = mat4_mul_vec4(mvp, [world_x, world_y, world_z, 1.0]);
+            // カメラ背後（w <= 0）は描画しない
+            if clip[3] <= 0.0 {
+                return;
+            }
+            let ndc_x = clip[0] / clip[3];
+            let ndc_y = clip[1] / clip[3];
+            // NDC [-1,1] → スクリーン座標
+            let sx = (ndc_x + 1.0) * 0.5 * w;
+            let sy = (1.0 - ndc_y) * 0.5 * h;
+            egui::pos2(sx, sy)
+        }
+        CameraParams::Camera2D { .. } => {
+            let (cam_x, cam_y) = camera.offset_xy();
+            egui::pos2(world_x - cam_x, world_y - cam_y)
+        }
+    };
+
     egui::Area::new(egui::Id::new(("world_text", id_bits ^ lifetime_bits)))
         .anchor(egui::Align2::LEFT_TOP, egui::vec2(0.0, 0.0))
         .order(egui::Order::Foreground)
         .show(ctx, |ui| {
             ui.painter().text(
-                egui::pos2(sx, sy),
+                screen_pos,
                 egui::Align2::CENTER_CENTER,
                 text,
                 egui::FontId::proportional(14.0),
                 to_color32(faded),
             );
         });
+}
+
+fn world_text_mvp(
+    eye: [f32; 3],
+    target: [f32; 3],
+    up: [f32; 3],
+    fov_rad: f32,
+    aspect: f32,
+    near: f32,
+    far: f32,
+) -> [[f32; 4]; 4] {
+    let view = look_at_wt(eye, target, up);
+    let proj = perspective_wt(fov_rad, aspect, near, far);
+    mat4_mul_wt(proj, view)
+}
+
+fn mat4_mul_vec4(m: [[f32; 4]; 4], v: [f32; 4]) -> [f32; 4] {
+    let mut out = [0.0f32; 4];
+    for row in 0..4 {
+        out[row] = (0..4).map(|col| m[col][row] * v[col]).sum();
+    }
+    out
+}
+
+fn look_at_wt(eye: [f32; 3], center: [f32; 3], up: [f32; 3]) -> [[f32; 4]; 4] {
+    let f = normalize_wt(sub3_wt(center, eye));
+    let r = normalize_wt(cross3_wt(f, up));
+    let u = cross3_wt(r, f);
+    [
+        [r[0], u[0], -f[0], 0.0],
+        [r[1], u[1], -f[1], 0.0],
+        [r[2], u[2], -f[2], 0.0],
+        [-dot3_wt(r, eye), -dot3_wt(u, eye), dot3_wt(f, eye), 1.0],
+    ]
+}
+
+fn perspective_wt(fov_rad: f32, aspect: f32, near: f32, far: f32) -> [[f32; 4]; 4] {
+    let tan_half = (fov_rad / 2.0).tan();
+    let range = far - near;
+    [
+        [1.0 / (aspect * tan_half), 0.0, 0.0, 0.0],
+        [0.0, 1.0 / tan_half, 0.0, 0.0],
+        [0.0, 0.0, -(far + near) / range, -1.0],
+        [0.0, 0.0, -2.0 * far * near / range, 0.0],
+    ]
+}
+
+fn mat4_mul_wt(a: [[f32; 4]; 4], b: [[f32; 4]; 4]) -> [[f32; 4]; 4] {
+    let mut out = [[0.0f32; 4]; 4];
+    for col in 0..4 {
+        for row in 0..4 {
+            out[col][row] = (0..4).map(|k| a[k][row] * b[col][k]).sum();
+        }
+    }
+    out
+}
+
+fn sub3_wt(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
+    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+}
+
+fn dot3_wt(a: [f32; 3], b: [f32; 3]) -> f32 {
+    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+}
+
+fn cross3_wt(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
+}
+
+fn normalize_wt(v: [f32; 3]) -> [f32; 3] {
+    let len = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
+    if len < 1e-8 {
+        return v;
+    }
+    [v[0] / len, v[1] / len, v[2] / len]
 }
 
 /// セーブ/ロード確認ダイアログ

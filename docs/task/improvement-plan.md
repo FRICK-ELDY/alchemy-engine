@@ -184,6 +184,23 @@
 
 ---
 
+### I-L: render_frame_nif.rs の肥大化（優先度: 中）
+
+**問題:** `native/game_nif/src/nif/render_frame_nif.rs` が DrawCommand・CameraParams・UiComponent の全デコードロジックを1ファイルに集約しており、コンテンツ追加のたびに肥大化する。現時点で634行あり、新しい DrawCommand や UiComponent を追加するたびに同ファイルへの変更が集中する。
+
+**影響ファイル:**
+- `native/game_nif/src/nif/render_frame_nif.rs`
+
+**作業ステップ:**
+1. `native/game_nif/src/nif/decode/` ディレクトリを作成し、以下の3モジュールに分割する
+   - `decode/draw_command.rs` — `decode_commands` / `decode_command`
+   - `decode/camera.rs` — `decode_camera`
+   - `decode/ui_canvas.rs` — `decode_ui_canvas` / `decode_ui_node` / `decode_ui_component` 等
+2. `render_frame_nif.rs` は NIF エントリポイント（`push_render_frame`・`create_render_frame_buffer`）のみに絞る
+3. 共通ヘルパー（`decode_color`・`atom_str`・`tag_of` 等）は `decode/mod.rs` に集約する
+
+---
+
 ## 完了済みタスク（フェーズ1・1.5）
 
 ~~I-G: HUD 型修正~~  

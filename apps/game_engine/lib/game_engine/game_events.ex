@@ -201,6 +201,33 @@ defmodule GameEngine.GameEvents do
     {:noreply, state}
   end
 
+  # ── インフォ: マウスデルタ ────────────────────────────────────────
+
+  def handle_info({:mouse_delta, dx, dy}, state) do
+    now = now_ms()
+    context = build_context(state, now, now - state.start_ms)
+    dispatch_event_to_components({:mouse_delta, dx, dy}, context)
+    {:noreply, state}
+  end
+
+  # ── インフォ: スプリント ──────────────────────────────────────────
+
+  def handle_info({:sprint, pressed}, state) when is_boolean(pressed) do
+    now = now_ms()
+    context = build_context(state, now, now - state.start_ms)
+    dispatch_event_to_components({:sprint, pressed}, context)
+    {:noreply, state}
+  end
+
+  # ── インフォ: キー押下 ────────────────────────────────────────────
+
+  def handle_info({:key_pressed, key}, state) when is_atom(key) do
+    now = now_ms()
+    context = build_context(state, now, now - state.start_ms)
+    dispatch_event_to_components({:key_pressed, key}, context)
+    {:noreply, state}
+  end
+
   # ── インフォ: ボスダッシュ終了（BatLord AI）────────────────────────
 
   def handle_info({:boss_dash_end, world_ref}, state) do

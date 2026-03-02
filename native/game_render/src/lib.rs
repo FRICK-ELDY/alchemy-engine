@@ -108,6 +108,7 @@ pub enum UiComponent {
     WorldText {
         world_x: f32,
         world_y: f32,
+        world_z: f32,
         text: String,
         color: [f32; 4],
         lifetime: f32,
@@ -248,6 +249,8 @@ pub struct RenderFrame {
     pub commands: Vec<DrawCommand>,
     pub camera: CameraParams,
     pub ui: UiCanvas,
+    /// カーソルグラブ状態の要求。`Some(true)` でグラブ、`Some(false)` で解放、`None` で変更なし。
+    pub cursor_grab: Option<bool>,
 }
 
 pub(crate) mod renderer;
