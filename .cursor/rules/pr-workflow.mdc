@@ -29,10 +29,18 @@ git checkout -b feature/<作業内容を簡潔に>
 
 ### 3. ローカル CI チェック（必須）
 
-コミット前に必ず実行し、全項目が PASS であることを確認する：
+コミット前に必ず実行し、全項目が PASS であることを確認する。
+CI の出力は長く途中で切れることがあるため、**必ずファイルにリダイレクトして末尾を確認する**：
 
 ```powershell
-bin\ci.bat check
+bin\ci.bat check 2>&1 | Out-File -FilePath ci_result.txt -Encoding utf8
+Get-Content ci_result.txt | Select-Object -Last 40
+```
+
+確認後は一時ファイルを削除する：
+
+```powershell
+Remove-Item ci_result.txt
 ```
 
 `check` モードは Rust fmt/clippy・Elixir compile/format/credo のみ実行し、テストをスキップするため数十秒で完了する。
