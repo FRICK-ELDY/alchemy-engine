@@ -181,19 +181,8 @@ defmodule GameEngine.GameEvents do
   # ── インフォ: 移動入力 ────────────────────────────────────────────
 
   def handle_info({:move_input, dx, dy}, state) do
-    # physics_scenes に含まれるシーンが現在アクティブな場合のみ Rust 物理エンジンに入力を渡す。
-    # Rust 物理エンジンを使わないコンテンツ（SimpleBox3D 等）では不要な NIF 呼び出しを避ける。
-    content = current_content()
-
-    case GameEngine.SceneManager.current() do
-      {:ok, %{module: mod}} ->
-        if mod in content.physics_scenes() do
-          GameEngine.NifBridge.set_player_input(state.world_ref, dx * 1.0, dy * 1.0)
-        end
-
-      _ ->
-        :ok
-    end
+    # set_player_input は maybe_set_input_and_broadcast でフレームごとに ETS から読んで行う。
+    # ここではコンポーネントへのディスパッチのみ（InputComponent 等がシーン state を更新する）。
 
     now = now_ms()
     context = build_context(state, now, now - state.start_ms)
@@ -219,7 +208,113 @@ defmodule GameEngine.GameEvents do
     {:noreply, state}
   end
 
-  # ── インフォ: キー押下 ────────────────────────────────────────────
+  # ── インフォ: 生入力イベント（Rust → InputHandler → 意味論的イベント）──
+
+  def handle_info({:raw_key, key, key_state}, state)
+      when is_atom(key) and key_state in [:pressed, :released] do
+    GameEngine.InputHandler.raw_key(key, key_state)
+    {:noreply, state}
+  end
+
+  def handle_info({:raw_mouse_motion, dx, dy}, state) when is_number(dx) and is_number(dy) do
+    now = now_ms()
+    context = build_context(state, now, now - state.start_ms)
+    dispatch_event_to_components({:mouse_delta, dx * 1.0, dy * 1.0}, context)
+    {:noreply, state}
+  end
+
+  def handle_info(:focus_lost, state) do
+    GameEngine.InputHandler.focus_lost()
+    {:noreply, state}
+  end
+
+  # ── インフォ: VR 入力イベント（game_input_openxr → game_nif 経由）───────
+  # position: {x,y,z}, orientation: {qx,qy,qz,qw}, velocity: {vx,vy,vz}
+  # 不正なペイロードはフォールバックで無視しクラッシュを防ぐ。
+
+  def handle_info(
+        {:head_pose, {position, orientation, timestamp}},
+        state
+      )
+      when is_tuple(position) and tuple_size(position) == 3 and
+             is_tuple(orientation) and tuple_size(orientation) == 4 and
+             is_number(timestamp) do
+    now = now_ms()
+    context = build_context(state, now, now - state.start_ms)
+    data = %{position: position, orientation: orientation, timestamp: timestamp}
+    dispatch_event_to_components({:head_pose, data}, context)
+    {:noreply, state}
+  end
+
+  def handle_info(
+        {:controller_pose, {hand, position, orientation, timestamp}},
+        state
+      )
+      when hand in [:left, :right] and
+             is_tuple(position) and tuple_size(position) == 3 and
+             is_tuple(orientation) and tuple_size(orientation) == 4 and
+             is_number(timestamp) do
+    now = now_ms()
+    context = build_context(state, now, now - state.start_ms)
+    data = %{hand: hand, position: position, orientation: orientation, timestamp: timestamp}
+    dispatch_event_to_components({:controller_pose, data}, context)
+    {:noreply, state}
+  end
+
+  def handle_info({:controller_button, {hand, button, pressed}}, state)
+      when hand in [:left, :right] and is_atom(button) and is_boolean(pressed) do
+    now = now_ms()
+    context = build_context(state, now, now - state.start_ms)
+    data = %{hand: hand, button: button, pressed: pressed}
+    dispatch_event_to_components({:controller_button, data}, context)
+    {:noreply, state}
+  end
+
+  def handle_info(
+        {:tracker_pose, {tracker_id, position, orientation, velocity, timestamp}},
+        state
+      )
+      when is_tuple(position) and tuple_size(position) == 3 and
+             is_tuple(orientation) and tuple_size(orientation) == 4 and
+             (is_nil(velocity) or (is_tuple(velocity) and tuple_size(velocity) == 3)) and
+             is_number(timestamp) do
+    now = now_ms()
+    context = build_context(state, now, now - state.start_ms)
+
+    data = %{
+      tracker_id: tracker_id,
+      position: position,
+      orientation: orientation,
+      velocity: velocity,
+      timestamp: timestamp
+    }
+
+    dispatch_event_to_components({:tracker_pose, data}, context)
+    {:noreply, state}
+  end
+
+  # 不正な VR イベントはログして無視（クラッシュ防止）
+  def handle_info({:head_pose, _}, state) do
+    Logger.warning("[VR] Ignoring malformed head_pose")
+    {:noreply, state}
+  end
+
+  def handle_info({:controller_pose, _}, state) do
+    Logger.warning("[VR] Ignoring malformed controller_pose")
+    {:noreply, state}
+  end
+
+  def handle_info({:controller_button, _}, state) do
+    Logger.warning("[VR] Ignoring malformed controller_button")
+    {:noreply, state}
+  end
+
+  def handle_info({:tracker_pose, _}, state) do
+    Logger.warning("[VR] Ignoring malformed tracker_pose")
+    {:noreply, state}
+  end
+
+  # ── インフォ: キー押下（InputHandler が raw_key から生成）───────────────
 
   def handle_info({:key_pressed, key}, state) when is_atom(key) do
     now = now_ms()
@@ -377,10 +472,10 @@ defmodule GameEngine.GameEvents do
 
   defp maybe_set_input_and_broadcast(state, mod, physics_scenes, events, context) do
     if mod in physics_scenes do
-      if state.room_id != :main do
-        {dx, dy} = GameEngine.InputHandler.get_move_vector()
-        GameEngine.NifBridge.set_player_input(state.world_ref, dx * 1.0, dy * 1.0)
-      end
+      # 全ルームでフレームごとに ETS から読む。InputHandler が raw_key で ETS を更新するため、
+      # メッセージ順序（frame_events vs move_input）に依存せず入力が 1 フレーム遅れない。
+      {dx, dy} = GameEngine.InputHandler.get_move_vector()
+      GameEngine.NifBridge.set_player_input(state.world_ref, dx * 1.0, dy * 1.0)
 
       run_component_physics_callbacks(context)
 

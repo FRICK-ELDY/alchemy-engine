@@ -2,7 +2,7 @@
 name = "game_render"
 version = "0.1.0"
 edition = "2021"
-description = "WGPU描画パイプライン・ウィンドウ管理・OS入力イベント処理"
+description = "WGPU描画パイプライン・HUD"
 
 [features]
 headless = []

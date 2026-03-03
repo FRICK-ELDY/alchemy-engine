@@ -7,6 +7,7 @@ description = "Elixir <-> Rust NIF通信インターフェース（Rustler）"
 [features]
 default = ["umbrella"]
 umbrella = []
+xr = ["game_input_openxr", "game_input_openxr/openxr"]
 
 [lib]
 name = "game_nif"
@@ -15,7 +16,9 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 game_physics = { path = "../game_physics", features = ["nif"] }
 game_audio      = { path = "../game_audio" }
+game_input      = { path = "../game_input" }
 game_render     = { path = "../game_render" }
+game_input_openxr = { path = "../game_input_openxr", optional = true }
 rustler = "0.34"
 rayon = "1"
 log = "0.4"
