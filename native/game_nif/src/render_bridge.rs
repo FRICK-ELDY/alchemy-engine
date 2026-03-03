@@ -15,7 +15,7 @@ use crate::render_frame_buffer::RenderFrameBuffer;
 use game_audio::AssetLoader;
 use game_physics::constants::{PLAYER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use game_physics::world::GameWorld;
-use game_render::window::{run_render_loop, KeyCode, RenderBridge, RendererInit, WindowConfig};
+use game_render::window::{run_render_loop, KeyCode, KeyState, RenderBridge, RendererInit, WindowConfig};
 use game_render::RenderFrame;
 use rustler::env::OwnedEnv;
 use rustler::{Encoder, LocalPid, ResourceArc};
@@ -131,13 +131,6 @@ impl RenderBridge for NativeRenderBridge {
         frame
     }
 
-    fn on_move_input(&self, dx: f32, dy: f32) {
-        let mut env = OwnedEnv::new();
-        let _ = env.send_and_clear(&self.elixir_pid, |env| {
-            (crate::move_input(), dx as f64, dy as f64).encode(env)
-        });
-    }
-
     fn on_ui_action(&self, action: String) {
         let mut env = OwnedEnv::new();
         let _ = env.send_and_clear(&self.elixir_pid, |env| {
@@ -145,31 +138,30 @@ impl RenderBridge for NativeRenderBridge {
         });
     }
 
-    fn on_mouse_delta(&self, dx: f32, dy: f32) {
-        let mut env = OwnedEnv::new();
-        let _ = env.send_and_clear(&self.elixir_pid, |env| {
-            (crate::mouse_delta(), dx as f64, dy as f64).encode(env)
-        });
-    }
-
-    fn on_sprint(&self, pressed: bool) {
-        let mut env = OwnedEnv::new();
-        let _ = env.send_and_clear(&self.elixir_pid, |env| {
-            (crate::sprint(), pressed).encode(env)
-        });
-    }
-
-    fn on_key_pressed(&self, key: KeyCode) {
-        // 転送対象キー（window.rs 側でフィルタ済み）:
-        //   - Escape
-        let key_atom = match key {
-            KeyCode::Escape => crate::escape(),
-            _ => return,
+    fn on_raw_key(&self, key: KeyCode, state: KeyState) {
+        let key_str = crate::key_map::key_code_to_atom_str(key);
+        let state_atom = match state {
+            KeyState::Pressed => crate::pressed(),
+            KeyState::Released => crate::released(),
         };
         let mut env = OwnedEnv::new();
         let _ = env.send_and_clear(&self.elixir_pid, |env| {
-            (crate::key_pressed(), key_atom).encode(env)
+            let key_atom = rustler::Atom::from_str(env, key_str)
+                .unwrap_or_else(|_| crate::unknown());
+            (crate::raw_key(), key_atom, state_atom).encode(env)
         });
+    }
+
+    fn on_raw_mouse_motion(&self, dx: f32, dy: f32) {
+        let mut env = OwnedEnv::new();
+        let _ = env.send_and_clear(&self.elixir_pid, |env| {
+            (crate::raw_mouse_motion(), dx as f64, dy as f64).encode(env)
+        });
+    }
+
+    fn on_focus_lost(&self) {
+        let mut env = OwnedEnv::new();
+        let _ = env.send_and_clear(&self.elixir_pid, |env| crate::focus_lost().encode(env));
     }
 }
 

@@ -36,13 +36,20 @@ rustler::atoms! {
     // Rust ゲームループ → Elixir 送信用
     frame_events,
     ui_action,
-    // フェーズ5: 移動入力用アトム
+    // フェーズ5: 移動入力用アトム（Elixir InputHandler が raw_key から生成）
     move_input,
     // 入力イベント用アトム
     mouse_delta,
     sprint,
     key_pressed,
     escape,
+    // 生入力イベント（デバイス抽象化設計）
+    raw_key,
+    raw_mouse_motion,
+    focus_lost,
+    pressed,
+    released,
+    unknown,
     // カーソルグラブ制御アトム
     grab,
     release,
@@ -52,6 +59,7 @@ rustler::atoms! {
     invincible,
 }
 
+mod key_map;
 mod lock_metrics;
 mod nif;
 mod render_bridge;

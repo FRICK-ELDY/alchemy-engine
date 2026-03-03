@@ -1175,6 +1175,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "game_input_openxr"
+version = "0.1.0"
+dependencies = [
+ "log",
+]
+
+[[package]]
 name = "game_nif"
 version = "0.1.0"
 dependencies = [
