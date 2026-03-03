@@ -15,6 +15,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 game_physics = { path = "../game_physics", features = ["nif"] }
 game_audio      = { path = "../game_audio" }
+game_input      = { path = "../game_input" }
 game_render     = { path = "../game_render" }
 rustler = "0.34"
 rayon = "1"

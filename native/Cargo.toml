@@ -5,6 +5,7 @@ members = [
     "game_audio",
     "game_render",
     "game_nif",
+    "game_input",
     "game_input_openxr",
 ]
 

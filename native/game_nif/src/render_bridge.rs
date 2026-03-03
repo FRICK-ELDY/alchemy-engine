@@ -15,7 +15,8 @@ use crate::render_frame_buffer::RenderFrameBuffer;
 use game_audio::AssetLoader;
 use game_physics::constants::{PLAYER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use game_physics::world::GameWorld;
-use game_render::window::{run_render_loop, KeyCode, KeyState, RenderBridge, RendererInit, WindowConfig};
+use game_input::run_desktop_loop;
+use game_render::window::{KeyCode, KeyState, RenderBridge, RendererInit, WindowConfig};
 use game_render::RenderFrame;
 use rustler::env::OwnedEnv;
 use rustler::{Encoder, LocalPid, ResourceArc};
@@ -43,7 +44,7 @@ pub fn run_render_thread(
         renderer_init: RendererInit { atlas_png },
     };
 
-    if let Err(e) = run_render_loop(bridge, config) {
+    if let Err(e) = run_desktop_loop(bridge, config) {
         eprintln!("Render thread: {e}");
     }
 }

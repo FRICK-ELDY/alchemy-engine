@@ -1,0 +1,10 @@
+[package]
+name = "game_input"
+version = "0.1.0"
+edition = "2021"
+description = "デスクトップ入力・ウィンドウ・イベントループ（winit）"
+
+[dependencies]
+game_render = { path = "../game_render" }
+winit = "0.30.12"
+pollster = "0.3"
