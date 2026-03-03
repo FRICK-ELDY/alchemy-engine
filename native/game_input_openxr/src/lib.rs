@@ -1,12 +1,45 @@
 //! Path: native/game_input_openxr/src/lib.rs
 //! Summary: OpenXR 入力ブリッジ（VR デバイス）
 //!
-//! Phase 3 で実装予定。以下のイベントを Elixir に送信する:
+//! 以下のイベントを game_nif 経由で Elixir に送信する:
 //! - `{:head_pose, data}` — ヘッドセットの位置・姿勢
 //! - `{:controller_pose, data}` — コントローラーの位置・姿勢
 //! - `{:controller_button, data}` — コントローラーボタン
-//! - `{:hand_pose, data}` — ハンドトラッキング（オプション）
 //! - `{:tracker_pose, data}` — トラッカーの位置・姿勢
+
+/// XR 入力ループを実行する。
+/// `on_event` が各イベントごとに呼ばれる。game_nif が Elixir へエンコード・送信する。
+///
+/// VR ランタイムが利用できない場合は即座に戻る。
+/// `openxr` フィーチャー有効時は OpenXR セッションを試行する。
+pub fn run_xr_input_loop<F>(mut on_event: F)
+where
+    F: FnMut(XrInputEvent) + Send + 'static,
+{
+    #[cfg(feature = "openxr")]
+    {
+        if let Err(e) = run_openxr_loop(&mut on_event) {
+            log::warn!("OpenXR input loop failed: {e} — VR input disabled");
+        }
+        return;
+    }
+
+    #[cfg(not(feature = "openxr"))]
+    {
+        log::debug!("OpenXR feature disabled — VR input unavailable");
+    }
+}
+
+#[cfg(feature = "openxr")]
+fn run_openxr_loop<F>(_on_event: &mut F) -> Result<(), String>
+where
+    F: FnMut(XrInputEvent),
+{
+    // TODO: OpenXR インスタンス・ヘッドレスセッション作成
+    // xrLocateSpace で head/controller pose 取得
+    // ポーリングループで on_event を呼ぶ
+    Err("OpenXR integration not yet implemented".to_string())
+}
 
 /// OpenXR 入力ソースのトレイト。
 /// Elixir へのイベント送信は game_nif が担う。

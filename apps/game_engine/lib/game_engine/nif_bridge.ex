@@ -3,6 +3,9 @@ defmodule GameEngine.NifBridge do
   Rust NIF のラッパーモジュール。
   `use Rustler` により、コンパイル時に `native/game_nif` クレートが
   自動的にビルドされ、`.dll` がロードされる。
+
+  VR 対応ビルド: `config :game_engine, GameEngine.NifBridge, features: ["xr"]`
+  を設定すると、mix compile 時に game_nif に --features xr が渡される。
   """
 
   use Rustler,
@@ -60,6 +63,9 @@ defmodule GameEngine.NifBridge do
   # atlas_path: アトラス PNG のファイルパス（Rust 側でロード、存在しない場合は埋め込みフォールバック）
   def start_render_thread(_world, _render_buf, _pid, _title, _atlas_path),
     do: :erlang.nif_error(:nif_not_loaded)
+
+  # Phase 3: XR 入力スレッド起動（VR 有効時のみ。xr フィーチャー無効時は nif_not_loaded）
+  def spawn_xr_input_thread(_pid), do: :erlang.nif_error(:nif_not_loaded)
 
   # Phase R-2: Elixir 側から DrawCommand リストを RenderFrameBuffer に push する
   # commands: DrawCommand タプルのリスト

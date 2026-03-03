@@ -13,5 +13,8 @@ mod save_nif;
 mod util;
 mod world_nif;
 
+#[cfg(feature = "xr")]
+mod xr_nif;
+
 pub use load::load;
 pub use save_nif::{SaveSnapshot, WeaponSlotSave};

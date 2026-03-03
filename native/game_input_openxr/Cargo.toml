@@ -4,7 +4,10 @@ version = "0.1.0"
 edition = "2021"
 description = "OpenXR 入力ブリッジ（VR ヘッドセット・コントローラー・トラッカー）"
 
+[features]
+default = []
+openxr = ["dep:openxr"]
+
 [dependencies]
-# Phase 3 で OpenXR 実装時に追加
-# openxr = "1.x"
 log = "0.4"
+openxr = { version = "0.21", optional = true }

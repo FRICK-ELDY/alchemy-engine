@@ -228,6 +228,92 @@ defmodule GameEngine.GameEvents do
     {:noreply, state}
   end
 
+  # ── インフォ: VR 入力イベント（game_input_openxr → game_nif 経由）───────
+  # position: {x,y,z}, orientation: {qx,qy,qz,qw}, velocity: {vx,vy,vz}
+  # 不正なペイロードはフォールバックで無視しクラッシュを防ぐ。
+
+  def handle_info(
+        {:head_pose, {position, orientation, timestamp}},
+        state
+      )
+      when is_tuple(position) and tuple_size(position) == 3 and
+             is_tuple(orientation) and tuple_size(orientation) == 4 and
+             is_number(timestamp) do
+    now = now_ms()
+    context = build_context(state, now, now - state.start_ms)
+    data = %{position: position, orientation: orientation, timestamp: timestamp}
+    dispatch_event_to_components({:head_pose, data}, context)
+    {:noreply, state}
+  end
+
+  def handle_info(
+        {:controller_pose, {hand, position, orientation, timestamp}},
+        state
+      )
+      when hand in [:left, :right] and
+             is_tuple(position) and tuple_size(position) == 3 and
+             is_tuple(orientation) and tuple_size(orientation) == 4 and
+             is_number(timestamp) do
+    now = now_ms()
+    context = build_context(state, now, now - state.start_ms)
+    data = %{hand: hand, position: position, orientation: orientation, timestamp: timestamp}
+    dispatch_event_to_components({:controller_pose, data}, context)
+    {:noreply, state}
+  end
+
+  def handle_info({:controller_button, {hand, button, pressed}}, state)
+      when hand in [:left, :right] and is_atom(button) and is_boolean(pressed) do
+    now = now_ms()
+    context = build_context(state, now, now - state.start_ms)
+    data = %{hand: hand, button: button, pressed: pressed}
+    dispatch_event_to_components({:controller_button, data}, context)
+    {:noreply, state}
+  end
+
+  def handle_info(
+        {:tracker_pose, {tracker_id, position, orientation, velocity, timestamp}},
+        state
+      )
+      when is_tuple(position) and tuple_size(position) == 3 and
+             is_tuple(orientation) and tuple_size(orientation) == 4 and
+             (is_nil(velocity) or (is_tuple(velocity) and tuple_size(velocity) == 3)) and
+             is_number(timestamp) do
+    now = now_ms()
+    context = build_context(state, now, now - state.start_ms)
+
+    data = %{
+      tracker_id: tracker_id,
+      position: position,
+      orientation: orientation,
+      velocity: velocity,
+      timestamp: timestamp
+    }
+
+    dispatch_event_to_components({:tracker_pose, data}, context)
+    {:noreply, state}
+  end
+
+  # 不正な VR イベントはログして無視（クラッシュ防止）
+  def handle_info({:head_pose, _}, state) do
+    Logger.warning("[VR] Ignoring malformed head_pose")
+    {:noreply, state}
+  end
+
+  def handle_info({:controller_pose, _}, state) do
+    Logger.warning("[VR] Ignoring malformed controller_pose")
+    {:noreply, state}
+  end
+
+  def handle_info({:controller_button, _}, state) do
+    Logger.warning("[VR] Ignoring malformed controller_button")
+    {:noreply, state}
+  end
+
+  def handle_info({:tracker_pose, _}, state) do
+    Logger.warning("[VR] Ignoring malformed tracker_pose")
+    {:noreply, state}
+  end
+
   # ── インフォ: キー押下（InputHandler が raw_key から生成）───────────────
 
   def handle_info({:key_pressed, key}, state) when is_atom(key) do

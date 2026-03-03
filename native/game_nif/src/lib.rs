@@ -57,6 +57,29 @@ rustler::atoms! {
     boss,
     enemy,
     invincible,
+    // Phase 3: VR 入力イベント
+    head_pose,
+    controller_pose,
+    controller_button,
+    tracker_pose,
+    left,
+    right,
+    trigger,
+    grip,
+    thumbstick,
+    // a,b,x,y は raw_key（キーボード）と controller_button（VR コントローラー）で共通。
+    // イベント種別で区別されるため混同しない。
+    a,
+    b,
+    x,
+    y,
+    menu,
+    system,
+    // VR イベント用（map キー）
+    position,
+    orientation,
+    timestamp,
+    velocity,
 }
 
 mod key_map;
@@ -64,6 +87,9 @@ mod lock_metrics;
 mod nif;
 mod render_bridge;
 mod render_frame_buffer;
+
+#[cfg(feature = "xr")]
+mod xr_bridge;
 
 pub use game_audio::{
     start_audio_thread, AssetId, AssetLoader, AudioCommand, AudioCommandSender, AudioManager,

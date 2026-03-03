@@ -13,8 +13,7 @@ config :game_network, :json_library, Jason
 # ── GameNetwork.UDP（UDP トランスポートサーバー）─────────────────────
 # デフォルトポート: 4001
 # 変更する場合は config/runtime.exs の GAME_NETWORK_UDP_PORT を設定する。
-config :game_network, GameNetwork.UDP,
-  port: 4001
+config :game_network, GameNetwork.UDP, port: 4001
 
 # ── 使用するコンテンツを指定する。
 # GameContent.VampireSurvivor — ヴァンパイアサバイバークローン
@@ -29,3 +28,7 @@ config :game_server, :map, :plain
 # ローカルゲームの性質上、完全な改ざん防止は不可能だが、
 # 環境ごとに鍵を変えることで配布バイナリ間の互換性を制御できる。
 config :game_engine, :save_hmac_secret, "alchemy-engine-save-secret-v1"
+
+# VR 対応 NIF をビルドする場合: features: ["xr"]
+# mix compile 時に game_nif に --features xr が渡される。
+config :game_engine, GameEngine.NifBridge, features: []
