@@ -88,6 +88,29 @@ alchemy-engine/
 
 （※チーム開発時のガイドラインや、コントリビューションルールの詳細をここに記載します）
 
+---
+
+## Acknowledgments
+
+### Vision Correction Pass（オプション機能）
+
+VR/HMD 向けに、ソフトウェアによる視度補正（逆畳み込み Pre-filtering）を検討しています。本機能は **On/Off 切り替え可能** に設計します。詳細は [docs/paper/vision-correction-pass-tech-spec.md](./docs/paper/vision-correction-pass-tech-spec.md) を参照。
+
+**参考研究**:
+- Xu et al., "Software Based Visual Aberration Correction for HMDs," *IEEE VR*, 2018.
+- Thibos et al., "Calculation of the geometrical point-spread function from wavefront aberrations," *Ophthalmic & Physiological Optics*, 2019.
+
+### Patent Notice（特許に関する注意）
+
+Vision Correction Pass で用いるアルゴリズム（逆畳み込み、処方箋からの PSF 導出、Wiener フィルタ等）は、第三者の特許の対象となる可能性があります。関連特許の例：US10529059B2（MIT/UCSD）、US20160314564A1（eSight）。本プロジェクトは特許の実施可能性（Freedom-to-Operate）を保証しません。利用前に適切な専門家にご相談ください。
+
+---
+
 ## 📄 License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under either of
+
+- [Apache License, Version 2.0](LICENSE-APACHE)
+- [MIT License](LICENSE)
+
+at your option.
