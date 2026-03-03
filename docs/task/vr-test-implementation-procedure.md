@@ -12,7 +12,7 @@
 
 | コンポーネント | 状態 | 備考 |
 |:---|:---|:---|
-| `native/game_input_openxr` | 骨格のみ | `run_openxr_loop` は `Err("OpenXR integration not yet implemented")` を返す |
+| `native/game_input_openxr` | ✅ 実装済み | XR_MND_headless でヘッドレスセッション、head pose 取得 |
 | `native/game_nif` xr_bridge | 完了 | XrInputEvent → Elixir タプル変換・送信は実装済み |
 | `apps/game_engine/game_events.ex` | 完了 | `{:head_pose}`, `{:controller_pose}` 等の `handle_info` は実装済み |
 | `native/game_render` | デスクトップのみ | winit + wgpu でウィンドウ描画。VR ステレオレンダリング・OpenXR コンポジションは未対応 |
@@ -49,6 +49,7 @@ OpenXR runtime → game_input_openxr → xr_bridge → GameEvents
 
 | 課題 | 重要度 | 内容 |
 |:---|:---|:---|
+| **OpenXR ローダーが LoadLibraryExW で失敗** | 高 | Steam が標準パス外の場合、`openxr_loader.dll` が見つからない。ユーザー設定不要の解決策が未確立。→ [vr-openxr-loader-path-issue.md](./vr-openxr-loader-path-issue.md) |
 | **XR 入力スレッド未起動** | 中 | `spawn_xr_input_thread` が GameEvents の init から呼ばれていない |
 | **VR 専用コンテンツの設定** | 低 | `config :game_server, :current` を VRTest に切り替える必要 |
 | **head_pose の座標系** | 中 | OpenXR の reference space と game_render のカメラ座標系の対応を確認する必要がある |
