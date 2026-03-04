@@ -161,7 +161,7 @@ Hub     ← コンテンツの一覧・選択・参加
 | `GameEngine.WorldBehaviour` | World 定義インターフェース | `GameEngine.Component` に統合予定 |
 | `GameEngine.RuleBehaviour` | Rule 定義インターフェース | `GameEngine.Component` に統合予定 |
 | `GameEngine.Config` | `current_world` / `current_rule` の設定解決 | `:current` キー一本に変更予定 |
-| `GameEngine.SceneBehaviour` | シーンインターフェース | 現状維持 |
+| `Contents.SceneBehaviour` | シーンインターフェース | contents 層に配置（移行済み） |
 | `GameEngine.GameEvents` | エンジンコア | コンポーネントライフサイクル呼び出しに対応予定 |
 | `GameContent.VampireSurvivorWorld` | WorldBehaviour の実装 | コンポーネントに分解予定 |
 | `GameContent.VampireSurvivorRule` | RuleBehaviour の実装 | コンポーネントに分解予定 |

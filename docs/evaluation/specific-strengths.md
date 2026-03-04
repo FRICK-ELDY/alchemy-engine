@@ -183,7 +183,7 @@
   > 対象ファイル: `apps/network/test/support/room_stubs.ex`
 
 - **純粋関数テストの徹底** `+3`
-  > `contents` の7テストファイルがすべて純粋関数・ロジック部分のみをテストし、NIF・SceneManagerへの依存を避けている。`async: true` で並列実行可能。
+  > `contents` の7テストファイルがすべて純粋関数・ロジック部分のみをテストし、NIF・シーン管理（Contents.SceneStack）への依存を避けている。`async: true` で並列実行可能。
   > 対象ファイル: `apps/contents/test/`
 
 ---

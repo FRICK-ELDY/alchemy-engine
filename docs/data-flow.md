@@ -18,7 +18,7 @@ sequenceDiagram
     participant COMP as Component 群（on_ready）
 
     MX->>APP: start/2
-    APP->>APP: Registry / SceneManager / InputHandler / EventBus 起動
+    APP->>APP: Registry / Contents.SceneStack / InputHandler / EventBus 起動
     APP->>RS: RoomSupervisor 起動
     APP->>APP: StressMonitor / Stats / Telemetry 起動
     APP->>RS: start_room(:main)
@@ -277,7 +277,7 @@ flowchart LR
 graph TB
     subgraph BEAM["Elixir BEAM VM"]
         GEV[GameEvents\nGenServer]
-        SCM[SceneManager\nGenServer]
+        SS[Contents.SceneStack\nGenServer]
         EVB[EventBus\nGenServer]
         STS[Stats\nGenServer]
     end

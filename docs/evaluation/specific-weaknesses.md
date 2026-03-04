@@ -16,9 +16,7 @@
 
 ### ❌ マイナス点
 
-- **SceneManager がシングルトン（マルチルーム非対応）** `-3`
-  > `SceneManager` がモジュール名で登録されるシングルトンであり `room_id` を持たない。`GameEvents` はマルチルーム対応（`room_id` を持つ）だが、シーン状態は全ルームで共有される。`game_events.ex` L207-214 で `:main` 以外のルームはシーン処理をスキップする実装になっており、マルチルーム対応を本格化する際には `SceneManager` のルーム分離が必要。ネットワーク層でマルチルームを謳いながらエンジンコアがシングルトンである矛盾が設計上の欠陥。
-  > 対象ファイル: `apps/core/lib/core/scene_manager.ex`（L11）
+- ~~**SceneManager がシングルトン（マルチルーム非対応）**~~ **解決済み**（scene-management-to-contents 移行により `Contents.SceneStack` に置換。`room_id` オプション対応の設計）
 
 - **GameEvents に BatLord 固有ロジックが漏出** `-2`
   > エンジンコアである `GameEvents` の `handle_info` に `{:boss_dash_end, world_ref}` というBatLord固有のメッセージ処理が実装されている。実装ルールの「エンジンはディスパッチのみ行う」に違反しており、コンテンツを追加するたびにエンジンコアを変更するリスクがある。`BossComponent.on_physics_process` が `GameEvents` プロセスに `Process.send_after` しているため、構造的に回避が難しい状態になっている。
@@ -28,8 +26,8 @@
   > `hmac_secret/0` のデフォルト値 `"alchemy-engine-save-secret-v1"` がソースコードに公開されており、セーブデータの改ざん検証が実質的に無効化されている。本番環境で環境変数等で上書きしなければ全ユーザーのセーブデータが改ざん可能。強制機構がない。
   > 対象ファイル: `apps/core/lib/core/save_manager.ex`（L162）
 
-- **GameEngine.SceneManager・GameEvents・EventBus・SaveManager のテストがゼロ** `-4`
-  > エンジンコアの中核モジュール群（`SceneManager`・`GameEvents`・`EventBus`・`SaveManager`・`StressMonitor`・`Stats`）に対するテストが一切存在しない。`improvement-plan.md` でも自己認識されているが、エンジンコアのリグレッションを検出する手段がなく、リファクタリングの安全網がない。
+- **Contents.SceneStack・GameEvents・EventBus・SaveManager のテストがゼロ** `-4`
+  > エンジンコアの中核モジュール群（`Contents.SceneStack`・`GameEvents`・`EventBus`・`SaveManager`・`StressMonitor`・`Stats`）に対するテストが一切存在しない。`improvement-plan.md` でも自己認識されているが、エンジンコアのリグレッションを検出する手段がなく、リファクタリングの安全網がない。（※ `Core.SceneManager` は `Contents.SceneStack` に移行済み）
   > 対象ファイル: `apps/core/test/`（存在しない）
 
 ---
