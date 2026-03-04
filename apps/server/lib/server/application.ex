@@ -8,7 +8,7 @@ defmodule Server.Application do
 
   @impl true
   def start(_type, _args) do
-    content = Application.get_env(:server, :current, GameContent.VampireSurvivor)
+    content = Application.get_env(:server, :current, Content.VampireSurvivor)
 
     assets_path =
       if function_exported?(content, :assets_path, 0), do: content.assets_path(), else: ""

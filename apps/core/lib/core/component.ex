@@ -37,11 +37,11 @@ defmodule Core.Component do
   コンテンツモジュールは `components/0` を実装し、
   使用するコンポーネントのモジュールリストを返す。
 
-      defmodule GameContent.MyGame do
+      defmodule Content.MyGame do
         def components do
           [
-            GameContent.MyGame.SpawnComponent,
-            GameContent.MyGame.LevelComponent,
+            Content.MyGame.SpawnComponent,
+            Content.MyGame.LevelComponent,
           ]
         end
       end
