@@ -3,7 +3,7 @@
 //!
 //! 生イベント転送用。Elixir 側でキー→意味のマッピングを行う。
 
-use game_render::window::KeyCode;
+use render::window::KeyCode;
 
 macro_rules! key_map {
     ($($key:ident => $atom:literal),* $(,)?) => {

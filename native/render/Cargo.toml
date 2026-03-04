@@ -1,5 +1,5 @@
 [package]
-name = "game_render"
+name = "render"
 version = "0.1.0"
 edition = "2021"
 description = "WGPU描画パイプライン・HUD"
@@ -8,7 +8,7 @@ description = "WGPU描画パイプライン・HUD"
 headless = []
 
 [dependencies]
-game_physics = { path = "../game_physics" }
+physics = { path = "../physics" }
 wgpu = "24"
 winit = "0.30.12"
 bytemuck = { version = "1", features = ["derive"] }

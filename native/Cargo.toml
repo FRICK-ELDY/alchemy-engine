@@ -1,12 +1,12 @@
 [workspace]
 resolver = "2"
 members = [
-    "game_physics",
-    "game_audio",
-    "game_render",
+    "physics",
+    "audio",
+    "render",
     "game_nif",
-    "game_input",
-    "game_input_openxr",
+    "input",
+    "input_openxr",
 ]
 
 [profile.dev]

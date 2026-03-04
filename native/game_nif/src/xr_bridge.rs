@@ -1,11 +1,11 @@
 //! Path: native/game_nif/src/xr_bridge.rs
 //! Summary: XR 入力イベントの Elixir 送信
 //!
-//! game_input_openxr が生成した XrInputEvent を Elixir のメッセージ形式に
+//! input_openxr が生成した XrInputEvent を Elixir のメッセージ形式に
 //! エンコードして GameEvents に送信する。
 
 #[cfg(feature = "xr")]
-use game_input_openxr::{ControllerButton, Hand, XrInputEvent};
+use input_openxr::{ControllerButton, Hand, XrInputEvent};
 use rustler::env::OwnedEnv;
 use rustler::{Encoder, LocalPid};
 use std::panic::AssertUnwindSafe;
@@ -116,13 +116,13 @@ fn encode_and_send(pid: LocalPid, event: XrInputEvent) {
 }
 
 /// XR 入力スレッドを起動する。
-/// game_input_openxr::run_xr_input_loop を別スレッドで実行し、
+/// input_openxr::run_xr_input_loop を別スレッドで実行し、
 /// イベントを Elixir に送信する。
 #[cfg(feature = "xr")]
 pub fn run_xr_input_thread(pid: LocalPid) {
     thread::spawn(move || {
         if let Err(e) = std::panic::catch_unwind(AssertUnwindSafe(|| {
-            game_input_openxr::run_xr_input_loop(|event| encode_and_send(pid, event));
+            input_openxr::run_xr_input_loop(|event| encode_and_send(pid, event));
         })) {
             log::error!("XR input thread panicked: {:?}", e);
         }

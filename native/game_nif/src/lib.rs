@@ -91,19 +91,19 @@ mod render_frame_buffer;
 #[cfg(feature = "xr")]
 mod xr_bridge;
 
-pub use game_audio::{
+pub use audio::{
     start_audio_thread, AssetId, AssetLoader, AudioCommand, AudioCommandSender, AudioManager,
 };
-pub use game_physics::game_logic::{
+pub use nif::{SaveSnapshot, WeaponSlotSave};
+pub use physics::game_logic::{
     find_nearest_enemy, find_nearest_enemy_spatial, find_nearest_enemy_spatial_excluding,
 };
-pub use game_physics::world::{
+pub use physics::world::{
     BossState, BulletWorld, EnemyWorld, FrameEvent, GameLoopControl, GameWorld, GameWorldInner,
     ParticleWorld, PlayerState, BULLET_KIND_FIREBALL, BULLET_KIND_LIGHTNING, BULLET_KIND_NORMAL,
     BULLET_KIND_ROCK, BULLET_KIND_WHIP,
 };
-pub use game_render::RenderFrame;
-pub use nif::{SaveSnapshot, WeaponSlotSave};
+pub use render::RenderFrame;
 
 #[cfg(feature = "umbrella")]
 rustler::init!("Elixir.GameEngine.NifBridge", load = nif::load);

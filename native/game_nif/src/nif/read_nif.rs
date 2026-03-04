@@ -2,7 +2,7 @@
 //! Summary: 読み取り専用 NIF（get_*、debug_dump_world、is_player_dead）
 
 use super::util::lock_poisoned_err;
-use game_physics::world::GameWorld;
+use physics::world::GameWorld;
 use rustler::{Atom, NifResult, ResourceArc};
 
 use crate::{alive, none};
@@ -300,7 +300,7 @@ pub fn get_weapon_upgrade_descs(
     weapon_choices: Vec<String>,
     weapon_slots: Vec<(u32, u32)>,
 ) -> NifResult<Vec<Vec<String>>> {
-    use game_physics::weapon::weapon_upgrade_desc;
+    use physics::weapon::weapon_upgrade_desc;
 
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;
 

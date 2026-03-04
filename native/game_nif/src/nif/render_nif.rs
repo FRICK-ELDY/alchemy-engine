@@ -7,7 +7,7 @@
 
 use crate::render_bridge::run_render_thread;
 use crate::render_frame_buffer::RenderFrameBuffer;
-use game_physics::world::GameWorld;
+use physics::world::GameWorld;
 use rustler::{Atom, LocalPid, NifResult, ResourceArc};
 use std::panic::AssertUnwindSafe;
 use std::thread;

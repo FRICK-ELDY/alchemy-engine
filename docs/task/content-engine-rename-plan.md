@@ -61,17 +61,17 @@
 
 ---
 
-### フェーズ 1: Native クレートのリネーム
+### フェーズ 1: Native クレートのリネーム ✅ 完了
 
 Rust 側のクレート名・ディレクトリを先に変更。Elixir からは `game_nif` 経由で参照されるため、`game_nif` はこのフェーズでは変更しない。
 
-| # | タスク | 対象 |
-|:---:|:---|:---|
-| 1.1 | `game_audio` → `audio` | ディレクトリ移動、Cargo.toml、`native/Cargo.toml` members、`game_nif` の依存 |
-| 1.2 | `game_input` → `input` | 同上。`game_input_openxr` が依存する場合は後述フェーズで対応 |
-| 1.3 | `game_physics` → `physics` | 同上 |
-| 1.4 | `game_render` → `render` | 同上 |
-| 1.5 | `game_input_openxr` → `input_openxr` | ディレクトリ、Cargo.toml、`game_nif` の optional 依存 |
+| # | タスク | 対象 | 状態 |
+|:---:|:---|:---|:---:|
+| 1.1 | `game_audio` → `audio` | ディレクトリ移動、Cargo.toml、`native/Cargo.toml` members、`game_nif` の依存 | ✅ |
+| 1.2 | `game_input` → `input` | 同上。`game_input_openxr` が依存する場合は後述フェーズで対応 | ✅ |
+| 1.3 | `game_physics` → `physics` | 同上 | ✅ |
+| 1.4 | `game_render` → `render` | 同上 | ✅ |
+| 1.5 | `game_input_openxr` → `input_openxr` | ディレクトリ、Cargo.toml、`game_nif` の optional 依存 | ✅ |
 
 **注意:** 各クレート内の `use game_xxx::` 等の参照をすべて `use xxx::` に置換する。
 

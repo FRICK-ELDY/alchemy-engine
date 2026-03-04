@@ -5,7 +5,7 @@
 //! push_render_frame NIF 経由でバッファに書き込む。
 
 use crate::render_frame_buffer::RenderFrameBuffer;
-use game_render::{
+use render::{
     CameraParams, DrawCommand, RenderFrame, UiAnchor, UiCanvas, UiComponent, UiNode, UiRect, UiSize,
 };
 use rustler::types::list::ListIterator;

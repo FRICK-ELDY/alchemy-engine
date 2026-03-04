@@ -8,8 +8,8 @@ use crate::{
     renderer::{build_sprite_instances, SpriteInstance, MAX_INSTANCES},
     RenderFrame,
 };
-use game_physics::constants::{BG_B, BG_G, BG_R};
 use image::{ImageBuffer, Rgba};
+use physics::constants::{BG_B, BG_G, BG_R};
 use wgpu::util::DeviceExt;
 
 const DEFAULT_WIDTH: u32 = 800;
