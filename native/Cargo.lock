@@ -1175,23 +1175,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "game_nif"
-version = "0.1.0"
-dependencies = [
- "audio",
- "bincode",
- "env_logger",
- "input",
- "input_openxr",
- "log",
- "physics",
- "rayon",
- "render",
- "rustler",
- "serde",
-]
-
-[[package]]
 name = "gethostname"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1914,6 +1897,23 @@ name = "new_debug_unreachable"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "650eef8c711430f1a879fdd01d4745a7deea475becfb90269c06775983bbf086"
+
+[[package]]
+name = "nif"
+version = "0.1.0"
+dependencies = [
+ "audio",
+ "bincode",
+ "env_logger",
+ "input",
+ "input_openxr",
+ "log",
+ "physics",
+ "rayon",
+ "render",
+ "rustler",
+ "serde",
+]
 
 [[package]]
 name = "nohash-hasher"

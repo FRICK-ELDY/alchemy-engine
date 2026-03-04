@@ -31,5 +31,5 @@ config :game_server, :map, :plain
 config :game_engine, :save_hmac_secret, "alchemy-engine-save-secret-v1"
 
 # VR 対応 NIF をビルドする場合: features: ["xr"]
-# mix compile 時に game_nif に --features xr が渡される。
+# mix compile 時に nif に --features xr が渡される。
 config :game_engine, GameEngine.NifBridge, features: []

@@ -4,7 +4,7 @@ members = [
     "physics",
     "audio",
     "render",
-    "game_nif",
+    "nif",
     "input",
     "input_openxr",
 ]
