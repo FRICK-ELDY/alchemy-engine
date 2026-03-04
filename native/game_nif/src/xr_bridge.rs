@@ -81,7 +81,10 @@ fn encode_and_send(pid: LocalPid, event: XrInputEvent) {
                 ControllerButton::Menu => crate::menu(),
                 ControllerButton::System => crate::system(),
             };
-            let data = (crate::controller_button(), (hand_atom, button_atom, *pressed));
+            let data = (
+                crate::controller_button(),
+                (hand_atom, button_atom, *pressed),
+            );
             data.encode(env)
         }
         XrInputEvent::TrackerPose {

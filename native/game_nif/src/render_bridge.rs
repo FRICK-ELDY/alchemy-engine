@@ -13,9 +13,9 @@
 use crate::lock_metrics::record_read_wait;
 use crate::render_frame_buffer::RenderFrameBuffer;
 use game_audio::AssetLoader;
+use game_input::run_desktop_loop;
 use game_physics::constants::{PLAYER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use game_physics::world::GameWorld;
-use game_input::run_desktop_loop;
 use game_render::window::{KeyCode, KeyState, RenderBridge, RendererInit, WindowConfig};
 use game_render::RenderFrame;
 use rustler::env::OwnedEnv;
@@ -147,8 +147,8 @@ impl RenderBridge for NativeRenderBridge {
         };
         let mut env = OwnedEnv::new();
         let _ = env.send_and_clear(&self.elixir_pid, |env| {
-            let key_atom = rustler::Atom::from_str(env, key_str)
-                .unwrap_or_else(|_| crate::unknown());
+            let key_atom =
+                rustler::Atom::from_str(env, key_str).unwrap_or_else(|_| crate::unknown());
             (crate::raw_key(), key_atom, state_atom).encode(env)
         });
     }

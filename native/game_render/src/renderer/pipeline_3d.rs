@@ -147,7 +147,10 @@ fn box_mesh(
     let (y0, y1) = (cy - hh, cy + hh);
     let (z0, z1) = (cz - hd, cz + hd);
 
-    let v = |pos| MeshVertex { position: pos, color };
+    let v = |pos| MeshVertex {
+        position: pos,
+        color,
+    };
     let verts = [
         v([x0, y0, z0]),
         v([x1, y0, z0]),
@@ -179,10 +182,22 @@ fn grid_lines(size: f32, divisions: u32, color: [f32; 4], out: &mut Vec<MeshVert
     let n = divisions + 1;
     for i in 0..n {
         let t = -half + i as f32 * step;
-        out.push(MeshVertex { position: [-half, 0.0, t], color });
-        out.push(MeshVertex { position: [half, 0.0, t], color });
-        out.push(MeshVertex { position: [t, 0.0, -half], color });
-        out.push(MeshVertex { position: [t, 0.0, half], color });
+        out.push(MeshVertex {
+            position: [-half, 0.0, t],
+            color,
+        });
+        out.push(MeshVertex {
+            position: [half, 0.0, t],
+            color,
+        });
+        out.push(MeshVertex {
+            position: [t, 0.0, -half],
+            color,
+        });
+        out.push(MeshVertex {
+            position: [t, 0.0, half],
+            color,
+        });
     }
 }
 
@@ -192,10 +207,22 @@ fn grid_lines(size: f32, divisions: u32, color: [f32; 4], out: &mut Vec<MeshVert
 /// depth = 0.999 とすることで深度テストなしパスで最背面に描画される。
 fn skybox_verts(top: [f32; 4], bottom: [f32; 4]) -> [MeshVertex; 4] {
     [
-        MeshVertex { position: [-1.0, 1.0, 0.999], color: top },
-        MeshVertex { position: [1.0, 1.0, 0.999], color: top },
-        MeshVertex { position: [1.0, -1.0, 0.999], color: bottom },
-        MeshVertex { position: [-1.0, -1.0, 0.999], color: bottom },
+        MeshVertex {
+            position: [-1.0, 1.0, 0.999],
+            color: top,
+        },
+        MeshVertex {
+            position: [1.0, 1.0, 0.999],
+            color: top,
+        },
+        MeshVertex {
+            position: [1.0, -1.0, 0.999],
+            color: bottom,
+        },
+        MeshVertex {
+            position: [-1.0, -1.0, 0.999],
+            color: bottom,
+        },
     ]
 }
 
@@ -506,7 +533,11 @@ impl Pipeline3D {
         // `mvp_buf` の内容（3D カメラ行列）に依存しない。
         // 別 Uniform バッファは不要。
         let sky_cmd = commands.iter().find_map(|c| {
-            if let DrawCommand::Skybox { top_color, bottom_color } = c {
+            if let DrawCommand::Skybox {
+                top_color,
+                bottom_color,
+            } = c
+            {
                 Some((*top_color, *bottom_color))
             } else {
                 None
@@ -548,14 +579,27 @@ impl Pipeline3D {
 
         for cmd in commands {
             match cmd {
-                DrawCommand::GridPlane { size, divisions, color } => {
+                DrawCommand::GridPlane {
+                    size,
+                    divisions,
+                    color,
+                } => {
                     grid_lines(*size, *divisions, *color, &mut self.grid_verts_scratch);
                 }
-                DrawCommand::Box3D { x, y, z, half_w, half_h, half_d, color } => {
+                DrawCommand::Box3D {
+                    x,
+                    y,
+                    z,
+                    half_w,
+                    half_h,
+                    half_d,
+                    color,
+                } => {
                     let base = self.box_verts_scratch.len() as u32;
                     let (verts, idx) = box_mesh(*x, *y, *z, *half_w, *half_h, *half_d, *color);
                     self.box_verts_scratch.extend_from_slice(&verts);
-                    self.box_indices_scratch.extend(idx.iter().map(|i| i + base));
+                    self.box_indices_scratch
+                        .extend(idx.iter().map(|i| i + base));
                 }
                 _ => {}
             }

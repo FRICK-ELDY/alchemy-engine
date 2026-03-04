@@ -8,9 +8,8 @@ use game_physics::item::{RENDER_KIND_GEM, RENDER_KIND_MAGNET, RENDER_KIND_POTION
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
 use winit::window::Window;
-mod ui;
 pub(crate) mod pipeline_3d;
-
+mod ui;
 
 pub(crate) const ELITE_RENDER_KIND_OFFSET: u8 = 20;
 pub(crate) const ELITE_SIZE_MULTIPLIER: f32 = 1.2;
@@ -273,7 +272,6 @@ pub(crate) fn enemy_anim_uv(kind: u8, frame: u8) -> ([f32; 2], [f32; 2]) {
         _ => slime_anim_uv(frame),
     }
 }
-
 
 /// ロードダイアログの種別
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
