@@ -1,5 +1,5 @@
 [package]
-name = "game_nif"
+name = "nif"
 version = "0.1.0"
 edition = "2021"
 description = "Elixir <-> Rust NIF通信インターフェース（Rustler）"
@@ -10,7 +10,7 @@ umbrella = []
 xr = ["input_openxr", "input_openxr/openxr"]
 
 [lib]
-name = "game_nif"
+name = "nif"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
