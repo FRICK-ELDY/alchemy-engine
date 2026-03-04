@@ -35,7 +35,7 @@ defmodule Content.RollingBall do
 
   # ── シーン定義 ────────────────────────────────────────────────────
 
-  def flow_runner(_room_id), do: Process.whereis(Core.SceneManager)
+  def flow_runner(_room_id), do: Process.whereis(Contents.SceneStack)
 
   def initial_scenes do
     [%{module: Content.RollingBall.Scenes.Title, init_arg: %{}}]

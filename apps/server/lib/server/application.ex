@@ -17,7 +17,7 @@ defmodule Server.Application do
 
     children = [
       {Registry, [keys: :unique, name: Core.RoomRegistry]},
-      Core.SceneManager,
+      {Contents.SceneStack, [content_module: content]},
       Core.InputHandler,
       Core.EventBus,
       Core.RoomSupervisor,
