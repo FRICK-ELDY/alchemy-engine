@@ -58,6 +58,14 @@ defmodule Core.ContentBehaviour do
   """
   @callback pause_on_push?(scene_module()) :: boolean()
 
+  @doc """
+  ルーム用の SceneStack の Superviser.child_spec/0 を返す。
+
+  ルーム起動時に content が自分の SceneStack を起動する際に使用する。
+  room_id はマルチルーム対応用（単一ルーム時は任意の値でよい）。
+  """
+  @callback scene_stack_spec(room_id :: term()) :: Supervisor.child_spec()
+
   @optional_callbacks [
     level_up_scene: 0,
     boss_alert_scene: 0,
@@ -65,6 +73,7 @@ defmodule Core.ContentBehaviour do
     generate_weapon_choices: 1,
     apply_weapon_selected: 2,
     apply_level_up_skipped: 1,
-    pause_on_push?: 1
+    pause_on_push?: 1,
+    scene_stack_spec: 1
   ]
 end
