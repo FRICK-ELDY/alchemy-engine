@@ -3,20 +3,9 @@
 
 > A platform for worlds. You bring the rules.
 
-3D空間とそこに存在するユーザーを保証するゲームエンジンです。
+3D空間とそこに存在するユーザーを保証する Elixir x Rust 製のエンジンです。
 
 詳細は [ビジョンと設計思想](./docs/vision.md) を参照。
-
-## アーキテクチャのハイライト
-
-- **Elixir as SSoT**
-> 状態とロジックはすべて Elixir 側で管理します。クライアント用のコードをそのままヘッドレスのマルチプレイサーバーとして転用可能です。1000人規模のプレイヤーが交差する大規模ネットワークも Elixir の並行処理能力で捌きます。
-- **Rust ECS for Physics & Rendering & Audio**
-> Elixir から同期された状態をもとに、Rust の ECS が 60Hz 固定の物理演算・描画・オーディオ処理を行います。SoA（Structure of Arrays）と SIMD による CPU キャッシュ最適化で、高フレームレートを維持します。
-- **Zero NIF Serialization Overhead**
-> Elixir <--> Rustの通信は軽量な識別子のみ。バイナリのシリアライズコストを設計レベルで排除しています。
-- **SuperCollider-inspired Audio**
-> Elixir が「指揮者」として非同期コマンドを発行し、Rust の専用スレッドが DSP 処理を行います。複雑な空間オーディオと動的ルーティングを低遅延で実現します。
 
 ## 🏗️ Architecture
 
@@ -47,6 +36,19 @@ flowchart TB
     nif_bridge --> render
 ```
 
+## ハイライト
+
+- **Elixir as SSoT**
+> 状態とロジックはすべて Elixir 側で管理します。クライアント用のコードをそのままヘッドレスのマルチプレイサーバーとして転用可能です。1000人規模のプレイヤーが交差する大規模ネットワークも Elixir の並行処理能力で捌きます。
+- **Rust ECS for Physics & Rendering & Audio**
+> Elixir から同期された状態をもとに、Rust の ECS が 60Hz 固定の物理演算・描画・オーディオ処理を行います。SoA（Structure of Arrays）と SIMD による CPU キャッシュ最適化で、高フレームレートを維持します。
+- **Zero NIF Serialization Overhead**
+> Elixir <--> Rustの通信は軽量な識別子のみ。バイナリのシリアライズコストを設計レベルで排除しています。
+- **SuperCollider-inspired Audio**
+> Elixir が「指揮者」として非同期コマンドを発行し、Rust の専用スレッドが DSP 処理を行います。複雑な空間オーディオと動的ルーティングを低遅延で実現します。
+
+詳細は [プラス点 詳細一覧](./docs/evaluation/specific-strengths.md) を参照。
+
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -70,7 +72,9 @@ flowchart TB
   ```
 3. エンジンを起動します。
   ```bash
-   iex -S mix
+   mix phx.server
+   # coreから動かしたい場合
+   # iex -S mix
   ```
 
 ---
