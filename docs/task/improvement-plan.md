@@ -227,11 +227,19 @@
 
 **方針:** 「あらゆる概念を contents に寄せる」。SceneManager / SceneBehaviour を core から contents へ移行する。
 
-**参照:** [scene-management-to-contents.md](./scene-management-to-contents.md)
+**参照:** 残課題・改善候補は [improvement-plan.md](../improvement-plan.md) の「残課題（シーン管理 → contents 移行タスクより）」に統合済み。
 
 **状況:** Phase 1〜6 完了。`Core.SceneManager`・`Core.SceneBehaviour` を削除し、`Contents.SceneStack`・`Contents.SceneBehaviour` に移行済み。
 
 **関連:** I-F（テスト整備）は `Contents.SceneStack` に対するテストとして実施する。
+
+### D-B: GameEvents を contents へ移行（未着手）
+
+**方針:** オプション B（責務分離）を採用。core に薄い EventReceiver を残し、contents に GameEvents を移行する。core の責務を「ループ制御・イベント配信・コンポーネントライフサイクル」に限定する。
+
+**参照:** [game-events-to-contents.md](./game-events-to-contents.md)
+
+**関連:** 移行時に BatLord 固有ロジック（`{:boss_dash_end}`）の汎用ディスパッチ化も検討。specific-proposals.md の「GameEvents への汎用メッセージディスパッチ機構」と兼用可。
 
 ---
 

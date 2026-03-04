@@ -93,4 +93,29 @@ graph TD
 
 ---
 
+## 残課題（シーン管理 → contents 移行タスクより）
+
+> 出典: `scene-management-to-contents.md`（削除済み）
+
+### 未解決事項・確認ポイント
+
+| 項目 | 内容 |
+|:---|:---|
+| **SceneStack の起動タイミング** | ルーム起動時に RoomSupervisor が content の `scene_stack_spec(room_id)` を起動するか、GameEvents の子プロセスとして起動するか要検討 |
+| **既存 ContentBehaviour コールバック** | `initial_scenes`, `playing_scene` 等を完全に削除するか、SceneStack 初期化用に content 経由で渡す形に留めるか |
+| **後方互換性** | 段階的移行のため、一時的に core と contents の両方に SceneManager/SceneStack が存在する期間を設けるか |
+
+### SceneStack 移行後の改善候補
+
+| 項目 | 内容 | 出典 |
+|:---|:---|:---|
+| **セキュリティ: update_current / update_by_module の fun 引数** | `handle_call` で受け取った匿名関数 `fun` をそのまま実行しており、GenServer が非信頼呼び出し元に晒された場合の RCE リスクがある。現状は内部呼び出しのみで実質リスクは低いが、API を「コマンド atoms + データ」形式に変更する検討余地あり。 | gemini-code-assist 指摘 |
+| **効率: update_by_module のリスト操作** | `Enum.find_index` → `Enum.at` → `List.replace_at` による複数回走査を、`List.update_at/3` で簡潔化できる。 | gemini-code-assist 指摘 |
+| **flow_runner の共通化** | 全コンテンツで `Process.whereis(Core.SceneManager)` を返す同一実装。scene_stack_spec/1 導入で差が付くならそのままでよい。共通化する場合は ContentBehaviour のデフォルト実装やヘルパーを検討。 | レビュー |
+| **flow_runner の optional_callbacks** | Phase 3 で GameEvents が参照するまでは実質未使用。フェーズ分離を厳密にするなら現時点で `@optional_callbacks` に入れ、Phase 3 に合わせて必須化する選択肢あり（現状は必須のまま）。 | レビュー |
+| **GameEvents / GameEvents.Diagnostics の所在** | `apps/core/lib/core/game_events.ex` および `apps/core/lib/core/game_events/diagnostics.ex` はコンポーネント（contents）層にあるべき。core の責務を「ループ制御・イベント配信・コンポーネントライフサイクル」に限定する方針に沿い、移行を検討する。**タスク化済み:** [game-events-to-contents.md](task/game-events-to-contents.md) | 設計 |
+| **flow_runner の重複呼び出し** | 各 `handle_info` で `flow_runner(state)` を個別に呼んでいる。イベントハンドラごとに同一値が返る想定であれば、変数にまとめる等で重複を減らす余地あり。 | レビュー |
+
+---
+
 *このドキュメントは `pending-issues.md` と連携して管理すること。課題が解消されたら該当セクションを削除し、`pending-issues.md` の対応する課題も更新すること。*
