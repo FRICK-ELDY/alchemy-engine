@@ -23,6 +23,7 @@ config :network, Network.UDP, port: 4001
 # Content.VRTest          — VR 動作検証（Phase A: マウスで見回し）
 config :server, :current, Content.SimpleBox3D
 config :server, :map, :plain
+config :server, :game_events_module, Contents.GameEvents
 
 # セーブデータの HMAC 署名鍵（デフォルト値）。
 # 本番ビルド時は環境変数 SAVE_HMAC_SECRET で上書きすることを推奨する（config/runtime.exs）。

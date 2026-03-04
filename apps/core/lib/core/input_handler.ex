@@ -80,19 +80,35 @@ defmodule Core.InputHandler do
   end
 
   defp emit_semantic_events(prev_state, new_keys, new_sprint, key, key_state) do
-    # move_input
-    {dx, dy} = move_vector_from_keys(new_keys)
-    :ets.insert(@table, {:move, {dx, dy}})
-    send(Core.GameEvents, {:move_input, dx * 1.0, dy * 1.0})
+    handler = event_handler()
 
-    # sprint
-    if new_sprint != prev_state.sprint do
-      send(Core.GameEvents, {:sprint, new_sprint})
+    if handler do
+      # move_input
+      {dx, dy} = move_vector_from_keys(new_keys)
+      :ets.insert(@table, {:move, {dx, dy}})
+      send(handler, {:move_input, dx * 1.0, dy * 1.0})
+
+      # sprint
+      if new_sprint != prev_state.sprint do
+        send(handler, {:sprint, new_sprint})
+      end
+
+      # key_pressed (Escape のみ、押下時のみ)
+      if key == :escape and key_state == :pressed do
+        send(handler, {:key_pressed, :escape})
+      end
+    else
+      {dx, dy} = move_vector_from_keys(new_keys)
+      :ets.insert(@table, {:move, {dx, dy}})
     end
+  end
 
-    # key_pressed (Escape のみ、押下時のみ)
-    if key == :escape and key_state == :pressed do
-      send(Core.GameEvents, {:key_pressed, :escape})
+  defp event_handler do
+    content = Core.Config.current()
+
+    case content.event_handler(:main) do
+      pid when is_pid(pid) -> pid
+      _ -> nil
     end
   end
 

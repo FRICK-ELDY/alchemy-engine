@@ -18,8 +18,12 @@ defmodule Core.RoomSupervisor do
         {:error, :already_started}
 
       :error ->
+        module =
+          Application.get_env(:server, :game_events_module) ||
+            raise "config :server, :game_events_module is required"
+
         child_spec =
-          {Core.GameEvents, [room_id: room_id]}
+          {module, [room_id: room_id]}
           |> Supervisor.child_spec(id: {:game_events, room_id})
 
         case DynamicSupervisor.start_child(__MODULE__, child_spec) do

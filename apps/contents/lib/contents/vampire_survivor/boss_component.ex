@@ -131,6 +131,20 @@ defmodule Content.VampireSurvivor.BossComponent do
   @impl Core.Component
   def on_event(_event, _context), do: :ok
 
+  # ── on_engine_message: 遅延コールバック（BatLord ダッシュ終了等）──────
+
+  @impl Core.Component
+  def on_engine_message({:boss_dash_end, world_ref}, %{world_ref: state_world_ref}) do
+    if state_world_ref == world_ref do
+      Core.NifBridge.set_entity_flag(world_ref, :boss, :invincible, false)
+      Core.NifBridge.set_entity_velocity(world_ref, :boss, 0.0, 0.0)
+    end
+
+    :ok
+  end
+
+  def on_engine_message(_msg, _context), do: :ok
+
   # ── プライベート: NIF 注入 ────────────────────────────────────────
 
   defp push_boss_hp_to_nif(_world_ref, nil), do: :ok

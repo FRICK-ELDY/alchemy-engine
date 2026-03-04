@@ -13,6 +13,7 @@ defmodule Core.Component do
   - `on_event/2`           — UI アクション・エンジン内部イベント発生時
   - `on_frame_event/2`     — Rust フレームイベント発生時（ゲーム状態の更新）
   - `on_nif_sync/1`        — 毎フレームの NIF 注入（Elixir state → Rust）
+  - `on_engine_message/2`  — エンジン内部メッセージ（例: 遅延コールバック）のディスパッチ用
 
   ## コンテキスト
 
@@ -57,6 +58,7 @@ defmodule Core.Component do
   @callback on_event(event(), context()) :: :ok
   @callback on_frame_event(event(), context()) :: :ok
   @callback on_nif_sync(context()) :: :ok
+  @callback on_engine_message(msg :: term(), context()) :: :ok
 
   @optional_callbacks [
     on_ready: 1,
@@ -64,6 +66,7 @@ defmodule Core.Component do
     on_physics_process: 1,
     on_event: 2,
     on_frame_event: 2,
-    on_nif_sync: 1
+    on_nif_sync: 1,
+    on_engine_message: 2
   ]
 end

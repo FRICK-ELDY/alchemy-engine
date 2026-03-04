@@ -1,4 +1,4 @@
-defmodule Core.GameEvents do
+defmodule Contents.GameEvents do
   @moduledoc """
   Rust からの frame_events を受信し、コンポーネントへ委譲する GenServer。
 
@@ -15,7 +15,7 @@ defmodule Core.GameEvents do
   use GenServer
   require Logger
 
-  alias Core.GameEvents.Diagnostics
+  alias Contents.GameEvents.Diagnostics
 
   @tick_ms 16
 
@@ -330,14 +330,13 @@ defmodule Core.GameEvents do
     {:noreply, state}
   end
 
-  # ── インフォ: ボスダッシュ終了（BatLord AI）────────────────────────
+  # ── インフォ: エンジン内部メッセージ（汎用ディスパッチ）──────────────────
+  # コンポーネントが Process.send_after 等で送った遅延メッセージを
+  # on_engine_message/2 で該当コンポーネントに転送する
 
-  def handle_info({:boss_dash_end, world_ref}, state) do
-    if state.world_ref == world_ref do
-      Core.NifBridge.set_entity_flag(world_ref, :boss, :invincible, false)
-      Core.NifBridge.set_entity_velocity(world_ref, :boss, 0.0, 0.0)
-    end
-
+  def handle_info({:boss_dash_end, _world_ref} = msg, state) do
+    context = %{world_ref: state.world_ref}
+    dispatch_to_components(:on_engine_message, [msg, context])
     {:noreply, state}
   end
 

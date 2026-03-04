@@ -1,4 +1,4 @@
-defmodule Core.GameEvents.Diagnostics do
+defmodule Contents.GameEvents.Diagnostics do
   @moduledoc false
 
   require Logger
