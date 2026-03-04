@@ -49,7 +49,9 @@ defmodule GameContent.CanvasTest do
   def title, do: "Canvas Test"
   def version, do: "0.1.0"
 
-  def assets_path, do: nil
+  # ── アセット（共通 LocalAssets を参照）───────────────────────────────
+
+  def assets_path, do: ""
 
   # ── エンティティレジストリ（CanvasTest はエネミー・武器の概念なし）──
 

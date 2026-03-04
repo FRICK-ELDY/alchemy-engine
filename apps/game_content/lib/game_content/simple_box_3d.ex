@@ -45,9 +45,9 @@ defmodule GameContent.SimpleBox3D do
   def title, do: "Simple Box 3D"
   def version, do: "0.1.0"
 
-  # ── アセット（3Dコンテンツはアトラス不要だが、インターフェースを合わせる）──
+  # ── アセット（共通 LocalAssets を参照、アトラス不要）──────────────────
 
-  def assets_path, do: nil
+  def assets_path, do: ""
 
   # ── コンテキストデフォルト ────────────────────────────────────────
 
