@@ -119,7 +119,7 @@
 
 ### I-F: Elixir 側テストがほぼ未整備（優先度: 中）
 
-**問題:** `Core.SceneManager`・`Core.GameEvents`・`Core.EventBus`・`Core.SaveManager` のテストが存在しない。エンジンコアのリグレッションを検出する手段がない。
+**問題:** `Contents.SceneStack`・`Core.GameEvents`・`Core.EventBus`・`Core.SaveManager` のテストが存在しない。エンジンコアのリグレッションを検出する手段がない。（※ `Core.SceneManager` は scene-management-to-contents タスクにより `Contents.SceneStack` に移行済み）
 
 **影響ファイル:**
 - `apps/core/test/`（存在しない）
@@ -223,13 +223,15 @@
 
 ## 設計タスク（別ドキュメント）
 
-### D-A: シーン管理を contents へ移行
+### D-A: シーン管理を contents へ移行 ✅ 完了
 
 **方針:** 「あらゆる概念を contents に寄せる」。SceneManager / SceneBehaviour を core から contents へ移行する。
 
 **参照:** [scene-management-to-contents.md](./scene-management-to-contents.md)
 
-**関連:** I-F（SceneManager テスト）は本タスク完了後に `Contents.SceneStack` に対するテストとして実施する。
+**状況:** Phase 1〜6 完了。`Core.SceneManager`・`Core.SceneBehaviour` を削除し、`Contents.SceneStack`・`Contents.SceneBehaviour` に移行済み。
+
+**関連:** I-F（テスト整備）は `Contents.SceneStack` に対するテストとして実施する。
 
 ---
 

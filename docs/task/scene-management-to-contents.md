@@ -159,7 +159,7 @@ contents/
 
 ## 受け入れ条件
 
-- [ ] `Core.SceneManager` および `Core.SceneBehaviour` が存在しない
+- [x] `Core.SceneManager` および `Core.SceneBehaviour` が存在しない
 - [ ] すべての既存コンテンツ（VampireSurvivor, AsteroidArena 等）が `Contents.SceneStack` 経由で動作する
 - [ ] `mix test` が通過する
 - [ ] `iex -S mix` でエンジンが起動し、既存コンテンツでプレイ可能である

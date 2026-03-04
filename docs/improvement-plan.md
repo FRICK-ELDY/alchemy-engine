@@ -48,11 +48,11 @@ Elixir を選んだ最大の根拠である「OTP による耐障害性」「軽
 
 **問題**
 
-Rust 側には `chase_ai.rs`・`spatial_hash.rs` 等に単体テストが存在するが、Elixir 側（`GameEvents`・`SceneManager`・各シーン・コンポーネント）のテストがほぼ存在しない。
+Rust 側には `chase_ai.rs`・`spatial_hash.rs` 等に単体テストが存在するが、Elixir 側（`GameEvents`・`Contents.SceneStack`・各シーン・コンポーネント）のテストがほぼ存在しない。
 
 **改善方針**
 
-- `GameEngine.SceneManager` のシーン遷移ロジックを `ExUnit` でテストする
+- `Contents.SceneStack` のシーン遷移ロジックを `ExUnit` でテストする
 - `GameContent.VampireSurvivor.Scenes.Playing.update/2` の純粋関数部分（EXP 計算・レベルアップ判定）を単体テストする
 - `GameEngine.EventBus` のサブスクライバー配信をテストする
 

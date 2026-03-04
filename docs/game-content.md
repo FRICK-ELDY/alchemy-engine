@@ -181,13 +181,13 @@ end
 
 ```mermaid
 graph TD
-    SM[SceneManager スタック]
+    SS[Contents.SceneStack]
     PL[Playing\nベースシーン・常駐]
     LU[LevelUp\npush: EXP 閾値超過時]
     BA[BossAlert\npush: ボス出現スケジュール到達時]
     GO[GameOver\nreplace: 死亡時]
 
-    SM --> PL
+    SS --> PL
     PL -->|push| LU
     PL -->|push| BA
     PL -->|replace| GO

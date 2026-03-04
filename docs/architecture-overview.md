@@ -4,7 +4,7 @@
 
 AlchemyEngine は **Elixir を Single Source of Truth（SSoT）** として、Rust の ECS で物理演算・描画・オーディオを処理するハイブリッドゲームエンジンです。
 
-- **Elixir 側**: ゲームロジックの制御フロー・シーン管理・セーブ/ロード・イベント配信
+- **Elixir 側**: ゲームロジックの制御フロー・セーブ/ロード・イベント配信（シーン管理は contents 層）
 - **Rust 側**: 60Hz 固定の物理演算・衝突判定・描画・オーディオ
 
 ---
@@ -57,8 +57,6 @@ alchemy-engine/
 │   │       ├── content_behaviour.ex # ContentBehaviour（コンテンツ定義インターフェース）
 │   │       ├── component.ex         # Component ビヘイビア（コンテンツ構成単位）
 │   │       ├── config.ex            # :current コンテンツモジュール解決
-│   │       ├── scene_behaviour.ex   # シーンコールバック定義
-│   │       ├── scene_manager.ex     # シーンスタック管理 GenServer
 │   │       ├── game_events.ex       # メインゲームループ GenServer
 │   │       ├── game_events/
 │   │       │   └── diagnostics.ex   # ログ・FrameCache 更新ヘルパー
@@ -82,6 +80,8 @@ alchemy-engine/
 │   ├── contents/                    # ゲームコンテンツ
 │   │   ├── mix.exs
 │   │   └── lib/contents/
+│   │       ├── scene_behaviour.ex         # シーンコールバック定義（contents 層）
+│   │       ├── scene_stack.ex             # シーンスタック管理 GenServer（contents 層）
 │   │       ├── vampire_survivor.ex        # ContentBehaviour 実装（VampireSurvivor）
 │   │       ├── asteroid_arena.ex          # ContentBehaviour 実装（AsteroidArena）
 │   │       ├── entity_params.ex           # EXP・スコア・ボスパラメータ（Elixir SSoT）
@@ -209,8 +209,8 @@ alchemy-engine/
 | レイヤー | 責務 | 技術 |
 |:---|:---|:---|
 | `server` | OTP Application 起動・Supervisor ツリー構築 | Elixir / OTP |
-| `core` | ゲームループ制御・シーン管理・イベント配信・セーブ・ContentBehaviour / Component インターフェース定義 | Elixir GenServer / ETS |
-| `contents` | ContentBehaviour 実装（VampireSurvivor / AsteroidArena）・Component 群・エンティティパラメータ | Elixir |
+| `core` | ゲームループ制御・イベント配信・セーブ・ContentBehaviour / Component インターフェース定義 | Elixir GenServer / ETS |
+| `contents` | シーンスタック・SceneBehaviour・ContentBehaviour 実装・Component 群・エンティティパラメータ | Elixir |
 | `network` | Phoenix Channels（WebSocket）・UDP トランスポート・ローカルマルチルーム管理 | Elixir / Phoenix |
 | `nif` | Elixir-Rust 間 NIF ブリッジ・ゲームループ・レンダーブリッジ | Rust / Rustler |
 | `physics` | 物理演算・空間ハッシュ・ECS・外部注入パラメータテーブル | Rust |
@@ -255,7 +255,7 @@ sequenceDiagram
     participant R as Rust 60Hz ループ
     participant GE as GameEvents GenServer
     participant COMP as Component 群
-    participant SM as SceneManager
+    participant SS as Contents.SceneStack
     participant S as Scene.update()
 
     loop 毎フレーム（60Hz）
@@ -263,7 +263,7 @@ sequenceDiagram
         R->>R: drain_frame_events()
         R-->>GE: {:frame_events, [enemy_killed, player_damaged, ...]}
         GE->>COMP: on_frame_event/2（スコア・HP・ボス HP 更新）
-        GE->>SM: Scene.update() → シーン遷移判断
+        GE->>SS: flow_runner 経由で Scene.update() → シーン遷移判断
         GE->>COMP: on_physics_process/1（ボス AI 等）
         GE->>COMP: on_nif_sync/1（Elixir state → Rust 注入）
     end

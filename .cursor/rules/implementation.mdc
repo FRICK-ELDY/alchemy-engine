@@ -16,7 +16,7 @@ alwaysApply: true
 
 ## アーキテクチャ原則
 
-- **Elixir = SSoT（Single Source of Truth）**：ゲームロジックの制御フロー・シーン管理・パラメータはElixir側で持つ
+- **Elixir = SSoT（Single Source of Truth）**：ゲームロジックの制御フロー・パラメータはElixir側で持つ（シーン管理は contents レイヤーの責務）
 - **Rust = 演算層**：物理演算・描画・オーディオはRust側で処理し、Elixirからパラメータを注入する
 - Elixir側からRust側へのパラメータ注入は `nif` 経由（Rustler NIF）で行う
 - Rust側でゲームルールをハードコードしない
@@ -39,8 +39,8 @@ alwaysApply: true
 
 | レイヤー | 追加・変更してよいもの | 追加・変更してはいけないもの |
 |:---|:---|:---|
-| `core` | ループ制御・シーン管理・イベント配信 | ゲームコンテンツ固有ロジック |
-| `contents` | World/Rule実装・エンティティパラメータ | エンジンコアの変更 |
+| `core` | ループ制御・イベント配信 | ゲームコンテンツ固有ロジック |
+| `contents` | シーンスタック・SceneBehaviour・World/Rule実装・エンティティパラメータ | エンジンコアの変更 |
 | `physics` | 物理演算・ECS・SoA構造 | ゲームルール・パラメータのハードコード |
 | `render` | 描画パイプライン・HUD | ゲームロジック |
 | `nif` | NIF定義・ブリッジ | 物理演算ロジック |

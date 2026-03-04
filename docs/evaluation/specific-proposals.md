@@ -14,8 +14,7 @@
 
 ### 💡 提案
 
-- **SceneManager のルーム分離（マルチルーム完全対応）** `0`
-  > `SceneManager` を `{GameEngine.SceneManager, room_id}` という名前付きプロセスに変更し、`GameEvents` と同様に `room_id` を持たせる。`DynamicSupervisor` 配下で `GameEvents` と同時に起動・停止することで、マルチルームが完全に機能する。参考: Elixir の `Registry.via_tuple/2` パターン。
+- ~~**SceneManager のルーム分離（マルチルーム完全対応）**~~ **解決済み**（scene-management-to-contents 移行により `Contents.SceneStack` が `room_id` オプションをサポートする設計で実装済み）
 
 - **GameEvents への汎用メッセージディスパッチ機構** `0`
   > `handle_info({:boss_dash_end, world_ref}, state)` のようなコンテンツ固有メッセージを、`GameEvents` が直接処理するのではなく、アクティブなコンポーネントに転送する汎用ディスパッチ機構を実装する。例: `on_engine_message/2` コールバックを `Component` ビヘイビアに追加し、`GameEvents` は受信したメッセージを全コンポーネントに転送するだけにする。
@@ -116,8 +115,8 @@
 
 ### 💡 提案
 
-- **GameEngine コアのテスト整備（SceneManager・GameEvents・EventBus）** `0`
-  > `improvement-plan.md` の I-F に対応。`Core.SceneManager` のシーン遷移・`GameEvents` のフレームループ・`EventBus` のサブスクライバー配信を `ExUnit` でテストする。`NifBridgeMock`（Mox）を使えばNIF依存なしにテスト可能。参考: `apps/core/test/support/mocks.ex` に既に `NifBridgeMock` が定義されている。
+- **GameEngine コアのテスト整備（Contents.SceneStack・GameEvents・EventBus）** `0`
+  > `improvement-plan.md` の I-F に対応。`Contents.SceneStack` のシーン遷移・`GameEvents` のフレームループ・`EventBus` のサブスクライバー配信を `ExUnit` でテストする。`NifBridgeMock`（Mox）を使えばNIF依存なしにテスト可能。参考: `apps/core/test/support/mocks.ex` に既に `NifBridgeMock` が定義されている。
 
 - **NIF デコードロジックの Rust ユニットテスト** `0`
   > `nif` の `decode_enemy_params`・`decode_weapon_params`・`decode_boss_params` は Erlang Term のデコードロジックであり、GPUなしでテスト可能。`rustler::types::tuple::get_tuple` 等のデコードパスをユニットテストすることで、パラメータ注入の信頼性が向上する。
