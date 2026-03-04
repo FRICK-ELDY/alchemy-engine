@@ -22,23 +22,23 @@ alwaysApply: false
 
 各 Elixir アプリを独立して評価する。
 
-- **`apps/game_content`**（コンテンツ実装・ゲームロジック・パラメータ設計）
+- **`apps/contents`**（コンテンツ実装・ゲームロジック・パラメータ設計）
   - World/Rule 実装の質、エンティティパラメータの外部化、コンテンツ交換可能性の実証
   - スポーン・レベル・ボス等のゲームシステムの設計品質
-  - `game_engine` への依存が適切に制御されているか
+  - `core` への依存が適切に制御されているか
 
-- **`apps/game_engine`**（エンジンコア・OTP設計・コンポーネント・シーン管理）
+- **`apps/core`**（エンジンコア・OTP設計・コンポーネント・シーン管理）
   - OTP Supervisor ツリー・GenServer 責務分離・耐障害性設計
   - `ContentBehaviour` / `SceneBehaviour` / `Component` ビヘイビア設計
   - SSoT（Elixir = Single Source of Truth）の一貫性
   - バックプレッシャー・スケジューリング設計
 
-- **`apps/game_network`**（ネットワーク層・トランスポート・OTP隔離）
+- **`apps/network`**（ネットワーク層・トランスポート・OTP隔離）
   - Local / Phoenix Channels / UDP トランスポートの実装度
   - OTP プロセス隔離の実証（ルーム間クラッシュ分離）
   - 認証・セキュリティ設計
 
-- **`apps/game_server`**（アプリケーション起動・設定・エントリポイント）
+- **`apps/server`**（アプリケーション起動・設定・エントリポイント）
   - Application 起動シーケンスの堅牢性
   - 設定管理（config.exs / runtime.exs）の設計
   - 環境別（dev/test/prod）の分離
@@ -49,24 +49,24 @@ alwaysApply: false
 
 各 Rust クレートを独立して評価する。
 
-- **`native/game_physics`**（ECS・SoA・SIMD・衝突・決定論性）
+- **`native/physics`**（ECS・SoA・SIMD・衝突・決定論性）
   - SoA 構造・`free_list` O(1) スポーン/キル
   - SIMD 実装（SSE2）・rayon 並列・スカラーフォールバックの3段階戦略
   - 空間ハッシュ衝突検出・決定論的乱数（LCG）
   - プラットフォーム対応（ARM NEON・WASM）
 
-- **`native/game_render`**（描画パイプライン・シェーダー・補間）
+- **`native/render`**（描画パイプライン・シェーダー・補間）
   - wgpu インスタンス描画・WGSL シェーダー
   - サブフレーム補間（lerp）のロック外計算
   - ヘッドレスレンダラー（CI対応）
   - レンダーグラフ設計・フラスタムカリング・アロケーション効率
 
-- **`native/game_audio`**（非同期設計・フォールバック・アセット管理）
+- **`native/audio`**（非同期設計・フォールバック・アセット管理）
   - コマンドパターン + `mpsc::channel` 非同期設計
   - デバイス不在時のグレースフルフォールバック
   - ボイスリミット・優先度システム・空間オーディオ
 
-- **`native/game_nif`**（NIF設計・Elixir×Rust ブリッジ・SSoT一貫性）
+- **`native/nif`**（NIF設計・Elixir×Rust ブリッジ・SSoT一貫性）
   - NIF 関数カテゴリ分類（ロック競合の予測可能性）
   - `ResourceArc` による GC 連動ライフタイム管理
   - パラメータ注入パターン（Rust にゲームバランス値なし）
@@ -81,7 +81,7 @@ alwaysApply: false
 
 - **テスト戦略**
   - テストピラミッドの形状（ユニット/統合/E2E の比率と意図的設計）
-  - コアモジュールのカバレッジ（特に `game_engine` アプリ）
+  - コアモジュールのカバレッジ（特に `core` アプリ）
   - テストの独立性・再現性（外部依存のモック化・`async: true` 活用）
   - unsafe コードの正当性テスト（SIMD/スカラー一致等）
   - プロパティベーステスト・ファジングの有無

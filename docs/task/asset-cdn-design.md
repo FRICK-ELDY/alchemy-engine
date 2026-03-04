@@ -11,7 +11,7 @@
 
 | レイヤー | 責務 | アセットとの関係 |
 |:---|:---|:---|
-| **Elixir (game_content)** | 「どのアセットセットを使うか」の意思決定 | 論理ID（`"vampire_survivor"`）のみ保持 |
+| **Elixir (contents)** | 「どのアセットセットを使うか」の意思決定 | 論理ID（`"vampire_survivor"`）のみ保持 |
 | **NIF境界** | パス文字列の受け渡し | バイナリは一切通さない（NIFシリアライズ負荷ゼロ） |
 | **Rust (AssetLoader)** | アセット実体の取得・キャッシュ | URIを解釈してバイト列を返す |
 
@@ -178,7 +178,7 @@ https://  → ダウンロード → 暗号化 → .alchemypackage に保存 →
 
 ### Phase A-1: `AssetLoader` をURIスキーム対応に拡張する
 
-**影響クレート**: `game_audio`（将来的には `game_assets` クレートに分離）
+**影響クレート**: `audio`（将来的には `assets` クレートに分離）
 
 現在の `AssetLoader` はファイルパス文字列のみを扱う。  
 これをURIを受け取って解釈する形に変更する。
@@ -285,7 +285,7 @@ fn load_asset_key() -> Option<[u8; 32]> {
 
 ### Phase A-2: Elixir側のパス解決をURI形式に統一する
 
-**影響アプリ**: `game_engine`, `game_content`
+**影響アプリ**: `core`, `contents`
 
 現在の `resolve_atlas_path/1` が返す文字列をURI形式に変更する。
 
@@ -326,37 +326,37 @@ end
 **作業ステップ:**
 1. `game_events.ex` の `resolve_atlas_path/1` を `resolve_atlas_uri/1` にリネームし、URI形式を返すよう変更する
 2. `GAME_ASSETS_CDN_URL` 環境変数が設定されている場合はCDN URLを優先するロジックを追加する
-3. `game_server/application.ex` の `GAME_ASSETS_ID` セット処理はそのまま維持する
-4. `nif_bridge.ex` / `game_engine.ex` のシグネチャは変更不要（文字列を渡すだけのため）
+3. `server/application.ex` の `GAME_ASSETS_ID` セット処理はそのまま維持する
+4. `nif_bridge.ex` / `core.ex` のシグネチャは変更不要（文字列を渡すだけのため）
 
 ---
 
 ### Phase A-3: `AssetLoader` を独立クレートに分離する
 
-**影響クレート**: `game_audio`, `game_render`, `game_nif`
+**影響クレート**: `audio`, `render`, `nif`
 
-現在 `AssetLoader` は `game_audio` クレートに置かれているが、  
+現在 `AssetLoader` は `audio` クレートに置かれているが、  
 音声以外のアセット（スプライトアトラス）も管理しており責務が混在している。
 
 ```
 # 現状（問題）
-game_audio/src/asset/mod.rs  ← AssetLoader がここにある
-game_render  ─────────────── game_audio に依存してアトラスを取得
-game_nif     ─────────────── game_audio に依存して AssetLoader を使用
+audio/src/asset/mod.rs  ← AssetLoader がここにある
+render  ─────────────── audio に依存してアトラスを取得
+nif     ─────────────── audio に依存して AssetLoader を使用
 
 # 目標
 game_assets/src/lib.rs  ← AssetLoader をここに移動
-game_audio  ──────────── game_assets に依存
-game_render ──────────── game_assets に依存
-game_nif    ──────────── game_assets に依存
+audio   ──────────── assets に依存
+render  ──────────── assets に依存
+nif     ──────────── assets に依存
 ```
 
 **作業ステップ:**
 1. `native/game_assets/` クレートを新規作成する（`Cargo.toml` に `[lib]` のみ）
-2. `game_audio/src/asset/` を `game_assets/src/` に移動する
-3. `game_audio/Cargo.toml` に `game_assets` への依存を追加し、`asset` モジュールの `pub use` を `game_assets` に委譲する
-4. `game_render/Cargo.toml` と `game_nif/Cargo.toml` の依存を `game_audio` → `game_assets` に変更する
-5. `game_nif/src/lib.rs` の `use game_audio::{AssetId, AssetLoader, ...}` を `use game_assets::{AssetId, AssetLoader}` に変更する
+2. `audio/src/asset/` を `assets/src/` に移動する
+3. `audio/Cargo.toml` に `assets` への依存を追加し、`asset` モジュールの `pub use` を `assets` に委譲する
+4. `render/Cargo.toml` と `nif/Cargo.toml` の依存を `audio` → `assets` に変更する
+5. `nif/src/lib.rs` の `use audio::{AssetId, AssetLoader, ...}` を `use assets::{AssetId, AssetLoader}` に変更する
 
 ---
 
@@ -406,9 +406,9 @@ end
 | CDNベースURL | **入れる** | 環境別設定の管理 |
 
 **作業ステップ:**
-1. `AlchemyEngine.Assets` ドメインを `game_content` アプリに追加する
+1. `AlchemyEngine.Assets` ドメインを `contents` アプリに追加する
 2. `ContentAssetConfig` リソースを定義する
-3. `game_content` の `assets_path/0` をDB参照に切り替える（環境変数フォールバック維持）
+3. `contents` の `assets_path/0` をDB参照に切り替える（環境変数フォールバック維持）
 4. `UserAsset` リソースを定義する（ユーザー別スキン機能実装時）
 
 ---

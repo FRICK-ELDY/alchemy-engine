@@ -37,8 +37,8 @@ echo  [A] Rust — cargo test
 echo ============================================================
 
 echo.
-echo [STEP] cargo test game_physics
-cargo test --manifest-path "%NATIVE%\Cargo.toml" -p game_physics
+echo [STEP] cargo test physics
+cargo test --manifest-path "%NATIVE%\Cargo.toml" -p physics
 if errorlevel 1 (
     set "FAILED=!FAILED! [cargo test]"
     echo [FAIL] cargo test

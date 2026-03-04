@@ -14,10 +14,10 @@ AlchemyEngine は **Elixir を Single Source of Truth（SSoT）** として、Ru
 ```mermaid
 graph TB
     subgraph Elixir["Elixir Umbrella"]
-        GS[game_server<br/>起動制御]
-        GE[game_engine<br/>SSoT コア]
-        GC[game_content<br/>VampireSurvivor / AsteroidArena]
-        GN[game_network<br/>Phoenix Channels / UDP]
+        GS[server<br/>起動制御]
+        GE[core<br/>SSoT コア]
+        GC[contents<br/>VampireSurvivor / AsteroidArena]
+        GN[network<br/>Phoenix Channels / UDP]
         GS -->|依存| GE
         GC -->|依存| GE
     end
@@ -25,10 +25,10 @@ graph TB
     GE <-->|Rustler NIF| GNIF
 
     subgraph Rust["Rust Workspace"]
-        GNIF[game_nif<br/>NIF インターフェース / ゲームループ / レンダーブリッジ]
-        GSIM[game_physics<br/>物理 / ECS]
-        GRENDER[game_render<br/>wgpu 描画 / winit ウィンドウ]
-        GAUDIO[game_audio<br/>rodio オーディオ]
+        GNIF[nif<br/>NIF インターフェース / ゲームループ / レンダーブリッジ]
+        GSIM[physics<br/>物理 / ECS]
+        GRENDER[render<br/>wgpu 描画 / winit ウィンドウ]
+        GAUDIO[audio<br/>rodio オーディオ]
         GNIF -->|依存| GSIM
         GNIF -->|依存| GRENDER
         GNIF -->|依存| GAUDIO
@@ -48,10 +48,10 @@ alchemy-engine/
 │   └── config.exs                   # :current（コンテンツモジュール）/ :map 設定
 │
 ├── apps/                            # Elixir アプリケーション群
-│   ├── game_engine/                 # SSoT コアエンジン
+│   ├── core/                        # SSoT コアエンジン
 │   │   ├── mix.exs
-│   │   └── lib/game_engine/
-│   │       ├── game_engine.ex       # 公開 API（エントリポイント）
+│   │   └── lib/core/
+│   │       ├── core.ex              # 公開 API（エントリポイント）
 │   │       ├── nif_bridge.ex        # Rustler NIF ラッパー
 │   │       ├── nif_bridge_behaviour.ex  # NifBridge ビヘイビア（テスト用 Mock 対応）
 │   │       ├── content_behaviour.ex # ContentBehaviour（コンテンツ定義インターフェース）
@@ -73,15 +73,15 @@ alchemy-engine/
 │   │       ├── telemetry.ex         # Telemetry Supervisor
 │   │       └── stress_monitor.ex    # パフォーマンス監視 GenServer
 │   │
-│   ├── game_server/                 # 起動プロセス
+│   ├── server/                      # 起動プロセス
 │   │   ├── mix.exs
-│   │   └── lib/game_server/
-│   │       ├── game_server.ex
+│   │   └── lib/server/
+│   │       ├── server.ex
 │   │       └── application.ex       # OTP Application / Supervisor ツリー
 │   │
-│   ├── game_content/                # ゲームコンテンツ
+│   ├── contents/                    # ゲームコンテンツ
 │   │   ├── mix.exs
-│   │   └── lib/game_content/
+│   │   └── lib/contents/
 │   │       ├── vampire_survivor.ex        # ContentBehaviour 実装（VampireSurvivor）
 │   │       ├── asteroid_arena.ex          # ContentBehaviour 実装（AsteroidArena）
 │   │       ├── entity_params.ex           # EXP・スコア・ボスパラメータ（Elixir SSoT）
@@ -105,10 +105,10 @@ alchemy-engine/
 │   │               ├── playing.ex
 │   │               └── game_over.ex
 │   │
-│   └── game_network/                # 通信レイヤー
+│   └── network/                     # 通信レイヤー
 │       ├── mix.exs                  # deps: phoenix ~> 1.8, phoenix_pubsub, plug_cowboy
-│       └── lib/game_network/
-│           ├── game_network.ex
+│       └── lib/network/
+│           ├── network.ex
 │           ├── application.ex
 │           ├── local.ex             # ローカルマルチルーム管理 GenServer
 │           ├── channel.ex           # Phoenix Channels / WebSocket
@@ -123,7 +123,7 @@ alchemy-engine/
 │   ├── Cargo.toml                   # Rust ワークスペース定義
 │   ├── Cargo.lock
 │   │
-│   ├── game_physics/             # 物理演算・ECS（依存: rustc-hash / rayon / log）
+│   ├── physics/                  # 物理演算・ECS（依存: rustc-hash / rayon / log）
 │   │   └── src/
 │   │       ├── lib.rs
 │   │       ├── constants.rs         # 画面定数（スクリーンサイズ等）
@@ -162,7 +162,7 @@ alchemy-engine/
 │   │               ├── collision.rs # 敵 vs 障害物押し出し
 │   │               └── spawn.rs     # スポーン位置生成
 │   │
-│   ├── game_nif/                    # NIF 通信インターフェース・ゲームループ
+│   ├── nif/                         # NIF 通信インターフェース・ゲームループ
 │   │   └── src/
 │   │       ├── lib.rs               # Rustler エントリポイント・アトム定義
 │   │       ├── nif/
@@ -181,13 +181,13 @@ alchemy-engine/
 │   │       ├── render_snapshot.rs   # RenderFrame 構築・補間
 │   │       └── lock_metrics.rs      # RwLock 待機時間メトリクス
 │   │
-│   ├── game_audio/                  # rodio オーディオ管理
+│   ├── audio/                       # rodio オーディオ管理
 │   │   └── src/
 │   │       ├── lib.rs
 │   │       ├── audio.rs             # AudioManager・コマンドループ
 │   │       └── asset/mod.rs         # アセット管理
 │   │
-│   └── game_render/                 # wgpu 描画パイプライン
+│   └── render/                      # wgpu 描画パイプライン
 │       └── src/
 │           ├── lib.rs               # 公開型（RenderFrame / HudData）
 │           ├── window.rs            # winit ウィンドウ管理・イベントループ
@@ -208,14 +208,14 @@ alchemy-engine/
 
 | レイヤー | 責務 | 技術 |
 |:---|:---|:---|
-| `game_server` | OTP Application 起動・Supervisor ツリー構築 | Elixir / OTP |
-| `game_engine` | ゲームループ制御・シーン管理・イベント配信・セーブ・ContentBehaviour / Component インターフェース定義 | Elixir GenServer / ETS |
-| `game_content` | ContentBehaviour 実装（VampireSurvivor / AsteroidArena）・Component 群・エンティティパラメータ | Elixir |
-| `game_network` | Phoenix Channels（WebSocket）・UDP トランスポート・ローカルマルチルーム管理 | Elixir / Phoenix |
-| `game_nif` | Elixir-Rust 間 NIF ブリッジ・ゲームループ・レンダーブリッジ | Rust / Rustler |
-| `game_physics` | 物理演算・空間ハッシュ・ECS・外部注入パラメータテーブル | Rust |
-| `game_render` | GPU 描画パイプライン・HUD・winit ウィンドウ管理・ヘッドレスモード | Rust / wgpu / egui / winit |
-| `game_audio` | オーディオ管理・アセット読み込み | Rust / rodio |
+| `server` | OTP Application 起動・Supervisor ツリー構築 | Elixir / OTP |
+| `core` | ゲームループ制御・シーン管理・イベント配信・セーブ・ContentBehaviour / Component インターフェース定義 | Elixir GenServer / ETS |
+| `contents` | ContentBehaviour 実装（VampireSurvivor / AsteroidArena）・Component 群・エンティティパラメータ | Elixir |
+| `network` | Phoenix Channels（WebSocket）・UDP トランスポート・ローカルマルチルーム管理 | Elixir / Phoenix |
+| `nif` | Elixir-Rust 間 NIF ブリッジ・ゲームループ・レンダーブリッジ | Rust / Rustler |
+| `physics` | 物理演算・空間ハッシュ・ECS・外部注入パラメータテーブル | Rust |
+| `render` | GPU 描画パイプライン・HUD・winit ウィンドウ管理・ヘッドレスモード | Rust / wgpu / egui / winit |
+| `audio` | オーディオ管理・アセット読み込み | Rust / rodio |
 
 ---
 

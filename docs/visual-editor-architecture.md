@@ -109,7 +109,7 @@ EditorServer.list_assets()              # アセット一覧取得
 
 ### Rust 側：EditorRenderer
 
-`game_render` クレートに **オフスクリーンモード** を追加する形で実装する。既存の `Renderer` 構造体を流用し、`winit` ウィンドウを持たない派生モードとして切り出す。
+`render` クレートに **オフスクリーンモード** を追加する形で実装する。既存の `Renderer` 構造体を流用し、`winit` ウィンドウを持たない派生モードとして切り出す。
 
 ```
 責務：
@@ -179,7 +179,7 @@ alchemy-engine/
 │   └── ...（既存）
 │
 └── native/
-    ├── game_render/
+    ├── render/
     │   └── src/
     │       ├── renderer/
     │       │   ├── mod.rs               # 既存 Renderer（winit あり）
@@ -209,7 +209,7 @@ alchemy-engine/
 
 ### フェーズ 1：オフスクリーンレンダリング基盤
 
-- `game_render` に `offscreen.rs` を追加
+- `render` に `offscreen.rs` を追加
 - 固定シーン（スプライト数枚）をオフスクリーン描画して PNG として出力する PoC
 - NIF 経由で Elixir から呼び出せることを確認
 
