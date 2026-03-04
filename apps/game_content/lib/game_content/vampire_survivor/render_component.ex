@@ -11,7 +11,7 @@ defmodule GameContent.VampireSurvivor.RenderComponent do
   2. Playing シーン state から UiCanvas ツリーを組み立てる
   3. `push_render_frame/4` で RenderFrameBuffer に書き込む
   """
-  @behaviour GameEngine.Component
+  @behaviour Core.Component
 
   # Rust 側の constants.rs と同値
   @screen_width 1280.0
@@ -30,20 +30,20 @@ defmodule GameContent.VampireSurvivor.RenderComponent do
     "lightning" => "Lightning"
   }
 
-  @impl GameEngine.Component
+  @impl Core.Component
   def on_nif_sync(context) do
-    content = GameEngine.Config.current()
-    playing_state = GameEngine.SceneManager.get_scene_state(content.playing_scene()) || %{}
+    content = Core.Config.current()
+    playing_state = Core.SceneManager.get_scene_state(content.playing_scene()) || %{}
 
     current_scene =
-      case GameEngine.SceneManager.current() do
+      case Core.SceneManager.current() do
         {:ok, %{module: mod}} -> mod
         _ -> content.playing_scene()
       end
 
     {{player_x, player_y, frame_id, enemy_count, bullet_count}, {magnet_timer, invincible_timer},
      {enemies, bullets, particles}, {items, obstacles, boss, score_popups}} =
-      GameEngine.NifBridge.get_render_entities(context.world_ref)
+      Core.NifBridge.get_render_entities(context.world_ref)
 
     anim_frame = rem(div(frame_id, 4), 4)
 
@@ -66,7 +66,7 @@ defmodule GameContent.VampireSurvivor.RenderComponent do
         invincible_timer
       )
 
-    GameEngine.NifBridge.push_render_frame(
+    Core.NifBridge.push_render_frame(
       context.render_buf_ref,
       commands,
       camera,
@@ -427,7 +427,7 @@ defmodule GameContent.VampireSurvivor.RenderComponent do
       if weapon_choices != [] do
         slots = weapon_slots_for_nif(playing_state)
 
-        GameEngine.NifBridge.get_weapon_upgrade_descs(
+        Core.NifBridge.get_weapon_upgrade_descs(
           context.world_ref,
           weapon_choices,
           slots

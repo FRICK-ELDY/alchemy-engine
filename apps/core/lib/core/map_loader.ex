@@ -1,4 +1,4 @@
-defmodule GameEngine.MapLoader do
+defmodule Core.MapLoader do
   @moduledoc """
   マップ ID に応じた障害物リストを提供する。
   各要素は `{x, y, radius, kind}` のタプル。

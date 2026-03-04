@@ -11,7 +11,7 @@ defmodule GameContent.SimpleBox3D.RenderComponent do
   - `DrawCommand::GridPlane` — XZ 平面グリッド地面
   - `DrawCommand::Box3D` — プレイヤー（青）と敵（赤）
   """
-  @behaviour GameEngine.Component
+  @behaviour Core.Component
 
   # ボックスの半サイズ
   @half_size 0.5
@@ -35,23 +35,23 @@ defmodule GameContent.SimpleBox3D.RenderComponent do
   @grid_size 20.0
   @grid_divisions 20
 
-  @impl GameEngine.Component
+  @impl Core.Component
   def on_nif_sync(context) do
-    content = GameEngine.Config.current()
+    content = Core.Config.current()
 
     current_scene =
-      case GameEngine.SceneManager.current() do
+      case Core.SceneManager.current() do
         {:ok, %{module: mod}} -> mod
         _ -> content.playing_scene()
       end
 
-    playing_state = GameEngine.SceneManager.get_scene_state(content.playing_scene()) || %{}
+    playing_state = Core.SceneManager.get_scene_state(content.playing_scene()) || %{}
 
     commands = build_commands(playing_state)
     camera = build_camera()
     ui = build_ui(current_scene, content)
 
-    GameEngine.NifBridge.push_render_frame(
+    Core.NifBridge.push_render_frame(
       context.render_buf_ref,
       commands,
       camera,

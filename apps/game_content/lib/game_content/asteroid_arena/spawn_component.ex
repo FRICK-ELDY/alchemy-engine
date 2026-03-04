@@ -5,7 +5,7 @@ defmodule GameContent.AsteroidArena.SpawnComponent do
   AsteroidArena は武器・ボスの概念を持たないため、
   weapons / bosses は空マップとして登録する。
   """
-  @behaviour GameEngine.Component
+  @behaviour Core.Component
 
   @map_width 2048.0
   @map_height 2048.0
@@ -31,11 +31,11 @@ defmodule GameContent.AsteroidArena.SpawnComponent do
     }
   end
 
-  @impl GameEngine.Component
+  @impl Core.Component
   def on_ready(world_ref) do
-    GameEngine.NifBridge.set_world_size(world_ref, @map_width, @map_height)
+    Core.NifBridge.set_world_size(world_ref, @map_width, @map_height)
 
-    GameEngine.NifBridge.set_entity_params(
+    Core.NifBridge.set_entity_params(
       world_ref,
       enemy_params(),
       [],

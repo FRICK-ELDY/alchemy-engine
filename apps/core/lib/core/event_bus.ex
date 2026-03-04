@@ -1,4 +1,4 @@
-defmodule GameEngine.EventBus do
+defmodule Core.EventBus do
   @moduledoc """
   フレームイベントを受け取り、複数のサブスクライバーに配信する。
   """

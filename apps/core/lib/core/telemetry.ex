@@ -1,4 +1,4 @@
-defmodule GameEngine.Telemetry do
+defmodule Core.Telemetry do
   @moduledoc """
   Telemetry イベントハンドラーと Metrics を定義する Supervisor。
   """

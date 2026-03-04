@@ -9,7 +9,7 @@ defmodule GameNetwork.ChannelTest do
   use ExUnit.Case, async: false
 
   # async: false の理由:
-  # GameEngine.RoomRegistry は名前付きプロセス（モジュール名固定）のため、
+  # Core.RoomRegistry は名前付きプロセス（モジュール名固定）のため、
   # 複数テストが並行して起動すると Registry の登録が衝突する。
 
   import Phoenix.ChannelTest

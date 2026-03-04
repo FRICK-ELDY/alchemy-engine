@@ -1,4 +1,4 @@
-defmodule GameEngine.GameEvents.Diagnostics do
+defmodule Core.GameEvents.Diagnostics do
   @moduledoc false
 
   require Logger
@@ -19,8 +19,8 @@ defmodule GameEngine.GameEvents.Diagnostics do
         %{}
       )
 
-      GameEngine.SaveManager.save_high_score(score)
-      Map.merge(init_arg || %{}, %{high_scores: GameEngine.SaveManager.load_high_scores()})
+      Core.SaveManager.save_high_score(score)
+      Map.merge(init_arg || %{}, %{high_scores: Core.SaveManager.load_high_scores()})
     else
       init_arg || %{}
     end
@@ -40,15 +40,15 @@ defmodule GameEngine.GameEvents.Diagnostics do
     score = Map.get(playing_state, :score, 0)
     elapsed_s = elapsed / 1000.0
 
-    render_type = GameEngine.SceneManager.render_type()
+    render_type = Core.SceneManager.render_type()
     hud_data = {player_hp, player_max_hp, score, elapsed_s}
 
     high_scores =
-      if render_type == :game_over, do: GameEngine.SaveManager.load_high_scores(), else: nil
+      if render_type == :game_over, do: Core.SaveManager.load_high_scores(), else: nil
 
-    nif_enemy_count = GameEngine.NifBridge.get_enemy_count(state.world_ref)
-    nif_bullet_count = GameEngine.NifBridge.get_bullet_count(state.world_ref)
-    physics_ms = GameEngine.NifBridge.get_frame_time_ms(state.world_ref)
+    nif_enemy_count = Core.NifBridge.get_enemy_count(state.world_ref)
+    nif_bullet_count = Core.NifBridge.get_bullet_count(state.world_ref)
+    physics_ms = Core.NifBridge.get_frame_time_ms(state.world_ref)
 
     # Rust ECS を使わないコンテンツ（BulletHell3D 等）は NIF が 0 を返すため、
     # Playing シーン state のリストから補完する。
@@ -62,7 +62,7 @@ defmodule GameEngine.GameEvents.Diagnostics do
         do: playing_state |> Map.get(:bullets, []) |> length(),
         else: nif_bullet_count
 
-    GameEngine.FrameCache.put(
+    Core.FrameCache.put(
       enemy_count,
       bullet_count,
       physics_ms,
@@ -118,7 +118,7 @@ defmodule GameEngine.GameEvents.Diagnostics do
     kill_count = Map.get(playing_state, :kill_count, 0)
 
     {rust_score, _rust_hp, _rust_elapsed, rust_kill_count} =
-      GameEngine.NifBridge.get_full_game_state(state.world_ref)
+      Core.NifBridge.get_full_game_state(state.world_ref)
 
     if rust_score != score do
       Logger.warning(
@@ -136,6 +136,6 @@ defmodule GameEngine.GameEvents.Diagnostics do
   end
 
   defp get_playing_scene_state(content) do
-    GameEngine.SceneManager.get_scene_state(content.playing_scene()) || %{}
+    Core.SceneManager.get_scene_state(content.playing_scene()) || %{}
   end
 end

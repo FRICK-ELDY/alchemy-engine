@@ -28,8 +28,8 @@ config :game_server, :map, :plain
 # 本番ビルド時は環境変数 SAVE_HMAC_SECRET で上書きすることを推奨する（config/runtime.exs）。
 # ローカルゲームの性質上、完全な改ざん防止は不可能だが、
 # 環境ごとに鍵を変えることで配布バイナリ間の互換性を制御できる。
-config :game_engine, :save_hmac_secret, "alchemy-engine-save-secret-v1"
+config :core, :save_hmac_secret, "alchemy-engine-save-secret-v1"
 
 # VR 対応 NIF をビルドする場合: features: ["xr"]
 # mix compile 時に nif に --features xr が渡される。
-config :game_engine, GameEngine.NifBridge, features: []
+config :core, Core.NifBridge, features: []

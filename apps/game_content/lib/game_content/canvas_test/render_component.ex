@@ -10,7 +10,7 @@ defmodule GameContent.CanvasTest.RenderComponent do
   - HUD Canvas               — ESC キーで表示/非表示（DEBUG MENU）
   - World Canvas             — 3D 空間内固定テキストパネル（毎フレーム再送）
   """
-  @behaviour GameEngine.Component
+  @behaviour Core.Component
 
   # カメラ設定
   @camera_fov 75.0
@@ -32,17 +32,17 @@ defmodule GameContent.CanvasTest.RenderComponent do
   @world_text_lifetime 9999.0
   @world_text_color {0.9, 0.95, 1.0, 1.0}
 
-  @impl GameEngine.Component
+  @impl Core.Component
   def on_nif_sync(context) do
-    content = GameEngine.Config.current()
-    playing_state = GameEngine.SceneManager.get_scene_state(content.playing_scene()) || %{}
+    content = Core.Config.current()
+    playing_state = Core.SceneManager.get_scene_state(content.playing_scene()) || %{}
 
     commands = build_commands()
     camera = build_camera(playing_state)
     ui = build_ui(playing_state, context)
     cursor_grab = Map.get(playing_state, :cursor_grab_request, :no_change)
 
-    GameEngine.NifBridge.push_render_frame(
+    Core.NifBridge.push_render_frame(
       context.render_buf_ref,
       commands,
       camera,
@@ -59,7 +59,7 @@ defmodule GameContent.CanvasTest.RenderComponent do
     # この場合でも次の Escape 押下で再送されるため、実害は1フレームの遅延に留まる。
     # 完全なアトミック性が必要な場合はシーケンス番号の導入を検討すること。
     if cursor_grab != :no_change do
-      GameEngine.SceneManager.update_by_module(
+      Core.SceneManager.update_by_module(
         GameContent.CanvasTest.Scenes.Playing,
         fn state ->
           if state.cursor_grab_request == cursor_grab do

@@ -6,7 +6,7 @@ defmodule GameContent.CanvasTest.Scenes.Playing do
   カメラ姿勢（位置・Yaw・Pitch）・HUD表示フラグを Elixir 側で管理する。
   物理エンジンは使用しない。
   """
-  @behaviour GameEngine.SceneBehaviour
+  @behaviour Core.SceneBehaviour
 
   @tick_sec 1.0 / 60.0
 
@@ -15,7 +15,7 @@ defmodule GameContent.CanvasTest.Scenes.Playing do
   @mouse_sensitivity 0.002
   @pitch_clamp 1.396
 
-  @impl GameEngine.SceneBehaviour
+  @impl Core.SceneBehaviour
   def init(_init_arg) do
     {:ok,
      %{
@@ -32,10 +32,10 @@ defmodule GameContent.CanvasTest.Scenes.Playing do
      }}
   end
 
-  @impl GameEngine.SceneBehaviour
+  @impl Core.SceneBehaviour
   def render_type, do: :playing
 
-  @impl GameEngine.SceneBehaviour
+  @impl Core.SceneBehaviour
   def update(_context, state) do
     new_state = tick(state)
     {:continue, new_state}

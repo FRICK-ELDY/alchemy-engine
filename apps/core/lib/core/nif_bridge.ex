@@ -1,15 +1,15 @@
-defmodule GameEngine.NifBridge do
+defmodule Core.NifBridge do
   @moduledoc """
   Rust NIF のラッパーモジュール。
   `use Rustler` により、コンパイル時に `native/nif` クレートが
   自動的にビルドされ、`.dll` がロードされる。
 
-  VR 対応ビルド: `config :game_engine, GameEngine.NifBridge, features: ["xr"]`
+  VR 対応ビルド: `config :core, Core.NifBridge, features: ["xr"]`
   を設定すると、mix compile 時に nif に --features xr が渡される。
   """
 
   use Rustler,
-    otp_app: :game_engine,
+    otp_app: :core,
     crate: :nif,
     path: "../../native/nif"
 

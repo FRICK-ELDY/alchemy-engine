@@ -1,4 +1,4 @@
-defmodule GameEngine.SceneBehaviour do
+defmodule Core.SceneBehaviour do
   @moduledoc """
   シーンコールバックの動作定義。
 

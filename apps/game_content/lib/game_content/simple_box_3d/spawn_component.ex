@@ -6,7 +6,7 @@ defmodule GameContent.SimpleBox3D.SpawnComponent do
   ゲームロジックは Elixir 側のシーン state で完結するため、
   `on_ready/1` では最小限のワールドサイズ設定のみ行う。
   """
-  @behaviour GameEngine.Component
+  @behaviour Core.Component
 
   # SimpleBox3D は Rust 物理エンジンを使わないが、エンジンループは常に動いている。
   # game_physics の physics_step.rs が `clamp(0.0, map_width - PLAYER_SIZE)` を呼ぶため、
@@ -15,9 +15,9 @@ defmodule GameContent.SimpleBox3D.SpawnComponent do
   # Rust 側でフォールバック処理を追加することが望ましい（残課題）。
   @map_size 2048.0
 
-  @impl GameEngine.Component
+  @impl Core.Component
   def on_ready(world_ref) do
-    GameEngine.NifBridge.set_world_size(world_ref, @map_size, @map_size)
+    Core.NifBridge.set_world_size(world_ref, @map_size, @map_size)
     :ok
   end
 end

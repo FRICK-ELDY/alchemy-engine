@@ -11,7 +11,7 @@ defmodule GameContent.VampireSurvivor.BossComponent do
   毎フレーム、Playing シーン state の boss_hp を NIF に注入する。
   ダーティフラグはプロセス辞書で管理する。
   """
-  @behaviour GameEngine.Component
+  @behaviour Core.Component
 
   require Logger
 
@@ -23,11 +23,11 @@ defmodule GameContent.VampireSurvivor.BossComponent do
 
   # ── on_frame_event: Rust フレームイベント処理 ──────────────────────
 
-  @impl GameEngine.Component
+  @impl Core.Component
   def on_frame_event({:boss_spawn, boss_kind, _, _, _}, _context) do
-    content = GameEngine.Config.current()
+    content = Core.Config.current()
 
-    GameEngine.SceneManager.update_by_module(content.playing_scene(), fn state ->
+    Core.SceneManager.update_by_module(content.playing_scene(), fn state ->
       max_hp = GameContent.EntityParams.boss_max_hp(boss_kind)
       %{state | boss_hp: max_hp, boss_max_hp: max_hp, boss_kind_id: boss_kind}
     end)
@@ -41,9 +41,9 @@ defmodule GameContent.VampireSurvivor.BossComponent do
 
   def on_frame_event({:boss_damaged, damage_x1000, _, _, _}, _context) do
     damage = damage_x1000 / 1000.0
-    content = GameEngine.Config.current()
+    content = Core.Config.current()
 
-    GameEngine.SceneManager.update_by_module(content.playing_scene(), fn state ->
+    Core.SceneManager.update_by_module(content.playing_scene(), fn state ->
       if state.boss_hp != nil do
         %{state | boss_hp: max(0.0, state.boss_hp - damage)}
       else
@@ -55,13 +55,13 @@ defmodule GameContent.VampireSurvivor.BossComponent do
   end
 
   def on_frame_event({:boss_defeated, world_ref, boss_kind, x, y}, _context) do
-    content = GameEngine.Config.current()
+    content = Core.Config.current()
 
     if function_exported?(content, :boss_exp_reward, 1) do
       exp = content.boss_exp_reward(boss_kind)
       score_delta = content.score_from_exp(exp)
 
-      GameEngine.SceneManager.update_by_module(content.playing_scene(), fn state ->
+      Core.SceneManager.update_by_module(content.playing_scene(), fn state ->
         state
         |> Map.update(:score, score_delta, &(&1 + score_delta))
         |> Map.update(:kill_count, 1, &(&1 + 1))
@@ -79,10 +79,10 @@ defmodule GameContent.VampireSurvivor.BossComponent do
 
   # ── on_nif_sync: 毎フレーム NIF 注入 ─────────────────────────────
 
-  @impl GameEngine.Component
+  @impl Core.Component
   def on_nif_sync(context) do
-    content = GameEngine.Config.current()
-    playing_state = GameEngine.SceneManager.get_scene_state(content.playing_scene()) || %{}
+    content = Core.Config.current()
+    playing_state = Core.SceneManager.get_scene_state(content.playing_scene()) || %{}
     boss_hp = Map.get(playing_state, :boss_hp)
     prev = Process.get({__MODULE__, :last_boss_hp}, :unset)
 
@@ -96,24 +96,24 @@ defmodule GameContent.VampireSurvivor.BossComponent do
 
   # ── on_physics_process: ボス AI 制御 ─────────────────────────────
 
-  @impl GameEngine.Component
+  @impl Core.Component
   def on_physics_process(context) do
     world_ref = context.world_ref
 
     playing_state =
-      GameEngine.SceneManager.get_scene_state(GameContent.VampireSurvivor.Scenes.Playing)
+      Core.SceneManager.get_scene_state(GameContent.VampireSurvivor.Scenes.Playing)
 
     kind_id = Map.get(playing_state || %{}, :boss_kind_id)
 
     if kind_id != nil do
-      boss_state = GameEngine.NifBridge.get_boss_state(world_ref)
+      boss_state = Core.NifBridge.get_boss_state(world_ref)
       update_boss_ai(context, boss_state, kind_id)
     end
 
     :ok
   end
 
-  @impl GameEngine.Component
+  @impl Core.Component
   def on_event(_event, _context), do: :ok
 
   # ── プライベート: NIF 注入 ────────────────────────────────────────
@@ -121,7 +121,7 @@ defmodule GameContent.VampireSurvivor.BossComponent do
   defp push_boss_hp_to_nif(_world_ref, nil), do: :ok
 
   defp push_boss_hp_to_nif(world_ref, boss_hp) do
-    case GameEngine.NifBridge.set_entity_hp(world_ref, :boss, boss_hp) do
+    case Core.NifBridge.set_entity_hp(world_ref, :boss, boss_hp) do
       {:error, reason} ->
         Logger.error("[NIF ERROR] set_entity_hp(:boss) failed: #{inspect(reason)}")
 
@@ -138,7 +138,7 @@ defmodule GameContent.VampireSurvivor.BossComponent do
     for _ <- 1..10 do
       ox = (:rand.uniform() - 0.5) * 200.0
       oy = (:rand.uniform() - 0.5) * 200.0
-      GameEngine.NifBridge.spawn_item(world_ref, x + ox, y + oy, @item_gem, gem_value)
+      Core.NifBridge.spawn_item(world_ref, x + ox, y + oy, @item_gem, gem_value)
     end
   end
 
@@ -150,11 +150,11 @@ defmodule GameContent.VampireSurvivor.BossComponent do
   defp update_boss_ai(context, {:alive, bx, by, _hp, _max_hp, _phase_timer}, kind_id) do
     world_ref = context.world_ref
     dt = context.tick_ms / 1000.0
-    {px, py} = GameEngine.NifBridge.get_player_pos(world_ref)
+    {px, py} = Core.NifBridge.get_player_pos(world_ref)
     bp = GameContent.EntityParams.boss_params_by_id(kind_id)
 
     {vx, vy} = chase_velocity(px, py, bx, by, bp.speed)
-    GameEngine.NifBridge.set_entity_velocity(world_ref, :boss, vx, vy)
+    Core.NifBridge.set_entity_velocity(world_ref, :boss, vx, vy)
 
     # phase_timer は Elixir 側プロセス辞書で管理する（Rust への書き込み NIF なし）
     phase_timer = Process.get({__MODULE__, :boss_phase_timer}, bp.special_interval)
@@ -179,14 +179,14 @@ defmodule GameContent.VampireSurvivor.BossComponent do
 
   defp handle_boss_special_action(world_ref, @boss_bat_lord, px, py, bx, by, bp) do
     {dvx, dvy} = chase_velocity(px, py, bx, by, bp.dash_speed)
-    GameEngine.NifBridge.set_entity_velocity(world_ref, :boss, dvx, dvy)
-    GameEngine.NifBridge.set_entity_flag(world_ref, :boss, :invincible, true)
+    Core.NifBridge.set_entity_velocity(world_ref, :boss, dvx, dvy)
+    Core.NifBridge.set_entity_flag(world_ref, :boss, :invincible, true)
     Process.send_after(self(), {:boss_dash_end, world_ref}, bp.dash_duration_ms)
   end
 
   defp handle_boss_special_action(world_ref, @boss_stone_golem, _px, _py, boss_x, boss_y, bp) do
     for {dx, dy} <- [{1.0, 0.0}, {-1.0, 0.0}, {0.0, 1.0}, {0.0, -1.0}] do
-      GameEngine.NifBridge.spawn_projectile(
+      Core.NifBridge.spawn_projectile(
         world_ref,
         boss_x,
         boss_y,
@@ -220,7 +220,7 @@ defmodule GameContent.VampireSurvivor.BossComponent do
         {bx + :math.cos(angle) * 120.0, by + :math.sin(angle) * 120.0}
       end
 
-    GameEngine.NifBridge.spawn_enemies_at(
+    Core.NifBridge.spawn_enemies_at(
       world_ref,
       GameContent.EntityParams.enemy_kind_slime(),
       positions

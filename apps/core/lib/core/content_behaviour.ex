@@ -1,4 +1,4 @@
-defmodule GameEngine.ContentBehaviour do
+defmodule Core.ContentBehaviour do
   @moduledoc """
   コンテンツモジュールが実装すべきビヘイビア。
 

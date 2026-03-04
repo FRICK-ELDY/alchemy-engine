@@ -1,4 +1,4 @@
-defmodule GameEngine.StressMonitor do
+defmodule Core.StressMonitor do
   @moduledoc """
   独立したパフォーマンス監視プロセス。
   クラッシュしてもゲームは継続する（one_for_one 戦略）。
@@ -32,7 +32,7 @@ defmodule GameEngine.StressMonitor do
   end
 
   defp sample_and_log(state) do
-    case GameEngine.FrameCache.get() do
+    case Core.FrameCache.get() do
       :empty ->
         state
 
@@ -43,7 +43,7 @@ defmodule GameEngine.StressMonitor do
          physics_ms: physics_ms,
          hud_data: {hp, max_hp, score, elapsed_s}
        }} ->
-        content_module = GameEngine.Config.current()
+        content_module = Core.Config.current()
         wave = content_module.wave_label(elapsed_s)
         overrun = physics_ms > @frame_budget_ms
 

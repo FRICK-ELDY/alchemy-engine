@@ -83,7 +83,7 @@ defmodule GameNetwork.Channel do
     dx = payload |> Map.get("dx", 0) |> to_float()
     dy = payload |> Map.get("dy", 0) |> to_float()
 
-    case GameEngine.RoomRegistry.get_loop(room_id) do
+    case Core.RoomRegistry.get_loop(room_id) do
       {:ok, pid} ->
         send(pid, {:move_input, dx, dy})
 
@@ -97,7 +97,7 @@ defmodule GameNetwork.Channel do
   def handle_in("action", %{"name" => name}, socket) do
     room_id = socket.assigns.room_id
 
-    case GameEngine.RoomRegistry.get_loop(room_id) do
+    case Core.RoomRegistry.get_loop(room_id) do
       {:ok, pid} ->
         send(pid, {:ui_action, name})
 
@@ -131,7 +131,7 @@ defmodule GameNetwork.Channel do
     {:noreply, socket}
   end
 
-  # GameEngine.GameEvents は {:frame_events, events} の2要素タプルを送信する。
+  # Core.GameEvents は {:frame_events, events} の2要素タプルを送信する。
   # tick は GameEvents 側に存在しないため、ペイロードには含めない。
   def handle_info({:frame_events, events}, socket) do
     push(socket, "frame", %{events: Enum.map(events, &encode_event/1)})

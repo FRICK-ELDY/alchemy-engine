@@ -1,4 +1,4 @@
-defmodule GameEngine.SceneManager do
+defmodule Core.SceneManager do
   @moduledoc """
   シーンスタックを管理する GenServer。
 
@@ -136,5 +136,5 @@ defmodule GameEngine.SceneManager do
     {:ok, %{module: module, state: scene_state}}
   end
 
-  defp current_content, do: GameEngine.Config.current()
+  defp current_content, do: Core.Config.current()
 end

@@ -24,7 +24,7 @@ defmodule GameServer.MixProject do
 
   defp deps do
     [
-      {:game_engine, in_umbrella: true},
+      {:core, in_umbrella: true},
       {:game_content, in_umbrella: true},
       {:game_network, in_umbrella: true}
     ]

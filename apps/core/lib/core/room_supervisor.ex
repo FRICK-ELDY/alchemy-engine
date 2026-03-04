@@ -1,4 +1,4 @@
-defmodule GameEngine.RoomSupervisor do
+defmodule Core.RoomSupervisor do
   @moduledoc """
   ルーム単位で GameEvents を管理する DynamicSupervisor。
   """
@@ -13,13 +13,13 @@ defmodule GameEngine.RoomSupervisor do
   end
 
   def start_room(room_id) when is_binary(room_id) or is_atom(room_id) do
-    case GameEngine.RoomRegistry.get_loop(room_id) do
+    case Core.RoomRegistry.get_loop(room_id) do
       {:ok, _pid} ->
         {:error, :already_started}
 
       :error ->
         child_spec =
-          {GameEngine.GameEvents, [room_id: room_id]}
+          {Core.GameEvents, [room_id: room_id]}
           |> Supervisor.child_spec(id: {:game_events, room_id})
 
         case DynamicSupervisor.start_child(__MODULE__, child_spec) do
@@ -34,7 +34,7 @@ defmodule GameEngine.RoomSupervisor do
   end
 
   def stop_room(room_id) when is_binary(room_id) or is_atom(room_id) do
-    case GameEngine.RoomRegistry.get_loop(room_id) do
+    case Core.RoomRegistry.get_loop(room_id) do
       {:ok, pid} ->
         DynamicSupervisor.terminate_child(__MODULE__, pid)
         Logger.info("[ROOM] Stopped room #{inspect(room_id)}")
@@ -46,7 +46,7 @@ defmodule GameEngine.RoomSupervisor do
   end
 
   def list_rooms do
-    GameEngine.RoomRegistry.list_rooms()
+    Core.RoomRegistry.list_rooms()
   end
 
   def default_room, do: @default_room

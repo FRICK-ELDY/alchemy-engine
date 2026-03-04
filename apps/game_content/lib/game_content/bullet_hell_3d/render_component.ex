@@ -12,7 +12,7 @@ defmodule GameContent.BulletHell3D.RenderComponent do
   - `DrawCommand::Box3D`     — プレイヤー（青）・敵（赤）・弾（黄）
   - HUD                      — 残り HP・生存時間（egui）
   """
-  @behaviour GameEngine.Component
+  @behaviour Core.Component
 
   # カメラ設定（斜め上から俯瞰）
   @camera_eye {0.0, 18.0, 14.0}
@@ -42,24 +42,24 @@ defmodule GameContent.BulletHell3D.RenderComponent do
   # HP 表示用の最大 HP
   @max_hp 3
 
-  @impl GameEngine.Component
+  @impl Core.Component
   def on_nif_sync(context) do
-    content = GameEngine.Config.current()
+    content = Core.Config.current()
 
     current_scene =
-      case GameEngine.SceneManager.current() do
+      case Core.SceneManager.current() do
         {:ok, %{module: mod}} -> mod
         _ -> content.playing_scene()
       end
 
-    playing_state = GameEngine.SceneManager.get_scene_state(content.playing_scene()) || %{}
-    game_over_state = GameEngine.SceneManager.get_scene_state(content.game_over_scene()) || %{}
+    playing_state = Core.SceneManager.get_scene_state(content.playing_scene()) || %{}
+    game_over_state = Core.SceneManager.get_scene_state(content.game_over_scene()) || %{}
 
     commands = build_commands(playing_state)
     camera = build_camera()
     ui = build_ui(current_scene, content, playing_state, game_over_state)
 
-    GameEngine.NifBridge.push_render_frame(
+    Core.NifBridge.push_render_frame(
       context.render_buf_ref,
       commands,
       camera,

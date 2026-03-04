@@ -5,7 +5,7 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
   weapon_levels, level_up_pending, weapon_choices はこのシーンの state で管理する。
   level, exp, exp_to_next, boss_hp, boss_max_hp, boss_kind_id もこのシーンの state で管理する。
   """
-  @behaviour GameEngine.SceneBehaviour
+  @behaviour Core.SceneBehaviour
 
   alias GameContent.EntityParams
   alias GameContent.VampireSurvivor.BossSystem
@@ -17,7 +17,7 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
 
   require Logger
 
-  @impl GameEngine.SceneBehaviour
+  @impl Core.SceneBehaviour
   def init(_init_arg) do
     {:ok,
      %{
@@ -44,10 +44,10 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
      }}
   end
 
-  @impl GameEngine.SceneBehaviour
+  @impl Core.SceneBehaviour
   def render_type, do: :playing
 
-  @impl GameEngine.SceneBehaviour
+  @impl Core.SceneBehaviour
   def update(context, state) do
     elapsed = context.elapsed
     player_hp = Map.get(state, :player_hp, 100.0)
@@ -193,7 +193,7 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
   Elixir 側 Rule state が武器の SSoT であり、毎フレーム Rust に注入するために使用する。
   """
   def weapon_slots_for_nif(weapon_levels) do
-    registry = GameEngine.Config.current().entity_registry().weapons
+    registry = Core.Config.current().entity_registry().weapons
 
     weapon_levels
     |> Enum.flat_map(fn {weapon_name, level} ->
@@ -210,7 +210,7 @@ defmodule GameContent.VampireSurvivor.Scenes.Playing do
     required = exp_required_for_next(state.level)
 
     if state.exp >= required and required > 0 do
-      content = GameEngine.Config.current()
+      content = Core.Config.current()
       already_pending = Map.get(state, :level_up_pending, false)
 
       state =

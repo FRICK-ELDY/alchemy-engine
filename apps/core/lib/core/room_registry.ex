@@ -1,4 +1,4 @@
-defmodule GameEngine.RoomRegistry do
+defmodule Core.RoomRegistry do
   @moduledoc """
   ルーム ID → GameEvents pid のマッピング用 Registry。
   """
