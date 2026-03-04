@@ -12,19 +12,31 @@ defmodule Content.SimpleBox3D.InputComponent do
   @impl Core.Component
   # dx, dy は Rust の on_move_input が f64 としてエンコードするため float で届く。
   def on_event({:move_input, dx, dy}, _context) when is_float(dx) and is_float(dy) do
-    Core.SceneManager.update_by_module(
-      Content.SimpleBox3D.Scenes.Playing,
-      fn state -> Map.put(state, :move_input, {dx, dy}) end
-    )
+    content = Core.Config.current()
+    runner = content.flow_runner(:main)
+
+    if runner do
+      Contents.SceneStack.update_by_module(
+        runner,
+        Content.SimpleBox3D.Scenes.Playing,
+        fn state -> Map.put(state, :move_input, {dx, dy}) end
+      )
+    end
 
     :ok
   end
 
   def on_event({:ui_action, "__retry__"}, _context) do
-    Core.SceneManager.update_by_module(
-      Content.SimpleBox3D.Scenes.GameOver,
-      fn state -> Map.put(state, :retry, true) end
-    )
+    content = Core.Config.current()
+    runner = content.flow_runner(:main)
+
+    if runner do
+      Contents.SceneStack.update_by_module(
+        runner,
+        Content.SimpleBox3D.Scenes.GameOver,
+        fn state -> Map.put(state, :retry, true) end
+      )
+    end
 
     :ok
   end

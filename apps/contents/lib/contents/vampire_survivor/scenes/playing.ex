@@ -5,7 +5,7 @@ defmodule Content.VampireSurvivor.Scenes.Playing do
   weapon_levels, level_up_pending, weapon_choices はこのシーンの state で管理する。
   level, exp, exp_to_next, boss_hp, boss_max_hp, boss_kind_id もこのシーンの state で管理する。
   """
-  @behaviour Core.SceneBehaviour
+  @behaviour Contents.SceneBehaviour
 
   alias Content.EntityParams
   alias Content.VampireSurvivor.BossSystem
@@ -17,7 +17,7 @@ defmodule Content.VampireSurvivor.Scenes.Playing do
 
   require Logger
 
-  @impl Core.SceneBehaviour
+  @impl Contents.SceneBehaviour
   def init(_init_arg) do
     {:ok,
      %{
@@ -44,10 +44,10 @@ defmodule Content.VampireSurvivor.Scenes.Playing do
      }}
   end
 
-  @impl Core.SceneBehaviour
+  @impl Contents.SceneBehaviour
   def render_type, do: :playing
 
-  @impl Core.SceneBehaviour
+  @impl Contents.SceneBehaviour
   def update(context, state) do
     elapsed = context.elapsed
     player_hp = Map.get(state, :player_hp, 100.0)

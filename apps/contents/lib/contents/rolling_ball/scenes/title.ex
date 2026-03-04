@@ -4,15 +4,15 @@ defmodule Content.RollingBall.Scenes.Title do
 
   「START」ボタン（`__start__` UI アクション）でステージ1のプレイ中シーンに遷移する。
   """
-  @behaviour Core.SceneBehaviour
+  @behaviour Contents.SceneBehaviour
 
-  @impl Core.SceneBehaviour
+  @impl Contents.SceneBehaviour
   def init(_init_arg), do: {:ok, %{start: false}}
 
-  @impl Core.SceneBehaviour
+  @impl Contents.SceneBehaviour
   def render_type, do: :playing
 
-  @impl Core.SceneBehaviour
+  @impl Contents.SceneBehaviour
   def update(_context, state) do
     if Map.get(state, :start, false) do
       {:transition, {:replace, Content.RollingBall.Scenes.Playing, %{stage: 1, retries_left: 3}},

@@ -5,17 +5,17 @@ defmodule Content.RollingBall.Scenes.StageClear do
   「NEXT STAGE」ボタン（`__next_stage__` UI アクション）で次ステージに遷移する。
   init_arg に `next_stage` と `retries_left` を受け取る。
   """
-  @behaviour Core.SceneBehaviour
+  @behaviour Contents.SceneBehaviour
 
-  @impl Core.SceneBehaviour
+  @impl Contents.SceneBehaviour
   def init(init_arg) do
     {:ok, Map.merge(%{next: false}, init_arg)}
   end
 
-  @impl Core.SceneBehaviour
+  @impl Contents.SceneBehaviour
   def render_type, do: :playing
 
-  @impl Core.SceneBehaviour
+  @impl Contents.SceneBehaviour
   def update(_context, state) do
     if Map.get(state, :next, false) do
       {:transition,

@@ -2,21 +2,21 @@ defmodule Content.VampireSurvivor.Scenes.BossAlert do
   @moduledoc """
   ボス出現警告シーン。一定時間後にボスをスポーンして Playing に戻る。
   """
-  @behaviour Core.SceneBehaviour
+  @behaviour Contents.SceneBehaviour
 
   alias Content.VampireSurvivor.BossSystem
 
   require Logger
 
-  @impl Core.SceneBehaviour
+  @impl Contents.SceneBehaviour
   def init(%{boss_kind: boss_kind, boss_name: boss_name, alert_ms: alert_ms}) do
     {:ok, %{boss_kind: boss_kind, boss_name: boss_name, alert_ms: alert_ms}}
   end
 
-  @impl Core.SceneBehaviour
+  @impl Contents.SceneBehaviour
   def render_type, do: :boss_alert
 
-  @impl Core.SceneBehaviour
+  @impl Contents.SceneBehaviour
   def update(context, %{boss_kind: boss_kind, boss_name: boss_name, alert_ms: alert_ms} = state) do
     world_ref = context.world_ref
     now = context.now

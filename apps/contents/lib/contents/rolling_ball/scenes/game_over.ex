@@ -8,17 +8,17 @@ defmodule Content.RollingBall.Scenes.GameOver do
 
   init_arg に `stage` と `retries_left` を受け取る。
   """
-  @behaviour Core.SceneBehaviour
+  @behaviour Contents.SceneBehaviour
 
-  @impl Core.SceneBehaviour
+  @impl Contents.SceneBehaviour
   def init(init_arg) do
     {:ok, Map.merge(%{retry: false}, init_arg)}
   end
 
-  @impl Core.SceneBehaviour
+  @impl Contents.SceneBehaviour
   def render_type, do: :game_over
 
-  @impl Core.SceneBehaviour
+  @impl Contents.SceneBehaviour
   def update(_context, state) do
     if Map.get(state, :retry, false) do
       retries_left = Map.get(state, :retries_left, 0)

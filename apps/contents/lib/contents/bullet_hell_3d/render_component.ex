@@ -45,15 +45,19 @@ defmodule Content.BulletHell3D.RenderComponent do
   @impl Core.Component
   def on_nif_sync(context) do
     content = Core.Config.current()
+    runner = content.flow_runner(:main)
 
     current_scene =
-      case Core.SceneManager.current() do
+      case runner && Contents.SceneStack.current(runner) do
         {:ok, %{module: mod}} -> mod
         _ -> content.playing_scene()
       end
 
-    playing_state = Core.SceneManager.get_scene_state(content.playing_scene()) || %{}
-    game_over_state = Core.SceneManager.get_scene_state(content.game_over_scene()) || %{}
+    playing_state =
+      (runner && Contents.SceneStack.get_scene_state(runner, content.playing_scene())) || %{}
+
+    game_over_state =
+      (runner && Contents.SceneStack.get_scene_state(runner, content.game_over_scene())) || %{}
 
     commands = build_commands(playing_state)
     camera = build_camera()

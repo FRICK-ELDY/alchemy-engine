@@ -25,14 +25,16 @@ defmodule Content.VRTest.RenderComponent do
   @impl Core.Component
   def on_nif_sync(context) do
     content = Core.Config.current()
+    runner = content.flow_runner(:main)
 
     current_scene =
-      case Core.SceneManager.current() do
+      case runner && Contents.SceneStack.current(runner) do
         {:ok, %{module: mod}} -> mod
         _ -> content.playing_scene()
       end
 
-    playing_state = Core.SceneManager.get_scene_state(content.playing_scene()) || %{}
+    playing_state =
+      (runner && Contents.SceneStack.get_scene_state(runner, content.playing_scene())) || %{}
 
     commands = build_commands(playing_state)
     camera = build_camera(playing_state)
@@ -47,8 +49,9 @@ defmodule Content.VRTest.RenderComponent do
       cursor_grab
     )
 
-    if cursor_grab != :no_change do
-      Core.SceneManager.update_by_module(
+    if cursor_grab != :no_change and runner do
+      Contents.SceneStack.update_by_module(
+        runner,
         Content.VRTest.Scenes.Playing,
         fn state ->
           if state.cursor_grab_request == cursor_grab do
