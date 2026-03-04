@@ -31,6 +31,14 @@ defmodule Core.ContentBehaviour do
   """
   @callback flow_runner(room_id :: term()) :: pid() | nil
 
+  @doc """
+  そのルームのイベントハンドラ（GameEvents）の pid を返す。
+
+  InputHandler・Network 等がイベント送信先を取得する際に使用する。
+  nil は GameEvents 未起動状態を表す。
+  """
+  @callback event_handler(room_id :: term()) :: pid() | nil
+
   @callback initial_scenes() :: [%{module: scene_module(), init_arg: map()}]
   @callback physics_scenes() :: [scene_module()]
   @callback playing_scene() :: scene_module()

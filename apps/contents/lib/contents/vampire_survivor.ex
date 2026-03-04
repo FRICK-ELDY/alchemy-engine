@@ -23,6 +23,13 @@ defmodule Content.VampireSurvivor do
 
   def flow_runner(_room_id), do: Process.whereis(Contents.SceneStack)
 
+  def event_handler(room_id) do
+    case Core.RoomRegistry.get_loop(room_id) do
+      {:ok, pid} -> pid
+      :error -> nil
+    end
+  end
+
   def initial_scenes do
     [
       %{module: Content.VampireSurvivor.Scenes.Playing, init_arg: %{}}

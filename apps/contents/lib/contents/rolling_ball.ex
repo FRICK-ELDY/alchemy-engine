@@ -37,6 +37,13 @@ defmodule Content.RollingBall do
 
   def flow_runner(_room_id), do: Process.whereis(Contents.SceneStack)
 
+  def event_handler(room_id) do
+    case Core.RoomRegistry.get_loop(room_id) do
+      {:ok, pid} -> pid
+      :error -> nil
+    end
+  end
+
   def initial_scenes do
     [%{module: Content.RollingBall.Scenes.Title, init_arg: %{}}]
   end
