@@ -55,7 +55,8 @@ defmodule GameContent.SimpleBox3D.RenderComponent do
       context.render_buf_ref,
       commands,
       camera,
-      ui
+      ui,
+      :no_change
     )
 
     :ok

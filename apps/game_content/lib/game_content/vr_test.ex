@@ -41,9 +41,9 @@ defmodule GameContent.VRTest do
   def title, do: "VR Test"
   def version, do: "0.1.0"
 
-  # ── アセット ───────────────────────────────────────────────────────
+  # ── アセット（共通 LocalAssets を参照）───────────────────────────────
 
-  def assets_path, do: nil
+  def assets_path, do: ""
 
   # ── コンテキストデフォルト ──────────────────────────────────────────
 

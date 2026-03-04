@@ -21,7 +21,7 @@ config :game_network, GameNetwork.UDP, port: 4001
 # GameContent.SimpleBox3D     — シンプルな3Dゲーム（Phase R-6 動作検証用）
 # GameContent.BulletHell3D    — 3D 弾幕避けゲーム
 # GameContent.VRTest          — VR 動作検証（Phase A: マウスで見回し）
-config :game_server, :current, GameContent.VRTest
+config :game_server, :current, GameContent.SimpleBox3D
 config :game_server, :map, :plain
 
 # セーブデータの HMAC 署名鍵（デフォルト値）。
