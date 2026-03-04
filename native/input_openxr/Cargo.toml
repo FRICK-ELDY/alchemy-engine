@@ -1,5 +1,5 @@
 [package]
-name = "game_input_openxr"
+name = "input_openxr"
 version = "0.1.0"
 edition = "2021"
 description = "OpenXR 入力ブリッジ（VR ヘッドセット・コントローラー・トラッカー）"

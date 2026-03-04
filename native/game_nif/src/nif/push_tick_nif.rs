@@ -3,8 +3,8 @@
 
 use super::util::lock_poisoned_err;
 use crate::lock_metrics::record_write_wait;
-use game_physics::game_logic::physics_step_inner;
-use game_physics::world::GameWorld;
+use physics::game_logic::physics_step_inner;
+use physics::world::GameWorld;
 use rustler::{Atom, NifResult, ResourceArc};
 use std::time::Instant;
 

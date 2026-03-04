@@ -2,7 +2,7 @@
 //! Summary: NIF ローダー（パニックフック・リソース登録・アトム事前登録）
 
 use crate::render_frame_buffer::RenderFrameBuffer;
-use game_physics::world::{GameLoopControl, GameWorld};
+use physics::world::{GameLoopControl, GameWorld};
 
 #[cfg(debug_assertions)]
 fn init_panic_hook() {

@@ -1,5 +1,5 @@
 //! Path: native/game_nif/src/render_bridge.rs
-//! Summary: game_render の RenderBridge 実装
+//! Summary: render の RenderBridge 実装
 //!
 //! Phase R-2: RenderBridge::next_frame() が GameWorldInner を直接読む代わりに
 //! RenderFrameBuffer を参照するよう変更した。
@@ -12,12 +12,12 @@
 
 use crate::lock_metrics::record_read_wait;
 use crate::render_frame_buffer::RenderFrameBuffer;
-use game_audio::AssetLoader;
-use game_input::run_desktop_loop;
-use game_physics::constants::{PLAYER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
-use game_physics::world::GameWorld;
-use game_render::window::{KeyCode, KeyState, RenderBridge, RendererInit, WindowConfig};
-use game_render::RenderFrame;
+use audio::AssetLoader;
+use input::run_desktop_loop;
+use physics::constants::{PLAYER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
+use physics::world::GameWorld;
+use render::window::{KeyCode, KeyState, RenderBridge, RendererInit, WindowConfig};
+use render::RenderFrame;
 use rustler::env::OwnedEnv;
 use rustler::{Encoder, LocalPid, ResourceArc};
 use std::time::Instant;
@@ -92,7 +92,7 @@ impl RenderBridge for NativeRenderBridge {
 
         // 補間は Camera2D 専用。Camera3D の場合は Elixir 側がカメラを毎フレーム計算して
         // push するため、ここでの上書きは不要かつ有害。
-        let is_2d = matches!(frame.camera, game_render::CameraParams::Camera2D { .. });
+        let is_2d = matches!(frame.camera, render::CameraParams::Camera2D { .. });
 
         if is_2d && interp_data.curr_tick_ms > 0 {
             let now_ms = std::time::SystemTime::now()
@@ -106,13 +106,13 @@ impl RenderBridge for NativeRenderBridge {
             // O(1) で直接書き換える。先頭が PlayerSprite でない場合（空フレーム等）は
             // 線形探索にフォールバックして安全性を保つ。
             let player_cmd = match frame.commands.first_mut() {
-                Some(c @ game_render::DrawCommand::PlayerSprite { .. }) => Some(c),
+                Some(c @ render::DrawCommand::PlayerSprite { .. }) => Some(c),
                 _ => frame
                     .commands
                     .iter_mut()
-                    .find(|c| matches!(c, game_render::DrawCommand::PlayerSprite { .. })),
+                    .find(|c| matches!(c, render::DrawCommand::PlayerSprite { .. })),
             };
-            if let Some(game_render::DrawCommand::PlayerSprite {
+            if let Some(render::DrawCommand::PlayerSprite {
                 ref mut x,
                 ref mut y,
                 ..
@@ -123,7 +123,7 @@ impl RenderBridge for NativeRenderBridge {
             }
             let cam_x = interp_x + PLAYER_SIZE / 2.0 - SCREEN_WIDTH / 2.0;
             let cam_y = interp_y + PLAYER_SIZE / 2.0 - SCREEN_HEIGHT / 2.0;
-            frame.camera = game_render::CameraParams::Camera2D {
+            frame.camera = render::CameraParams::Camera2D {
                 offset_x: cam_x,
                 offset_y: cam_y,
             };
@@ -177,7 +177,7 @@ struct InterpolationData {
     curr_tick_ms: u64,
 }
 
-fn copy_interpolation_data(w: &game_physics::world::GameWorldInner) -> InterpolationData {
+fn copy_interpolation_data(w: &physics::world::GameWorldInner) -> InterpolationData {
     InterpolationData {
         prev_player_x: w.prev_player_x,
         prev_player_y: w.prev_player_y,

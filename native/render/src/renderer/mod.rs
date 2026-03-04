@@ -3,8 +3,8 @@
 //! 1.8: game_native から game_render へ分離移設。
 
 use crate::DrawCommand;
-use game_physics::constants::{BG_B, BG_G, BG_R, SPRITE_SIZE};
-use game_physics::item::{RENDER_KIND_GEM, RENDER_KIND_MAGNET, RENDER_KIND_POTION};
+use physics::constants::{BG_B, BG_G, BG_R, SPRITE_SIZE};
+use physics::item::{RENDER_KIND_GEM, RENDER_KIND_MAGNET, RENDER_KIND_POTION};
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
 use winit::window::Window;

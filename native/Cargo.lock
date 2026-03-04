@@ -264,6 +264,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
+name = "audio"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "rodio",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1167,72 +1175,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "game_audio"
-version = "0.1.0"
-dependencies = [
- "log",
- "rodio",
-]
-
-[[package]]
-name = "game_input"
-version = "0.1.0"
-dependencies = [
- "game_render",
- "pollster",
- "winit",
-]
-
-[[package]]
-name = "game_input_openxr"
-version = "0.1.0"
-dependencies = [
- "log",
- "openxr",
-]
-
-[[package]]
 name = "game_nif"
 version = "0.1.0"
 dependencies = [
+ "audio",
  "bincode",
  "env_logger",
- "game_audio",
- "game_input",
- "game_input_openxr",
- "game_physics",
- "game_render",
+ "input",
+ "input_openxr",
  "log",
+ "physics",
  "rayon",
+ "render",
  "rustler",
  "serde",
-]
-
-[[package]]
-name = "game_physics"
-version = "0.1.0"
-dependencies = [
- "criterion",
- "log",
- "rayon",
- "rustc-hash 2.1.1",
- "rustler",
-]
-
-[[package]]
-name = "game_render"
-version = "0.1.0"
-dependencies = [
- "bytemuck",
- "egui",
- "egui-wgpu",
- "egui-winit",
- "game_physics",
- "image",
- "log",
- "pollster",
- "wgpu",
- "winit",
 ]
 
 [[package]]
@@ -1544,6 +1500,23 @@ checksum = "7714e70437a7dc3ac8eb7e6f8df75fd8eb422675fc7678aff7364301092b1017"
 dependencies = [
  "equivalent",
  "hashbrown 0.16.1",
+]
+
+[[package]]
+name = "input"
+version = "0.1.0"
+dependencies = [
+ "pollster",
+ "render",
+ "winit",
+]
+
+[[package]]
+name = "input_openxr"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "openxr",
 ]
 
 [[package]]
@@ -2460,6 +2433,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
 
 [[package]]
+name = "physics"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "log",
+ "rayon",
+ "rustc-hash 2.1.1",
+ "rustler",
+]
+
+[[package]]
 name = "pin-project"
 version = "1.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2842,6 +2826,22 @@ name = "regex-syntax"
 version = "0.8.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc897dd8d9e8bd1ed8cdad82b5966c3e0ecae09fb1907d58efaa013543185d0a"
+
+[[package]]
+name = "render"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "egui",
+ "egui-wgpu",
+ "egui-winit",
+ "image",
+ "log",
+ "physics",
+ "pollster",
+ "wgpu",
+ "winit",
+]
 
 [[package]]
 name = "renderdoc-sys"

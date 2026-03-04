@@ -2,11 +2,11 @@
 //! Summary: アクション NIF（set_weapon_slots, spawn_item, 汎用エンティティ操作 等）
 
 use super::util::{lock_poisoned_err, params_not_loaded_err};
-use game_physics::constants::{PLAYER_RADIUS, POPUP_LIFETIME, POPUP_Y_OFFSET};
-use game_physics::game_logic::systems::spawn::get_spawn_positions_around_player;
-use game_physics::item::ItemKind;
-use game_physics::weapon::WeaponSlot;
-use game_physics::world::{BossState, FrameEvent, GameWorld};
+use physics::constants::{PLAYER_RADIUS, POPUP_LIFETIME, POPUP_Y_OFFSET};
+use physics::game_logic::systems::spawn::get_spawn_positions_around_player;
+use physics::item::ItemKind;
+use physics::weapon::WeaponSlot;
+use physics::world::{BossState, FrameEvent, GameWorld};
 use rustler::{Atom, NifResult, ResourceArc};
 
 use crate::ok;
