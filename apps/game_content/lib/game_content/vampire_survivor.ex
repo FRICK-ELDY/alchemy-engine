@@ -3,7 +3,7 @@ defmodule GameContent.VampireSurvivor do
   ヴァンパイアサバイバーのコンテンツ定義。
 
   エンジンは `components/0` が返すコンポーネントリストを順に呼び出す。
-  各コンポーネントは `GameEngine.Component` ビヘイビアを実装する。
+  各コンポーネントは `Core.Component` ビヘイビアを実装する。
   """
 
   # ── コンポーネントリスト ──────────────────────────────────────────

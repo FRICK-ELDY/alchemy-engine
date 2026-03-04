@@ -9,7 +9,7 @@ defmodule GameContent.BulletHell3D.BulletComponent do
   現時点では Rust フレームイベントを受け取る口として機能し、
   弾発射に関連するイベントをシーン state に反映する役割を担う。
   """
-  @behaviour GameEngine.Component
+  @behaviour Core.Component
 
   # 現時点では弾ロジックは Playing シーンに集約されているため、
   # コールバックは最小限の実装とする。

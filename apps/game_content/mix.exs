@@ -27,7 +27,7 @@ defmodule GameContent.MixProject do
 
   defp deps do
     [
-      {:game_engine, in_umbrella: true},
+      {:core, in_umbrella: true},
       {:mox, "~> 1.0", only: :test}
     ]
   end

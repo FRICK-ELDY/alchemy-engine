@@ -2,21 +2,21 @@ defmodule GameContent.VampireSurvivor.Scenes.BossAlert do
   @moduledoc """
   ボス出現警告シーン。一定時間後にボスをスポーンして Playing に戻る。
   """
-  @behaviour GameEngine.SceneBehaviour
+  @behaviour Core.SceneBehaviour
 
   alias GameContent.VampireSurvivor.BossSystem
 
   require Logger
 
-  @impl GameEngine.SceneBehaviour
+  @impl Core.SceneBehaviour
   def init(%{boss_kind: boss_kind, boss_name: boss_name, alert_ms: alert_ms}) do
     {:ok, %{boss_kind: boss_kind, boss_name: boss_name, alert_ms: alert_ms}}
   end
 
-  @impl GameEngine.SceneBehaviour
+  @impl Core.SceneBehaviour
   def render_type, do: :boss_alert
 
-  @impl GameEngine.SceneBehaviour
+  @impl Core.SceneBehaviour
   def update(context, %{boss_kind: boss_kind, boss_name: boss_name, alert_ms: alert_ms} = state) do
     world_ref = context.world_ref
     now = context.now
@@ -27,7 +27,7 @@ defmodule GameContent.VampireSurvivor.Scenes.BossAlert do
         GameContent.VampireSurvivor.entity_registry().bosses[boss_kind] ||
           raise "Unknown boss kind: #{inspect(boss_kind)}"
 
-      GameEngine.NifBridge.spawn_special_entity(world_ref, kind_id)
+      Core.NifBridge.spawn_special_entity(world_ref, kind_id)
       Logger.info("[BOSS] Spawned: #{boss_name}")
       {:transition, :pop, state}
     else

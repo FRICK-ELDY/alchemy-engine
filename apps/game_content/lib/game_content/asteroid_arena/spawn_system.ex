@@ -44,11 +44,11 @@ defmodule GameContent.AsteroidArena.SpawnSystem do
     {interval_ms, count} = current_wave(elapsed_sec)
 
     if elapsed_ms - last_spawn_ms >= interval_ms do
-      current = GameEngine.get_enemy_count(world_ref)
+      current = Core.get_enemy_count(world_ref)
 
       if current < @max_enemies do
         to_spawn = min(count, @max_enemies - current)
-        GameEngine.NifBridge.spawn_enemies(world_ref, @asteroid_large, to_spawn)
+        Core.NifBridge.spawn_enemies(world_ref, @asteroid_large, to_spawn)
       end
 
       elapsed_ms
@@ -67,7 +67,7 @@ defmodule GameContent.AsteroidArena.SpawnSystem do
 
       interval_ms ->
         if elapsed_ms - last_ufo_spawn_ms >= interval_ms do
-          GameEngine.NifBridge.spawn_enemies(world_ref, @ufo, 1)
+          Core.NifBridge.spawn_enemies(world_ref, @ufo, 1)
           elapsed_ms
         else
           last_ufo_spawn_ms
@@ -141,6 +141,6 @@ defmodule GameContent.AsteroidArena.SpawnSystem do
         {x + :math.cos(angle) * dist, y + :math.sin(angle) * dist}
       end
 
-    GameEngine.NifBridge.spawn_enemies_at(world_ref, kind_id, positions)
+    Core.NifBridge.spawn_enemies_at(world_ref, kind_id, positions)
   end
 end

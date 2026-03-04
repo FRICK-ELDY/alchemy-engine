@@ -1,4 +1,4 @@
-defmodule GameEngine.InputHandler do
+defmodule Core.InputHandler do
   @moduledoc """
   生キー入力（raw_key）を受け取り、意味論的イベントに変換する GenServer。
 
@@ -83,16 +83,16 @@ defmodule GameEngine.InputHandler do
     # move_input
     {dx, dy} = move_vector_from_keys(new_keys)
     :ets.insert(@table, {:move, {dx, dy}})
-    send(GameEngine.GameEvents, {:move_input, dx * 1.0, dy * 1.0})
+    send(Core.GameEvents, {:move_input, dx * 1.0, dy * 1.0})
 
     # sprint
     if new_sprint != prev_state.sprint do
-      send(GameEngine.GameEvents, {:sprint, new_sprint})
+      send(Core.GameEvents, {:sprint, new_sprint})
     end
 
     # key_pressed (Escape のみ、押下時のみ)
     if key == :escape and key_state == :pressed do
-      send(GameEngine.GameEvents, {:key_pressed, :escape})
+      send(Core.GameEvents, {:key_pressed, :escape})
     end
   end
 

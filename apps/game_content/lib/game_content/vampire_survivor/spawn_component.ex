@@ -4,7 +4,7 @@ defmodule GameContent.VampireSurvivor.SpawnComponent do
 
   旧 `GameContent.VampireSurvivorWorld` の責務を引き継ぐ。
   """
-  @behaviour GameEngine.Component
+  @behaviour Core.Component
 
   @map_width 4096.0
   @map_height 4096.0
@@ -36,11 +36,11 @@ defmodule GameContent.VampireSurvivor.SpawnComponent do
   @doc "初期武器リストを返す"
   def initial_weapons, do: [:magic_wand]
 
-  @impl GameEngine.Component
+  @impl Core.Component
   def on_ready(world_ref) do
-    GameEngine.NifBridge.set_world_size(world_ref, @map_width, @map_height)
+    Core.NifBridge.set_world_size(world_ref, @map_width, @map_height)
 
-    GameEngine.NifBridge.set_entity_params(
+    Core.NifBridge.set_entity_params(
       world_ref,
       enemy_params(),
       weapon_params(),

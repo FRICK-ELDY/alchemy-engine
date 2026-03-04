@@ -1,4 +1,4 @@
-defmodule GameEngine.Component do
+defmodule Core.Component do
   @moduledoc """
   ゲームコンテンツの構成単位となるビヘイビア。
 

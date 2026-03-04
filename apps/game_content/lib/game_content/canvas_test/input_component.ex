@@ -17,11 +17,11 @@ defmodule GameContent.CanvasTest.InputComponent do
   - グラブ/解放要求は `cursor_grab_request` として Playing 状態に書き込み、
     RenderComponent が次フレームで Rust へ送信する
   """
-  @behaviour GameEngine.Component
+  @behaviour Core.Component
 
-  @impl GameEngine.Component
+  @impl Core.Component
   def on_event({:move_input, dx, dz}, _context) when is_float(dx) and is_float(dz) do
-    GameEngine.SceneManager.update_by_module(
+    Core.SceneManager.update_by_module(
       GameContent.CanvasTest.Scenes.Playing,
       fn state -> Map.put(state, :move_input, {dx, dz}) end
     )
@@ -30,7 +30,7 @@ defmodule GameContent.CanvasTest.InputComponent do
   end
 
   def on_event({:mouse_delta, dx, dy}, _context) when is_float(dx) and is_float(dy) do
-    GameEngine.SceneManager.update_by_module(
+    Core.SceneManager.update_by_module(
       GameContent.CanvasTest.Scenes.Playing,
       fn state -> Map.put(state, :mouse_delta, {dx, dy}) end
     )
@@ -39,7 +39,7 @@ defmodule GameContent.CanvasTest.InputComponent do
   end
 
   def on_event({:sprint, value}, _context) when is_boolean(value) do
-    GameEngine.SceneManager.update_by_module(
+    Core.SceneManager.update_by_module(
       GameContent.CanvasTest.Scenes.Playing,
       fn state -> Map.put(state, :sprint, value) end
     )
@@ -48,7 +48,7 @@ defmodule GameContent.CanvasTest.InputComponent do
   end
 
   def on_event({:key_pressed, :escape}, _context) do
-    GameEngine.SceneManager.update_by_module(
+    Core.SceneManager.update_by_module(
       GameContent.CanvasTest.Scenes.Playing,
       fn state ->
         if state.hud_visible do

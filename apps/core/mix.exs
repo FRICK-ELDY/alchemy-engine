@@ -1,9 +1,9 @@
-defmodule GameEngine.MixProject do
+defmodule Core.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :game_engine,
+      app: :core,
       version: "0.1.0",
       build_path: "../../_build",
       config_path: "../../config/config.exs",

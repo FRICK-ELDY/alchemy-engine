@@ -106,7 +106,7 @@ pub use physics::world::{
 pub use render::RenderFrame;
 
 #[cfg(feature = "umbrella")]
-rustler::init!("Elixir.GameEngine.NifBridge", load = nif::load);
+rustler::init!("Elixir.Core.NifBridge", load = nif::load);
 
 #[cfg(not(feature = "umbrella"))]
 rustler::init!("Elixir.App.NifBridge", load = nif::load);

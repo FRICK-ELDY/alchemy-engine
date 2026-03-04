@@ -206,7 +206,7 @@ defmodule GameNetwork.UDP do
         Logger.warning("[GameNetwork.UDP] Input from unknown client #{inspect(client)}")
 
       %{room_id: room_id} ->
-        case GameEngine.RoomRegistry.get_loop(room_id) do
+        case Core.RoomRegistry.get_loop(room_id) do
           {:ok, pid} ->
             send(pid, {:move_input, dx, dy})
 
@@ -224,7 +224,7 @@ defmodule GameNetwork.UDP do
         Logger.warning("[GameNetwork.UDP] Action from unknown client #{inspect(client)}")
 
       %{room_id: room_id} ->
-        case GameEngine.RoomRegistry.get_loop(room_id) do
+        case Core.RoomRegistry.get_loop(room_id) do
           {:ok, pid} ->
             send(pid, {:ui_action, name})
 

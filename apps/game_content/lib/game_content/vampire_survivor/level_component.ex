@@ -11,7 +11,7 @@ defmodule GameContent.VampireSurvivor.LevelComponent do
   毎フレーム、Playing シーン state の差分を NIF に注入する。
   ダーティフラグはプロセス辞書で管理する。
   """
-  @behaviour GameEngine.Component
+  @behaviour Core.Component
 
   require Logger
 
@@ -26,9 +26,9 @@ defmodule GameContent.VampireSurvivor.LevelComponent do
 
   # ── on_frame_event: Rust フレームイベント処理 ──────────────────────
 
-  @impl GameEngine.Component
+  @impl Core.Component
   def on_frame_event({:enemy_killed, enemy_kind, x_bits, y_bits, _}, context) do
-    content = GameEngine.Config.current()
+    content = Core.Config.current()
     exp = content.enemy_exp_reward(enemy_kind)
     x = bits_to_f32(x_bits)
     y = bits_to_f32(y_bits)
@@ -36,7 +36,7 @@ defmodule GameContent.VampireSurvivor.LevelComponent do
     score_delta = apply_kill_to_scene(content, exp)
 
     call_nif(:add_score_popup, fn ->
-      GameEngine.NifBridge.add_score_popup(context.world_ref, x, y, score_delta)
+      Core.NifBridge.add_score_popup(context.world_ref, x, y, score_delta)
     end)
 
     spawn_item_drop(context.world_ref, enemy_kind, x, y, exp)
@@ -46,9 +46,9 @@ defmodule GameContent.VampireSurvivor.LevelComponent do
 
   def on_frame_event({:player_damaged, damage_x1000, _, _, _}, _context) do
     damage = damage_x1000 / 1000.0
-    content = GameEngine.Config.current()
+    content = Core.Config.current()
 
-    GameEngine.SceneManager.update_by_module(content.playing_scene(), fn state ->
+    Core.SceneManager.update_by_module(content.playing_scene(), fn state ->
       new_hp = max(0.0, Map.get(state, :player_hp, 100.0) - damage)
       Map.put(state, :player_hp, new_hp)
     end)
@@ -60,10 +60,10 @@ defmodule GameContent.VampireSurvivor.LevelComponent do
 
   # ── on_nif_sync: 毎フレーム NIF 注入 ─────────────────────────────
 
-  @impl GameEngine.Component
+  @impl Core.Component
   def on_nif_sync(context) do
-    content = GameEngine.Config.current()
-    playing_state = GameEngine.SceneManager.get_scene_state(content.playing_scene()) || %{}
+    content = Core.Config.current()
+    playing_state = Core.SceneManager.get_scene_state(content.playing_scene()) || %{}
 
     sync_player_hp(context.world_ref, playing_state)
     sync_elapsed(context.world_ref, playing_state, context)
@@ -74,33 +74,33 @@ defmodule GameContent.VampireSurvivor.LevelComponent do
 
   # ── on_event: UI アクション・エンジン内部イベント ─────────────────
 
-  @impl GameEngine.Component
+  @impl Core.Component
   def on_event({:entity_removed, world_ref, kind_id, x, y}, _context) do
     roll = :rand.uniform(100)
 
     cond do
       roll <= @drop_magnet_threshold ->
-        GameEngine.NifBridge.spawn_item(world_ref, x, y, @item_magnet, 0)
+        Core.NifBridge.spawn_item(world_ref, x, y, @item_magnet, 0)
 
       roll <= @drop_potion_threshold ->
-        GameEngine.NifBridge.spawn_item(world_ref, x, y, @item_potion, @potion_heal_value)
+        Core.NifBridge.spawn_item(world_ref, x, y, @item_potion, @potion_heal_value)
 
       true ->
         exp_reward = GameContent.EntityParams.enemy_exp_reward(kind_id)
-        GameEngine.NifBridge.spawn_item(world_ref, x, y, @item_gem, exp_reward)
+        Core.NifBridge.spawn_item(world_ref, x, y, @item_gem, exp_reward)
     end
 
     :ok
   end
 
   def on_event({:ui_action, "__skip__"}, context) do
-    content = GameEngine.Config.current()
-    playing_state = GameEngine.SceneManager.get_scene_state(content.playing_scene()) || %{}
+    content = Core.Config.current()
+    playing_state = Core.SceneManager.get_scene_state(content.playing_scene()) || %{}
 
     if Map.get(playing_state, :level_up_pending, false) do
       Logger.info("[LEVEL UP] Skipped from renderer UI")
 
-      GameEngine.SceneManager.update_by_module(
+      Core.SceneManager.update_by_module(
         content.playing_scene(),
         &content.apply_level_up_skipped/1
       )
@@ -112,8 +112,8 @@ defmodule GameContent.VampireSurvivor.LevelComponent do
   end
 
   def on_event({:ui_action, weapon_name}, context) when is_binary(weapon_name) do
-    content = GameEngine.Config.current()
-    playing_state = GameEngine.SceneManager.get_scene_state(content.playing_scene()) || %{}
+    content = Core.Config.current()
+    playing_state = Core.SceneManager.get_scene_state(content.playing_scene()) || %{}
 
     if Map.get(playing_state, :level_up_pending, false) do
       weapon_levels = Map.get(playing_state, :weapon_levels, %{})
@@ -123,13 +123,13 @@ defmodule GameContent.VampireSurvivor.LevelComponent do
         :apply ->
           Logger.info("[LEVEL UP] Weapon selected from renderer: #{inspect(weapon)}")
 
-          GameEngine.SceneManager.update_by_module(
+          Core.SceneManager.update_by_module(
             content.playing_scene(),
             &content.apply_weapon_selected(&1, weapon)
           )
 
         :skip ->
-          GameEngine.SceneManager.update_by_module(
+          Core.SceneManager.update_by_module(
             content.playing_scene(),
             &content.apply_level_up_skipped/1
           )
@@ -142,13 +142,13 @@ defmodule GameContent.VampireSurvivor.LevelComponent do
   end
 
   def on_event({:ui_action, "__auto_pop__", scene_state}, _context) do
-    content = GameEngine.Config.current()
+    content = Core.Config.current()
 
     case scene_state do
       %{choices: [first | _]} ->
         Logger.info("[LEVEL UP] Auto-selected: #{inspect(first)} -> resuming")
 
-        GameEngine.SceneManager.update_by_module(
+        Core.SceneManager.update_by_module(
           content.playing_scene(),
           &content.apply_weapon_selected(&1, first)
         )
@@ -156,7 +156,7 @@ defmodule GameContent.VampireSurvivor.LevelComponent do
       _ ->
         Logger.info("[LEVEL UP] Auto-skipped (no choices) -> resuming")
 
-        GameEngine.SceneManager.update_by_module(
+        Core.SceneManager.update_by_module(
           content.playing_scene(),
           &content.apply_level_up_skipped/1
         )
@@ -175,7 +175,7 @@ defmodule GameContent.VampireSurvivor.LevelComponent do
 
     if player_hp != prev do
       call_nif(:set_player_hp, fn ->
-        GameEngine.NifBridge.set_player_hp(world_ref, player_hp)
+        Core.NifBridge.set_player_hp(world_ref, player_hp)
       end)
 
       Process.put({__MODULE__, :last_player_hp}, player_hp)
@@ -193,7 +193,7 @@ defmodule GameContent.VampireSurvivor.LevelComponent do
 
     if elapsed_ms != prev do
       call_nif(:set_elapsed_seconds, fn ->
-        GameEngine.NifBridge.set_elapsed_seconds(world_ref, elapsed_ms / 1000.0)
+        Core.NifBridge.set_elapsed_seconds(world_ref, elapsed_ms / 1000.0)
       end)
 
       Process.put({__MODULE__, :last_elapsed_ms}, elapsed_ms)
@@ -210,7 +210,7 @@ defmodule GameContent.VampireSurvivor.LevelComponent do
       slots = playing_scene.weapon_slots_for_nif(weapon_levels)
 
       call_nif(:set_weapon_slots, fn ->
-        GameEngine.NifBridge.set_weapon_slots(world_ref, slots)
+        Core.NifBridge.set_weapon_slots(world_ref, slots)
       end)
 
       # NIF を実際に呼んだときだけダーティフラグを更新する
@@ -225,7 +225,7 @@ defmodule GameContent.VampireSurvivor.LevelComponent do
 
     # シーンが見つからない場合（Playing シーン以外での敵撃破等）は
     # update_by_module が何もしないため、score_delta のみ返して NIF ポップアップに使う
-    GameEngine.SceneManager.update_by_module(content.playing_scene(), fn state ->
+    Core.SceneManager.update_by_module(content.playing_scene(), fn state ->
       state
       |> Map.update(:score, score_delta, &(&1 + score_delta))
       |> Map.update(:kill_count, 1, &(&1 + 1))
@@ -240,13 +240,13 @@ defmodule GameContent.VampireSurvivor.LevelComponent do
 
     cond do
       roll <= @drop_magnet_threshold ->
-        GameEngine.NifBridge.spawn_item(world_ref, x, y, @item_magnet, 0)
+        Core.NifBridge.spawn_item(world_ref, x, y, @item_magnet, 0)
 
       roll <= @drop_potion_threshold ->
-        GameEngine.NifBridge.spawn_item(world_ref, x, y, @item_potion, @potion_heal_value)
+        Core.NifBridge.spawn_item(world_ref, x, y, @item_potion, @potion_heal_value)
 
       true ->
-        GameEngine.NifBridge.spawn_item(world_ref, x, y, @item_gem, exp)
+        Core.NifBridge.spawn_item(world_ref, x, y, @item_gem, exp)
     end
   end
 
@@ -291,7 +291,7 @@ defmodule GameContent.VampireSurvivor.LevelComponent do
     if function_exported?(content, :level_up_scene, 0) do
       level_up_scene = content.level_up_scene()
 
-      case GameEngine.SceneManager.current() do
+      case Core.SceneManager.current() do
         {:ok, %{module: ^level_up_scene}} ->
           context.pop_scene.()
 

@@ -13,7 +13,7 @@ defmodule GameNetwork.Local.TestHelpers do
   @doc """
   `GameNetwork.Local` の接続テーブルにルームを登録する。
 
-  `open_room/1` は `GameEngine.RoomSupervisor`（NIF 起動）を呼ぶため、
+  `open_room/1` は `Core.RoomSupervisor`（NIF 起動）を呼ぶため、
   テストでは代わりにこの関数でルームを登録する。
 
   `GameNetwork.Local.register_room/1` の公開 API を経由するため、

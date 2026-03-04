@@ -8,7 +8,7 @@ defmodule GameContent.BulletHell3D.DamageComponent do
 
   現時点では HP 変化に関連するイベントを受け取る口として機能する。
   """
-  @behaviour GameEngine.Component
+  @behaviour Core.Component
 
   # 現時点では HP ロジックは Playing シーンに集約されているため、
   # コールバックは最小限の実装とする。

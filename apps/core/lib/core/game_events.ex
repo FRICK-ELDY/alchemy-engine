@@ -1,4 +1,4 @@
-defmodule GameEngine.GameEvents do
+defmodule Core.GameEvents do
   @moduledoc """
   Rust からの frame_events を受信し、コンポーネントへ委譲する GenServer。
 
@@ -15,7 +15,7 @@ defmodule GameEngine.GameEvents do
   use GenServer
   require Logger
 
-  alias GameEngine.GameEvents.Diagnostics
+  alias Core.GameEvents.Diagnostics
 
   @tick_ms 16
 
@@ -26,7 +26,7 @@ defmodule GameEngine.GameEvents do
   end
 
   defp process_name(:main), do: __MODULE__
-  defp process_name(room_id), do: {:via, Registry, {GameEngine.RoomRegistry, room_id}}
+  defp process_name(room_id), do: {:via, Registry, {Core.RoomRegistry, room_id}}
 
   def save_session, do: GenServer.cast(__MODULE__, :save_session)
 
@@ -37,26 +37,26 @@ defmodule GameEngine.GameEvents do
     room_id = Keyword.get(opts, :room_id, :main)
 
     if room_id == :main do
-      GameEngine.RoomRegistry.register(:main)
+      Core.RoomRegistry.register(:main)
     end
 
-    world_ref = GameEngine.NifBridge.create_world()
+    world_ref = Core.NifBridge.create_world()
 
-    Enum.each(GameEngine.Config.components(), fn component ->
+    Enum.each(Core.Config.components(), fn component ->
       init_component(component, world_ref)
     end)
 
     map_id = Application.get_env(:game_server, :map, :plain)
-    obstacles = GameEngine.MapLoader.obstacles_for_map(map_id)
-    GameEngine.NifBridge.set_map_obstacles(world_ref, obstacles)
+    obstacles = Core.MapLoader.obstacles_for_map(map_id)
+    Core.NifBridge.set_map_obstacles(world_ref, obstacles)
 
-    control_ref = GameEngine.NifBridge.create_game_loop_control()
-    if room_id == :main, do: GameEngine.FrameCache.init()
+    control_ref = Core.NifBridge.create_game_loop_control()
+    if room_id == :main, do: Core.FrameCache.init()
     start_ms = now_ms()
 
-    GameEngine.NifBridge.start_rust_game_loop(world_ref, control_ref, self())
+    Core.NifBridge.start_rust_game_loop(world_ref, control_ref, self())
 
-    render_buf_ref = GameEngine.NifBridge.create_render_frame_buffer()
+    render_buf_ref = Core.NifBridge.create_render_frame_buffer()
 
     render_started =
       if room_id == :main do
@@ -64,7 +64,7 @@ defmodule GameEngine.GameEvents do
         window_title = build_window_title(content)
         atlas_path = resolve_atlas_path(content)
 
-        GameEngine.NifBridge.start_render_thread(
+        Core.NifBridge.start_render_thread(
           world_ref,
           render_buf_ref,
           self(),
@@ -92,7 +92,7 @@ defmodule GameEngine.GameEvents do
 
   @impl true
   def terminate(_reason, %{room_id: :main}) do
-    GameEngine.RoomRegistry.unregister(:main)
+    Core.RoomRegistry.unregister(:main)
     :ok
   end
 
@@ -124,7 +124,7 @@ defmodule GameEngine.GameEvents do
   end
 
   def handle_cast(:save_session, state) do
-    case GameEngine.SaveManager.save_session(state.world_ref) do
+    case Core.SaveManager.save_session(state.world_ref) do
       :ok -> Logger.info("[SAVE] Session saved")
       {:error, reason} -> Logger.warning("[SAVE] Failed: #{inspect(reason)}")
     end
@@ -137,11 +137,11 @@ defmodule GameEngine.GameEvents do
   @impl true
   def handle_call(:load_session, _from, state) do
     content = current_content()
-    result = GameEngine.SaveManager.load_session(state.world_ref)
+    result = Core.SaveManager.load_session(state.world_ref)
 
     case result do
       :ok ->
-        GameEngine.SceneManager.replace_scene(content.physics_scenes() |> List.first(), %{})
+        Core.SceneManager.replace_scene(content.physics_scenes() |> List.first(), %{})
         {:reply, :ok, state}
 
       other ->
@@ -212,7 +212,7 @@ defmodule GameEngine.GameEvents do
 
   def handle_info({:raw_key, key, key_state}, state)
       when is_atom(key) and key_state in [:pressed, :released] do
-    GameEngine.InputHandler.raw_key(key, key_state)
+    Core.InputHandler.raw_key(key, key_state)
     {:noreply, state}
   end
 
@@ -224,7 +224,7 @@ defmodule GameEngine.GameEvents do
   end
 
   def handle_info(:focus_lost, state) do
-    GameEngine.InputHandler.focus_lost()
+    Core.InputHandler.focus_lost()
     {:noreply, state}
   end
 
@@ -327,8 +327,8 @@ defmodule GameEngine.GameEvents do
 
   def handle_info({:boss_dash_end, world_ref}, state) do
     if state.world_ref == world_ref do
-      GameEngine.NifBridge.set_entity_flag(world_ref, :boss, :invincible, false)
-      GameEngine.NifBridge.set_entity_velocity(world_ref, :boss, 0.0, 0.0)
+      Core.NifBridge.set_entity_flag(world_ref, :boss, :invincible, false)
+      Core.NifBridge.set_entity_velocity(world_ref, :boss, 0.0, 0.0)
     end
 
     {:noreply, state}
@@ -365,7 +365,7 @@ defmodule GameEngine.GameEvents do
   # ── UI アクションハンドラ ─────────────────────────────────────────
 
   defp handle_ui_action_load(state) do
-    if GameEngine.SaveManager.has_save?() do
+    if Core.SaveManager.has_save?() do
       do_load_session(state)
     else
       Logger.info("[LOAD] No save file")
@@ -376,10 +376,10 @@ defmodule GameEngine.GameEvents do
   defp handle_ui_action_load_confirm(state), do: do_load_session(state)
 
   defp do_load_session(state) do
-    case GameEngine.SaveManager.load_session(state.world_ref) do
+    case Core.SaveManager.load_session(state.world_ref) do
       :ok ->
         content = current_content()
-        GameEngine.SceneManager.replace_scene(content.physics_scenes() |> List.first(), %{})
+        Core.SceneManager.replace_scene(content.physics_scenes() |> List.first(), %{})
         state
 
       :no_save ->
@@ -402,7 +402,7 @@ defmodule GameEngine.GameEvents do
     content = current_content()
     physics_scenes = content.physics_scenes()
 
-    case GameEngine.SceneManager.current() do
+    case Core.SceneManager.current() do
       :empty ->
         {:noreply, %{state | last_tick: now}}
 
@@ -417,7 +417,7 @@ defmodule GameEngine.GameEvents do
         # シーン update（遷移判断のみ）
         result = mod.update(context, scene_state)
         {new_scene_state, _opts} = extract_state_and_opts(result)
-        GameEngine.SceneManager.update_current(fn _ -> new_scene_state end)
+        Core.SceneManager.update_current(fn _ -> new_scene_state end)
 
         state = process_transition(result, state, now, content)
 
@@ -463,7 +463,7 @@ defmodule GameEngine.GameEvents do
   defp dispatch_to_components(callback, args) do
     arity = length(args)
 
-    Enum.each(GameEngine.Config.components(), fn component ->
+    Enum.each(Core.Config.components(), fn component ->
       if function_exported?(component, callback, arity) do
         apply(component, callback, args)
       end
@@ -474,12 +474,12 @@ defmodule GameEngine.GameEvents do
     if mod in physics_scenes do
       # 全ルームでフレームごとに ETS から読む。InputHandler が raw_key で ETS を更新するため、
       # メッセージ順序（frame_events vs move_input）に依存せず入力が 1 フレーム遅れない。
-      {dx, dy} = GameEngine.InputHandler.get_move_vector()
-      GameEngine.NifBridge.set_player_input(state.world_ref, dx * 1.0, dy * 1.0)
+      {dx, dy} = Core.InputHandler.get_move_vector()
+      Core.NifBridge.set_player_input(state.world_ref, dx * 1.0, dy * 1.0)
 
       run_component_physics_callbacks(context)
 
-      unless events == [], do: GameEngine.EventBus.broadcast(events)
+      unless events == [], do: Core.EventBus.broadcast(events)
     end
 
     :ok
@@ -500,17 +500,17 @@ defmodule GameEngine.GameEvents do
         content = current_content()
 
         if function_exported?(content, :pause_on_push?, 1) and content.pause_on_push?(mod) do
-          GameEngine.NifBridge.pause_physics(control_ref)
+          Core.NifBridge.pause_physics(control_ref)
         end
 
-        GameEngine.SceneManager.push_scene(mod, init_arg)
+        Core.SceneManager.push_scene(mod, init_arg)
       end,
       pop_scene: fn ->
-        GameEngine.NifBridge.resume_physics(control_ref)
-        GameEngine.SceneManager.pop_scene()
+        Core.NifBridge.resume_physics(control_ref)
+        Core.SceneManager.pop_scene()
       end,
       replace_scene: fn mod, init_arg ->
-        GameEngine.SceneManager.replace_scene(mod, init_arg)
+        Core.SceneManager.replace_scene(mod, init_arg)
       end
     }
 
@@ -535,8 +535,8 @@ defmodule GameEngine.GameEvents do
       dispatch_event_to_components({:ui_action, "__auto_pop__", scene_state}, context)
     end
 
-    GameEngine.NifBridge.resume_physics(state.control_ref)
-    GameEngine.SceneManager.pop_scene()
+    Core.NifBridge.resume_physics(state.control_ref)
+    Core.SceneManager.pop_scene()
     state
   end
 
@@ -545,10 +545,10 @@ defmodule GameEngine.GameEvents do
       function_exported?(content, :pause_on_push?, 1) and content.pause_on_push?(mod)
 
     if should_pause do
-      GameEngine.NifBridge.pause_physics(state.control_ref)
+      Core.NifBridge.pause_physics(state.control_ref)
     end
 
-    GameEngine.SceneManager.push_scene(mod, init_arg)
+    Core.SceneManager.push_scene(mod, init_arg)
     state
   end
 
@@ -563,7 +563,7 @@ defmodule GameEngine.GameEvents do
         content
       )
 
-    GameEngine.SceneManager.replace_scene(mod, init_arg)
+    Core.SceneManager.replace_scene(mod, init_arg)
     state
   end
 
@@ -571,7 +571,7 @@ defmodule GameEngine.GameEvents do
 
   defp now_ms, do: System.monotonic_time(:millisecond)
 
-  defp current_content, do: GameEngine.Config.current()
+  defp current_content, do: Core.Config.current()
 
   defp build_window_title(content) do
     if function_exported?(content, :title, 0) do

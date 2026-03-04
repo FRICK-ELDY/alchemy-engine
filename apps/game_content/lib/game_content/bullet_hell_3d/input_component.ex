@@ -7,11 +7,11 @@ defmodule GameContent.BulletHell3D.InputComponent do
   `GameEvents` は `{:move_input, dx, dy}` を受信すると `on_event/2` として
   各コンポーネントに配信するため、ここで `SceneManager` を更新する。
   """
-  @behaviour GameEngine.Component
+  @behaviour Core.Component
 
-  @impl GameEngine.Component
+  @impl Core.Component
   def on_event({:move_input, dx, dy}, _context) when is_float(dx) and is_float(dy) do
-    GameEngine.SceneManager.update_by_module(
+    Core.SceneManager.update_by_module(
       GameContent.BulletHell3D.Scenes.Playing,
       fn state -> Map.put(state, :move_input, {dx, dy}) end
     )
@@ -20,7 +20,7 @@ defmodule GameContent.BulletHell3D.InputComponent do
   end
 
   def on_event({:ui_action, "__retry__"}, _context) do
-    GameEngine.SceneManager.update_by_module(
+    Core.SceneManager.update_by_module(
       GameContent.BulletHell3D.Scenes.GameOver,
       fn state -> Map.put(state, :retry, true) end
     )

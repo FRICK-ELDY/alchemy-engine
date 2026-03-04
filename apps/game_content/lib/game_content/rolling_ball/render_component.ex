@@ -6,7 +6,7 @@ defmodule GameContent.RollingBall.RenderComponent do
   - `DrawCommand::Skybox` — 昼空グラデーション背景
   - `DrawCommand::Box3D` — フロアタイル（グレー）、ボール（白・大）、障害物（赤）、ゴール（緑・高い柱）
   """
-  @behaviour GameEngine.Component
+  @behaviour Core.Component
 
   # カメラ設定（斜め上から俯瞰）
   @camera_eye {0.0, 28.0, 22.0}
@@ -32,23 +32,23 @@ defmodule GameContent.RollingBall.RenderComponent do
   @goal_half_y 1.0
   @obstacle_half 0.65
 
-  @impl GameEngine.Component
+  @impl Core.Component
   def on_nif_sync(context) do
-    content = GameEngine.Config.current()
+    content = Core.Config.current()
 
     current_scene =
-      case GameEngine.SceneManager.current() do
+      case Core.SceneManager.current() do
         {:ok, %{module: mod}} -> mod
         _ -> content.playing_scene()
       end
 
-    playing_state = GameEngine.SceneManager.get_scene_state(content.playing_scene()) || %{}
+    playing_state = Core.SceneManager.get_scene_state(content.playing_scene()) || %{}
 
     commands = build_commands(playing_state, current_scene)
     camera = build_camera()
     ui = build_ui(playing_state, current_scene, content)
 
-    GameEngine.NifBridge.push_render_frame(
+    Core.NifBridge.push_render_frame(
       context.render_buf_ref,
       commands,
       camera,

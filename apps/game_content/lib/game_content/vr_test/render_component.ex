@@ -5,7 +5,7 @@ defmodule GameContent.VRTest.RenderComponent do
   Phase A: camera_yaw / camera_pitch から1人称カメラを組み立て、
   マウスで見回せる3D空間を描画する。
   """
-  @behaviour GameEngine.Component
+  @behaviour Core.Component
 
   @half_size 0.5
   @camera_eye_height 1.7
@@ -22,24 +22,24 @@ defmodule GameContent.VRTest.RenderComponent do
   @grid_size 20.0
   @grid_divisions 20
 
-  @impl GameEngine.Component
+  @impl Core.Component
   def on_nif_sync(context) do
-    content = GameEngine.Config.current()
+    content = Core.Config.current()
 
     current_scene =
-      case GameEngine.SceneManager.current() do
+      case Core.SceneManager.current() do
         {:ok, %{module: mod}} -> mod
         _ -> content.playing_scene()
       end
 
-    playing_state = GameEngine.SceneManager.get_scene_state(content.playing_scene()) || %{}
+    playing_state = Core.SceneManager.get_scene_state(content.playing_scene()) || %{}
 
     commands = build_commands(playing_state)
     camera = build_camera(playing_state)
     ui = build_ui(current_scene, content)
     cursor_grab = Map.get(playing_state, :cursor_grab_request, :no_change)
 
-    GameEngine.NifBridge.push_render_frame(
+    Core.NifBridge.push_render_frame(
       context.render_buf_ref,
       commands,
       camera,
@@ -48,7 +48,7 @@ defmodule GameContent.VRTest.RenderComponent do
     )
 
     if cursor_grab != :no_change do
-      GameEngine.SceneManager.update_by_module(
+      Core.SceneManager.update_by_module(
         GameContent.VRTest.Scenes.Playing,
         fn state ->
           if state.cursor_grab_request == cursor_grab do

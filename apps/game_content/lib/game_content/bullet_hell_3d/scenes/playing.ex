@@ -18,7 +18,7 @@ defmodule GameContent.BulletHell3D.Scenes.Playing do
   - `spawn_timer_ms`— 次の敵スポーンまでの残り時間（ms）
   - `shoot_timer_ms`— 次の弾発射までの残り時間（ms）
   """
-  @behaviour GameEngine.SceneBehaviour
+  @behaviour Core.SceneBehaviour
 
   @tick_ms 1000.0 / 60.0
   @tick_sec 1.0 / 60.0
@@ -48,7 +48,7 @@ defmodule GameContent.BulletHell3D.Scenes.Playing do
     {0, 6, 2000}
   ]
 
-  @impl GameEngine.SceneBehaviour
+  @impl Core.SceneBehaviour
   def init(_init_arg) do
     {:ok,
      %{
@@ -66,10 +66,10 @@ defmodule GameContent.BulletHell3D.Scenes.Playing do
      }}
   end
 
-  @impl GameEngine.SceneBehaviour
+  @impl Core.SceneBehaviour
   def render_type, do: :playing
 
-  @impl GameEngine.SceneBehaviour
+  @impl Core.SceneBehaviour
   def update(_context, state) do
     if state.hp <= 0 do
       {:transition,

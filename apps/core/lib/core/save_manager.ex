@@ -1,4 +1,4 @@
-defmodule GameEngine.SaveManager do
+defmodule Core.SaveManager do
   @moduledoc """
   セッションデータおよびハイスコアの永続化を担当するモジュール。
   HMAC 署名付き JSON ファイルへの読み書きを行う。
@@ -33,7 +33,7 @@ defmodule GameEngine.SaveManager do
   # ── セッション保存 ───────────────────────────────────────────────────────
 
   def save_session(world_ref) do
-    snapshot = GameEngine.NifBridge.get_save_snapshot(world_ref)
+    snapshot = Core.NifBridge.get_save_snapshot(world_ref)
     write_json(session_path(), snapshot_to_map(snapshot))
   rescue
     e -> {:error, Exception.message(e)}
@@ -51,7 +51,7 @@ defmodule GameEngine.SaveManager do
 
   defp do_load_session(world_ref, data) do
     snapshot = map_to_snapshot(data["state"])
-    GameEngine.NifBridge.load_save_snapshot(world_ref, snapshot)
+    Core.NifBridge.load_save_snapshot(world_ref, snapshot)
     :ok
   rescue
     e -> {:error, Exception.message(e)}
@@ -165,7 +165,7 @@ defmodule GameEngine.SaveManager do
   # ── HMAC 計算・検証 ──────────────────────────────────────────────────────
 
   defp hmac_secret do
-    Application.get_env(:game_engine, :save_hmac_secret, "alchemy-engine-save-secret-v1")
+    Application.get_env(:core, :save_hmac_secret, "alchemy-engine-save-secret-v1")
   end
 
   defp compute_hmac(json) do

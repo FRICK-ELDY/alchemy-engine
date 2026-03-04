@@ -1,4 +1,4 @@
-defmodule GameEngine.FrameCache do
+defmodule Core.FrameCache do
   @moduledoc """
   フレームごとのゲーム状態を ETS に書き込む。
   """

@@ -6,7 +6,7 @@ defmodule GameContent.VRTest.Scenes.Playing do
   - カメラはプレイヤー位置（原点）で固定、yaw/pitch で向きを制御
   - 敵に触れるとゲームオーバー（SimpleBox3D と同様）
   """
-  @behaviour GameEngine.SceneBehaviour
+  @behaviour Core.SceneBehaviour
 
   @tick_sec 1.0 / 60.0
 
@@ -31,7 +31,7 @@ defmodule GameContent.VRTest.Scenes.Playing do
     {-8.0, 0.0, -8.0}
   ]
 
-  @impl GameEngine.SceneBehaviour
+  @impl Core.SceneBehaviour
   def init(_init_arg) do
     {:ok,
      %{
@@ -46,10 +46,10 @@ defmodule GameContent.VRTest.Scenes.Playing do
      }}
   end
 
-  @impl GameEngine.SceneBehaviour
+  @impl Core.SceneBehaviour
   def render_type, do: :playing
 
-  @impl GameEngine.SceneBehaviour
+  @impl Core.SceneBehaviour
   def update(_context, state) do
     if Map.get(state, :alive, true) do
       {dx, dz} = Map.get(state, :move_input, {0.0, 0.0})

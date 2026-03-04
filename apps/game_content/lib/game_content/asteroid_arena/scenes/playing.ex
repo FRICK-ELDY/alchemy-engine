@@ -5,13 +5,13 @@ defmodule GameContent.AsteroidArena.Scenes.Playing do
   武器・ボス・レベルアップの概念を持たない。
   小惑星と UFO のスポーン、プレイヤー死亡判定のみを行う。
   """
-  @behaviour GameEngine.SceneBehaviour
+  @behaviour Core.SceneBehaviour
 
   require Logger
 
   alias GameContent.AsteroidArena.SpawnSystem
 
-  @impl GameEngine.SceneBehaviour
+  @impl Core.SceneBehaviour
   def init(_init_arg) do
     {:ok,
      %{
@@ -25,10 +25,10 @@ defmodule GameContent.AsteroidArena.Scenes.Playing do
      }}
   end
 
-  @impl GameEngine.SceneBehaviour
+  @impl Core.SceneBehaviour
   def render_type, do: :playing
 
-  @impl GameEngine.SceneBehaviour
+  @impl Core.SceneBehaviour
   def update(context, state) do
     elapsed = context.elapsed
     player_hp = Map.get(state, :player_hp, 100.0)

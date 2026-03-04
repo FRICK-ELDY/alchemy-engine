@@ -7,11 +7,11 @@ defmodule GameContent.VRTest.InputComponent do
   - `{:move_input, dx, dy}` — WASD 移動入力
   - `{:key_pressed, :escape}` — カーソルグラブのトグル
   """
-  @behaviour GameEngine.Component
+  @behaviour Core.Component
 
-  @impl GameEngine.Component
+  @impl Core.Component
   def on_event({:mouse_delta, dx, dy}, _context) when is_float(dx) and is_float(dy) do
-    GameEngine.SceneManager.update_by_module(
+    Core.SceneManager.update_by_module(
       GameContent.VRTest.Scenes.Playing,
       fn state ->
         yaw = Map.get(state, :camera_yaw, 0.0) - dx * 0.002
@@ -28,7 +28,7 @@ defmodule GameContent.VRTest.InputComponent do
   end
 
   def on_event({:move_input, dx, dy}, _context) when is_float(dx) and is_float(dy) do
-    GameEngine.SceneManager.update_by_module(
+    Core.SceneManager.update_by_module(
       GameContent.VRTest.Scenes.Playing,
       fn state -> Map.put(state, :move_input, {dx, dy}) end
     )
@@ -37,7 +37,7 @@ defmodule GameContent.VRTest.InputComponent do
   end
 
   def on_event({:key_pressed, :escape}, _context) do
-    GameEngine.SceneManager.update_by_module(
+    Core.SceneManager.update_by_module(
       GameContent.VRTest.Scenes.Playing,
       fn state ->
         grabbed = Map.get(state, :cursor_grabbed, false)
@@ -49,7 +49,7 @@ defmodule GameContent.VRTest.InputComponent do
   end
 
   def on_event({:ui_action, "__retry__"}, _context) do
-    GameEngine.SceneManager.update_by_module(
+    Core.SceneManager.update_by_module(
       GameContent.VRTest.Scenes.GameOver,
       fn state -> Map.put(state, :retry, true) end
     )

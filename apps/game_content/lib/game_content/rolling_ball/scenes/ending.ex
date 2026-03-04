@@ -5,15 +5,15 @@ defmodule GameContent.RollingBall.Scenes.Ending do
   全ステージクリア後に表示される。
   「BACK TO TITLE」ボタン（`__back_to_title__` UI アクション）でタイトルに戻る。
   """
-  @behaviour GameEngine.SceneBehaviour
+  @behaviour Core.SceneBehaviour
 
-  @impl GameEngine.SceneBehaviour
+  @impl Core.SceneBehaviour
   def init(_init_arg), do: {:ok, %{back_to_title: false}}
 
-  @impl GameEngine.SceneBehaviour
+  @impl Core.SceneBehaviour
   def render_type, do: :playing
 
-  @impl GameEngine.SceneBehaviour
+  @impl Core.SceneBehaviour
   def update(_context, state) do
     if Map.get(state, :back_to_title, false) do
       {:transition, {:replace, GameContent.RollingBall.Scenes.Title, %{}}, state}

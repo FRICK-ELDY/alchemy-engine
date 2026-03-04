@@ -1,11 +1,11 @@
-defmodule GameEngine do
+defmodule Core do
   @moduledoc """
   ゲームエンジンの安定化された公開 API。
 
-  ゲームは **GameEngine モジュール経由でのみ** エンジンとやり取りする。
+  ゲームは **Core モジュール経由でのみ** エンジンとやり取りする。
   """
 
-  alias GameEngine.NifBridge
+  alias Core.NifBridge
 
   # ── World 操作（ゲームから利用）───────────────────────────────────────
 
@@ -31,11 +31,11 @@ defmodule GameEngine do
     NifBridge.get_frame_metadata(world_ref)
   end
 
-  def save_session(world_ref), do: GameEngine.SaveManager.save_session(world_ref)
-  def load_session(world_ref), do: GameEngine.SaveManager.load_session(world_ref)
-  def has_save?, do: GameEngine.SaveManager.has_save?()
-  def save_high_score(score), do: GameEngine.SaveManager.save_high_score(score)
-  def load_high_scores, do: GameEngine.SaveManager.load_high_scores()
+  def save_session(world_ref), do: Core.SaveManager.save_session(world_ref)
+  def load_session(world_ref), do: Core.SaveManager.load_session(world_ref)
+  def has_save?, do: Core.SaveManager.has_save?()
+  def save_high_score(score), do: Core.SaveManager.save_high_score(score)
+  def load_high_scores, do: Core.SaveManager.load_high_scores()
 
   # ── エンジン内部用（GameEvents が使用）───────────────────────────────
 
@@ -61,7 +61,7 @@ defmodule GameEngine do
   # ── ID 解決（entity_registry 経由）──────────────────────────────────
 
   defp resolve_enemy_id(kind) when is_atom(kind) do
-    GameEngine.Config.current().entity_registry().enemies[kind] ||
+    Core.Config.current().entity_registry().enemies[kind] ||
       raise "Unknown enemy kind: #{inspect(kind)}"
   end
 end

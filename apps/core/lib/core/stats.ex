@@ -1,4 +1,4 @@
-defmodule GameEngine.Stats do
+defmodule Core.Stats do
   @moduledoc """
   ゲームセッション統計をリアルタイム収集する GenServer。
   """
@@ -30,7 +30,7 @@ defmodule GameEngine.Stats do
 
   @impl true
   def init(_opts) do
-    GameEngine.EventBus.subscribe()
+    Core.EventBus.subscribe()
     {:ok, initial_state()}
   end
 

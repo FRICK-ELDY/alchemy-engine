@@ -5,11 +5,11 @@ defmodule GameContent.RollingBall.PhysicsComponent do
   WASD 入力を Playing シーン state に反映する。
   物理演算（慣性・摩擦・落下判定）は Playing シーンの update で行う。
   """
-  @behaviour GameEngine.Component
+  @behaviour Core.Component
 
-  @impl GameEngine.Component
+  @impl Core.Component
   def on_event({:move_input, dx, dy}, _context) when is_float(dx) and is_float(dy) do
-    GameEngine.SceneManager.update_by_module(
+    Core.SceneManager.update_by_module(
       GameContent.RollingBall.Scenes.Playing,
       fn state -> Map.put(state, :move_input, {dx, dy}) end
     )
@@ -18,7 +18,7 @@ defmodule GameContent.RollingBall.PhysicsComponent do
   end
 
   def on_event({:ui_action, "__retry__"}, _context) do
-    GameEngine.SceneManager.update_by_module(
+    Core.SceneManager.update_by_module(
       GameContent.RollingBall.Scenes.GameOver,
       fn state -> Map.put(state, :retry, true) end
     )
@@ -27,7 +27,7 @@ defmodule GameContent.RollingBall.PhysicsComponent do
   end
 
   def on_event({:ui_action, "__next_stage__"}, _context) do
-    GameEngine.SceneManager.update_by_module(
+    Core.SceneManager.update_by_module(
       GameContent.RollingBall.Scenes.StageClear,
       fn state -> Map.put(state, :next, true) end
     )
@@ -36,7 +36,7 @@ defmodule GameContent.RollingBall.PhysicsComponent do
   end
 
   def on_event({:ui_action, "__start__"}, _context) do
-    GameEngine.SceneManager.update_by_module(
+    Core.SceneManager.update_by_module(
       GameContent.RollingBall.Scenes.Title,
       fn state -> Map.put(state, :start, true) end
     )
@@ -45,7 +45,7 @@ defmodule GameContent.RollingBall.PhysicsComponent do
   end
 
   def on_event({:ui_action, "__back_to_title__"}, _context) do
-    GameEngine.SceneManager.update_by_module(
+    Core.SceneManager.update_by_module(
       GameContent.RollingBall.Scenes.Ending,
       fn state -> Map.put(state, :back_to_title, true) end
     )

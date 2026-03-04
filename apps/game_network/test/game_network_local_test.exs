@@ -7,7 +7,7 @@ defmodule GameNetwork.LocalTest do
   """
 
   # async: false の理由:
-  # GameEngine.RoomRegistry は名前付きプロセス（モジュール名固定）のため、
+  # Core.RoomRegistry は名前付きプロセス（モジュール名固定）のため、
   # 複数テストが並行して起動すると Registry の登録が衝突する。
   use ExUnit.Case, async: false
 
@@ -25,8 +25,8 @@ defmodule GameNetwork.LocalTest do
       _ -> :ok
     end
 
-    case Process.whereis(GameEngine.RoomRegistry) do
-      nil -> start_supervised!({Registry, keys: :unique, name: GameEngine.RoomRegistry})
+    case Process.whereis(Core.RoomRegistry) do
+      nil -> start_supervised!({Registry, keys: :unique, name: Core.RoomRegistry})
       _ -> :ok
     end
 

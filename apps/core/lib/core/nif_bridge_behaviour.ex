@@ -1,9 +1,9 @@
-defmodule GameEngine.NifBridge.Behaviour do
+defmodule Core.NifBridge.Behaviour do
   @moduledoc """
-  `GameEngine.NifBridge` の Behaviour 定義。
+  `Core.NifBridge` の Behaviour 定義。
 
   テスト時に `Mox` でモック化するために使用する。
-  本番コードは `GameEngine.NifBridge` が直接 NIF を呼び出すため、
+  本番コードは `Core.NifBridge` が直接 NIF を呼び出すため、
   このビヘイビアを `@behaviour` として宣言する必要はない。
   """
 

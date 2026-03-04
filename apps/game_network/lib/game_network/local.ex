@@ -2,7 +2,7 @@ defmodule GameNetwork.Local do
   @moduledoc """
   同一 BEAM ノード内でのローカルマルチルーム管理。
 
-  2 つの `GameEngine.GameEvents` プロセスを接続し、
+  2 つの `Core.GameEvents` プロセスを接続し、
   イベントを相互にルーティングする。
 
   ## 目的
@@ -33,7 +33,7 @@ defmodule GameNetwork.Local do
   @doc """
   新しいルームを起動する。
 
-  `GameEngine.RoomSupervisor` 経由で `GameEngine.GameEvents` を起動し、
+  `Core.RoomSupervisor` 経由で `Core.GameEvents` を起動し、
   ルーム ID を登録する。
   """
   @spec open_room(room_id()) :: {:ok, pid()} | {:error, term()}
@@ -106,7 +106,7 @@ defmodule GameNetwork.Local do
   @doc """
   指定ルームとその接続先全てにイベントをブロードキャストする。
 
-  送信先ルームの `GameEngine.GameEvents` プロセスに
+  送信先ルームの `Core.GameEvents` プロセスに
   `{:network_event, from_room, event}` として届く。
   """
   @spec broadcast(room_id(), event()) :: :ok | {:error, :room_not_found}
@@ -149,7 +149,7 @@ defmodule GameNetwork.Local do
   end
 
   def handle_call({:open_room, room_id}, _from, state) do
-    case GameEngine.RoomSupervisor.start_room(room_id) do
+    case Core.RoomSupervisor.start_room(room_id) do
       {:ok, pid} ->
         Logger.info("[GameNetwork.Local] Opened room #{inspect(room_id)} (pid=#{inspect(pid)})")
         {:reply, {:ok, pid}, put_room(state, room_id)}
@@ -163,7 +163,7 @@ defmodule GameNetwork.Local do
   end
 
   def handle_call({:close_room, room_id}, _from, state) do
-    case GameEngine.RoomSupervisor.stop_room(room_id) do
+    case Core.RoomSupervisor.stop_room(room_id) do
       :ok ->
         new_connections = remove_room_connections(state.connections, room_id)
         Logger.info("[GameNetwork.Local] Closed room #{inspect(room_id)}")
@@ -264,7 +264,7 @@ defmodule GameNetwork.Local do
 
   # 対象ルームの GameEvents プロセスにイベントを送信する
   defp deliver_event(room_id, from_room, event) do
-    case GameEngine.RoomRegistry.get_loop(room_id) do
+    case Core.RoomRegistry.get_loop(room_id) do
       {:ok, pid} ->
         send(pid, {:network_event, from_room, event})
 

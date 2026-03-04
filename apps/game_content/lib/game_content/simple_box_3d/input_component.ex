@@ -7,12 +7,12 @@ defmodule GameContent.SimpleBox3D.InputComponent do
   `GameEvents` は `{:move_input, dx, dy}` を受信すると `on_frame_event/2` として
   各コンポーネントに配信するため、ここで `SceneManager` を更新する。
   """
-  @behaviour GameEngine.Component
+  @behaviour Core.Component
 
-  @impl GameEngine.Component
+  @impl Core.Component
   # dx, dy は Rust の on_move_input が f64 としてエンコードするため float で届く。
   def on_event({:move_input, dx, dy}, _context) when is_float(dx) and is_float(dy) do
-    GameEngine.SceneManager.update_by_module(
+    Core.SceneManager.update_by_module(
       GameContent.SimpleBox3D.Scenes.Playing,
       fn state -> Map.put(state, :move_input, {dx, dy}) end
     )
@@ -21,7 +21,7 @@ defmodule GameContent.SimpleBox3D.InputComponent do
   end
 
   def on_event({:ui_action, "__retry__"}, _context) do
-    GameEngine.SceneManager.update_by_module(
+    Core.SceneManager.update_by_module(
       GameContent.SimpleBox3D.Scenes.GameOver,
       fn state -> Map.put(state, :retry, true) end
     )

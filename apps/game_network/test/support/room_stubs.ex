@@ -4,7 +4,7 @@ defmodule GameNetwork.Test.StubRoom do
 
   本番の NIF / Rust ゲームループは起動せず、
   受信した `{:network_event, from, event}` メッセージを蓄積する。
-  自身を `GameEngine.RoomRegistry` に登録するため、
+  自身を `Core.RoomRegistry` に登録するため、
   `GameNetwork.Local` からのイベント配信が正常に動作する。
 
   ## 起動方法
@@ -53,7 +53,7 @@ defmodule GameNetwork.Test.StubRoom do
 
   @impl true
   def init({room_id, opts}) do
-    GameEngine.RoomRegistry.register(room_id)
+    Core.RoomRegistry.register(room_id)
     notify = Keyword.get(opts, :notify)
     {:ok, %{room_id: room_id, events: [], notify: notify}}
   end
