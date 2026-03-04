@@ -1,13 +1,13 @@
-defmodule GameNetwork.UDPTest do
+defmodule Network.UDPTest do
   @moduledoc """
-  `GameNetwork.UDP` および `GameNetwork.UDP.Protocol` の統合テスト。
+  `Network.UDP` および `Network.UDP.Protocol` の統合テスト。
 
   UDP ソケットを直接開いてパケットを送受信し、サーバーの動作を検証する。
   """
 
   use ExUnit.Case, async: false
 
-  alias GameNetwork.UDP.Protocol
+  alias Network.UDP.Protocol
 
   # テスト用 UDP クライアントを起動するヘルパー
   defp open_client do
@@ -37,8 +37,8 @@ defmodule GameNetwork.UDPTest do
   # ── セットアップ ─────────────────────────────────────────────────────
 
   setup do
-    # GameNetwork.UDP は GameNetwork.Application が起動済みであれば既に動いている。
-    server_port = GameNetwork.UDP.port()
+    # Network.UDP は Network.Application が起動済みであれば既に動いている。
+    server_port = Network.UDP.port()
     {:ok, server_port: server_port}
   end
 
@@ -131,7 +131,7 @@ defmodule GameNetwork.UDPTest do
   describe "JOIN / JOIN_ACK" do
     test "JOIN を送ると JOIN_ACK が返る", %{server_port: server_port} do
       room_id = "udp_join_#{System.unique_integer([:positive])}"
-      on_exit(fn -> GameNetwork.Local.unregister_room(room_id) end)
+      on_exit(fn -> Network.Local.unregister_room(room_id) end)
 
       sock = open_client()
       on_exit(fn -> close_client(sock) end)
@@ -140,9 +140,9 @@ defmodule GameNetwork.UDPTest do
       assert {:ok, {:join_ack, 1, ^room_id}} = recv_packet(sock)
     end
 
-    test "JOIN 後にルームが GameNetwork.Local に登録される", %{server_port: server_port} do
+    test "JOIN 後にルームが Network.Local に登録される", %{server_port: server_port} do
       room_id = "udp_reg_#{System.unique_integer([:positive])}"
-      on_exit(fn -> GameNetwork.Local.unregister_room(room_id) end)
+      on_exit(fn -> Network.Local.unregister_room(room_id) end)
 
       sock = open_client()
       on_exit(fn -> close_client(sock) end)
@@ -150,7 +150,7 @@ defmodule GameNetwork.UDPTest do
       :ok = send_packet(sock, server_port, Protocol.encode({:join, 1, room_id}))
       {:ok, {:join_ack, 1, _}} = recv_packet(sock)
 
-      rooms = GameNetwork.Local.list_rooms()
+      rooms = Network.Local.list_rooms()
       assert room_id in rooms
     end
   end
@@ -170,12 +170,12 @@ defmodule GameNetwork.UDPTest do
   describe "INPUT 転送" do
     test "JOIN 後の INPUT が GameEvents に届く", %{server_port: server_port} do
       room_id = "udp_input_#{System.unique_integer([:positive])}"
-      on_exit(fn -> GameNetwork.Local.unregister_room(room_id) end)
+      on_exit(fn -> Network.Local.unregister_room(room_id) end)
 
       # StubRoom を起動して RoomRegistry に登録する
       {:ok, stub_pid} =
         start_supervised(
-          {GameNetwork.Test.StubRoom, {room_id, notify: self()}},
+          {Network.Test.StubRoom, {room_id, notify: self()}},
           id: :"stub_#{room_id}"
         )
 
@@ -200,11 +200,11 @@ defmodule GameNetwork.UDPTest do
   describe "ACTION 転送" do
     test "JOIN 後の ACTION が GameEvents に届く", %{server_port: server_port} do
       room_id = "udp_action_#{System.unique_integer([:positive])}"
-      on_exit(fn -> GameNetwork.Local.unregister_room(room_id) end)
+      on_exit(fn -> Network.Local.unregister_room(room_id) end)
 
       {:ok, _stub_pid} =
         start_supervised(
-          {GameNetwork.Test.StubRoom, {room_id, notify: self()}},
+          {Network.Test.StubRoom, {room_id, notify: self()}},
           id: :"stub_#{room_id}"
         )
 
@@ -223,7 +223,7 @@ defmodule GameNetwork.UDPTest do
   describe "セッション管理" do
     test "sessions/0 が接続中クライアントを返す", %{server_port: server_port} do
       room_id = "udp_sess_#{System.unique_integer([:positive])}"
-      on_exit(fn -> GameNetwork.Local.unregister_room(room_id) end)
+      on_exit(fn -> Network.Local.unregister_room(room_id) end)
 
       sock = open_client()
       on_exit(fn -> close_client(sock) end)
@@ -232,7 +232,7 @@ defmodule GameNetwork.UDPTest do
       :ok = send_packet(sock, server_port, Protocol.encode({:join, 1, room_id}))
       {:ok, {:join_ack, 1, _}} = recv_packet(sock)
 
-      sessions = GameNetwork.UDP.sessions()
+      sessions = Network.UDP.sessions()
 
       assert Enum.any?(sessions, fn {{_ip, p}, session} ->
                p == port and session.room_id == room_id
@@ -241,7 +241,7 @@ defmodule GameNetwork.UDPTest do
 
     test "LEAVE 後にセッションが削除される", %{server_port: server_port} do
       room_id = "udp_leave_#{System.unique_integer([:positive])}"
-      on_exit(fn -> GameNetwork.Local.unregister_room(room_id) end)
+      on_exit(fn -> Network.Local.unregister_room(room_id) end)
 
       sock = open_client()
       on_exit(fn -> close_client(sock) end)
@@ -262,7 +262,7 @@ defmodule GameNetwork.UDPTest do
       :ok = send_packet(sock, server_port, Protocol.encode({:ping, 999}))
       {:ok, {:pong, 999, _}} = recv_packet(sock, 500)
 
-      sessions = GameNetwork.UDP.sessions()
+      sessions = Network.UDP.sessions()
       refute Enum.any?(sessions, fn {{_ip, p}, _} -> p == port end)
     end
   end
@@ -270,7 +270,7 @@ defmodule GameNetwork.UDPTest do
   describe "broadcast_frame/2" do
     test "broadcast_frame が JOIN 済みクライアントにフレームを届ける", %{server_port: server_port} do
       room_id = "udp_frame_#{System.unique_integer([:positive])}"
-      on_exit(fn -> GameNetwork.Local.unregister_room(room_id) end)
+      on_exit(fn -> Network.Local.unregister_room(room_id) end)
 
       sock = open_client()
       on_exit(fn -> close_client(sock) end)
@@ -279,7 +279,7 @@ defmodule GameNetwork.UDPTest do
       {:ok, {:join_ack, 1, _}} = recv_packet(sock)
 
       events = [:event_a, :event_b]
-      GameNetwork.UDP.broadcast_frame(room_id, events)
+      Network.UDP.broadcast_frame(room_id, events)
 
       assert {:ok, {:frame, _seq, ^events}} = recv_packet(sock, 1000)
     end
@@ -289,8 +289,8 @@ defmodule GameNetwork.UDPTest do
       room_b = "udp_fb_#{System.unique_integer([:positive])}"
 
       on_exit(fn ->
-        GameNetwork.Local.unregister_room(room_a)
-        GameNetwork.Local.unregister_room(room_b)
+        Network.Local.unregister_room(room_a)
+        Network.Local.unregister_room(room_b)
       end)
 
       sock_a = open_client()
@@ -308,7 +308,7 @@ defmodule GameNetwork.UDPTest do
       {:ok, {:join_ack, 2, _}} = recv_packet(sock_b)
 
       # room_a にのみブロードキャスト
-      GameNetwork.UDP.broadcast_frame(room_a, [:only_for_a])
+      Network.UDP.broadcast_frame(room_a, [:only_for_a])
 
       # sock_a は受信できる
       assert {:ok, {:frame, _seq, [:only_for_a]}} = recv_packet(sock_a, 500)

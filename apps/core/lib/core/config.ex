@@ -11,7 +11,7 @@ defmodule Core.Config do
 
   @doc "コンテンツモジュールを返す（`components/0` を実装したモジュール）"
   def current do
-    Application.get_env(:game_server, :current, @default_content)
+    Application.get_env(:server, :current, @default_content)
   end
 
   @doc "コンテンツが提供するコンポーネントモジュールのリストを返す"

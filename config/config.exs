@@ -1,19 +1,19 @@
 import Config
 
-# ── GameNetwork.Endpoint（Phoenix WebSocket サーバー）────────────────
+# ── Network.Endpoint（Phoenix WebSocket サーバー）────────────────
 # ポートはコンパイル時固定値として設定する。
-# 実行時に変更したい場合は config/runtime.exs の GAME_NETWORK_PORT を使用する。
-config :game_network, GameNetwork.Endpoint,
+# 実行時に変更したい場合は config/runtime.exs の NETWORK_PORT を使用する。
+config :network, Network.Endpoint,
   http: [port: 4000],
-  pubsub_server: GameNetwork.PubSub,
+  pubsub_server: Network.PubSub,
   server: true
 
-config :game_network, :json_library, Jason
+config :network, :json_library, Jason
 
-# ── GameNetwork.UDP（UDP トランスポートサーバー）─────────────────────
+# ── Network.UDP（UDP トランスポートサーバー）─────────────────────
 # デフォルトポート: 4001
-# 変更する場合は config/runtime.exs の GAME_NETWORK_UDP_PORT を設定する。
-config :game_network, GameNetwork.UDP, port: 4001
+# 変更する場合は config/runtime.exs の NETWORK_UDP_PORT を設定する。
+config :network, Network.UDP, port: 4001
 
 # ── 使用するコンテンツを指定する。
 # GameContent.VampireSurvivor — ヴァンパイアサバイバークローン
@@ -21,8 +21,8 @@ config :game_network, GameNetwork.UDP, port: 4001
 # GameContent.SimpleBox3D     — シンプルな3Dゲーム（Phase R-6 動作検証用）
 # GameContent.BulletHell3D    — 3D 弾幕避けゲーム
 # GameContent.VRTest          — VR 動作検証（Phase A: マウスで見回し）
-config :game_server, :current, GameContent.SimpleBox3D
-config :game_server, :map, :plain
+config :server, :current, GameContent.SimpleBox3D
+config :server, :map, :plain
 
 # セーブデータの HMAC 署名鍵（デフォルト値）。
 # 本番ビルド時は環境変数 SAVE_HMAC_SECRET で上書きすることを推奨する（config/runtime.exs）。

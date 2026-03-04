@@ -1,6 +1,6 @@
-defmodule GameNetwork.ChannelTest do
+defmodule Network.ChannelTest do
   @moduledoc """
-  GameNetwork.Channel の単体テスト。
+  Network.Channel の単体テスト。
 
   Phoenix.ChannelTest を使い、WebSocket 接続なしで
   チャンネルのメッセージハンドリングを検証する。
@@ -14,14 +14,14 @@ defmodule GameNetwork.ChannelTest do
 
   import Phoenix.ChannelTest
 
-  @endpoint GameNetwork.Endpoint
+  @endpoint Network.Endpoint
 
-  alias GameNetwork.Test.StubRoom
+  alias Network.Test.StubRoom
 
   setup do
-    # このテストは GameNetwork.Application（または GameServer.Application）が
+    # このテストは Network.Application（または Server.Application）が
     # 起動した状態で実行される。
-    # RoomRegistry / GameNetwork.Local / PubSub / Endpoint は既に起動済みのため、
+    # RoomRegistry / Network.Local / PubSub / Endpoint は既に起動済みのため、
     # ここでは何も起動しない。
     :ok
   end
@@ -29,25 +29,25 @@ defmodule GameNetwork.ChannelTest do
   describe "join" do
     test "room:* トピックに join できる" do
       track("test_room")
-      {:ok, socket} = connect(GameNetwork.UserSocket, %{})
+      {:ok, socket} = connect(Network.UserSocket, %{})
 
       assert {:ok, %{room_id: "test_room"}, _socket} =
-               subscribe_and_join(socket, GameNetwork.Channel, "room:test_room")
+               subscribe_and_join(socket, Network.Channel, "room:test_room")
     end
 
     test "不明なトピックは拒否される" do
-      {:ok, socket} = connect(GameNetwork.UserSocket, %{})
+      {:ok, socket} = connect(Network.UserSocket, %{})
 
       assert {:error, %{reason: "unknown_topic"}} =
-               subscribe_and_join(socket, GameNetwork.Channel, "unknown:topic")
+               subscribe_and_join(socket, Network.Channel, "unknown:topic")
     end
   end
 
   describe "ping / pong" do
     setup do
       track("ping_room")
-      {:ok, socket} = connect(GameNetwork.UserSocket, %{})
-      {:ok, _, socket} = subscribe_and_join(socket, GameNetwork.Channel, "room:ping_room")
+      {:ok, socket} = connect(Network.UserSocket, %{})
+      {:ok, _, socket} = subscribe_and_join(socket, Network.Channel, "room:ping_room")
       %{socket: socket}
     end
 
@@ -63,8 +63,8 @@ defmodule GameNetwork.ChannelTest do
       test_pid = self()
       track("input_room")
       start_supervised!({StubRoom, {"input_room", notify: test_pid}}, id: :stub_input)
-      {:ok, socket} = connect(GameNetwork.UserSocket, %{})
-      {:ok, _, socket} = subscribe_and_join(socket, GameNetwork.Channel, "room:input_room")
+      {:ok, socket} = connect(Network.UserSocket, %{})
+      {:ok, _, socket} = subscribe_and_join(socket, Network.Channel, "room:input_room")
       %{socket: socket}
     end
 
@@ -75,8 +75,8 @@ defmodule GameNetwork.ChannelTest do
 
     test "存在しないルームへの input はエラーを返す" do
       track("ghost_room")
-      {:ok, socket} = connect(GameNetwork.UserSocket, %{})
-      {:ok, _, socket} = subscribe_and_join(socket, GameNetwork.Channel, "room:ghost_room")
+      {:ok, socket} = connect(Network.UserSocket, %{})
+      {:ok, _, socket} = subscribe_and_join(socket, Network.Channel, "room:ghost_room")
 
       push(socket, "input", %{"dx" => 0.0, "dy" => 0.0})
       assert_push("error", %{reason: "room_not_found"})
@@ -88,8 +88,8 @@ defmodule GameNetwork.ChannelTest do
       test_pid = self()
       track("action_room")
       start_supervised!({StubRoom, {"action_room", notify: test_pid}}, id: :stub_action)
-      {:ok, socket} = connect(GameNetwork.UserSocket, %{})
-      {:ok, _, socket} = subscribe_and_join(socket, GameNetwork.Channel, "room:action_room")
+      {:ok, socket} = connect(Network.UserSocket, %{})
+      {:ok, _, socket} = subscribe_and_join(socket, Network.Channel, "room:action_room")
       %{socket: socket}
     end
 
@@ -103,8 +103,8 @@ defmodule GameNetwork.ChannelTest do
     test "GameEvents からの :network_event がクライアントに届く" do
       track("net_room")
       start_supervised!({StubRoom, "net_room"}, id: :stub_net)
-      {:ok, socket} = connect(GameNetwork.UserSocket, %{})
-      {:ok, _, socket} = subscribe_and_join(socket, GameNetwork.Channel, "room:net_room")
+      {:ok, socket} = connect(Network.UserSocket, %{})
+      {:ok, _, socket} = subscribe_and_join(socket, Network.Channel, "room:net_room")
 
       send(socket.channel_pid, {:network_event, "other_room", :hello})
 
@@ -120,9 +120,9 @@ defmodule GameNetwork.ChannelTest do
   # ExUnit によって自動的に上書きされる（冪等）。
   defp track(room_id) do
     on_exit({:unregister, room_id}, fn ->
-      case Process.whereis(GameNetwork.Local) do
+      case Process.whereis(Network.Local) do
         nil -> :ok
-        _ -> GameNetwork.Local.unregister_room(room_id)
+        _ -> Network.Local.unregister_room(room_id)
       end
     end)
   end

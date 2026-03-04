@@ -1,6 +1,6 @@
-defmodule GameServer.Application do
+defmodule Server.Application do
   @moduledoc """
-  GameServer OTP アプリケーションのエントリポイント。
+  Server OTP アプリケーションのエントリポイント。
   ゲームエンジンの各スーパーバイザーとワーカーを起動する。
   """
 
@@ -8,7 +8,7 @@ defmodule GameServer.Application do
 
   @impl true
   def start(_type, _args) do
-    content = Application.get_env(:game_server, :current, GameContent.VampireSurvivor)
+    content = Application.get_env(:server, :current, GameContent.VampireSurvivor)
 
     assets_path =
       if function_exported?(content, :assets_path, 0), do: content.assets_path(), else: ""
@@ -26,7 +26,7 @@ defmodule GameServer.Application do
       Core.Telemetry
     ]
 
-    opts = [strategy: :one_for_one, name: GameServer.Supervisor]
+    opts = [strategy: :one_for_one, name: Server.Supervisor]
 
     case Supervisor.start_link(children, opts) do
       {:ok, pid} ->

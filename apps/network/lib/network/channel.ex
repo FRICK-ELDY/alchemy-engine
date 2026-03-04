@@ -1,4 +1,4 @@
-defmodule GameNetwork.Channel do
+defmodule Network.Channel do
   @moduledoc """
   Phoenix Channel によるリアルタイム WebSocket トランスポート。
 
@@ -55,23 +55,21 @@ defmodule GameNetwork.Channel do
 
   @impl true
   def join("room:" <> room_id, _params, socket) do
-    case GameNetwork.Local.register_room(room_id) do
+    case Network.Local.register_room(room_id) do
       :ok ->
-        Logger.info("[GameNetwork.Channel] Client joined room=#{room_id}")
+        Logger.info("[Network.Channel] Client joined room=#{room_id}")
         socket = assign(socket, :room_id, room_id)
         {:ok, %{room_id: room_id}, socket}
 
       {:error, reason} ->
-        Logger.warning(
-          "[GameNetwork.Channel] Failed to register room=#{room_id}: #{inspect(reason)}"
-        )
+        Logger.warning("[Network.Channel] Failed to register room=#{room_id}: #{inspect(reason)}")
 
         {:error, %{reason: "register_failed", detail: inspect(reason)}}
     end
   end
 
   def join(topic, _params, _socket) do
-    Logger.warning("[GameNetwork.Channel] Rejected join for unknown topic=#{topic}")
+    Logger.warning("[Network.Channel] Rejected join for unknown topic=#{topic}")
     {:error, %{reason: "unknown_topic"}}
   end
 
@@ -119,7 +117,7 @@ defmodule GameNetwork.Channel do
   end
 
   def handle_in(event, _payload, socket) do
-    Logger.debug("[GameNetwork.Channel] Unknown event=#{event} room=#{socket.assigns.room_id}")
+    Logger.debug("[Network.Channel] Unknown event=#{event} room=#{socket.assigns.room_id}")
     {:noreply, socket}
   end
 

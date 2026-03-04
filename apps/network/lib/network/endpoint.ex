@@ -1,4 +1,4 @@
-defmodule GameNetwork.Endpoint do
+defmodule Network.Endpoint do
   @moduledoc """
   Phoenix Endpoint。
 
@@ -6,16 +6,16 @@ defmodule GameNetwork.Endpoint do
 
   ## 設定（config/config.exs または config/dev.exs）
 
-      config :game_network, GameNetwork.Endpoint,
+      config :network, Network.Endpoint,
         http: [port: 4000],
-        pubsub_server: GameNetwork.PubSub
+        pubsub_server: Network.PubSub
 
   デフォルトポートは 4000。
   """
 
-  use Phoenix.Endpoint, otp_app: :game_network
+  use Phoenix.Endpoint, otp_app: :network
 
-  socket("/socket", GameNetwork.UserSocket,
+  socket("/socket", Network.UserSocket,
     websocket: true,
     longpoll: false
   )
@@ -29,5 +29,5 @@ defmodule GameNetwork.Endpoint do
     json_decoder: Phoenix.json_library()
   )
 
-  plug(GameNetwork.Router)
+  plug(Network.Router)
 end
