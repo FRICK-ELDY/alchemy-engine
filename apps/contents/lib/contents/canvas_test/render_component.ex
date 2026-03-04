@@ -35,7 +35,10 @@ defmodule Content.CanvasTest.RenderComponent do
   @impl Core.Component
   def on_nif_sync(context) do
     content = Core.Config.current()
-    playing_state = Core.SceneManager.get_scene_state(content.playing_scene()) || %{}
+    runner = content.flow_runner(:main)
+
+    playing_state =
+      (runner && Contents.SceneStack.get_scene_state(runner, content.playing_scene())) || %{}
 
     commands = build_commands()
     camera = build_camera(playing_state)
@@ -58,8 +61,9 @@ defmodule Content.CanvasTest.RenderComponent do
     # （例: Escape 連打で :release が2回書き込まれた場合）は区別できず上書きされる。
     # この場合でも次の Escape 押下で再送されるため、実害は1フレームの遅延に留まる。
     # 完全なアトミック性が必要な場合はシーケンス番号の導入を検討すること。
-    if cursor_grab != :no_change do
-      Core.SceneManager.update_by_module(
+    if cursor_grab != :no_change and runner do
+      Contents.SceneStack.update_by_module(
+        runner,
         Content.CanvasTest.Scenes.Playing,
         fn state ->
           if state.cursor_grab_request == cursor_grab do

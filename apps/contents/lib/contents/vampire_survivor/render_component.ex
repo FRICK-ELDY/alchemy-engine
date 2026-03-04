@@ -33,10 +33,13 @@ defmodule Content.VampireSurvivor.RenderComponent do
   @impl Core.Component
   def on_nif_sync(context) do
     content = Core.Config.current()
-    playing_state = Core.SceneManager.get_scene_state(content.playing_scene()) || %{}
+    runner = content.flow_runner(:main)
+
+    playing_state =
+      (runner && Contents.SceneStack.get_scene_state(runner, content.playing_scene())) || %{}
 
     current_scene =
-      case Core.SceneManager.current() do
+      case runner && Contents.SceneStack.current(runner) do
         {:ok, %{module: mod}} -> mod
         _ -> content.playing_scene()
       end

@@ -26,11 +26,14 @@ defmodule Content.VampireSurvivor.BossComponent do
   @impl Core.Component
   def on_frame_event({:boss_spawn, boss_kind, _, _, _}, _context) do
     content = Core.Config.current()
+    runner = content.flow_runner(:main)
 
-    Core.SceneManager.update_by_module(content.playing_scene(), fn state ->
-      max_hp = Content.EntityParams.boss_max_hp(boss_kind)
-      %{state | boss_hp: max_hp, boss_max_hp: max_hp, boss_kind_id: boss_kind}
-    end)
+    if runner do
+      Contents.SceneStack.update_by_module(runner, content.playing_scene(), fn state ->
+        max_hp = Content.EntityParams.boss_max_hp(boss_kind)
+        %{state | boss_hp: max_hp, boss_max_hp: max_hp, boss_kind_id: boss_kind}
+      end)
+    end
 
     # phase_timer をリセットする（Elixir 側で管理）
     bp = Content.EntityParams.boss_params_by_id(boss_kind)
@@ -42,26 +45,30 @@ defmodule Content.VampireSurvivor.BossComponent do
   def on_frame_event({:boss_damaged, damage_x1000, _, _, _}, _context) do
     damage = damage_x1000 / 1000.0
     content = Core.Config.current()
+    runner = content.flow_runner(:main)
 
-    Core.SceneManager.update_by_module(content.playing_scene(), fn state ->
-      if state.boss_hp != nil do
-        %{state | boss_hp: max(0.0, state.boss_hp - damage)}
-      else
-        state
-      end
-    end)
+    if runner do
+      Contents.SceneStack.update_by_module(runner, content.playing_scene(), fn state ->
+        if state.boss_hp != nil do
+          %{state | boss_hp: max(0.0, state.boss_hp - damage)}
+        else
+          state
+        end
+      end)
+    end
 
     :ok
   end
 
   def on_frame_event({:boss_defeated, world_ref, boss_kind, x, y}, _context) do
     content = Core.Config.current()
+    runner = content.flow_runner(:main)
 
-    if function_exported?(content, :boss_exp_reward, 1) do
+    if function_exported?(content, :boss_exp_reward, 1) and runner do
       exp = content.boss_exp_reward(boss_kind)
       score_delta = content.score_from_exp(exp)
 
-      Core.SceneManager.update_by_module(content.playing_scene(), fn state ->
+      Contents.SceneStack.update_by_module(runner, content.playing_scene(), fn state ->
         state
         |> Map.update(:score, score_delta, &(&1 + score_delta))
         |> Map.update(:kill_count, 1, &(&1 + 1))
@@ -82,7 +89,11 @@ defmodule Content.VampireSurvivor.BossComponent do
   @impl Core.Component
   def on_nif_sync(context) do
     content = Core.Config.current()
-    playing_state = Core.SceneManager.get_scene_state(content.playing_scene()) || %{}
+    runner = content.flow_runner(:main)
+
+    playing_state =
+      (runner && Contents.SceneStack.get_scene_state(runner, content.playing_scene())) || %{}
+
     boss_hp = Map.get(playing_state, :boss_hp)
     prev = Process.get({__MODULE__, :last_boss_hp}, :unset)
 
@@ -99,9 +110,13 @@ defmodule Content.VampireSurvivor.BossComponent do
   @impl Core.Component
   def on_physics_process(context) do
     world_ref = context.world_ref
+    content = Core.Config.current()
+    runner = content.flow_runner(:main)
 
     playing_state =
-      Core.SceneManager.get_scene_state(Content.VampireSurvivor.Scenes.Playing)
+      (runner &&
+         Contents.SceneStack.get_scene_state(runner, Content.VampireSurvivor.Scenes.Playing)) ||
+        %{}
 
     kind_id = Map.get(playing_state || %{}, :boss_kind_id)
 

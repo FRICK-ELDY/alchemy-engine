@@ -21,49 +21,73 @@ defmodule Content.CanvasTest.InputComponent do
 
   @impl Core.Component
   def on_event({:move_input, dx, dz}, _context) when is_float(dx) and is_float(dz) do
-    Core.SceneManager.update_by_module(
-      Content.CanvasTest.Scenes.Playing,
-      fn state -> Map.put(state, :move_input, {dx, dz}) end
-    )
+    content = Core.Config.current()
+    runner = content.flow_runner(:main)
+
+    if runner do
+      Contents.SceneStack.update_by_module(
+        runner,
+        Content.CanvasTest.Scenes.Playing,
+        fn state -> Map.put(state, :move_input, {dx, dz}) end
+      )
+    end
 
     :ok
   end
 
   def on_event({:mouse_delta, dx, dy}, _context) when is_float(dx) and is_float(dy) do
-    Core.SceneManager.update_by_module(
-      Content.CanvasTest.Scenes.Playing,
-      fn state -> Map.put(state, :mouse_delta, {dx, dy}) end
-    )
+    content = Core.Config.current()
+    runner = content.flow_runner(:main)
+
+    if runner do
+      Contents.SceneStack.update_by_module(
+        runner,
+        Content.CanvasTest.Scenes.Playing,
+        fn state -> Map.put(state, :mouse_delta, {dx, dy}) end
+      )
+    end
 
     :ok
   end
 
   def on_event({:sprint, value}, _context) when is_boolean(value) do
-    Core.SceneManager.update_by_module(
-      Content.CanvasTest.Scenes.Playing,
-      fn state -> Map.put(state, :sprint, value) end
-    )
+    content = Core.Config.current()
+    runner = content.flow_runner(:main)
+
+    if runner do
+      Contents.SceneStack.update_by_module(
+        runner,
+        Content.CanvasTest.Scenes.Playing,
+        fn state -> Map.put(state, :sprint, value) end
+      )
+    end
 
     :ok
   end
 
   def on_event({:key_pressed, :escape}, _context) do
-    Core.SceneManager.update_by_module(
-      Content.CanvasTest.Scenes.Playing,
-      fn state ->
-        if state.hud_visible do
-          # HUD表示中: HUDを閉じてカーソルをグラブ（ゲームに戻る）
-          state
-          |> Map.put(:hud_visible, false)
-          |> Map.put(:cursor_grab_request, :grab)
-        else
-          # HUD非表示: HUDを表示してカーソルを解放（HUDを操作できる状態へ）
-          state
-          |> Map.put(:hud_visible, true)
-          |> Map.put(:cursor_grab_request, :release)
+    content = Core.Config.current()
+    runner = content.flow_runner(:main)
+
+    if runner do
+      Contents.SceneStack.update_by_module(
+        runner,
+        Content.CanvasTest.Scenes.Playing,
+        fn state ->
+          if state.hud_visible do
+            # HUD表示中: HUDを閉じてカーソルをグラブ（ゲームに戻る）
+            state
+            |> Map.put(:hud_visible, false)
+            |> Map.put(:cursor_grab_request, :grab)
+          else
+            # HUD非表示: HUDを表示してカーソルを解放（HUDを操作できる状態へ）
+            state
+            |> Map.put(:hud_visible, true)
+            |> Map.put(:cursor_grab_request, :release)
+          end
         end
-      end
-    )
+      )
+    end
 
     :ok
   end

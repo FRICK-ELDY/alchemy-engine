@@ -10,7 +10,7 @@ defmodule Content.SimpleBox3D.Scenes.Playing do
   - 敵（赤ボックス）はプレイヤーを追跡する
   - 敵に触れるとゲームオーバー
   """
-  @behaviour Core.SceneBehaviour
+  @behaviour Contents.SceneBehaviour
 
   @tick_sec 1.0 / 60.0
 
@@ -35,7 +35,7 @@ defmodule Content.SimpleBox3D.Scenes.Playing do
     {-8.0, 0.0, -8.0}
   ]
 
-  @impl Core.SceneBehaviour
+  @impl Contents.SceneBehaviour
   def init(_init_arg) do
     {:ok,
      %{
@@ -45,10 +45,10 @@ defmodule Content.SimpleBox3D.Scenes.Playing do
      }}
   end
 
-  @impl Core.SceneBehaviour
+  @impl Contents.SceneBehaviour
   def render_type, do: :playing
 
-  @impl Core.SceneBehaviour
+  @impl Contents.SceneBehaviour
   def update(_context, state) do
     if Map.get(state, :alive, true) do
       # move_input は Rust の on_move_input が f64 としてエンコードするため float で届く。

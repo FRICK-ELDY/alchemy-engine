@@ -47,11 +47,14 @@ defmodule Content.VampireSurvivor.LevelComponent do
   def on_frame_event({:player_damaged, damage_x1000, _, _, _}, _context) do
     damage = damage_x1000 / 1000.0
     content = Core.Config.current()
+    runner = content.flow_runner(:main)
 
-    Core.SceneManager.update_by_module(content.playing_scene(), fn state ->
-      new_hp = max(0.0, Map.get(state, :player_hp, 100.0) - damage)
-      Map.put(state, :player_hp, new_hp)
-    end)
+    if runner do
+      Contents.SceneStack.update_by_module(runner, content.playing_scene(), fn state ->
+        new_hp = max(0.0, Map.get(state, :player_hp, 100.0) - damage)
+        Map.put(state, :player_hp, new_hp)
+      end)
+    end
 
     :ok
   end
@@ -63,7 +66,10 @@ defmodule Content.VampireSurvivor.LevelComponent do
   @impl Core.Component
   def on_nif_sync(context) do
     content = Core.Config.current()
-    playing_state = Core.SceneManager.get_scene_state(content.playing_scene()) || %{}
+    runner = content.flow_runner(:main)
+
+    playing_state =
+      (runner && Contents.SceneStack.get_scene_state(runner, content.playing_scene())) || %{}
 
     sync_player_hp(context.world_ref, playing_state)
     sync_elapsed(context.world_ref, playing_state, context)
@@ -95,17 +101,21 @@ defmodule Content.VampireSurvivor.LevelComponent do
 
   def on_event({:ui_action, "__skip__"}, context) do
     content = Core.Config.current()
-    playing_state = Core.SceneManager.get_scene_state(content.playing_scene()) || %{}
+    runner = content.flow_runner(:main)
 
-    if Map.get(playing_state, :level_up_pending, false) do
+    playing_state =
+      (runner && Contents.SceneStack.get_scene_state(runner, content.playing_scene())) || %{}
+
+    if Map.get(playing_state, :level_up_pending, false) and runner do
       Logger.info("[LEVEL UP] Skipped from renderer UI")
 
-      Core.SceneManager.update_by_module(
+      Contents.SceneStack.update_by_module(
+        runner,
         content.playing_scene(),
         &content.apply_level_up_skipped/1
       )
 
-      close_level_up_scene_if_active(content, context)
+      close_level_up_scene_if_active(content, context, runner)
     end
 
     :ok
@@ -113,9 +123,12 @@ defmodule Content.VampireSurvivor.LevelComponent do
 
   def on_event({:ui_action, weapon_name}, context) when is_binary(weapon_name) do
     content = Core.Config.current()
-    playing_state = Core.SceneManager.get_scene_state(content.playing_scene()) || %{}
+    runner = content.flow_runner(:main)
 
-    if Map.get(playing_state, :level_up_pending, false) do
+    playing_state =
+      (runner && Contents.SceneStack.get_scene_state(runner, content.playing_scene())) || %{}
+
+    if Map.get(playing_state, :level_up_pending, false) and runner do
       weapon_levels = Map.get(playing_state, :weapon_levels, %{})
       {action, weapon} = resolve_weapon(weapon_name, weapon_levels, content)
 
@@ -123,19 +136,21 @@ defmodule Content.VampireSurvivor.LevelComponent do
         :apply ->
           Logger.info("[LEVEL UP] Weapon selected from renderer: #{inspect(weapon)}")
 
-          Core.SceneManager.update_by_module(
+          Contents.SceneStack.update_by_module(
+            runner,
             content.playing_scene(),
             &content.apply_weapon_selected(&1, weapon)
           )
 
         :skip ->
-          Core.SceneManager.update_by_module(
+          Contents.SceneStack.update_by_module(
+            runner,
             content.playing_scene(),
             &content.apply_level_up_skipped/1
           )
       end
 
-      close_level_up_scene_if_active(content, context)
+      close_level_up_scene_if_active(content, context, runner)
     end
 
     :ok
@@ -143,23 +158,28 @@ defmodule Content.VampireSurvivor.LevelComponent do
 
   def on_event({:ui_action, "__auto_pop__", scene_state}, _context) do
     content = Core.Config.current()
+    runner = content.flow_runner(:main)
 
-    case scene_state do
-      %{choices: [first | _]} ->
-        Logger.info("[LEVEL UP] Auto-selected: #{inspect(first)} -> resuming")
+    if runner do
+      case scene_state do
+        %{choices: [first | _]} ->
+          Logger.info("[LEVEL UP] Auto-selected: #{inspect(first)} -> resuming")
 
-        Core.SceneManager.update_by_module(
-          content.playing_scene(),
-          &content.apply_weapon_selected(&1, first)
-        )
+          Contents.SceneStack.update_by_module(
+            runner,
+            content.playing_scene(),
+            &content.apply_weapon_selected(&1, first)
+          )
 
-      _ ->
-        Logger.info("[LEVEL UP] Auto-skipped (no choices) -> resuming")
+        _ ->
+          Logger.info("[LEVEL UP] Auto-skipped (no choices) -> resuming")
 
-        Core.SceneManager.update_by_module(
-          content.playing_scene(),
-          &content.apply_level_up_skipped/1
-        )
+          Contents.SceneStack.update_by_module(
+            runner,
+            content.playing_scene(),
+            &content.apply_level_up_skipped/1
+          )
+      end
     end
 
     :ok
@@ -222,15 +242,18 @@ defmodule Content.VampireSurvivor.LevelComponent do
 
   defp apply_kill_to_scene(content, exp) do
     score_delta = content.score_from_exp(exp)
+    runner = content.flow_runner(:main)
 
     # シーンが見つからない場合（Playing シーン以外での敵撃破等）は
     # update_by_module が何もしないため、score_delta のみ返して NIF ポップアップに使う
-    Core.SceneManager.update_by_module(content.playing_scene(), fn state ->
-      state
-      |> Map.update(:score, score_delta, &(&1 + score_delta))
-      |> Map.update(:kill_count, 1, &(&1 + 1))
-      |> content.playing_scene().accumulate_exp(exp)
-    end)
+    if runner do
+      Contents.SceneStack.update_by_module(runner, content.playing_scene(), fn state ->
+        state
+        |> Map.update(:score, score_delta, &(&1 + score_delta))
+        |> Map.update(:kill_count, 1, &(&1 + 1))
+        |> content.playing_scene().accumulate_exp(exp)
+      end)
+    end
 
     score_delta
   end
@@ -287,11 +310,11 @@ defmodule Content.VampireSurvivor.LevelComponent do
     end
   end
 
-  defp close_level_up_scene_if_active(content, context) do
-    if function_exported?(content, :level_up_scene, 0) do
+  defp close_level_up_scene_if_active(content, context, runner) do
+    if function_exported?(content, :level_up_scene, 0) and runner do
       level_up_scene = content.level_up_scene()
 
-      case Core.SceneManager.current() do
+      case Contents.SceneStack.current(runner) do
         {:ok, %{module: ^level_up_scene}} ->
           context.pop_scene.()
 

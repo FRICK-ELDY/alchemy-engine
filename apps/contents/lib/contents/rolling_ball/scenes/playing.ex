@@ -31,7 +31,7 @@ defmodule Content.RollingBall.Scenes.Playing do
   }
   ```
   """
-  @behaviour Core.SceneBehaviour
+  @behaviour Contents.SceneBehaviour
 
   alias Content.RollingBall.StageData
 
@@ -61,7 +61,7 @@ defmodule Content.RollingBall.Scenes.Playing do
   # 障害物衝突半径（ボール半径 0.55 + 障害物半径 0.65）
   @obstacle_collision_radius 1.2
 
-  @impl Core.SceneBehaviour
+  @impl Contents.SceneBehaviour
   def init(%{stage: stage, retries_left: retries_left}) do
     stage_data = StageData.get(stage)
     {bx, bz} = stage_data.ball_start
@@ -89,10 +89,10 @@ defmodule Content.RollingBall.Scenes.Playing do
     {:ok, state}
   end
 
-  @impl Core.SceneBehaviour
+  @impl Contents.SceneBehaviour
   def render_type, do: :playing
 
-  @impl Core.SceneBehaviour
+  @impl Contents.SceneBehaviour
   def update(_context, state) do
     cond do
       state.cleared ->
