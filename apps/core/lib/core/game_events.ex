@@ -141,8 +141,15 @@ defmodule Core.GameEvents do
 
     case result do
       :ok ->
-        Core.SceneManager.replace_scene(content.physics_scenes() |> List.first(), %{})
-        {:reply, :ok, state}
+        case content.flow_runner(state.room_id) do
+          nil ->
+            {:reply, {:error, :flow_runner_unavailable}, state}
+
+          runner ->
+            physics_scene = content.physics_scenes() |> List.first()
+            GenServer.call(runner, {:replace, physics_scene, %{}})
+            {:reply, :ok, state}
+        end
 
       other ->
         {:reply, other, state}
@@ -170,7 +177,7 @@ defmodule Core.GameEvents do
 
         _ ->
           now = now_ms()
-          context = build_context(state, now, now - state.start_ms)
+          context = build_context(state, now, now - state.start_ms, flow_runner(state))
           dispatch_event_to_components({:ui_action, action}, context)
           state
       end
@@ -185,7 +192,7 @@ defmodule Core.GameEvents do
     # ここではコンポーネントへのディスパッチのみ（InputComponent 等がシーン state を更新する）。
 
     now = now_ms()
-    context = build_context(state, now, now - state.start_ms)
+    context = build_context(state, now, now - state.start_ms, flow_runner(state))
     dispatch_event_to_components({:move_input, dx, dy}, context)
     {:noreply, state}
   end
@@ -194,7 +201,7 @@ defmodule Core.GameEvents do
 
   def handle_info({:mouse_delta, dx, dy}, state) do
     now = now_ms()
-    context = build_context(state, now, now - state.start_ms)
+    context = build_context(state, now, now - state.start_ms, flow_runner(state))
     dispatch_event_to_components({:mouse_delta, dx, dy}, context)
     {:noreply, state}
   end
@@ -203,7 +210,7 @@ defmodule Core.GameEvents do
 
   def handle_info({:sprint, pressed}, state) when is_boolean(pressed) do
     now = now_ms()
-    context = build_context(state, now, now - state.start_ms)
+    context = build_context(state, now, now - state.start_ms, flow_runner(state))
     dispatch_event_to_components({:sprint, pressed}, context)
     {:noreply, state}
   end
@@ -218,7 +225,7 @@ defmodule Core.GameEvents do
 
   def handle_info({:raw_mouse_motion, dx, dy}, state) when is_number(dx) and is_number(dy) do
     now = now_ms()
-    context = build_context(state, now, now - state.start_ms)
+    context = build_context(state, now, now - state.start_ms, flow_runner(state))
     dispatch_event_to_components({:mouse_delta, dx * 1.0, dy * 1.0}, context)
     {:noreply, state}
   end
@@ -240,7 +247,7 @@ defmodule Core.GameEvents do
              is_tuple(orientation) and tuple_size(orientation) == 4 and
              is_number(timestamp) do
     now = now_ms()
-    context = build_context(state, now, now - state.start_ms)
+    context = build_context(state, now, now - state.start_ms, flow_runner(state))
     data = %{position: position, orientation: orientation, timestamp: timestamp}
     dispatch_event_to_components({:head_pose, data}, context)
     {:noreply, state}
@@ -255,7 +262,7 @@ defmodule Core.GameEvents do
              is_tuple(orientation) and tuple_size(orientation) == 4 and
              is_number(timestamp) do
     now = now_ms()
-    context = build_context(state, now, now - state.start_ms)
+    context = build_context(state, now, now - state.start_ms, flow_runner(state))
     data = %{hand: hand, position: position, orientation: orientation, timestamp: timestamp}
     dispatch_event_to_components({:controller_pose, data}, context)
     {:noreply, state}
@@ -264,7 +271,7 @@ defmodule Core.GameEvents do
   def handle_info({:controller_button, {hand, button, pressed}}, state)
       when hand in [:left, :right] and is_atom(button) and is_boolean(pressed) do
     now = now_ms()
-    context = build_context(state, now, now - state.start_ms)
+    context = build_context(state, now, now - state.start_ms, flow_runner(state))
     data = %{hand: hand, button: button, pressed: pressed}
     dispatch_event_to_components({:controller_button, data}, context)
     {:noreply, state}
@@ -279,7 +286,7 @@ defmodule Core.GameEvents do
              (is_nil(velocity) or (is_tuple(velocity) and tuple_size(velocity) == 3)) and
              is_number(timestamp) do
     now = now_ms()
-    context = build_context(state, now, now - state.start_ms)
+    context = build_context(state, now, now - state.start_ms, flow_runner(state))
 
     data = %{
       tracker_id: tracker_id,
@@ -318,7 +325,7 @@ defmodule Core.GameEvents do
 
   def handle_info({:key_pressed, key}, state) when is_atom(key) do
     now = now_ms()
-    context = build_context(state, now, now - state.start_ms)
+    context = build_context(state, now, now - state.start_ms, flow_runner(state))
     dispatch_event_to_components({:key_pressed, key}, context)
     {:noreply, state}
   end
@@ -379,8 +386,20 @@ defmodule Core.GameEvents do
     case Core.SaveManager.load_session(state.world_ref) do
       :ok ->
         content = current_content()
-        Core.SceneManager.replace_scene(content.physics_scenes() |> List.first(), %{})
-        state
+
+        case content.flow_runner(state.room_id) do
+          nil ->
+            Logger.warning(
+              "[LOAD] Session loaded but flow_runner unavailable, scene not replaced"
+            )
+
+            state
+
+          runner ->
+            physics_scene = content.physics_scenes() |> List.first()
+            GenServer.call(runner, {:replace, physics_scene, %{}})
+            state
+        end
 
       :no_save ->
         Logger.info("[LOAD] No save data")
@@ -401,13 +420,21 @@ defmodule Core.GameEvents do
     elapsed = now - state.start_ms
     content = current_content()
     physics_scenes = content.physics_scenes()
+    runner = content.flow_runner(state.room_id)
 
-    case Core.SceneManager.current() do
+    # runner が nil のときは short-circuit で GenServer.call を避ける。
+    # runner が有効な pid でもプロセス終了済みの場合は GenServer.call が exit する。
+    case runner && GenServer.call(runner, :current) do
+      nil ->
+        # flow_runner 未使用（起動前等）。frame_count は受信フレーム数として更新する。
+        {:noreply, %{state | last_tick: now, frame_count: state.frame_count + 1}}
+
       :empty ->
-        {:noreply, %{state | last_tick: now}}
+        # スタック空。同上。
+        {:noreply, %{state | last_tick: now, frame_count: state.frame_count + 1}}
 
       {:ok, %{module: mod, state: scene_state}} ->
-        context = build_context(state, now, elapsed)
+        context = build_context(state, now, elapsed, runner)
 
         # ── バックプレッシャー時もスキップしない処理 ──────────────────────
         # スコア・HP・レベルアップ等のゲーム整合性に影響するため常に実行する
@@ -417,9 +444,9 @@ defmodule Core.GameEvents do
         # シーン update（遷移判断のみ）
         result = mod.update(context, scene_state)
         {new_scene_state, _opts} = extract_state_and_opts(result)
-        Core.SceneManager.update_current(fn _ -> new_scene_state end)
+        GenServer.call(runner, {:update_current, fn _ -> new_scene_state end})
 
-        state = process_transition(result, state, now, content)
+        state = process_transition(result, state, now, content, runner)
 
         # ── バックプレッシャー時にスキップする処理 ────────────────────────
         # NIF 書き込み・物理コールバック・ブロードキャスト・ログは重い副作用のためスキップ
@@ -436,7 +463,7 @@ defmodule Core.GameEvents do
           dispatch_nif_sync_to_components(context)
 
           # ログ・キャッシュ（60フレームごと）
-          Diagnostics.maybe_log_and_cache(state, mod, elapsed, content)
+          Diagnostics.maybe_log_and_cache(state, mod, elapsed, content, runner)
         end
 
         # frame_count は「受信したフレーム数」として管理する（ドロップ分も含む）
@@ -485,8 +512,11 @@ defmodule Core.GameEvents do
     :ok
   end
 
-  defp build_context(state, now, elapsed) do
+  defp flow_runner(state), do: current_content().flow_runner(state.room_id)
+
+  defp build_context(state, now, elapsed, runner) do
     control_ref = state.control_ref
+    content = current_content()
 
     base = %{
       tick_ms: @tick_ms,
@@ -497,24 +527,26 @@ defmodule Core.GameEvents do
       frame_count: state.frame_count,
       start_ms: state.start_ms,
       push_scene: fn mod, init_arg ->
-        content = current_content()
+        if runner do
+          if function_exported?(content, :pause_on_push?, 1) and content.pause_on_push?(mod) do
+            Core.NifBridge.pause_physics(control_ref)
+          end
 
-        if function_exported?(content, :pause_on_push?, 1) and content.pause_on_push?(mod) do
-          Core.NifBridge.pause_physics(control_ref)
+          GenServer.call(runner, {:push, mod, init_arg})
+        else
+          :ok
         end
-
-        Core.SceneManager.push_scene(mod, init_arg)
       end,
       pop_scene: fn ->
         Core.NifBridge.resume_physics(control_ref)
-        Core.SceneManager.pop_scene()
+        if runner, do: GenServer.call(runner, :pop), else: :ok
       end,
       replace_scene: fn mod, init_arg ->
-        Core.SceneManager.replace_scene(mod, init_arg)
+        if runner, do: GenServer.call(runner, {:replace, mod, init_arg}), else: :ok
       end
     }
 
-    Map.merge(current_content().context_defaults(), base)
+    Map.merge(content.context_defaults(), base)
   end
 
   defp extract_state_and_opts({:continue, scene_state}), do: {scene_state, %{}}
@@ -524,23 +556,24 @@ defmodule Core.GameEvents do
   defp extract_state_and_opts({:transition, _action, scene_state, opts}),
     do: {scene_state, opts || %{}}
 
-  defp process_transition({:continue, _}, state, _now, _content), do: state
-  defp process_transition({:continue, _, _}, state, _now, _content), do: state
+  # runner は handle_frame_events_main の {:ok, ...} 経路からのみ渡されるため常に non-nil
+  defp process_transition({:continue, _}, state, _now, _content, _runner), do: state
+  defp process_transition({:continue, _, _}, state, _now, _content, _runner), do: state
 
-  defp process_transition({:transition, :pop, scene_state}, state, now, _content) do
+  defp process_transition({:transition, :pop, scene_state}, state, now, _content, runner) do
     auto_select = Map.get(scene_state, :auto_select, false)
 
     if auto_select do
-      context = build_context(state, now, now - state.start_ms)
+      context = build_context(state, now, now - state.start_ms, runner)
       dispatch_event_to_components({:ui_action, "__auto_pop__", scene_state}, context)
     end
 
     Core.NifBridge.resume_physics(state.control_ref)
-    Core.SceneManager.pop_scene()
+    GenServer.call(runner, :pop)
     state
   end
 
-  defp process_transition({:transition, {:push, mod, init_arg}, _}, state, _now, content) do
+  defp process_transition({:transition, {:push, mod, init_arg}, _}, state, _now, content, runner) do
     should_pause =
       function_exported?(content, :pause_on_push?, 1) and content.pause_on_push?(mod)
 
@@ -548,11 +581,17 @@ defmodule Core.GameEvents do
       Core.NifBridge.pause_physics(state.control_ref)
     end
 
-    Core.SceneManager.push_scene(mod, init_arg)
+    GenServer.call(runner, {:push, mod, init_arg})
     state
   end
 
-  defp process_transition({:transition, {:replace, mod, init_arg}, _}, state, now, content) do
+  defp process_transition(
+         {:transition, {:replace, mod, init_arg}, _},
+         state,
+         now,
+         content,
+         runner
+       ) do
     elapsed = now - state.start_ms
 
     init_arg =
@@ -560,14 +599,15 @@ defmodule Core.GameEvents do
         mod,
         init_arg,
         elapsed,
-        content
+        content,
+        runner
       )
 
-    Core.SceneManager.replace_scene(mod, init_arg)
+    GenServer.call(runner, {:replace, mod, init_arg})
     state
   end
 
-  defp process_transition(_, state, _, _), do: state
+  defp process_transition(_, state, _, _, _), do: state
 
   defp now_ms, do: System.monotonic_time(:millisecond)
 

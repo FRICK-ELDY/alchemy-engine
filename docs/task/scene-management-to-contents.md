@@ -186,12 +186,18 @@ contents/
 | **効率: update_by_module のリスト操作** | `Enum.find_index` → `Enum.at` → `List.replace_at` による複数回走査を、`List.update_at/3` で簡潔化できる。 | gemini-code-assist 指摘 |
 | **flow_runner の共通化** | 全コンテンツで `Process.whereis(Core.SceneManager)` を返す同一実装。scene_stack_spec/1 導入で差が付くならそのままでよい。共通化する場合は ContentBehaviour のデフォルト実装やヘルパーを検討。 | レビュー |
 | **flow_runner の optional_callbacks** | Phase 3 で GameEvents が参照するまでは実質未使用。フェーズ分離を厳密にするなら現時点で `@optional_callbacks` に入れ、Phase 3 に合わせて必須化する選択肢あり（現状は必須のまま）。 | レビュー |
+| **GameEvents / GameEvents.Diagnostics の所在** | `apps/core/lib/core/game_events.ex` および `apps/core/lib/core/game_events/diagnostics.ex` はコンポーネント（contents）層にあるべき。core の責務を「ループ制御・イベント配信・コンポーネントライフサイクル」に限定する方針に沿い、移行を検討する。 | 設計 |
+| **flow_runner の重複呼び出し** | 各 `handle_info` で `flow_runner(state)` を個別に呼んでいる。イベントハンドラごとに同一値が返る想定であれば、変数にまとめる等で重複を減らす余地あり。 | レビュー |
 
 ### 対応済み
 
 | 項目 | 対応内容 |
 |:---|:---|
 | **flow_runner 戻り型** | `pid()` → `pid() \| nil` に修正。Process.whereis/1 の戻り値と一致。Phase 3 以降で呼び出し元が nil を扱う必要あり。 |
+| **do_load_session の flow_runner nil** | セッションロード成功時に flow_runner が nil の場合、Logger.warning を追加。handle_call の :flow_runner_unavailable と挙動の差を明確化。 |
+| **nil/:empty 時の frame_count** | runner が nil または :empty のときも frame_count を更新するよう修正。コメントで意図を明示。 |
+| **process_transition / runner 契約** | runner が常に non-nil である旨をコメントで明記。 |
+| **Diagnostics render_type の nil 分岐** | 呼び出し元では runner は常に non-nil であるが、防御的に nil 分岐を残す理由をコメントで明記。 |
 
 ---
 
