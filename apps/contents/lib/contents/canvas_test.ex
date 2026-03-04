@@ -30,7 +30,7 @@ defmodule Content.CanvasTest do
 
   def render_type, do: :playing
 
-  def flow_runner(_room_id), do: Process.whereis(Core.SceneManager)
+  def flow_runner(_room_id), do: Process.whereis(Contents.SceneStack)
 
   def initial_scenes do
     [%{module: Content.CanvasTest.Scenes.Playing, init_arg: %{}}]
