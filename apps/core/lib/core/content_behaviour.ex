@@ -20,7 +20,17 @@ defmodule Core.ContentBehaviour do
   # ── 必須コールバック ───────────────────────────────────────────────
 
   @callback components() :: [module()]
-  @callback flow_runner(room_id :: term()) :: pid()
+
+  @doc """
+  そのルームのシーンスタック（またはフロー管理）の pid を返す。
+
+  `Process.whereis/1` 使用時は pid() | nil となりうる。
+  nil は SceneManager 未登録等の起動前状態を表し、
+  Phase 3 以降で呼び出し元が nil を適切に扱う必要がある。
+  room_id は将来のマルチルーム対応で使用する予定。
+  """
+  @callback flow_runner(room_id :: term()) :: pid() | nil
+
   @callback initial_scenes() :: [%{module: scene_module(), init_arg: map()}]
   @callback physics_scenes() :: [scene_module()]
   @callback playing_scene() :: scene_module()

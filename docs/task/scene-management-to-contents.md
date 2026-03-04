@@ -178,4 +178,21 @@ contents/
 
 ---
 
+## 残課題（SceneStack 移行後の改善候補）
+
+| 項目 | 内容 | 出典 |
+|:---|:---|:---|
+| **セキュリティ: update_current / update_by_module の fun 引数** | `handle_call` で受け取った匿名関数 `fun` をそのまま実行しており、GenServer が非信頼呼び出し元に晒された場合の RCE リスクがある。現状は内部呼び出しのみで実質リスクは低いが、API を「コマンド atoms + データ」形式に変更する検討余地あり。 | gemini-code-assist 指摘 |
+| **効率: update_by_module のリスト操作** | `Enum.find_index` → `Enum.at` → `List.replace_at` による複数回走査を、`List.update_at/3` で簡潔化できる。 | gemini-code-assist 指摘 |
+| **flow_runner の共通化** | 全コンテンツで `Process.whereis(Core.SceneManager)` を返す同一実装。scene_stack_spec/1 導入で差が付くならそのままでよい。共通化する場合は ContentBehaviour のデフォルト実装やヘルパーを検討。 | レビュー |
+| **flow_runner の optional_callbacks** | Phase 3 で GameEvents が参照するまでは実質未使用。フェーズ分離を厳密にするなら現時点で `@optional_callbacks` に入れ、Phase 3 に合わせて必須化する選択肢あり（現状は必須のまま）。 | レビュー |
+
+### 対応済み
+
+| 項目 | 対応内容 |
+|:---|:---|
+| **flow_runner 戻り型** | `pid()` → `pid() \| nil` に修正。Process.whereis/1 の戻り値と一致。Phase 3 以降で呼び出し元が nil を扱う必要あり。 |
+
+---
+
 *このタスクは vision.md の「エンジンはコンテンツを知らない」原則に沿った設計変更である。*
