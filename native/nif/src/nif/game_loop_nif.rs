@@ -1,4 +1,4 @@
-//! Path: native/game_nif/src/nif/game_loop_nif.rs
+//! Path: native/nif/src/nif/game_loop_nif.rs
 //! Summary: ゲームループ NIF（physics_step, drain_frame_events, pause/resume, Rust ループ起動）
 
 use super::events::drain_frame_events_inner;

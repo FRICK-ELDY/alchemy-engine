@@ -14,7 +14,7 @@ defmodule Content.CanvasTest do
   ## 設計方針
   - Elixir = SSoT: カメラ姿勢（位置・Yaw・Pitch）・HUD 表示フラグを Elixir 側で管理
   - Rust = 演算層: 描画・入力受信のみ担当
-  - 物理エンジン（game_physics）は使用しない
+  - 物理エンジン（physics）は使用しない
   """
 
   # ── コンポーネントリスト ──────────────────────────────────────────

@@ -34,14 +34,14 @@
 - **Elixir = SSoT**：カメラ姿勢（位置・Yaw・Pitch）・HUD表示フラグをElixir側で管理する
 - **Rust = 演算層**：描画・入力受信のみ担当。カメラ計算はElixir側で行う
 - `simple_box_3d` および `bullet_hell_3d` の実装パターンを踏襲する
-- 物理エンジン（game_physics）は使用しない
+- 物理エンジン（physics）は使用しない
 
 ---
 
 ## ファイル構成
 
 ```
-apps/game_content/lib/game_content/canvas_test/
+apps/contents/lib/contents/canvas_test/
 ├── canvas_test.ex              ← ContentBehaviour 実装（エントリポイント）
 ├── input_component.ex          ← 入力イベント処理（移動・マウス・ESC・UIアクション）
 ├── render_component.ex         ← DrawCommand・Camera・UiCanvas 組み立て
@@ -189,7 +189,7 @@ defmodule GameContent.CanvasTest do
   ]
 
   def playing_scene,   do: GameContent.CanvasTest.Scenes.Playing
-  def game_over_scene, do: GameContent.CanvasTest.Scenes.Playing  # ゲームオーバーなし
+  def game_over_scene, do: Content.CanvasTest.Scenes.Playing  # ゲームオーバーなし
 end
 ```
 
@@ -203,8 +203,8 @@ end
 | 2 | `InputComponent` 実装（イベント受信・state更新） | `input_component.ex` |
 | 3 | `RenderComponent` 実装（DrawCommand・Camera・UI組み立て） | `render_component.ex` |
 | 4 | `CanvasTest` エントリポイント実装 | `canvas_test.ex` |
-| 5 | `GameEngine.Config` へのコンテンツ登録確認 | `game_engine/config.ex` |
-| 6 | Rust側に `mouse_delta` / `sprint` イベントが未実装の場合は追加 | `native/game_render/` |
+| 5 | `Core.Config` へのコンテンツ登録確認 | `core/config.ex` |
+| 6 | Rust側に `mouse_delta` / `sprint` イベントが未実装の場合は追加 | `native/render/` |
 
 ---
 

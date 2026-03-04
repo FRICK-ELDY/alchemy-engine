@@ -1,4 +1,4 @@
-//! Path: native/game_nif/src/nif/read_nif.rs
+//! Path: native/nif/src/nif/read_nif.rs
 //! Summary: 読み取り専用 NIF（get_*、debug_dump_world、is_player_dead）
 
 use super::util::lock_poisoned_err;
@@ -164,7 +164,7 @@ pub fn get_full_game_state(world: ResourceArc<GameWorld>) -> NifResult<(u32, f64
 /// Phase R-2: 描画に必要なエンティティスナップショットを返す汎用 NIF。
 ///
 /// コンテンツ固有の知識を持たず、物理ワールドの描画用データのみを返す。
-/// Elixir 側（game_content）がこのデータを使って DrawCommand リストを組み立てる。
+/// Elixir 側（contents）がこのデータを使って DrawCommand リストを組み立てる。
 ///
 /// 戻り値（ネストタプル）:
 /// ```
@@ -285,7 +285,7 @@ pub fn get_render_entities(world: ResourceArc<GameWorld>) -> NifResult<RenderEnt
 /// Phase R-2: 武器アップグレード説明文を返す汎用 NIF。
 ///
 /// `weapon_choices` の各武器名に対応するアップグレード説明文を返す。
-/// Elixir 側（game_content）が UiCanvas のレベルアップモーダルを組み立てるために使用する。
+/// Elixir 側（contents）が UiCanvas のレベルアップモーダルを組み立てるために使用する。
 ///
 /// # 引数
 /// - `world`: ゲームワールド（`params` フィールドを参照する）

@@ -1,4 +1,4 @@
-//! Path: native/game_nif/src/nif/world_nif.rs
+//! Path: native/nif/src/nif/world_nif.rs
 //! Summary: ワールド作成・入力・スポーン・障害物設定 NIF
 
 use super::util::{lock_poisoned_err, params_not_loaded_err};

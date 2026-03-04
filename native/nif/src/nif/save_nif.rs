@@ -1,4 +1,4 @@
-//! Path: native/game_nif/src/nif/save_nif.rs
+//! Path: native/nif/src/nif/save_nif.rs
 //! Summary: セーブ・ロード NIF
 
 use super::util::lock_poisoned_err;

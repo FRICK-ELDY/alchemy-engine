@@ -1,4 +1,4 @@
-//! Path: native/game_core/src/item.rs
+//! Path: native/physics/src/item.rs
 //! Summary: アイテム種類・レンダー kind の定義と ItemWorld
 
 /// アイテムの種類

@@ -14,7 +14,7 @@ sequenceDiagram
     participant APP as GameServer.Application
     participant RS as RoomSupervisor
     participant GEV as GameEvents
-    participant NIF as NifBridge (game_nif)
+    participant NIF as NifBridge (nif)
     participant COMP as Component 群（on_ready）
 
     MX->>APP: start/2
@@ -232,7 +232,7 @@ graph LR
 ```mermaid
 sequenceDiagram
     participant SM as SaveManager
-    participant NIF as NifBridge (game_nif)
+    participant NIF as NifBridge (nif)
     participant FS as ファイルシステム
 
     SM->>NIF: get_save_snapshot(world)
@@ -247,7 +247,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant SM as SaveManager
-    participant NIF as NifBridge (game_nif)
+    participant NIF as NifBridge (nif)
     participant FS as ファイルシステム
 
     SM->>FS: File.read("saves/session.dat")
@@ -284,11 +284,11 @@ graph TB
 
     BEAM <-->|NIF Rustler| GW
 
-    subgraph RUST["Rust スレッド群（game_nif / game_physics / game_render / game_audio）"]
-        GL[ゲームループスレッド\n60Hz physics\ngame_nif]
-        RT[レンダースレッド\nwinit EventLoop\ngame_render]
-        AT[オーディオスレッド\nrodio / コマンド\ngame_audio]
-        GW["GameWorld\n(RwLock&lt;GameWorldInner&gt;)\ngame_physics"]
+    subgraph RUST["Rust スレッド群（nif / physics / render / audio）"]
+        GL[ゲームループスレッド\n60Hz physics\nnif]
+        RT[レンダースレッド\nwinit EventLoop\nrender]
+        AT[オーディオスレッド\nrodio / コマンド\naudio]
+        GW["GameWorld\n(RwLock&lt;GameWorldInner&gt;)\nphysics"]
 
         GL <-->|write lock| GW
         RT <-->|read lock| GW

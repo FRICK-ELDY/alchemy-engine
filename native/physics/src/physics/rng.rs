@@ -1,4 +1,4 @@
-//! Path: native/game_core/src/physics/rng.rs
+//! Path: native/physics/src/physics/rng.rs
 //! Summary: 決定論的 LCG 乱数ジェネレータ（no-std 互換）
 
 pub struct SimpleRng(u64);

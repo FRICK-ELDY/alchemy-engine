@@ -1,4 +1,4 @@
-//! Path: native/game_physics/src/weapon.rs
+//! Path: native/physics/src/weapon.rs
 //! Summary: 武器スロット管理（WeaponSlot）
 //!
 //! Phase 3-A: WeaponKind enum を除去。

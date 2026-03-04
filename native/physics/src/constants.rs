@@ -1,4 +1,4 @@
-//! Path: native/game_core/src/constants.rs
+//! Path: native/physics/src/constants.rs
 //! Summary: 画面解像度・マップサイズ・物理定数などの定数定義
 
 // Background clear color (dark purple)

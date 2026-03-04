@@ -1,4 +1,4 @@
-//! game_physics: ECS World・ゲームロジック・物理演算・Dead Reckoning
+//! physics: ECS World・ゲームロジック・物理演算・Dead Reckoning
 //! （ヘッドレス動作可能 — rustler 等の NIF 依存なし）
 
 pub mod boss;

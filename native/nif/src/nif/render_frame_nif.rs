@@ -1,7 +1,7 @@
-//! Path: native/game_nif/src/nif/render_frame_nif.rs
+//! Path: native/nif/src/nif/render_frame_nif.rs
 //! Summary: RenderFrameBuffer 作成・push_render_frame NIF
 //!
-//! Phase R-2: Elixir 側（game_content）が DrawCommand リストを組み立てて
+//! Phase R-2: Elixir 側（contents）が DrawCommand リストを組み立てて
 //! push_render_frame NIF 経由でバッファに書き込む。
 
 use crate::render_frame_buffer::RenderFrameBuffer;

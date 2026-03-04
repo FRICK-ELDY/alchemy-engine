@@ -1,14 +1,14 @@
-//! Path: native/game_input_openxr/src/lib.rs
+//! Path: native/input_openxr/src/lib.rs
 //! Summary: OpenXR 入力ブリッジ（VR デバイス）
 //!
-//! 以下のイベントを game_nif 経由で Elixir に送信する:
+//! 以下のイベントを nif 経由で Elixir に送信する:
 //! - `{:head_pose, data}` — ヘッドセットの位置・姿勢
 //! - `{:controller_pose, data}` — コントローラーの位置・姿勢
 //! - `{:controller_button, data}` — コントローラーボタン
 //! - `{:tracker_pose, data}` — トラッカーの位置・姿勢
 
 /// XR 入力ループを実行する。
-/// `on_event` が各イベントごとに呼ばれる。game_nif が Elixir へエンコード・送信する。
+/// `on_event` が各イベントごとに呼ばれる。nif が Elixir へエンコード・送信する。
 ///
 /// VR ランタイムが利用できない場合は即座に戻る。
 /// `openxr` フィーチャー有効時は OpenXR セッションを試行する。
@@ -43,7 +43,7 @@ where
 }
 
 /// OpenXR 入力ソースのトレイト。
-/// Elixir へのイベント送信は game_nif が担う。
+/// Elixir へのイベント送信は nif が担う。
 pub trait XrInputSource: Send + 'static {
     /// ポーリングして新しいイベントを取得する。
     /// 実装時に OpenXR セッションから head pose, controller 等を読み取る。

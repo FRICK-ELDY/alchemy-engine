@@ -1,4 +1,4 @@
-//! Path: native/game_nif/src/nif/mod.rs
+//! Path: native/nif/src/nif/mod.rs
 //! Summary: NIF エントリモジュール
 
 mod action_nif;

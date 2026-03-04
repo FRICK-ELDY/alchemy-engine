@@ -1,4 +1,4 @@
-//! Path: native/game_core/src/util.rs
+//! Path: native/physics/src/util.rs
 //! Summary: 経験値計算・ウェーブ設定・スポーン位置などの共通ユーティリティ
 
 use crate::constants::WAVES;

@@ -267,7 +267,7 @@ native/
 │       └── vision_params.rs     # 左右眼の処方パラメータ取得（将来）
 ```
 
-### 5.2 game_input_openxr との連携
+### 5.2 input_openxr との連携
 
 - **現状**: `input_openxr` は HeadPose, ControllerPose, ControllerButton 等のイベントを `nif` 経由で Elixir に送信
 - **拡張案**: ユーザー設定（処方箋）を **Elixir 側で保持**し、NIF 経由で Rust に渡す

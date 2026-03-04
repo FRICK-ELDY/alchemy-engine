@@ -1,4 +1,4 @@
-//! game_audio: SuperCollider風コマンド駆動オーディオスレッド
+//! audio: SuperCollider風コマンド駆動オーディオスレッド
 //! Elixir（指揮者）が非同期コマンドを発行し、専用スレッドがDSP処理を行う。
 
 pub mod asset;

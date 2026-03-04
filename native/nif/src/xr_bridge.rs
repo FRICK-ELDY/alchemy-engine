@@ -1,4 +1,4 @@
-//! Path: native/game_nif/src/xr_bridge.rs
+//! Path: native/nif/src/xr_bridge.rs
 //! Summary: XR 入力イベントの Elixir 送信
 //!
 //! input_openxr が生成した XrInputEvent を Elixir のメッセージ形式に

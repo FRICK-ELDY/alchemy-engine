@@ -1,4 +1,4 @@
-//! Path: native/game_render/src/headless.rs
+//! Path: native/render/src/headless.rs
 //! Summary: ヘッドレス/オフスクリーンレンダリングモード（`headless` フィーチャー有効時のみ利用可能）
 //!
 //! ウィンドウを開かずに wgpu のオフスクリーンターゲットへ描画し、

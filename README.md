@@ -34,7 +34,7 @@ alchemy-engine/
     ├── audio/               # SuperCollider風コマンド駆動オーディオスレッド
     │                        #   (専用スレッド + mpsc チャネル、Elixirが指揮者)
     ├── render/              # WGPU描画パイプライン + ウィンドウ管理・OS入力イベント
-    │                        #   (旧 game_render + game_window を統合)
+    │                        #   (wgpu 描画 + winit ウィンドウ管理)
     └── nif/                 # Elixir <-> Rust NIF通信インターフェース (Rustler)
                              #   (physics / audio / render を束ねる薄い層)
 ```

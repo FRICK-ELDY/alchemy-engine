@@ -1,4 +1,4 @@
-//! Path: native/game_core/src/physics/obstacle_resolve.rs
+//! Path: native/physics/src/physics/obstacle_resolve.rs
 //! Summary: プレイヤーと障害物の衝突解決・押し出し処理
 
 use super::spatial_hash::CollisionWorld;

@@ -1,7 +1,7 @@
-//! Path: native/game_render/src/window.rs
+//! Path: native/render/src/window.rs
 //! Summary: RenderBridge トレイト・ウィンドウ設定型
 //!
-//! Phase 2: イベントループは game_input に移行。game_render は描画専用。
+//! Phase 2: イベントループは input に移行。render は描画専用。
 //! このモジュールはトレイトと型定義のみを提供する。
 
 pub use winit::keyboard::KeyCode;
@@ -25,7 +25,7 @@ pub enum KeyState {
     Released,
 }
 
-/// イベントループ（game_input）が呼び出すブリッジトレイト。
+/// イベントループ（input）が呼び出すブリッジトレイト。
 /// 描画フレーム取得・入力イベント・UI アクションのコールバックを定義する。
 pub trait RenderBridge: Send + 'static {
     fn next_frame(&self) -> crate::RenderFrame;

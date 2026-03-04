@@ -1,4 +1,4 @@
-//! Path: native/game_nif/src/key_map.rs
+//! Path: native/nif/src/key_map.rs
 //! Summary: winit KeyCode → Elixir アトム名のマッピング
 //!
 //! 生イベント転送用。Elixir 側でキー→意味のマッピングを行う。

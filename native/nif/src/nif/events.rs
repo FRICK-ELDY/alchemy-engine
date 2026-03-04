@@ -1,4 +1,4 @@
-//! Path: native/game_nif/src/nif/events.rs
+//! Path: native/nif/src/nif/events.rs
 //! Summary: フレームイベントの drain（Elixir EventBus 用）
 
 use physics::world::{FrameEvent, GameWorldInner};

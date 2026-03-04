@@ -1,4 +1,4 @@
-//! Path: native/game_nif/src/nif/render_nif.rs
+//! Path: native/nif/src/nif/render_nif.rs
 //! Summary: 描画スレッド起動 NIF
 //!
 //! Elixir 側からウィンドウタイトルとアトラスのファイルパスを受け取り、

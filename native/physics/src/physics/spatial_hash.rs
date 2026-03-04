@@ -1,4 +1,4 @@
-//! Path: native/game_core/src/physics/spatial_hash.rs
+//! Path: native/physics/src/physics/spatial_hash.rs
 //! Summary: 空間ハッシュによる衝突検出・近傍クエリ
 
 use rustc_hash::FxHashMap;

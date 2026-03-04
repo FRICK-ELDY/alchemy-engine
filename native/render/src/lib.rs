@@ -7,7 +7,7 @@ pub const BULLET_KIND_ROCK: u8 = 14;
 // ── UI Canvas ────────────────────────────────────────────────────────
 
 /// 1フレーム分の UI 全体。コンテンツ側が組み立てて渡す。
-/// game_render はこのツリーを走査して描画するだけで、内容の意味を知らない。
+/// render はこのツリーを走査して描画するだけで、内容の意味を知らない。
 #[derive(Clone, Default, Debug)]
 pub struct UiCanvas {
     pub nodes: Vec<UiNode>,
@@ -125,7 +125,7 @@ impl Default for UiRect {
 // ── DrawCommand ──────────────────────────────────────────────────────
 
 /// 1フレーム分の描画命令。
-/// Elixir 側（`game_content`）が組み立てて `push_render_frame` NIF 経由で送る。
+/// Elixir 側（`contents`）が組み立てて `push_render_frame` NIF 経由で送る。
 #[derive(Clone, Debug)]
 pub enum DrawCommand {
     /// プレイヤースプライト描画。

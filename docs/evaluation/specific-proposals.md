@@ -10,7 +10,7 @@
 
 ---
 
-## apps/game_engine — エンジンコア・OTP設計
+## apps/core — エンジンコア・OTP設計
 
 ### 💡 提案
 
@@ -21,14 +21,14 @@
   > `handle_info({:boss_dash_end, world_ref}, state)` のようなコンテンツ固有メッセージを、`GameEvents` が直接処理するのではなく、アクティブなコンポーネントに転送する汎用ディスパッチ機構を実装する。例: `on_engine_message/2` コールバックを `Component` ビヘイビアに追加し、`GameEvents` は受信したメッセージを全コンポーネントに転送するだけにする。
 
 - **SaveManager の HMAC シークレット強制機構** `0`
-  > `Application.get_env(:game_engine, :save_hmac_secret)` でデフォルト値を持たせず、未設定時に起動を拒否する。または `runtime.exs` で `System.fetch_env!("GAME_SAVE_HMAC_SECRET")` を使い、環境変数未設定時に明確なエラーメッセージで起動を停止する。
+  > `Application.get_env(:core, :save_hmac_secret)` でデフォルト値を持たせず、未設定時に起動を拒否する。または `runtime.exs` で `System.fetch_env!("GAME_SAVE_HMAC_SECRET")` を使い、環境変数未設定時に明確なエラーメッセージで起動を停止する。
 
 - **LiveDashboard 統合** `0`
   > `phoenix_live_dashboard` を追加し、`GameEngine.Telemetry` のメトリクスをリアルタイムで可視化する。`StressMonitor` のフレームバジェット超過率・`lock_metrics` のRwLock待機時間・`EventBus` のメッセージキュー深度をダッシュボードで監視できるようにする。参考: Phoenix LiveDashboard の `Telemetry` ページ。
 
 ---
 
-## apps/game_content — コンテンツ実装・ゲームロジック
+## apps/contents — コンテンツ実装・ゲームロジック
 
 ### 💡 提案
 
@@ -43,7 +43,7 @@
 
 ---
 
-## apps/game_network — ネットワーク層
+## apps/network — ネットワーク層
 
 ### 💡 提案
 
@@ -58,7 +58,7 @@
 
 ---
 
-## native/game_physics — ECS・SoA・SIMD
+## native/physics — ECS・SoA・SIMD
 
 ### 💡 提案
 
@@ -66,7 +66,7 @@
   > `chase_ai.rs` に `#[cfg(target_arch = "aarch64")]` で ARM NEON 版を追加する。`vld1q_f32`・`vmulq_f32`・`vrsqrteq_f32` を使った NEON 実装により、Apple Silicon・Android・Raspberry Pi での性能が向上する。参考: `std::arch::aarch64` モジュール。
 
 - **WASM 対応（`wasm32-unknown-unknown`）** `0`
-  > `#[cfg(target_arch = "wasm32")]` でスカラーフォールバックを使い、`rayon` を `wasm-bindgen-rayon` に切り替えることで、ブラウザ上での実行が可能になる。`game_render` の `wgpu` は WebGPU バックエンドをサポートしているため、理論上は実現可能。参考: `wasm-pack`・`wgpu` の WebGPU バックエンド。
+  > `#[cfg(target_arch = "wasm32")]` でスカラーフォールバックを使い、`rayon` を `wasm-bindgen-rayon` に切り替えることで、ブラウザ上での実行が可能になる。`render` の `wgpu` は WebGPU バックエンドをサポートしているため、理論上は実現可能。参考: `wasm-pack`・`wgpu` の WebGPU バックエンド。
 
 - **決定論的物理によるリプレイ機能** `0`
   > `SimpleRng` の決定論的設計を活かし、初期シード + 入力列を記録することでリプレイを実現する。`SaveManager` にリプレイデータの保存・再生機能を追加することで、バグ再現・スピードラン・観戦モードが可能になる。
@@ -76,7 +76,7 @@
 
 ---
 
-## native/game_render — 描画パイプライン
+## native/render — 描画パイプライン
 
 ### ✅ 提案
 
@@ -91,7 +91,7 @@
 
 ---
 
-## native/game_audio — オーディオ
+## native/audio — オーディオ
 
 ### 💡 提案
 
@@ -108,7 +108,7 @@
 ### 💡 提案
 
 - **bin/ci.bat の完全通過を最優先で達成する** `0`
-  > `cargo fmt` で全対象ファイルをフォーマットし、`cargo clippy -D warnings` を通過させる。具体的には: game_input_openxr の未使用変数・不要な mut を修正、game_render の多引数関数を構造体に集約、needless_range_loop を iterator に置き換え。chase_ai_bench.rs の `game_simulation` を `game_physics` に修正し、cargo bench がコンパイルできる状態にする。README の保証と実態を一致させる。
+  > `cargo fmt` で全対象ファイルをフォーマットし、`cargo clippy -D warnings` を通過させる。具体的には: input_openxr の未使用変数・不要な mut を修正、render の多引数関数を構造体に集約、needless_range_loop を iterator に置き換え。chase_ai_bench.rs の `game_simulation` を `physics` に修正し、cargo bench がコンパイルできる状態にする。README の保証と実態を一致させる。
 
 ---
 
@@ -117,10 +117,10 @@
 ### 💡 提案
 
 - **GameEngine コアのテスト整備（SceneManager・GameEvents・EventBus）** `0`
-  > `improvement-plan.md` の I-F に対応。`GameEngine.SceneManager` のシーン遷移・`GameEvents` のフレームループ・`EventBus` のサブスクライバー配信を `ExUnit` でテストする。`NifBridgeMock`（Mox）を使えばNIF依存なしにテスト可能。参考: `apps/game_engine/test/support/mocks.ex` に既に `NifBridgeMock` が定義されている。
+  > `improvement-plan.md` の I-F に対応。`Core.SceneManager` のシーン遷移・`GameEvents` のフレームループ・`EventBus` のサブスクライバー配信を `ExUnit` でテストする。`NifBridgeMock`（Mox）を使えばNIF依存なしにテスト可能。参考: `apps/core/test/support/mocks.ex` に既に `NifBridgeMock` が定義されている。
 
 - **NIF デコードロジックの Rust ユニットテスト** `0`
-  > `game_nif` の `decode_enemy_params`・`decode_weapon_params`・`decode_boss_params` は Erlang Term のデコードロジックであり、GPUなしでテスト可能。`rustler::types::tuple::get_tuple` 等のデコードパスをユニットテストすることで、パラメータ注入の信頼性が向上する。
+  > `nif` の `decode_enemy_params`・`decode_weapon_params`・`decode_boss_params` は Erlang Term のデコードロジックであり、GPUなしでテスト可能。`rustler::types::tuple::get_tuple` 等のデコードパスをユニットテストすることで、パラメータ注入の信頼性が向上する。
 
 ---
 

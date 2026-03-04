@@ -1,4 +1,4 @@
-//! Path: native/game_native/src/lock_metrics.rs
+//! Path: native/nif/src/lock_metrics.rs
 //! Summary: RwLock 待機時間メトリクス（警告 + 周期レポート）
 
 use std::sync::atomic::{AtomicU64, Ordering};
