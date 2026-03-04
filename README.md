@@ -22,22 +22,29 @@
 
 プロジェクトは、ElixirのUmbrellaプロジェクトとRustのマルチクレート構成をシームレスに統合しています。
 
-```text
-alchemy-engine/
-├── apps/                    # Elixir Umbrella Apps (Logic & Network)
-│   ├── contents/            # ゲームの静的データ・アセット管理
-│   ├── core/                # SSoTコアロジック・空間分割・ECSへの同期
-│   ├── network/             # クライアント間・サーバー間通信
-│   └── server/              # サーバー起動プロセス・ヘッドレス管理
-└── native/                  # Rust Crates (スレッド・インターフェース単位)
-    ├── physics/             # ECS World・ゲームロジック・物理演算・Dead Reckoning
-    │                        #   (rustler 非依存 — ヘッドレス動作・ベンチマーク可能)
-    ├── audio/               # SuperCollider風コマンド駆動オーディオスレッド
-    │                        #   (専用スレッド + mpsc チャネル、Elixirが指揮者)
-    ├── render/              # WGPU描画パイプライン + ウィンドウ管理・OS入力イベント
-    │                        #   (wgpu 描画 + winit ウィンドウ管理)
-    └── nif/                 # Elixir <-> Rust NIF通信インターフェース (Rustler)
-                             #   (physics / audio / render を束ねる薄い層)
+```mermaid
+flowchart TB
+    subgraph Elixir["Elixir (SSoT)"]
+        server[server<br/>サーバー起動・ヘッドレス]
+        core[core<br/>SSoTコア・空間分割・ECS同期]
+        contents[contents<br/>静的データ・アセット]
+        network[network<br/>クライアント/サーバー通信]
+    end
+
+    subgraph NIF["nif (Rustler)"]
+        nif_bridge[NIF インターフェース]
+    end
+
+    subgraph Rust["Rust (演算層)"]
+        physics[physics<br/>ECS・物理演算・Dead Reckoning]
+        audio[audio<br/>オーディオスレッド・DSP]
+        render[render<br/>WGPU描画・ウィンドウ管理]
+    end
+
+    Elixir --> nif_bridge
+    nif_bridge --> physics
+    nif_bridge --> audio
+    nif_bridge --> render
 ```
 
 ## 🚀 Getting Started
