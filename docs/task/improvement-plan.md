@@ -1,7 +1,7 @@
 # AlchemyEngine — 改善提案書
 
-> 最終更新: 2026-03-01  
-> 前回評価スコア: +87点（2026-03-01 evaluation）
+> 最終更新: 2026-03-04  
+> 前回評価スコア: +83点（2026-03-04 evaluation）
 
 ---
 
@@ -20,16 +20,36 @@
 | アーキテクチャ（ビジョン一致度） | 7/10 | 7/10 |
 | テスト | 6/10 | 5/10 ↓ |
 | セキュリティ | — | 3/10 |
-| **総合** | **7/10** | **7/10** |
+| 開発者体験（DX） | 7/10 | 5/10 ↓ |
+| **総合** | **7/10** | **6/10** ↓ |
 
-> Rust 安全性が 8→7 に低下: `spawn_elite_enemy` の脆弱なスロット特定ロジック・`FrameEvent::PlayerDamaged` の u32 オーバーフローリスク・`bench/chase_ai_bench.rs` のコンパイル不可が新たに発見された。  
-> テストが 6→5 に低下: `game_nif`・`game_render`・`game_audio` の Rust テストがゼロであることが改めて確認された。
+> DX が 7→5 に低下: `bin/ci.bat` が cargo fmt / cargo clippy で失敗し、評価ルールの「エラーゼロで通過」前提に違反。README の品質保証記述と実態が乖離。  
+> Rust 安全性 8→7: `spawn_elite_enemy`・`FrameEvent::PlayerDamaged` オーバーフロー・bench コンパイル不可。  
+> テスト 6→5: `game_nif`・`game_render`・`game_audio` の Rust テストがゼロ。
 
 ---
 
 ## 未解決課題
 
-### I-A: bench/chase_ai_bench.rs のクレート名不一致（優先度: 緊急）
+### I-0: bin/ci.bat の完全通過（優先度: 最優先）
+
+**問題:** `bin/ci.bat` がエラーゼロで通過しない。評価ルールの DX 原則「ローカル CI がエラーゼロで通過すること」に違反。README の「品質保証」セクションの記述と実態が乖離している。
+
+**影響:**
+- cargo fmt: 複数ファイルでフォーマット差分（native/game_nif, game_render 等）
+- cargo clippy: game_input_openxr（未使用変数 `on_event`、不要な mut）、game_render（too many arguments、needless_range_loop）
+- cargo bench: chase_ai_bench.rs の `game_simulation` → `game_physics` 修正が必要
+
+**作業ステップ:**
+1. `cargo fmt --manifest-path native/Cargo.toml --all` で全ファイルをフォーマット
+2. game_input_openxr: 未使用変数の削除・`mut` の除去
+3. game_render: 多引数関数を構造体に集約、needless_range_loop を iterator に置き換え
+4. chase_ai_bench.rs: `use game_simulation::` を `use game_physics::` に変更
+5. `bin/ci.bat` を実行し、全ジョブ PASS を確認
+
+---
+
+### I-A: bench/chase_ai_bench.rs のクレート名不一致（優先度: 緊急・I-0 に含む）
 
 **問題:** ベンチマークが `game_simulation` クレートをインポートしているが、`Cargo.toml` のパッケージ名は `game_physics`。ベンチマークがコンパイルできない状態であり、`bench-regression` CIジョブが機能していない可能性がある。
 
