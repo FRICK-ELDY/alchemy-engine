@@ -20,6 +20,7 @@ defmodule Core.ContentBehaviour do
   # ── 必須コールバック ───────────────────────────────────────────────
 
   @callback components() :: [module()]
+  @callback flow_runner(room_id :: term()) :: pid()
   @callback initial_scenes() :: [%{module: scene_module(), init_arg: map()}]
   @callback physics_scenes() :: [scene_module()]
   @callback playing_scene() :: scene_module()
