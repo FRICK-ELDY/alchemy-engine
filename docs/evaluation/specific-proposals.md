@@ -103,6 +103,15 @@
 
 ---
 
+## 開発者体験（DX）
+
+### 💡 提案
+
+- **bin/ci.bat の完全通過を最優先で達成する** `0`
+  > `cargo fmt` で全対象ファイルをフォーマットし、`cargo clippy -D warnings` を通過させる。具体的には: game_input_openxr の未使用変数・不要な mut を修正、game_render の多引数関数を構造体に集約、needless_range_loop を iterator に置き換え。chase_ai_bench.rs の `game_simulation` を `game_physics` に修正し、cargo bench がコンパイルできる状態にする。README の保証と実態を一致させる。
+
+---
+
 ## テスト戦略
 
 ### 💡 提案

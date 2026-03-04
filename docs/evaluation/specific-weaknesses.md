@@ -160,6 +160,10 @@
 
 ### ❌ マイナス点
 
+- **bin/ci.bat がエラーゼロで通過しない（README の保証と矛盾）** `-4`
+  > 評価ルールの DX 原則「ローカル CI として `bin\ci.bat` が **エラーゼロで通過すること** を前提とする」に違反。現状: cargo fmt が複数ファイルで差分検出、cargo clippy が game_input_openxr（未使用変数・不要な mut）および game_render（too many arguments・needless_range_loop）で失敗。README の「品質保証」セクションで「cargo fmt / cargo clippy が PASS」と謳いながら、実際には CI が通らない状態。プロジェクトの信頼性を損なう。
+  > 対象ファイル: `bin/ci.bat`, `README.md`, `native/game_input_openxr/src/lib.rs`, `native/game_render/`
+
 - **CI の pull_request トリガーが未設定** `-2`
   > `.github/workflows/ci.yml` が `push` イベントのみをトリガーとしており、`pull_request:` イベントが未設定。PRへの自動チェックが走らず、PRマージ前の品質保証が機能しない。
   > 対象ファイル: `.github/workflows/ci.yml`

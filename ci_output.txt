@@ -1,0 +1,560 @@
+
+============================================================
+ AlchemyEngine — Local CI
+ Mode: ALL
+============================================================
+
+============================================================
+ [A] Rust — fmt & clippy
+============================================================
+
+[STEP] cargo fmt
+Diff in \\?\D:\Work\FRICK-ELDY\alchemy-engine\native\game_nif\src\nif\render_frame_nif.rs:6:
+ 
+ use crate::render_frame_buffer::RenderFrameBuffer;
+ use game_render::{
+-    CameraParams, DrawCommand, RenderFrame, UiAnchor, UiCanvas, UiComponent, UiNode, UiRect,
+-    UiSize,
++    CameraParams, DrawCommand, RenderFrame, UiAnchor, UiCanvas, UiComponent, UiNode, UiRect, UiSize,
+ };
+ use rustler::types::list::ListIterator;
+ use rustler::types::tuple::get_tuple;
+Diff in \\?\D:\Work\FRICK-ELDY\alchemy-engine\native\game_nif\src\nif\render_frame_nif.rs:100:
+ 
+ /// タプルの先頭要素（タグアトム）を文字列として取得する。
+ fn tag_of(term: Term) -> NifResult<String> {
+-    let elems =
+-        get_tuple(term).map_err(|_| NifError::Term(Box::new("expected tuple")))?;
++    let elems = get_tuple(term).map_err(|_| NifError::Term(Box::new("expected tuple")))?;
+     let first = elems
+         .first()
+         .ok_or_else(|| NifError::Term(Box::new("expected non-empty tuple")))?;
+Diff in \\?\D:\Work\FRICK-ELDY\alchemy-engine\native\game_nif\src\nif\render_frame_nif.rs:218:
+             Ok(DrawCommand::GridPlane {
+                 size: size as f32,
+                 divisions,
+-                color: [color.0 as f32, color.1 as f32, color.2 as f32, color.3 as f32],
++                color: [
++                    color.0 as f32,
++                    color.1 as f32,
++                    color.2 as f32,
++                    color.3 as f32,
++                ],
+             })
+         }
+         // {:skybox, {top_r, top_g, top_b, top_a}, {bot_r, bot_g, bot_b, bot_a}}
+Diff in \\?\D:\Work\FRICK-ELDY\alchemy-engine\native\game_nif\src\nif\render_frame_nif.rs:225:
+         "skybox" => {
+             let (_, top, bot): (Atom, (f64, f64, f64, f64), (f64, f64, f64, f64)) =
+                 term.decode().map_err(|_| {
+-                    NifError::Term(Box::new(
+-                        "skybox: expected {:skybox, {r,g,b,a}, {r,g,b,a}}",
+-                    ))
++                    NifError::Term(Box::new("skybox: expected {:skybox, {r,g,b,a}, {r,g,b,a}}"))
+                 })?;
+             Ok(DrawCommand::Skybox {
+                 top_color: [top.0 as f32, top.1 as f32, top.2 as f32, top.3 as f32],
+Diff in \\?\D:\Work\FRICK-ELDY\alchemy-engine\native\game_nif\src\nif\render_frame_nif.rs:248:
+                         "sprite_raw: uvs expected {{uv_ox, uv_oy}, {uv_sx, uv_sy}, {r, g, b, a}}",
+                     ))
+                 })?;
+-            let (uv_ox, uv_oy): (f64, f64) = uv_offset_t.decode().map_err(|_| {
+-                NifError::Term(Box::new("sprite_raw: uv_offset expected {f, f}"))
+-            })?;
+-            let (uv_sx, uv_sy): (f64, f64) = uv_size_t.decode().map_err(|_| {
+-                NifError::Term(Box::new("sprite_raw: uv_size expected {f, f}"))
+-            })?;
++            let (uv_ox, uv_oy): (f64, f64) = uv_offset_t
++                .decode()
++                .map_err(|_| NifError::Term(Box::new("sprite_raw: uv_offset expected {f, f}")))?;
++            let (uv_sx, uv_sy): (f64, f64) = uv_size_t
++                .decode()
++                .map_err(|_| NifError::Term(Box::new("sprite_raw: uv_size expected {f, f}")))?;
+             let color = decode_color(color_t)?;
+             Ok(DrawCommand::SpriteRaw {
+                 x: x as f32,
+Diff in \\?\D:\Work\FRICK-ELDY\alchemy-engine\native\game_nif\src\nif\render_frame_nif.rs:591:
+         // {:screen_flash, {r,g,b,a}}
+         "screen_flash" => {
+             let (_, color_t): (Atom, Term) = term.decode().map_err(|_| {
+-                NifError::Term(Box::new("screen_flash: expected {:screen_flash, {r,g,b,a}}"))
++                NifError::Term(Box::new(
++                    "screen_flash: expected {:screen_flash, {r,g,b,a}}",
++                ))
+             })?;
+             let color = decode_color(color_t)?;
+             Ok(UiComponent::ScreenFlash { color })
+Diff in \\?\D:\Work\FRICK-ELDY\alchemy-engine\native\game_nif\src\nif\render_frame_nif.rs:598:
+         }
+         // {:spacing, amount}
+         "spacing" => {
+-            let (_, amount): (Atom, f64) = term.decode().map_err(|_| {
+-                NifError::Term(Box::new("spacing: expected {:spacing, amount}"))
+-            })?;
++            let (_, amount): (Atom, f64) = term
++                .decode()
++                .map_err(|_| NifError::Term(Box::new("spacing: expected {:spacing, amount}")))?;
+             Ok(UiComponent::Spacing {
+                 amount: amount as f32,
+             })
+Diff in \\?\D:\Work\FRICK-ELDY\alchemy-engine\native\game_nif\src\render_bridge.rs:13:
+ use crate::lock_metrics::record_read_wait;
+ use crate::render_frame_buffer::RenderFrameBuffer;
+ use game_audio::AssetLoader;
++use game_input::run_desktop_loop;
+ use game_physics::constants::{PLAYER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
+ use game_physics::world::GameWorld;
+-use game_input::run_desktop_loop;
+ use game_render::window::{KeyCode, KeyState, RenderBridge, RendererInit, WindowConfig};
+ use game_render::RenderFrame;
+ use rustler::env::OwnedEnv;
+Diff in \\?\D:\Work\FRICK-ELDY\alchemy-engine\native\game_nif\src\render_bridge.rs:147:
+         };
+         let mut env = OwnedEnv::new();
+         let _ = env.send_and_clear(&self.elixir_pid, |env| {
+-            let key_atom = rustler::Atom::from_str(env, key_str)
+-                .unwrap_or_else(|_| crate::unknown());
++            let key_atom =
++                rustler::Atom::from_str(env, key_str).unwrap_or_else(|_| crate::unknown());
+             (crate::raw_key(), key_atom, state_atom).encode(env)
+         });
+     }
+Diff in \\?\D:\Work\FRICK-ELDY\alchemy-engine\native\game_nif\src\xr_bridge.rs:81:
+                 ControllerButton::Menu => crate::menu(),
+                 ControllerButton::System => crate::system(),
+             };
+-            let data = (crate::controller_button(), (hand_atom, button_atom, *pressed));
++            let data = (
++                crate::controller_button(),
++                (hand_atom, button_atom, *pressed),
++            );
+             data.encode(env)
+         }
+         XrInputEvent::TrackerPose {
+Diff in \\?\D:\Work\FRICK-ELDY\alchemy-engine\native\game_render\src\lib.rs:57:
+ #[derive(Clone, Debug)]
+ pub enum UiComponent {
+     /// 子ノードを横方向に並べるレイアウト
+-    HorizontalLayout {
+-        spacing: f32,
+-        padding: [f32; 4],
+-    },
++    HorizontalLayout { spacing: f32, padding: [f32; 4] },
+     /// 子ノードを縦方向に並べるレイアウト
+-    VerticalLayout {
+-        spacing: f32,
+-        padding: [f32; 4],
+-    },
++    VerticalLayout { spacing: f32, padding: [f32; 4] },
+     /// テキストラベル
+     Text {
+         text: String,
+Diff in \\?\D:\Work\FRICK-ELDY\alchemy-engine\native\game_render\src\lib.rs:115:
+         max_lifetime: f32,
+     },
+     /// 画面全体を覆うフラッシュオーバーレイ
+-    ScreenFlash {
+-        color: [f32; 4],
+-    },
++    ScreenFlash { color: [f32; 4] },
+ }
+ 
+ impl Default for UiRect {
+Diff in \\?\D:\Work\FRICK-ELDY\alchemy-engine\native\game_render\src\lib.rs:208:
+ /// カメラパラメータ。
+ #[derive(Clone, Debug)]
+ pub enum CameraParams {
+-    Camera2D { offset_x: f32, offset_y: f32 },
++    Camera2D {
++        offset_x: f32,
++        offset_y: f32,
++    },
+     /// 3D カメラ（R-5）
+     Camera3D {
+         eye: [f32; 3],
+Diff in \\?\D:\Work\FRICK-ELDY\alchemy-engine\native\game_render\src\renderer\mod.rs:8:
+ use std::sync::Arc;
+ use wgpu::util::DeviceExt;
+ use winit::window::Window;
+-mod ui;
+ pub(crate) mod pipeline_3d;
++mod ui;
+ 
+-
+ pub(crate) const ELITE_RENDER_KIND_OFFSET: u8 = 20;
+ pub(crate) const ELITE_SIZE_MULTIPLIER: f32 = 1.2;
+ 
+Diff in \\?\D:\Work\FRICK-ELDY\alchemy-engine\native\game_render\src\renderer\mod.rs:273:
+         _ => slime_anim_uv(frame),
+     }
+ }
+-
+ 
+ /// ロードダイアログの種別
+ #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+Diff in \\?\D:\Work\FRICK-ELDY\alchemy-engine\native\game_render\src\renderer\pipeline_3d.rs:147:
+     let (y0, y1) = (cy - hh, cy + hh);
+     let (z0, z1) = (cz - hd, cz + hd);
+ 
+-    let v = |pos| MeshVertex { position: pos, color };
++    let v = |pos| MeshVertex {
++        position: pos,
++        color,
++    };
+     let verts = [
+         v([x0, y0, z0]),
+         v([x1, y0, z0]),
+Diff in \\?\D:\Work\FRICK-ELDY\alchemy-engine\native\game_render\src\renderer\pipeline_3d.rs:179:
+     let n = divisions + 1;
+     for i in 0..n {
+         let t = -half + i as f32 * step;
+-        out.push(MeshVertex { position: [-half, 0.0, t], color });
+-        out.push(MeshVertex { position: [half, 0.0, t], color });
+-        out.push(MeshVertex { position: [t, 0.0, -half], color });
+-        out.push(MeshVertex { position: [t, 0.0, half], color });
++        out.push(MeshVertex {
++            position: [-half, 0.0, t],
++            color,
++        });
++        out.push(MeshVertex {
++            position: [half, 0.0, t],
++            color,
++        });
++        out.push(MeshVertex {
++            position: [t, 0.0, -half],
++            color,
++        });
++        out.push(MeshVertex {
++            position: [t, 0.0, half],
++            color,
++        });
+     }
+ }
+ 
+Diff in \\?\D:\Work\FRICK-ELDY\alchemy-engine\native\game_render\src\renderer\pipeline_3d.rs:192:
+ /// depth = 0.999 とすることで深度テストなしパスで最背面に描画される。
+ fn skybox_verts(top: [f32; 4], bottom: [f32; 4]) -> [MeshVertex; 4] {
+     [
+-        MeshVertex { position: [-1.0, 1.0, 0.999], color: top },
+-        MeshVertex { position: [1.0, 1.0, 0.999], color: top },
+-        MeshVertex { position: [1.0, -1.0, 0.999], color: bottom },
+-        MeshVertex { position: [-1.0, -1.0, 0.999], color: bottom },
++        MeshVertex {
++            position: [-1.0, 1.0, 0.999],
++            color: top,
++        },
++        MeshVertex {
++            position: [1.0, 1.0, 0.999],
++            color: top,
++        },
++        MeshVertex {
++            position: [1.0, -1.0, 0.999],
++            color: bottom,
++        },
++        MeshVertex {
++            position: [-1.0, -1.0, 0.999],
++            color: bottom,
++        },
+     ]
+ }
+ 
+Diff in \\?\D:\Work\FRICK-ELDY\alchemy-engine\native\game_render\src\renderer\pipeline_3d.rs:506:
+         // `mvp_buf` の内容（3D カメラ行列）に依存しない。
+         // 別 Uniform バッファは不要。
+         let sky_cmd = commands.iter().find_map(|c| {
+-            if let DrawCommand::Skybox { top_color, bottom_color } = c {
++            if let DrawCommand::Skybox {
++                top_color,
++                bottom_color,
++            } = c
++            {
+                 Some((*top_color, *bottom_color))
+             } else {
+                 None
+Diff in \\?\D:\Work\FRICK-ELDY\alchemy-engine\native\game_render\src\renderer\pipeline_3d.rs:548:
+ 
+         for cmd in commands {
+             match cmd {
+-                DrawCommand::GridPlane { size, divisions, color } => {
++                DrawCommand::GridPlane {
++                    size,
++                    divisions,
++                    color,
++                } => {
+                     grid_lines(*size, *divisions, *color, &mut self.grid_verts_scratch);
+                 }
+-                DrawCommand::Box3D { x, y, z, half_w, half_h, half_d, color } => {
++                DrawCommand::Box3D {
++                    x,
++                    y,
++                    z,
++                    half_w,
++                    half_h,
++                    half_d,
++                    color,
++                } => {
+                     let base = self.box_verts_scratch.len() as u32;
+                     let (verts, idx) = box_mesh(*x, *y, *z, *half_w, *half_h, *half_d, *color);
+                     self.box_verts_scratch.extend_from_slice(&verts);
+Diff in \\?\D:\Work\FRICK-ELDY\alchemy-engine\native\game_render\src\renderer\pipeline_3d.rs:558:
+-                    self.box_indices_scratch.extend(idx.iter().map(|i| i + base));
++                    self.box_indices_scratch
++                        .extend(idx.iter().map(|i| i + base));
+                 }
+                 _ => {}
+             }
+Diff in \\?\D:\Work\FRICK-ELDY\alchemy-engine\native\game_render\src\renderer\ui.rs:188:
+             color,
+             corner_radius,
+             border,
++        } => render_rect_component(
++            ui,
++            children,
++            *color,
++            *corner_radius,
++            *border,
++            camera,
++            fps,
++            ui_state,
++        ),
++        UiComponent::Text {
++            text,
++            color,
++            size,
++            bold,
+         } => {
+-            render_rect_component(ui, children, *color, *corner_radius, *border, camera, fps, ui_state)
+-        }
+-        UiComponent::Text { text, color, size, bold } => {
+             render_text(ui, text, *color, *size, *bold);
+             None
+         }
+Diff in \\?\D:\Work\FRICK-ELDY\alchemy-engine\native\game_render\src\renderer\ui.rs:336:
+         .corner_radius(corner_radius);
+ 
+     if let Some((border_color, border_width)) = border {
+-        frame = frame.stroke(egui::Stroke::new(border_width, to_color32_rgb(border_color)));
++        frame = frame.stroke(egui::Stroke::new(
++            border_width,
++            to_color32_rgb(border_color),
++        ));
+     }
+ 
+     let mut result: Option<String> = None;
+Diff in \\?\D:\Work\FRICK-ELDY\alchemy-engine\native\game_render\src\renderer\ui.rs:359:
+ }
+ 
+ fn render_text(ui: &mut egui::Ui, text: &str, color: [f32; 4], size: f32, bold: bool) {
+-    let mut rich = egui::RichText::new(text).color(to_color32(color)).size(size);
++    let mut rich = egui::RichText::new(text)
++        .color(to_color32(color))
++        .size(size);
+     if bold {
+         rich = rich.strong();
+     }
+Diff in \\?\D:\Work\FRICK-ELDY\alchemy-engine\native\game_render\src\renderer\ui.rs:482:
+             }
+             let aspect = w / h;
+             // MVP でワールド座標 → クリップ座標に変換
+-            let mvp = world_text_mvp(*eye, *target, *up, fov_deg.to_radians(), aspect, *near, *far);
++            let mvp = world_text_mvp(
++                *eye,
++                *target,
++                *up,
++                fov_deg.to_radians(),
++                aspect,
++                *near,
++                *far,
++            );
+             let clip = mat4_mul_vec4(mvp, [world_x, world_y, world_z, 1.0]);
+             // カメラ背後（w <= 0）は描画しない
+             if clip[3] <= 0.0 {
+Diff in \\?\D:\Work\FRICK-ELDY\alchemy-engine\native\game_render\src\renderer\ui.rs:631:
+                                 if ui
+                                     .add(
+                                         egui::Button::new(
+-                                            egui::RichText::new("Load")
+-                                                .color(egui::Color32::WHITE),
++                                            egui::RichText::new("Load").color(egui::Color32::WHITE),
+                                         )
+                                         .fill(egui::Color32::from_rgb(60, 120, 200))
+                                         .min_size(egui::vec2(100.0, 36.0)),
+
+[STEP] cargo clippy
+    Checking game_input_openxr v0.1.0 (D:\Work\FRICK-ELDY\alchemy-engine\native\game_input_openxr)
+    Checking game_render v0.1.0 (D:\Work\FRICK-ELDY\alchemy-engine\native\game_render)
+error: unused variable: `on_event`
+  --> game_input_openxr\src\lib.rs:15:33
+   |
+15 | pub fn run_xr_input_loop<F>(mut on_event: F)
+   |                                 ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_on_event`
+   |
+   = note: `-D unused-variables` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(unused_variables)]`
+
+error: variable does not need to be mutable
+  --> game_input_openxr\src\lib.rs:15:29
+   |
+15 | pub fn run_xr_input_loop<F>(mut on_event: F)
+   |                             ----^^^^^^^^
+   |                             |
+   |                             help: remove this `mut`
+   |
+   = note: `-D unused-mut` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(unused_mut)]`
+
+error: could not compile `game_input_openxr` (lib) due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: this function has too many arguments (8/7)
+   --> game_render\src\renderer\ui.rs:324:1
+    |
+324 | / fn render_rect_component(
+325 | |     ui: &mut egui::Ui,
+326 | |     children: &[UiNode],
+327 | |     color: [f32; 4],
+...   |
+332 | |     ui_state: &mut GameUiState,
+333 | | ) -> Option<String> {
+    | |___________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#too_many_arguments
+    = note: `-D clippy::too-many-arguments` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::too_many_arguments)]`
+
+error: this function has too many arguments (10/7)
+   --> game_render\src\renderer\ui.rs:396:1
+    |
+396 | / fn render_progress_bar(
+397 | |     ui: &mut egui::Ui,
+398 | |     value: f32,
+399 | |     max: f32,
+...   |
+406 | |     corner_radius: f32,
+407 | | ) {
+    | |_^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#too_many_arguments
+
+error: this function has too many arguments (9/7)
+   --> game_render\src\renderer\ui.rs:445:1
+    |
+445 | / fn render_world_text(
+446 | |     ctx: &egui::Context,
+447 | |     camera: &CameraParams,
+448 | |     world_x: f32,
+...   |
+454 | |     max_lifetime: f32,
+455 | | ) {
+    | |_^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#too_many_arguments
+
+error: the loop variable `row` is used to index `out`
+   --> game_render\src\renderer\ui.rs:534:16
+    |
+534 |     for row in 0..4 {
+    |                ^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#needless_range_loop
+    = note: `-D clippy::needless-range-loop` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::needless_range_loop)]`
+help: consider using an iterator and enumerate()
+    |
+534 -     for row in 0..4 {
+534 +     for (row, <item>) in out.iter_mut().enumerate() {
+    |
+
+error: could not compile `game_render` (lib) due to 4 previous errors
+
+============================================================
+ [B] Rust — unit tests (game_physics)
+============================================================
+
+[STEP] cargo test game_physics
+    Finished `test` profile [optimized + debuginfo] target(s) in 0.15s
+     Running unittests src\lib.rs (C:\Users\ncssa\AppData\Local\Temp\cursor-sandbox-cache\89485b0824c6a29aa307471bcecde8e8\cargo-target\debug\deps\game_physics-fd044e974be9a278.exe)
+
+running 35 tests
+test entity_params::tests::default_tables_are_empty ... ok
+test entity_params::tests::enemy_passes_obstacles_false_for_unknown_id ... ok
+test entity_params::tests::get_boss_returns_correct_params ... ok
+test entity_params::tests::get_enemy_returns_correct_params ... ok
+test game_logic::chase_ai::tests::update_chase_velocity_magnitude_equals_speed ... ok
+test entity_params::tests::get_weapon_returns_correct_params ... ok
+test physics::separation::tests::dead_enemies_are_not_separated ... ok
+test game_logic::chase_ai::tests::find_nearest_enemy_empty_world_returns_none ... ok
+test physics::spatial_hash::tests::collision_world_rebuild_static_and_query ... ok
+test game_logic::chase_ai::tests::find_nearest_enemy_returns_closest ... ok
+test game_logic::chase_ai::tests::update_chase_moves_enemy_toward_player ... ok
+test physics::obstacle_resolve::tests::player_not_moved_when_no_obstacle ... ok
+test physics::rng::tests::deterministic_reproducibility ... ok
+test physics::rng::tests::next_f32_in_range ... ok
+test world::enemy::tests::kill_decreases_count_and_adds_to_free_list ... ok
+test physics::separation::tests::overlapping_enemies_are_separated ... ok
+test physics::separation::tests::single_enemy_no_panic ... ok
+test physics::separation::tests::well_separated_enemies_are_not_moved ... ok
+test world::enemy::tests::spawn_increases_count ... ok
+test physics::spatial_hash::tests::spatial_hash_clear_removes_all_entries ... ok
+test game_logic::chase_ai::tests::simd_and_scalar_produce_same_result ... ok
+test physics::spatial_hash::tests::spatial_hash_cross_cell_query ... ok
+test physics::spatial_hash::tests::spatial_hash_no_false_negatives_within_radius ... ok
+test entity_params::tests::get_enemy_returns_none_for_invalid_id ... ok
+test physics::spatial_hash::tests::spatial_hash_same_cell_multiple_entities ... ok
+test util::tests::test_current_wave ... ok
+test util::tests::test_is_elite_spawn_before_600 ... ok
+test physics::obstacle_resolve::tests::player_pushed_out_of_obstacle ... ok
+test weapon::tests::weapon_slot_bullet_count ... ok
+test entity_params::tests::weapon_bullet_count_by_level ... ok
+test world::enemy::tests::kill_idempotent ... ok
+test game_logic::chase_ai::tests::find_nearest_enemy_ignores_dead ... ok
+test weapon::tests::weapon_slot_effective_damage ... ok
+test world::enemy::tests::spawn_reuses_free_list_slot ... ok
+test world::enemy::tests::spawn_sets_correct_kind_id ... ok
+
+test result: ok. 35 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests game_physics
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+[PASS] cargo test
+
+============================================================
+ [C] Elixir — compile & credo
+============================================================
+
+[PREP] mix deps.get
+Resolving Hex dependencies...
+Resolution completed in 0.037s
+Unchanged:
+  bunt 1.0.0
+  cowboy 2.14.2
+  cowboy_telemetry 0.4.0
+  cowlib 2.16.0
+  credo 1.7.16
+  file_system 1.1.1
+  finch 0.21.0
+  hpax 1.0.3
+  jason 1.4.4
+  mime 2.0.7
+  mint 1.7.1
+  mox 1.2.0
+  nimble_options 1.1.1
+  nimble_ownership 1.0.2
+  nimble_pool 1.1.0
+  phoenix 1.8.4
+  phoenix_pubsub 2.2.0
+  phoenix_template 1.0.4
+  plug 1.19.1
+  plug_cowboy 2.8.0
+  plug_crypto 2.1.1
+  ranch 2.2.0
+  req 0.5.17
+  rustler 0.34.0
+  telemetry 1.3.0
+  telemetry_metrics 1.1.0
+  toml 0.7.0
+  websock 0.5.3
+  websock_adapter 0.5.9
