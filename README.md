@@ -24,19 +24,19 @@
 ```text
 alchemy-engine/
 ├── apps/                    # Elixir Umbrella Apps (Logic & Network)
-│   ├── game_content/        # ゲームの静的データ・アセット管理
-│   ├── game_engine/         # SSoTコアロジック・空間分割・ECSへの同期
-│   ├── game_network/        # クライアント間・サーバー間通信
-│   └── game_server/         # サーバー起動プロセス・ヘッドレス管理
+│   ├── contents/            # ゲームの静的データ・アセット管理
+│   ├── core/                # SSoTコアロジック・空間分割・ECSへの同期
+│   ├── network/             # クライアント間・サーバー間通信
+│   └── server/              # サーバー起動プロセス・ヘッドレス管理
 └── native/                  # Rust Crates (スレッド・インターフェース単位)
-    ├── game_physics/     # ECS World・ゲームロジック・物理演算・Dead Reckoning
+    ├── physics/             # ECS World・ゲームロジック・物理演算・Dead Reckoning
     │                        #   (rustler 非依存 — ヘッドレス動作・ベンチマーク可能)
-    ├── game_audio/          # SuperCollider風コマンド駆動オーディオスレッド
+    ├── audio/               # SuperCollider風コマンド駆動オーディオスレッド
     │                        #   (専用スレッド + mpsc チャネル、Elixirが指揮者)
-    ├── game_render/         # WGPU描画パイプライン + ウィンドウ管理・OS入力イベント
+    ├── render/              # WGPU描画パイプライン + ウィンドウ管理・OS入力イベント
     │                        #   (旧 game_render + game_window を統合)
-    └── game_nif/            # Elixir <-> Rust NIF通信インターフェース (Rustler)
-                             #   (game_physics / game_audio / game_render を束ねる薄い層)
+    └── nif/                 # Elixir <-> Rust NIF通信インターフェース (Rustler)
+                             #   (physics / audio / render を束ねる薄い層)
 ```
 
 ## 🚀 Getting Started

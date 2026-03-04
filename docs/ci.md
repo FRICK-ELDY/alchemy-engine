@@ -7,10 +7,10 @@
 | ジョブ | 内容 | 実行条件 |
 |:---|:---|:---|
 | `Rust — fmt & clippy` | `cargo fmt --check` + `cargo clippy -D warnings` | 全 push / PR |
-| `Rust — unit tests` | `cargo test -p game_physics` | 全 push / PR |
+| `Rust — unit tests` | `cargo test -p physics` | 全 push / PR |
 | `Elixir — compile & credo` | `mix compile --warnings-as-errors` + `mix format --check-formatted` + `mix credo --strict` | 全 push / PR |
 | `Elixir — mix test (with NIF)` | `mix test`（NIF ビルド込み） | 全 push / PR |
-| `Rust — bench regression` | `cargo bench -p game_physics`（前回比 +10% 超でブロック） | `main` push のみ |
+| `Rust — bench regression` | `cargo bench -p physics`（前回比 +10% 超でブロック） | `main` push のみ |
 
 ---
 
