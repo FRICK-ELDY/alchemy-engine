@@ -6,11 +6,11 @@ defmodule Core.GameEvents.Diagnostics do
   @tick_ms 16
 
   @doc "replace 遷移時の init_arg を構築する（ゲームオーバー時のスコア・ハイスコア付与）"
-  def build_replace_init_arg(mod, init_arg, elapsed, content) do
+  def build_replace_init_arg(mod, init_arg, elapsed, content, runner) do
     game_over_scene = content.game_over_scene()
 
     if mod == game_over_scene do
-      playing_state = get_playing_scene_state(content)
+      playing_state = get_playing_scene_state(content, runner)
       score = Map.get(playing_state, :score, 0)
 
       :telemetry.execute(
@@ -27,20 +27,24 @@ defmodule Core.GameEvents.Diagnostics do
   end
 
   @doc "60フレームごとにフレームキャッシュ更新・ログ・スナップショット検証を行う"
-  def maybe_log_and_cache(state, _mod, elapsed, content) do
+  def maybe_log_and_cache(state, _mod, elapsed, content, runner) do
     if state.room_id == :main and rem(state.frame_count, 60) == 0 do
-      do_log_and_cache(state, elapsed, content)
+      do_log_and_cache(state, elapsed, content, runner)
     end
   end
 
-  defp do_log_and_cache(state, elapsed, content) do
-    playing_state = get_playing_scene_state(content)
+  defp do_log_and_cache(state, elapsed, content, runner) do
+    playing_state = get_playing_scene_state(content, runner)
     player_hp = Map.get(playing_state, :player_hp, 100.0)
     player_max_hp = Map.get(playing_state, :player_max_hp, 100.0)
     score = Map.get(playing_state, :score, 0)
     elapsed_s = elapsed / 1000.0
 
-    render_type = Core.SceneManager.render_type()
+    # 呼び出し元（handle_frame_events_main の {:ok, ...} 経路）では runner は常に non-nil。
+    # 防御的に nil 分岐を残し、万が一の場合に content.render_type() で代替する。
+    render_type =
+      if runner, do: GenServer.call(runner, :render_type), else: content.render_type()
+
     hud_data = {player_hp, player_max_hp, score, elapsed_s}
 
     high_scores =
@@ -135,7 +139,11 @@ defmodule Core.GameEvents.Diagnostics do
     e -> Logger.debug("[SSOT CHECK] snapshot check failed: #{inspect(e)}")
   end
 
-  defp get_playing_scene_state(content) do
-    Core.SceneManager.get_scene_state(content.playing_scene()) || %{}
+  defp get_playing_scene_state(content, runner) do
+    if runner do
+      GenServer.call(runner, {:get_scene_state, content.playing_scene()}) || %{}
+    else
+      %{}
+    end
   end
 end
