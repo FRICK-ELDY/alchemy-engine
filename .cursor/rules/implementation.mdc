@@ -39,8 +39,8 @@ alwaysApply: true
 
 | レイヤー | 追加・変更してよいもの | 追加・変更してはいけないもの |
 |:---|:---|:---|
-| `core` | ループ制御・イベント配信 | ゲームコンテンツ固有ロジック |
-| `contents` | シーンスタック・SceneBehaviour・World/Rule実装・エンティティパラメータ | エンジンコアの変更 |
+| `core` | ループ制御・イベント受信・ContentBehaviour インターフェース | ゲームコンテンツ固有ロジック・GameEvents（コンテンツディスパッチ） |
+| `contents` | シーンスタック・SceneBehaviour・GameEvents・World/Rule実装・エンティティパラメータ | エンジンコアの変更 |
 | `physics` | 物理演算・ECS・SoA構造 | ゲームルール・パラメータのハードコード |
 | `render` | 描画パイプライン・HUD | ゲームロジック |
 | `nif` | NIF定義・ブリッジ | 物理演算ロジック |

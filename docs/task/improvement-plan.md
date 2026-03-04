@@ -233,13 +233,11 @@
 
 **関連:** I-F（テスト整備）は `Contents.SceneStack` に対するテストとして実施する。
 
-### D-B: GameEvents を contents へ移行（未着手）
+### D-B: GameEvents を contents へ移行（完了済み 2026-03）
 
-**方針:** オプション B（責務分離）を採用。core に薄い EventReceiver を残し、contents に GameEvents を移行する。core の責務を「ループ制御・イベント配信・コンポーネントライフサイクル」に限定する。
+**方針:** オプション B（責務分離）を採用。contents に `Contents.GameEvents` / `Contents.GameEvents.Diagnostics` を移行。core の責務を「ループ制御・イベント受信・ContentBehaviour インターフェース」に限定。BatLord 固有ロジックは `on_engine_message/2` 汎用ディスパッチに置き換え済み。
 
-**参照:** [game-events-to-contents.md](./game-events-to-contents.md)
-
-**関連:** 移行時に BatLord 固有ロジック（`{:boss_dash_end}`）の汎用ディスパッチ化も検討。specific-proposals.md の「GameEvents への汎用メッセージディスパッチ機構」と兼用可。
+**未解決事項・確認ポイント:** [improvement-plan.md](../improvement-plan.md) の「GameEvents → contents 移行タスクより」を参照。
 
 ---
 

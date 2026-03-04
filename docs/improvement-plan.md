@@ -93,7 +93,21 @@ graph TD
 
 ---
 
-## 残課題（シーン管理 → contents 移行タスクより）
+## 残課題
+
+### GameEvents → contents 移行タスクより（未解決事項・確認ポイント）
+
+> 出典: `game-events-to-contents.md`（タスク完了により削除済み）
+
+| 項目 | 内容 |
+|:---|:---|
+| **送信先の解決方法** | InputHandler・Network・NIF が「メインルームの GameEvents」に送る方法。`ContentBehaviour.event_handler(:main)` および Registry（`Core.RoomRegistry.get_loop/1`）経由で解決する設計に移行済み。 |
+| **RoomSupervisor との関係** | RoomSupervisor が `config :server, :game_events_module` で指定されたモジュール（`Contents.GameEvents`）を起動。contents アプリが先に起動している必要があり、Application の children 順序で満たしている。 |
+| **mix.exs 依存関係** | contents が core に依存。core は contents を直接参照せず、`ContentBehaviour`（core に定義）経由および `config :server, :game_events_module` でモジュール名を解決。この依存関係は維持済み。 |
+
+---
+
+### シーン管理 → contents 移行タスクより
 
 > 出典: `scene-management-to-contents.md`（削除済み）
 
@@ -113,7 +127,7 @@ graph TD
 | **効率: update_by_module のリスト操作** | `Enum.find_index` → `Enum.at` → `List.replace_at` による複数回走査を、`List.update_at/3` で簡潔化できる。 | gemini-code-assist 指摘 |
 | **flow_runner の共通化** | 全コンテンツで `Process.whereis(Core.SceneManager)` を返す同一実装。scene_stack_spec/1 導入で差が付くならそのままでよい。共通化する場合は ContentBehaviour のデフォルト実装やヘルパーを検討。 | レビュー |
 | **flow_runner の optional_callbacks** | Phase 3 で GameEvents が参照するまでは実質未使用。フェーズ分離を厳密にするなら現時点で `@optional_callbacks` に入れ、Phase 3 に合わせて必須化する選択肢あり（現状は必須のまま）。 | レビュー |
-| **GameEvents / GameEvents.Diagnostics の所在** | `apps/core/lib/core/game_events.ex` および `apps/core/lib/core/game_events/diagnostics.ex` はコンポーネント（contents）層にあるべき。core の責務を「ループ制御・イベント配信・コンポーネントライフサイクル」に限定する方針に沿い、移行を検討する。**タスク化済み:** [game-events-to-contents.md](task/game-events-to-contents.md) | 設計 |
+| **GameEvents / GameEvents.Diagnostics の所在** | ~~core から contents へ移行~~ **解決済み（2026-03）:** `Contents.GameEvents` / `Contents.GameEvents.Diagnostics` として contents 層に配置。 | 設計 |
 | **flow_runner の重複呼び出し** | 各 `handle_info` で `flow_runner(state)` を個別に呼んでいる。イベントハンドラごとに同一値が返る想定であれば、変数にまとめる等で重複を減らす余地あり。 | レビュー |
 
 ---

@@ -36,7 +36,7 @@ graph TD
     IH[Core.InputHandler]
     EB[Core.EventBus]
     RS[Core.RoomSupervisor]
-    GEV[Core.GameEvents<br/>:main ルーム]
+    GEV[Contents.GameEvents<br/>:main ルーム]
     MON[Core.StressMonitor]
     STATS[Core.Stats]
     TEL[Core.Telemetry]
@@ -229,9 +229,9 @@ GameEngine.Config.components()  # current().components() を呼び出す
 
 ---
 
-### `game_events.ex` — メインゲームループ GenServer
+### `Contents.game_events.ex` — メインゲームループ GenServer（contents 層）
 
-Rust の 60Hz ゲームループから `{:frame_events, events}` を受信し、コンポーネントへ委譲するコアコンポーネント。エンジン自体はゲームロジックを知らず、ディスパッチのみを担う。
+Rust の 60Hz ゲームループから `{:frame_events, events}` を受信し、コンポーネントへ委譲する。contents 層に配置され、エンジン自体はゲームロジックを知らず、ディスパッチのみを担う。
 
 **GenServer state:**
 
@@ -290,7 +290,7 @@ stateDiagram-v2
 | `stop_room/1` | ルームを停止 |
 | `list_rooms/0` | 実行中ルーム一覧 |
 
-起動時に `:main` ルームを自動開始します。
+起動時に `:main` ルームを自動開始します。`config :server, :game_events_module` で起動する GameEvents モジュール（デフォルト `Contents.GameEvents`）を指定する。
 
 ---
 

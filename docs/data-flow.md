@@ -56,7 +56,7 @@ flowchart TD
     BOSS[ボス物理]
     DFE[drain_frame_events]
     SEND["send {:frame_events, [...]}"]
-    GEV[Elixir GameEvents プロセス]
+    GEV[Elixir Contents.GameEvents プロセス]
 
     LOOP --> PS
     PS --> PM --> OB --> AI --> SEP --> COL --> WEP --> PAR --> ITEM --> BUL --> BOSS
@@ -67,7 +67,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    GEV[GameEvents GenServer\nhandle_info :frame_events]
+    GEV[Contents.GameEvents GenServer\nhandle_info :frame_events]
     EK[EnemyKilled]
     PD[PlayerDamaged]
     SE[SpecialEntitySpawned\nSpecialEntityDamaged\nSpecialEntityDefeated]
@@ -150,7 +150,7 @@ flowchart TD
     OUA["GameWorld.on_ui_action(action)\nMutex pending_action"]
     Q[on_ui_action キュー]
     SEND["Elixir プロセスに send\nRedrawRequested 末尾で取り出し"]
-    GEV["GameEvents.handle_info\n{:ui_action, action}"]
+    GEV["Contents.GameEvents.handle_info\n{:ui_action, action}"]
     W1["Component.on_event/2\n:select_weapon_1/2/3 等"]
     W2["SaveManager.save_session()\n:__save__"]
     W3["SaveManager.load_session()\n→ NifBridge.load_save_snapshot()\n:__load__"]
@@ -276,7 +276,7 @@ flowchart LR
 ```mermaid
 graph TB
     subgraph BEAM["Elixir BEAM VM"]
-        GEV[GameEvents\nGenServer]
+        GEV[Contents.GameEvents\nGenServer]
         SS[Contents.SceneStack\nGenServer]
         EVB[EventBus\nGenServer]
         STS[Stats\nGenServer]

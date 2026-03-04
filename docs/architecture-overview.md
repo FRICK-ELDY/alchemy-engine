@@ -57,9 +57,6 @@ alchemy-engine/
 │   │       ├── content_behaviour.ex # ContentBehaviour（コンテンツ定義インターフェース）
 │   │       ├── component.ex         # Component ビヘイビア（コンテンツ構成単位）
 │   │       ├── config.ex            # :current コンテンツモジュール解決
-│   │       ├── game_events.ex       # メインゲームループ GenServer
-│   │       ├── game_events/
-│   │       │   └── diagnostics.ex   # ログ・FrameCache 更新ヘルパー
 │   │       ├── room_supervisor.ex   # DynamicSupervisor
 │   │       ├── room_registry.ex     # Registry ラッパー
 │   │       ├── event_bus.ex         # フレームイベント配信 GenServer
@@ -80,6 +77,9 @@ alchemy-engine/
 │   ├── contents/                    # ゲームコンテンツ
 │   │   ├── mix.exs
 │   │   └── lib/contents/
+│   │       ├── game_events.ex             # メインゲームループ GenServer（contents 層）
+│   │       ├── game_events/
+│   │       │   └── diagnostics.ex         # ログ・FrameCache 更新ヘルパー
 │   │       ├── scene_behaviour.ex         # シーンコールバック定義（contents 層）
 │   │       ├── scene_stack.ex             # シーンスタック管理 GenServer（contents 層）
 │   │       ├── vampire_survivor.ex        # ContentBehaviour 実装（VampireSurvivor）
@@ -209,8 +209,8 @@ alchemy-engine/
 | レイヤー | 責務 | 技術 |
 |:---|:---|:---|
 | `server` | OTP Application 起動・Supervisor ツリー構築 | Elixir / OTP |
-| `core` | ゲームループ制御・イベント配信・セーブ・ContentBehaviour / Component インターフェース定義 | Elixir GenServer / ETS |
-| `contents` | シーンスタック・SceneBehaviour・ContentBehaviour 実装・Component 群・エンティティパラメータ | Elixir |
+| `core` | ゲームループ制御・イベント受信・セーブ・ContentBehaviour / Component インターフェース定義 | Elixir GenServer / ETS |
+| `contents` | GameEvents・シーンスタック・SceneBehaviour・ContentBehaviour 実装・Component 群・エンティティパラメータ | Elixir |
 | `network` | Phoenix Channels（WebSocket）・UDP トランスポート・ローカルマルチルーム管理 | Elixir / Phoenix |
 | `nif` | Elixir-Rust 間 NIF ブリッジ・ゲームループ・レンダーブリッジ | Rust / Rustler |
 | `physics` | 物理演算・空間ハッシュ・ECS・外部注入パラメータテーブル | Rust |
@@ -276,7 +276,7 @@ graph LR
     CFG["config.exs\n:current コンテンツモジュール"]
     CB["ContentBehaviour\ncomponents / initial_scenes\nentity_registry 等"]
     COMP["Component ビヘイビア\non_ready / on_frame_event\non_nif_sync 等（全オプショナル）"]
-    GE["GameEvents\n（エンジンコア）"]
+    GE["Contents.GameEvents\n（contents 層）"]
     VS["VampireSurvivor\n+ SpawnComponent\n+ LevelComponent\n+ BossComponent"]
     AA["AsteroidArena\n+ SpawnComponent\n+ SplitComponent"]
 
