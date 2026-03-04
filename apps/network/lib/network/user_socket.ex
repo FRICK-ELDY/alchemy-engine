@@ -1,9 +1,9 @@
-defmodule GameNetwork.UserSocket do
+defmodule Network.UserSocket do
   @moduledoc """
   Phoenix WebSocket ソケット。
 
   `/socket` エンドポイントに接続したクライアントが
-  `GameNetwork.Channel` の各トピックに join できるようにする。
+  `Network.Channel` の各トピックに join できるようにする。
 
   ## 認証
 
@@ -13,7 +13,7 @@ defmodule GameNetwork.UserSocket do
 
   use Phoenix.Socket
 
-  channel("room:*", GameNetwork.Channel)
+  channel("room:*", Network.Channel)
 
   @impl true
   def connect(_params, socket, _connect_info) do

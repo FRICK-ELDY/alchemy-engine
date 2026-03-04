@@ -1,4 +1,4 @@
-defmodule GameNetwork.UDP do
+defmodule Network.UDP do
   @moduledoc """
   `:gen_udp` による UDP トランスポートサーバー。
 
@@ -7,7 +7,7 @@ defmodule GameNetwork.UDP do
 
   ## 接続フロー
 
-      クライアント                   GameNetwork.UDP
+      クライアント                   Network.UDP
           |                               |
           |--- JOIN(seq=1, "room_a") ---->|  register_room + セッション登録
           |<-- JOIN_ACK(seq=1, "room_a") -|
@@ -25,11 +25,11 @@ defmodule GameNetwork.UDP do
 
   ## パケット形式
 
-  `GameNetwork.UDP.Protocol` を参照。
+  `Network.UDP.Protocol` を参照。
 
   ## 設定
 
-      config :game_network, GameNetwork.UDP,
+      config :network, Network.UDP,
         port: 4001   # デフォルト: 4001
 
   実行時に変更する場合は `config/runtime.exs` で `GAME_NETWORK_UDP_PORT` を設定する。
@@ -44,7 +44,7 @@ defmodule GameNetwork.UDP do
   use GenServer
   require Logger
 
-  alias GameNetwork.UDP.Protocol
+  alias Network.UDP.Protocol
 
   @default_port 4001
 
@@ -56,13 +56,13 @@ defmodule GameNetwork.UDP do
   @doc """
   UDP サーバーを起動する。
 
-  ポート番号は `config :game_network, GameNetwork.UDP, port: N` から読み取る。
+  ポート番号は `config :network, Network.UDP, port: N` から読み取る。
   `opts` に `port:` を渡すことで上書きできる（テスト用途など）。
   """
   def start_link(opts \\ []) do
     port =
       Keyword.get_lazy(opts, :port, fn ->
-        Application.get_env(:game_network, __MODULE__, [])
+        Application.get_env(:network, __MODULE__, [])
         |> Keyword.get(:port, @default_port)
       end)
 
@@ -103,7 +103,7 @@ defmodule GameNetwork.UDP do
     # UDP には TCP の TIME_WAIT がないため本番環境でも副作用はない。
     case :gen_udp.open(port, [:binary, active: true, reuseaddr: true]) do
       {:ok, socket} ->
-        Logger.info("[GameNetwork.UDP] Listening on UDP port #{port}")
+        Logger.info("[Network.UDP] Listening on UDP port #{port}")
         {:ok, %{socket: socket, port: port, sessions: %{}, next_seq: 0}}
 
       {:error, reason} ->
@@ -134,7 +134,7 @@ defmodule GameNetwork.UDP do
 
       {:error, reason} ->
         Logger.error(
-          "[GameNetwork.UDP] Failed to encode frame for room=#{room_id}: #{inspect(reason)}"
+          "[Network.UDP] Failed to encode frame for room=#{room_id}: #{inspect(reason)}"
         )
     end
 
@@ -153,7 +153,7 @@ defmodule GameNetwork.UDP do
           handle_packet(packet, client, state)
 
         {:error, :invalid_packet} ->
-          Logger.warning("[GameNetwork.UDP] Invalid packet from #{inspect(client)}")
+          Logger.warning("[Network.UDP] Invalid packet from #{inspect(client)}")
           state
       end
 
@@ -170,11 +170,11 @@ defmodule GameNetwork.UDP do
   # ── パケットハンドラ ─────────────────────────────────────────────────
 
   defp handle_packet({:join, seq, room_id}, client, state) do
-    case GameNetwork.Local.register_room(room_id) do
+    case Network.Local.register_room(room_id) do
       :ok ->
         session = %{room_id: room_id}
         new_sessions = Map.put(state.sessions, client, session)
-        Logger.info("[GameNetwork.UDP] Client #{inspect(client)} joined room=#{room_id}")
+        Logger.info("[Network.UDP] Client #{inspect(client)} joined room=#{room_id}")
 
         {:ok, ack} = Protocol.encode({:join_ack, seq, room_id})
         {ip, port} = client
@@ -184,7 +184,7 @@ defmodule GameNetwork.UDP do
 
       {:error, reason} ->
         Logger.warning(
-          "[GameNetwork.UDP] register_room failed for room=#{room_id}: #{inspect(reason)}"
+          "[Network.UDP] register_room failed for room=#{room_id}: #{inspect(reason)}"
         )
 
         {:ok, err_packet} = Protocol.encode({:error, seq, "register_failed"})
@@ -196,14 +196,14 @@ defmodule GameNetwork.UDP do
   end
 
   defp handle_packet({:leave, _seq, room_id}, client, state) do
-    Logger.info("[GameNetwork.UDP] Client #{inspect(client)} left room=#{room_id}")
+    Logger.info("[Network.UDP] Client #{inspect(client)} left room=#{room_id}")
     %{state | sessions: Map.delete(state.sessions, client)}
   end
 
   defp handle_packet({:input, _seq, dx, dy}, client, state) do
     case Map.get(state.sessions, client) do
       nil ->
-        Logger.warning("[GameNetwork.UDP] Input from unknown client #{inspect(client)}")
+        Logger.warning("[Network.UDP] Input from unknown client #{inspect(client)}")
 
       %{room_id: room_id} ->
         case Core.RoomRegistry.get_loop(room_id) do
@@ -211,7 +211,7 @@ defmodule GameNetwork.UDP do
             send(pid, {:move_input, dx, dy})
 
           :error ->
-            Logger.warning("[GameNetwork.UDP] Room #{room_id} not found for input")
+            Logger.warning("[Network.UDP] Room #{room_id} not found for input")
         end
     end
 
@@ -221,7 +221,7 @@ defmodule GameNetwork.UDP do
   defp handle_packet({:action, _seq, name}, client, state) do
     case Map.get(state.sessions, client) do
       nil ->
-        Logger.warning("[GameNetwork.UDP] Action from unknown client #{inspect(client)}")
+        Logger.warning("[Network.UDP] Action from unknown client #{inspect(client)}")
 
       %{room_id: room_id} ->
         case Core.RoomRegistry.get_loop(room_id) do
@@ -229,7 +229,7 @@ defmodule GameNetwork.UDP do
             send(pid, {:ui_action, name})
 
           :error ->
-            Logger.warning("[GameNetwork.UDP] Room #{room_id} not found for action")
+            Logger.warning("[Network.UDP] Room #{room_id} not found for action")
         end
     end
 
@@ -246,7 +246,7 @@ defmodule GameNetwork.UDP do
 
   defp handle_packet(packet, client, state) do
     Logger.debug(
-      "[GameNetwork.UDP] Unhandled packet #{inspect(elem(packet, 0))} from #{inspect(client)}"
+      "[Network.UDP] Unhandled packet #{inspect(elem(packet, 0))} from #{inspect(client)}"
     )
 
     state

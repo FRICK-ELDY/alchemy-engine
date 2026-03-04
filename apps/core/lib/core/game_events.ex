@@ -46,7 +46,7 @@ defmodule Core.GameEvents do
       init_component(component, world_ref)
     end)
 
-    map_id = Application.get_env(:game_server, :map, :plain)
+    map_id = Application.get_env(:server, :map, :plain)
     obstacles = Core.MapLoader.obstacles_for_map(map_id)
     Core.NifBridge.set_map_obstacles(world_ref, obstacles)
 

@@ -1,11 +1,11 @@
-defmodule GameNetwork.Test.StubRoom do
+defmodule Network.Test.StubRoom do
   @moduledoc """
   テスト用の軽量ルームプロセス。
 
   本番の NIF / Rust ゲームループは起動せず、
   受信した `{:network_event, from, event}` メッセージを蓄積する。
   自身を `Core.RoomRegistry` に登録するため、
-  `GameNetwork.Local` からのイベント配信が正常に動作する。
+  `Network.Local` からのイベント配信が正常に動作する。
 
   ## 起動方法
 

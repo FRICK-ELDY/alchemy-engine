@@ -1,4 +1,4 @@
-defmodule GameNetwork.Router do
+defmodule Network.Router do
   @moduledoc """
   HTTP ルーター。
 
@@ -43,10 +43,10 @@ defmodule GameNetwork.Router do
     send_resp(conn, 404, "not found")
   end
 
-  # GameNetwork.Local がダウンしている場合（プロセス不在・タイムアウト・TOCTOU）は
+  # Network.Local がダウンしている場合（プロセス不在・タイムアウト・TOCTOU）は
   # {:error, reason} を返す。:exit は GenServer.call が失敗する全ケースをカバーする。
   defp fetch_rooms do
-    {:ok, GameNetwork.Local.list_rooms()}
+    {:ok, Network.Local.list_rooms()}
   catch
     :exit, reason -> {:error, reason}
   end

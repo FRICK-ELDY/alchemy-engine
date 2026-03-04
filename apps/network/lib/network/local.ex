@@ -1,4 +1,4 @@
-defmodule GameNetwork.Local do
+defmodule Network.Local do
   @moduledoc """
   同一 BEAM ノード内でのローカルマルチルーム管理。
 
@@ -11,11 +11,11 @@ defmodule GameNetwork.Local do
 
   ## 使い方
 
-      {:ok, _} = GameNetwork.Local.start_link()
-      {:ok, pid_a} = GameNetwork.Local.open_room("room_a")
-      {:ok, pid_b} = GameNetwork.Local.open_room("room_b")
-      :ok = GameNetwork.Local.connect_rooms("room_a", "room_b")
-      :ok = GameNetwork.Local.broadcast("room_a", {:chat, "hello"})
+      {:ok, _} = Network.Local.start_link()
+      {:ok, pid_a} = Network.Local.open_room("room_a")
+      {:ok, pid_b} = Network.Local.open_room("room_b")
+      :ok = Network.Local.connect_rooms("room_a", "room_b")
+      :ok = Network.Local.broadcast("room_a", {:chat, "hello"})
   """
 
   use GenServer
@@ -151,7 +151,7 @@ defmodule GameNetwork.Local do
   def handle_call({:open_room, room_id}, _from, state) do
     case Core.RoomSupervisor.start_room(room_id) do
       {:ok, pid} ->
-        Logger.info("[GameNetwork.Local] Opened room #{inspect(room_id)} (pid=#{inspect(pid)})")
+        Logger.info("[Network.Local] Opened room #{inspect(room_id)} (pid=#{inspect(pid)})")
         {:reply, {:ok, pid}, put_room(state, room_id)}
 
       {:error, :already_started} = err ->
@@ -166,7 +166,7 @@ defmodule GameNetwork.Local do
     case Core.RoomSupervisor.stop_room(room_id) do
       :ok ->
         new_connections = remove_room_connections(state.connections, room_id)
-        Logger.info("[GameNetwork.Local] Closed room #{inspect(room_id)}")
+        Logger.info("[Network.Local] Closed room #{inspect(room_id)}")
         {:reply, :ok, %{state | connections: new_connections}}
 
       {:error, _} = err ->
@@ -188,7 +188,7 @@ defmodule GameNetwork.Local do
           |> Map.update!(room_a, &MapSet.put(&1, room_b))
           |> Map.update!(room_b, &MapSet.put(&1, room_a))
 
-        Logger.info("[GameNetwork.Local] Connected #{inspect(room_a)} <-> #{inspect(room_b)}")
+        Logger.info("[Network.Local] Connected #{inspect(room_a)} <-> #{inspect(room_b)}")
         {:reply, :ok, %{state | connections: new_connections}}
     end
   end
@@ -199,7 +199,7 @@ defmodule GameNetwork.Local do
       |> update_if_exists(room_a, &MapSet.delete(&1, room_b))
       |> update_if_exists(room_b, &MapSet.delete(&1, room_a))
 
-    Logger.info("[GameNetwork.Local] Disconnected #{inspect(room_a)} <-> #{inspect(room_b)}")
+    Logger.info("[Network.Local] Disconnected #{inspect(room_a)} <-> #{inspect(room_b)}")
     {:reply, :ok, %{state | connections: new_connections}}
   end
 
@@ -269,7 +269,7 @@ defmodule GameNetwork.Local do
         send(pid, {:network_event, from_room, event})
 
       :error ->
-        Logger.warning("[GameNetwork.Local] deliver_event: room #{inspect(room_id)} not found")
+        Logger.warning("[Network.Local] deliver_event: room #{inspect(room_id)} not found")
     end
   end
 end

@@ -1,4 +1,4 @@
-defmodule GameNetwork.UDP.Protocol do
+defmodule Network.UDP.Protocol do
   @moduledoc """
   UDP パケットのエンコード・デコードとデルタ圧縮。
 
