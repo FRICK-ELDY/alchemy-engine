@@ -221,6 +221,18 @@
 
 ---
 
+## 設計タスク（別ドキュメント）
+
+### D-A: シーン管理を contents へ移行
+
+**方針:** 「あらゆる概念を contents に寄せる」。SceneManager / SceneBehaviour を core から contents へ移行する。
+
+**参照:** [scene-management-to-contents.md](./scene-management-to-contents.md)
+
+**関連:** I-F（SceneManager テスト）は本タスク完了後に `Contents.SceneStack` に対するテストとして実施する。
+
+---
+
 ## 完了済みタスク（フェーズ1・1.5）
 
 ~~I-G: HUD 型修正~~  
