@@ -1,4 +1,5 @@
 # AlchemyEngine
+![Elixir](https://img.shields.io/badge/Elixir-1.19-4B275F?style=flat-square&logo=elixir) ![Erlang/OTP](https://img.shields.io/badge/Erlang%2FOTP-28-A90533?style=flat-square&logo=erlang) ![Rust](https://img.shields.io/badge/Rust-stable-orange?style=flat-square&logo=rust)
 
 > A platform for worlds. You bring the rules.
 
