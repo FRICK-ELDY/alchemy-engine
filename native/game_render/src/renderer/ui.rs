@@ -188,10 +188,22 @@ fn render_component_in_ui(
             color,
             corner_radius,
             border,
+        } => render_rect_component(
+            ui,
+            children,
+            *color,
+            *corner_radius,
+            *border,
+            camera,
+            fps,
+            ui_state,
+        ),
+        UiComponent::Text {
+            text,
+            color,
+            size,
+            bold,
         } => {
-            render_rect_component(ui, children, *color, *corner_radius, *border, camera, fps, ui_state)
-        }
-        UiComponent::Text { text, color, size, bold } => {
             render_text(ui, text, *color, *size, *bold);
             None
         }
@@ -321,6 +333,7 @@ fn render_horizontal_layout(
     result
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_rect_component(
     ui: &mut egui::Ui,
     children: &[UiNode],
@@ -336,7 +349,10 @@ fn render_rect_component(
         .corner_radius(corner_radius);
 
     if let Some((border_color, border_width)) = border {
-        frame = frame.stroke(egui::Stroke::new(border_width, to_color32_rgb(border_color)));
+        frame = frame.stroke(egui::Stroke::new(
+            border_width,
+            to_color32_rgb(border_color),
+        ));
     }
 
     let mut result: Option<String> = None;
@@ -359,7 +375,9 @@ fn render_rect_component(
 }
 
 fn render_text(ui: &mut egui::Ui, text: &str, color: [f32; 4], size: f32, bold: bool) {
-    let mut rich = egui::RichText::new(text).color(to_color32(color)).size(size);
+    let mut rich = egui::RichText::new(text)
+        .color(to_color32(color))
+        .size(size);
     if bold {
         rich = rich.strong();
     }
@@ -393,6 +411,7 @@ fn render_button(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_progress_bar(
     ui: &mut egui::Ui,
     value: f32,
@@ -442,6 +461,7 @@ fn render_screen_flash(ctx: &egui::Context, color: [f32; 4]) {
         });
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_world_text(
     ctx: &egui::Context,
     camera: &CameraParams,
@@ -482,7 +502,15 @@ fn render_world_text(
             }
             let aspect = w / h;
             // MVP でワールド座標 → クリップ座標に変換
-            let mvp = world_text_mvp(*eye, *target, *up, fov_deg.to_radians(), aspect, *near, *far);
+            let mvp = world_text_mvp(
+                *eye,
+                *target,
+                *up,
+                fov_deg.to_radians(),
+                aspect,
+                *near,
+                *far,
+            );
             let clip = mat4_mul_vec4(mvp, [world_x, world_y, world_z, 1.0]);
             // カメラ背後（w <= 0）は描画しない
             if clip[3] <= 0.0 {
@@ -531,8 +559,8 @@ fn world_text_mvp(
 
 fn mat4_mul_vec4(m: [[f32; 4]; 4], v: [f32; 4]) -> [f32; 4] {
     let mut out = [0.0f32; 4];
-    for row in 0..4 {
-        out[row] = (0..4).map(|col| m[col][row] * v[col]).sum();
+    for (row, out_val) in out.iter_mut().enumerate() {
+        *out_val = (0..4).map(|col| m[col][row] * v[col]).sum();
     }
     out
 }
@@ -631,8 +659,7 @@ fn build_load_dialog(ctx: &egui::Context, ui_state: &mut GameUiState) -> Option<
                                 if ui
                                     .add(
                                         egui::Button::new(
-                                            egui::RichText::new("Load")
-                                                .color(egui::Color32::WHITE),
+                                            egui::RichText::new("Load").color(egui::Color32::WHITE),
                                         )
                                         .fill(egui::Color32::from_rgb(60, 120, 200))
                                         .min_size(egui::vec2(100.0, 36.0)),

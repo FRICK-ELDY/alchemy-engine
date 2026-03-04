@@ -133,10 +133,8 @@ pub fn set_entity_hp(
         }
         // 未対応 atom はサイレント無視
     } else if let Ok((tag, index)) = entity_id.decode::<(Atom, usize)>() {
-        if tag == crate::enemy() {
-            if index < w.enemies.hp.len() && w.enemies.alive[index] != 0 {
-                w.enemies.hp[index] = hp as f32;
-            }
+        if tag == crate::enemy() && index < w.enemies.hp.len() && w.enemies.alive[index] != 0 {
+            w.enemies.hp[index] = hp as f32;
         }
         // 未対応 tag はサイレント無視
     }
@@ -155,6 +153,7 @@ pub fn set_entity_hp(
 /// ボス存在が保証された状態でのみ呼ばれる。
 /// `is_player` は常に `false`（プレイヤー弾は別経路で管理）。
 #[rustler::nif]
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_projectile(
     world: ResourceArc<GameWorld>,
     x: f64,

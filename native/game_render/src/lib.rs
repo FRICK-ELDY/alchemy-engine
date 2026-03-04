@@ -57,15 +57,9 @@ pub enum UiSize {
 #[derive(Clone, Debug)]
 pub enum UiComponent {
     /// 子ノードを横方向に並べるレイアウト
-    HorizontalLayout {
-        spacing: f32,
-        padding: [f32; 4],
-    },
+    HorizontalLayout { spacing: f32, padding: [f32; 4] },
     /// 子ノードを縦方向に並べるレイアウト
-    VerticalLayout {
-        spacing: f32,
-        padding: [f32; 4],
-    },
+    VerticalLayout { spacing: f32, padding: [f32; 4] },
     /// テキストラベル
     Text {
         text: String,
@@ -115,9 +109,7 @@ pub enum UiComponent {
         max_lifetime: f32,
     },
     /// 画面全体を覆うフラッシュオーバーレイ
-    ScreenFlash {
-        color: [f32; 4],
-    },
+    ScreenFlash { color: [f32; 4] },
 }
 
 impl Default for UiRect {
@@ -208,7 +200,10 @@ pub enum DrawCommand {
 /// カメラパラメータ。
 #[derive(Clone, Debug)]
 pub enum CameraParams {
-    Camera2D { offset_x: f32, offset_y: f32 },
+    Camera2D {
+        offset_x: f32,
+        offset_y: f32,
+    },
     /// 3D カメラ（R-5）
     Camera3D {
         eye: [f32; 3],

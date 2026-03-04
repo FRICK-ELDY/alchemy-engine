@@ -12,6 +12,7 @@
 ///
 /// VR ランタイムが利用できない場合は即座に戻る。
 /// `openxr` フィーチャー有効時は OpenXR セッションを試行する。
+#[cfg_attr(not(feature = "openxr"), allow(unused_variables, unused_mut))]
 pub fn run_xr_input_loop<F>(mut on_event: F)
 where
     F: FnMut(XrInputEvent) + Send + 'static,

@@ -6,8 +6,7 @@
 
 use crate::render_frame_buffer::RenderFrameBuffer;
 use game_render::{
-    CameraParams, DrawCommand, RenderFrame, UiAnchor, UiCanvas, UiComponent, UiNode, UiRect,
-    UiSize,
+    CameraParams, DrawCommand, RenderFrame, UiAnchor, UiCanvas, UiComponent, UiNode, UiRect, UiSize,
 };
 use rustler::types::list::ListIterator;
 use rustler::types::tuple::get_tuple;
@@ -100,8 +99,7 @@ fn atom_str<'a>(term: Term<'a>) -> NifResult<String> {
 
 /// タプルの先頭要素（タグアトム）を文字列として取得する。
 fn tag_of(term: Term) -> NifResult<String> {
-    let elems =
-        get_tuple(term).map_err(|_| NifError::Term(Box::new("expected tuple")))?;
+    let elems = get_tuple(term).map_err(|_| NifError::Term(Box::new("expected tuple")))?;
     let first = elems
         .first()
         .ok_or_else(|| NifError::Term(Box::new("expected non-empty tuple")))?;
@@ -184,6 +182,7 @@ fn decode_command(term: Term) -> NifResult<DrawCommand> {
         }
         // {:box_3d, x, y, z, half_w, half_h, {half_d, r, g, b, a}}
         "box_3d" => {
+            #[allow(clippy::type_complexity)]
             let (_, x, y, z, half_w, half_h, (half_d, r, g, b, a)): (
                 Atom,
                 f64,
@@ -218,16 +217,20 @@ fn decode_command(term: Term) -> NifResult<DrawCommand> {
             Ok(DrawCommand::GridPlane {
                 size: size as f32,
                 divisions,
-                color: [color.0 as f32, color.1 as f32, color.2 as f32, color.3 as f32],
+                color: [
+                    color.0 as f32,
+                    color.1 as f32,
+                    color.2 as f32,
+                    color.3 as f32,
+                ],
             })
         }
         // {:skybox, {top_r, top_g, top_b, top_a}, {bot_r, bot_g, bot_b, bot_a}}
         "skybox" => {
+            #[allow(clippy::type_complexity)]
             let (_, top, bot): (Atom, (f64, f64, f64, f64), (f64, f64, f64, f64)) =
                 term.decode().map_err(|_| {
-                    NifError::Term(Box::new(
-                        "skybox: expected {:skybox, {r,g,b,a}, {r,g,b,a}}",
-                    ))
+                    NifError::Term(Box::new("skybox: expected {:skybox, {r,g,b,a}, {r,g,b,a}}"))
                 })?;
             Ok(DrawCommand::Skybox {
                 top_color: [top.0 as f32, top.1 as f32, top.2 as f32, top.3 as f32],
@@ -248,12 +251,12 @@ fn decode_command(term: Term) -> NifResult<DrawCommand> {
                         "sprite_raw: uvs expected {{uv_ox, uv_oy}, {uv_sx, uv_sy}, {r, g, b, a}}",
                     ))
                 })?;
-            let (uv_ox, uv_oy): (f64, f64) = uv_offset_t.decode().map_err(|_| {
-                NifError::Term(Box::new("sprite_raw: uv_offset expected {f, f}"))
-            })?;
-            let (uv_sx, uv_sy): (f64, f64) = uv_size_t.decode().map_err(|_| {
-                NifError::Term(Box::new("sprite_raw: uv_size expected {f, f}"))
-            })?;
+            let (uv_ox, uv_oy): (f64, f64) = uv_offset_t
+                .decode()
+                .map_err(|_| NifError::Term(Box::new("sprite_raw: uv_offset expected {f, f}")))?;
+            let (uv_sx, uv_sy): (f64, f64) = uv_size_t
+                .decode()
+                .map_err(|_| NifError::Term(Box::new("sprite_raw: uv_size expected {f, f}")))?;
             let color = decode_color(color_t)?;
             Ok(DrawCommand::SpriteRaw {
                 x: x as f32,
@@ -289,6 +292,7 @@ fn decode_camera(term: Term) -> NifResult<CameraParams> {
         }
         // {:camera_3d, {eye_x, eye_y, eye_z}, {target_x, target_y, target_z}, {up_x, up_y, up_z}, {fov_deg, near, far}}
         "camera_3d" => {
+            #[allow(clippy::type_complexity)]
             let (_, eye, target, up, (fov_deg, near, far)): (
                 Atom,
                 (f64, f64, f64),
@@ -591,16 +595,18 @@ fn decode_ui_component(term: Term) -> NifResult<UiComponent> {
         // {:screen_flash, {r,g,b,a}}
         "screen_flash" => {
             let (_, color_t): (Atom, Term) = term.decode().map_err(|_| {
-                NifError::Term(Box::new("screen_flash: expected {:screen_flash, {r,g,b,a}}"))
+                NifError::Term(Box::new(
+                    "screen_flash: expected {:screen_flash, {r,g,b,a}}",
+                ))
             })?;
             let color = decode_color(color_t)?;
             Ok(UiComponent::ScreenFlash { color })
         }
         // {:spacing, amount}
         "spacing" => {
-            let (_, amount): (Atom, f64) = term.decode().map_err(|_| {
-                NifError::Term(Box::new("spacing: expected {:spacing, amount}"))
-            })?;
+            let (_, amount): (Atom, f64) = term
+                .decode()
+                .map_err(|_| NifError::Term(Box::new("spacing: expected {:spacing, amount}")))?;
             Ok(UiComponent::Spacing {
                 amount: amount as f32,
             })
