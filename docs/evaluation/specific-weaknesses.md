@@ -1,5 +1,7 @@
 # AlchemyEngine — マイナス点 詳細一覧
 
+> 最終更新: 2026-03-05（evaluation-2026-03-05 に基づく）
+
 ## 採点基準
 
 | 点数 | 基準 |
@@ -18,9 +20,9 @@
 
 - ~~**SceneManager がシングルトン（マルチルーム非対応）**~~ **解決済み**（scene-management-to-contents 移行により `Contents.SceneStack` に置換。`room_id` オプション対応の設計）
 
-- **GameEvents に BatLord 固有ロジックが漏出** `-2`
-  > エンジンコアである `GameEvents` の `handle_info` に `{:boss_dash_end, world_ref}` というBatLord固有のメッセージ処理が実装されている。実装ルールの「エンジンはディスパッチのみ行う」に違反しており、コンテンツを追加するたびにエンジンコアを変更するリスクがある。`BossComponent.on_physics_process` が `GameEvents` プロセスに `Process.send_after` しているため、構造的に回避が難しい状態になっている。
-  > 対象ファイル: `apps/core/lib/core/game_events.ex`（L180-187）
+- **boss_dash_end の専用 handle_info 節（汎用化の余地）** `-1`
+  > `Contents.GameEvents` の `handle_info({:boss_dash_end, _}, state)` は `dispatch_to_components(:on_engine_message, [msg, context])` を呼ぶ設計に改善済み。ロジックは `BossComponent.on_engine_message/2` に移っているが、新規エンジンメッセージ種別を追加するたびに `GameEvents` に専用節を追加する必要があり、完全な汎用化には至っていない。
+  > 対象ファイル: `apps/contents/lib/contents/game_events.ex`（L337-341）
 
 - **SaveManager の HMAC シークレットがデフォルト値でハードコード** `-2`
   > `hmac_secret/0` のデフォルト値 `"alchemy-engine-save-secret-v1"` がソースコードに公開されており、セーブデータの改ざん検証が実質的に無効化されている。本番環境で環境変数等で上書きしなければ全ユーザーのセーブデータが改ざん可能。強制機構がない。
@@ -58,9 +60,9 @@
 
 ### ❌ マイナス点
 
-- **network が実質スタブ（Elixir選択の最大の根拠が未証明）** `-4`
-  > `improvement-plan.md` の I-E で自己認識されているが、`network.ex` は実装なしのスタブ。「なぜElixir + Rustか」というプロジェクトの価値命題の核心（OTPによる分散・耐障害性）がコードで証明されていない。WebSocket・UDP・Localの3トランスポートは実装されているが、実際のマルチルーム分散シナリオ（複数ノード間のルーム移動・フェイルオーバー）が未実装。
-  > 対象ファイル: `apps/network/lib/network.ex`
+- **分散ノード間フェイルオーバーが未実装** `-3`
+  > `Network.Local`（272行）・`Network.Channel`・`Network.UDP` の3トランスポートは実装済みで、OTP 隔離テストも存在する。しかし複数 BEAM ノード間のルーム移動・`libcluster` によるクラスタリング・フェイルオーバーシナリオが未実装。「なぜ Elixir + Rust か」の分散面の証明が不十分。
+  > 対象ファイル: `apps/network/lib/network.ex`, `network/local.ex`
 
 - **WebSocket 認証・認可が未実装** `-3`
   > `channel.ex` の `join/3` でルームIDの存在確認のみを行い、認証・認可のロジックがない。誰でも任意のルームに参加できる状態。`save_manager.ex` の HMAC と同様、セキュリティ設計が未完成。
