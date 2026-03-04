@@ -88,7 +88,7 @@ Engine ← 物理・描画・NIF基盤（Rust）+ ゲームループ制御（Eli
 Content ← GameContent.VampireSurvivor（コンポーネント群）
 ```
 
-`config :game_server, :current, GameContent.VampireSurvivor` でコンテンツを指定する。
+`config :server, :current, Content.VampireSurvivor` でコンテンツを指定する。
 
 エンティティパラメータ（敵HP・武器クールダウン等）は `set_entity_params` NIF 経由で Rust に注入済み。
 ボスAI は Elixir 側コンポーネントで制御する。
@@ -195,7 +195,7 @@ Hub     ← コンテンツの一覧・選択・参加
 4. **`WorldBehaviour` / `RuleBehaviour` を `Component` に統合**（未着手）
    - `GameEngine.Component` ビヘイビアを新設
    - `GameContent.VampireSurvivor` をコンポーネント群として再構成
-   - `config :game_server, :current` キー一本に変更
+   - `config :server, :current` キー一本に変更
 
 5. **残存課題**（`pending-issues.md` 参照）
    - `GameWorldInner` の `weapon_slots`, `boss` フィールドの除去

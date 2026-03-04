@@ -1,4 +1,4 @@
-//! Path: native/game_nif/src/nif/util.rs
+//! Path: native/nif/src/nif/util.rs
 //! Summary: NIF 共通ユーティリティ（lock_poisoned_err）
 
 #[inline]

@@ -1,4 +1,4 @@
-//! Path: native/game_nif/src/nif/push_tick_nif.rs
+//! Path: native/nif/src/nif/push_tick_nif.rs
 //! Summary: Push 型同期 NIF（push_tick / physics_result delta）
 
 use super::util::lock_poisoned_err;

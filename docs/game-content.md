@@ -2,7 +2,7 @@
 
 ## 概要
 
-`game_content` アプリケーションは `ContentBehaviour` と `Component` ビヘイビアを実装したゲーム固有のコンテンツを提供します。現在は以下の 2 コンテンツが実装されています。
+`contents` アプリケーションは `ContentBehaviour` と `Component` ビヘイビアを実装したゲーム固有のコンテンツを提供します。現在は以下の 2 コンテンツが実装されています。
 
 | コンテンツ | モジュール | 説明 |
 |:---|:---|:---|
@@ -13,7 +13,7 @@
 
 ```elixir
 # GameContent.VampireSurvivor または GameContent.AsteroidArena
-config :game_server, :current, GameContent.VampireSurvivor
+config :server, :current, Content.VampireSurvivor
 ```
 
 ---

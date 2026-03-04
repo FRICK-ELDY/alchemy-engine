@@ -1,4 +1,4 @@
-//! Path: native/game_nif/src/nif/xr_nif.rs
+//! Path: native/nif/src/nif/xr_nif.rs
 //! Summary: XR 入力スレッド起動 NIF
 //!
 //! Elixir から VR 入力を有効にする際に呼ぶ。

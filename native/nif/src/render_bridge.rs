@@ -1,4 +1,4 @@
-//! Path: native/game_nif/src/render_bridge.rs
+//! Path: native/nif/src/render_bridge.rs
 //! Summary: render の RenderBridge 実装
 //!
 //! Phase R-2: RenderBridge::next_frame() が GameWorldInner を直接読む代わりに

@@ -1,4 +1,4 @@
-//! Path: native/game_nif/src/nif/load.rs
+//! Path: native/nif/src/nif/load.rs
 //! Summary: NIF ローダー（パニックフック・リソース登録・アトム事前登録）
 
 use crate::render_frame_buffer::RenderFrameBuffer;

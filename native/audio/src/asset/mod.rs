@@ -1,4 +1,4 @@
-//! Path: native/game_audio/src/asset/mod.rs
+//! Path: native/audio/src/asset/mod.rs
 //! Summary: アセット ID マッピング・実行時ロード・埋め込みフォールバック
 
 use std::path::Path;

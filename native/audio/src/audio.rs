@@ -1,4 +1,4 @@
-//! Path: native/game_audio/src/audio.rs
+//! Path: native/audio/src/audio.rs
 //! Summary: BGM・SE 管理（rodio）+ コマンド駆動オーディオスレッド
 //!
 //! 音声データは [AssetLoader](crate::asset::AssetLoader) 経由で取得すること（Single Source of Truth）。

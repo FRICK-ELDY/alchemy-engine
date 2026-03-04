@@ -1,4 +1,4 @@
-//! Path: native/game_input/src/desktop_loop.rs
+//! Path: native/input/src/desktop_loop.rs
 //! Summary: winit イベントループ・ウィンドウ生成・入力イベント処理
 //!
 //! render の Renderer を用いて描画するが、イベントループの所有権はここにある。

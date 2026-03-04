@@ -1,7 +1,7 @@
-//! Path: native/game_nif/src/render_frame_buffer.rs
+//! Path: native/nif/src/render_frame_buffer.rs
 //! Summary: Elixir から push された RenderFrame を保持するスレッドセーフバッファ。
 //!
-//! Phase R-2: render_snapshot.rs を廃止し、Elixir 側（game_content）が
+//! Phase R-2: render_snapshot.rs を廃止し、Elixir 側（contents）が
 //! DrawCommand リストを組み立てて push_render_frame NIF 経由でこのバッファに書き込む。
 //! RenderBridge::next_frame() はこのバッファから RenderFrame を取得する。
 

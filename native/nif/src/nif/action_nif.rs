@@ -1,4 +1,4 @@
-//! Path: native/game_nif/src/nif/action_nif.rs
+//! Path: native/nif/src/nif/action_nif.rs
 //! Summary: アクション NIF（set_weapon_slots, spawn_item, 汎用エンティティ操作 等）
 
 use super::util::{lock_poisoned_err, params_not_loaded_err};

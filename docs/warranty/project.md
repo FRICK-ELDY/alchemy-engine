@@ -10,23 +10,23 @@
 
 | フォルダ | 役割 | 保証するもの | 保証しないもの |
 |:---|:---|:---|:---|
-| **apps/game_engine/** | SSoT コアロジック・ECS 同期・空間分割・NIF ブリッジ | コンポーネントライフサイクル・Elixir↔Rust 状態同期の契約。`mix compile --warnings-as-errors` 通過。`mix test` で結合される NIF 呼び出しの動作 | すべての NIF 呼び出しパスの網羅。エッジケースの完全検証 |
-| **apps/game_content/** | ゲームの静的データ・アセット参照・コンテンツ定義 | コンテンツ登録・コンポーネント定義の一貫性。`mix test` で検証済みモジュールの動作 | 各コンテンツのゲームデザイン・バランス。未テストのコンポーネント |
-| **apps/game_network/** | クライアント間・サーバー間通信 (WebSocket, UDP) | チャネル・UDP プロトコルの基本的な動作。`mix test` で検証済み | 大規模同時接続。ネットワーク分断時の完全な整合性 |
-| **apps/game_server/** | サーバー起動・ヘッドレス管理 | アプリケーション起動・ルートプロセスの開始 | 起動後の長時間稼働。リソースリークの不在 |
+| **apps/core/** | SSoT コアロジック・ECS 同期・空間分割・NIF ブリッジ | コンポーネントライフサイクル・Elixir↔Rust 状態同期の契約。`mix compile --warnings-as-errors` 通過。`mix test` で結合される NIF 呼び出しの動作 | すべての NIF 呼び出しパスの網羅。エッジケースの完全検証 |
+| **apps/contents/** | ゲームの静的データ・アセット参照・コンテンツ定義 | コンテンツ登録・コンポーネント定義の一貫性。`mix test` で検証済みモジュールの動作 | 各コンテンツのゲームデザイン・バランス。未テストのコンポーネント |
+| **apps/network/** | クライアント間・サーバー間通信 (WebSocket, UDP) | チャネル・UDP プロトコルの基本的な動作。`mix test` で検証済み | 大規模同時接続。ネットワーク分断時の完全な整合性 |
+| **apps/server/** | サーバー起動・ヘッドレス管理 | アプリケーション起動・ルートプロセスの開始 | 起動後の長時間稼働。リソースリークの不在 |
 
 ### `native/` — Rust クレート
 
 | フォルダ | 役割 | 保証するもの | 保証しないもの |
 |:---|:---|:---|:---|
-| **native/game_physics/** | ECS World・物理演算・ゲームロジック・Dead Reckoning | `cargo test` で検証済みの物理・AI・空間ハッシュ・武器ロジック。`cargo bench` による性能回帰チェック (main のみ) | GPU 依存部分。描画・オーディオとの結合 |
-| **native/game_audio/** | オーディオスレッド・DSP・アセット再生 | コマンド受信・再生パイプラインの基本動作 | オーディオデバイス未装着環境。低遅延保証 |
-| **native/game_render/** | WGPU 描画・ウィンドウ・HUD | 描画パイプラインの構築・フレーム描画の流れ | headless 環境での動作。全 GPU での互換性 |
-| **native/game_nif/** | Elixir–Rust NIF 通信 | NIF 関数のエンコーディング・デコード。`mix test` 経由で結合検証 | 全 NIF 関数の個別ユニットテスト |
-| **native/game_input/** | デスクトップ入力・ウィンドウ | ウィンドウ・イベントループの基本動作 | 全入力デバイス・全 OS での同等挙動 |
-| **native/game_input_openxr/** | VR/XR 入力 | OpenXR 有効ビルド時の入力取得 | VR デバイス未接続時。全 OpenXR ランタイム |
+| **native/physics/** | ECS World・物理演算・ゲームロジック・Dead Reckoning | `cargo test` で検証済みの物理・AI・空間ハッシュ・武器ロジック。`cargo bench` による性能回帰チェック (main のみ) | GPU 依存部分。描画・オーディオとの結合 |
+| **native/audio/** | オーディオスレッド・DSP・アセット再生 | コマンド受信・再生パイプラインの基本動作 | オーディオデバイス未装着環境。低遅延保証 |
+| **native/render/** | WGPU 描画・ウィンドウ・HUD | 描画パイプラインの構築・フレーム描画の流れ | headless 環境での動作。全 GPU での互換性 |
+| **native/nif/** | Elixir–Rust NIF 通信 | NIF 関数のエンコーディング・デコード。`mix test` 経由で結合検証 | 全 NIF 関数の個別ユニットテスト |
+| **native/input/** | デスクトップ入力・ウィンドウ | ウィンドウ・イベントループの基本動作 | 全入力デバイス・全 OS での同等挙動 |
+| **native/input_openxr/** | VR/XR 入力 | OpenXR 有効ビルド時の入力取得 | VR デバイス未接続時。全 OpenXR ランタイム |
 
-> **補足**: CI の Rust ユニットテストは `game_physics` のみ実行。`game_render` / `game_audio` は GPU・音声デバイスが必要なため除外。`game_nif` は Elixir の `mix test` で結合的にカバー。
+> **補足**: CI の Rust ユニットテストは `physics` のみ実行。`render` / `audio` は GPU・音声デバイスが必要なため除外。`nif` は Elixir の `mix test` で結合的にカバー。
 
 ### その他
 
@@ -81,14 +81,14 @@
 
 | 対象 | 検証手段 | 保証の強さ |
 |:---|:---|:---|
-| `game_physics` (Rust) | `cargo test` | ユニットテストでロジックを検証 |
-| `game_physics` 性能 | `cargo bench` (main のみ) | 前回比 +10% 超の劣化をブロック |
+| `physics` (Rust) | `cargo test` | ユニットテストでロジックを検証 |
+| `physics` 性能 | `cargo bench` (main のみ) | 前回比 +10% 超の劣化をブロック |
 | Elixir ↔ NIF | `mix test` | 結合テストで NIF 呼び出しを検証 |
-| `game_content` コンポーネント | `mix test` | boss, spawn, level 等のモジュールテスト |
-| `game_network` | `mix test` | channel, local, udp のテスト |
-| `game_render` | なし | CI でユニットテスト未実行 |
-| `game_audio` | なし | CI でユニットテスト未実行 |
-| `game_input` / `game_input_openxr` | なし | CI でユニットテスト未実行 |
+| `contents` コンポーネント | `mix test` | boss, spawn, level 等のモジュールテスト |
+| `network` | `mix test` | channel, local, udp のテスト |
+| `render` | なし | CI でユニットテスト未実行 |
+| `audio` | なし | CI でユニットテスト未実行 |
+| `input` / `input_openxr` | なし | CI でユニットテスト未実行 |
 
 ---
 

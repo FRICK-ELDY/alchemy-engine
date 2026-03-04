@@ -32,7 +32,7 @@ graph TB
 
         subgraph Rust["Rust エンジン（エディタモード）"]
             ER[EditorRenderer<br/>オフスクリーン wgpu]
-            GC[game_core<br/>物理 / ECS]
+            GC[physics<br/>物理 / ECS]
         end
     end
 
@@ -163,9 +163,9 @@ Elixir binary
 ```
 alchemy-engine/
 ├── apps/
-│   ├── game_editor/                     # ← 新規追加
+│   ├── editor/                          # ← 新規追加
 │   │   ├── mix.exs
-│   │   └── lib/game_editor/
+│   │   └── lib/editor/
 │   │       ├── application.ex           # Supervisor
 │   │       ├── editor_server.ex         # シーン状態 SSoT GenServer
 │   │       ├── editor_live.ex           # Phoenix LiveView ルート
@@ -215,7 +215,7 @@ alchemy-engine/
 
 ### フェーズ 2：EditorServer と LiveView の骨格
 
-- `game_editor` アプリを Umbrella に追加
+- `editor` アプリを Umbrella に追加
 - `EditorServer` GenServer の実装（シーン状態の CRUD）
 - Phoenix LiveView でシーンツリーとプレビューの最小構成を表示
 

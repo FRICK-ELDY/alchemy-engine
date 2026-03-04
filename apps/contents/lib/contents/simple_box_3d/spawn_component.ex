@@ -9,7 +9,7 @@ defmodule Content.SimpleBox3D.SpawnComponent do
   @behaviour Core.Component
 
   # SimpleBox3D は Rust 物理エンジンを使わないが、エンジンループは常に動いている。
-  # game_physics の physics_step.rs が `clamp(0.0, map_width - PLAYER_SIZE)` を呼ぶため、
+  # physics の physics_step.rs が `clamp(0.0, map_width - PLAYER_SIZE)` を呼ぶため、
   # map_size < PLAYER_SIZE になるとパニックする（PLAYER_SIZE は Rust 側の定数で現在 64.0 px）。
   # この値は Rust 側の定数変更に追従できないため、将来的には NIF 経由で定数を取得するか
   # Rust 側でフォールバック処理を追加することが望ましい（残課題）。

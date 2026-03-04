@@ -1,4 +1,4 @@
-//! Path: native/game_nif/src/lib.rs
+//! Path: native/nif/src/lib.rs
 //! Summary: NIF エントリ・モジュール宣言・rustler::init のみ
 
 rustler::atoms! {
