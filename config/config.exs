@@ -16,12 +16,12 @@ config :network, :json_library, Jason
 config :network, Network.UDP, port: 4001
 
 # ── 使用するコンテンツを指定する。
-# GameContent.VampireSurvivor — ヴァンパイアサバイバークローン
-# GameContent.AsteroidArena   — 小惑星シューター（武器・ボスなし）
-# GameContent.SimpleBox3D     — シンプルな3Dゲーム（Phase R-6 動作検証用）
-# GameContent.BulletHell3D    — 3D 弾幕避けゲーム
-# GameContent.VRTest          — VR 動作検証（Phase A: マウスで見回し）
-config :server, :current, GameContent.SimpleBox3D
+# Content.VampireSurvivor — ヴァンパイアサバイバークローン
+# Content.AsteroidArena   — 小惑星シューター（武器・ボスなし）
+# Content.SimpleBox3D     — シンプルな3Dゲーム（Phase R-6 動作検証用）
+# Content.BulletHell3D    — 3D 弾幕避けゲーム
+# Content.VRTest          — VR 動作検証（Phase A: マウスで見回し）
+config :server, :current, Content.SimpleBox3D
 config :server, :map, :plain
 
 # セーブデータの HMAC 署名鍵（デフォルト値）。
