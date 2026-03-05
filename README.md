@@ -92,7 +92,7 @@ flowchart TB
 | Elixir コンパイル | `mix compile --warnings-as-errors` | 警告ゼロ |
 | Elixir 統合テスト | `mix test`（NIF ビルド込み） | Elixir/Rust 結合の動作保証 |
 
-すべての push で GitHub Actions が自動実行されます。詳細は [docs/ci.md](./docs/ci.md) を参照。
+すべての push で GitHub Actions が自動実行されます。詳細は [docs/warranty/ci.md](./docs/warranty/ci.md) を参照。
 
 ---
 

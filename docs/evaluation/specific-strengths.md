@@ -214,7 +214,7 @@
 
 - **pending-issues.md による課題の一元管理** `+3`
   > 未解決課題9件が番号・優先度・影響ファイル・作業ステップ付きで `pending-issues.md` に一元管理されており、コード内のTODOが2件のみ。技術的負債の把握と管理が行き届いている。
-  > 対象ファイル: `docs/pending-issues.md`
+  > 対象ファイル: `docs/plan/pending-issues.md`
 
 ---
 
@@ -241,7 +241,7 @@
 ### ✅ プラス点
 
 - **ドキュメントの品質・網羅性・コードとの一致度** `+5`
-  > `vision.md`（175行）・`architecture-overview.md`（303行）・`elixir-layer.md`（434行）・`rust-layer.md`（563行）・`data-flow.md`（306行）・`game-content.md`（418行）の6ドキュメントが全てMermaidダイアグラム付きで充実しており、コードとの一致度が高い。個人プロジェクトのドキュメント品質としては突出している。
+  > `vision.md`・`docs/architecture/`（overview、elixir/server・core・contents・network・contents/vampire_survivor・asteroid_arena、rust/nif・physics・render・audio・input_openxr）が全て Mermaid ダイアグラム付きで充実しており、コードとの一致度が高い。個人プロジェクトのドキュメント品質としては突出している。
   > 対象ファイル: `docs/`
 
 - **vision.md による設計哲学の明文化** `+4`
@@ -250,4 +250,4 @@
 
 - **improvement-plan.md による自己評価サイクル** `+3`
   > スコアカード（各カテゴリ 1〜10点）と未解決課題の優先順位が `improvement-plan.md` に記録されており、自己改善サイクルが機能している。完了済みタスクの取り消し線による進捗管理も明確。
-  > 対象ファイル: `docs/task/improvement-plan.md`
+  > 対象ファイル: `docs/plan/improvement-plan.md`

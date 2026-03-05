@@ -227,7 +227,7 @@
 
 **方針:** 「あらゆる概念を contents に寄せる」。SceneManager / SceneBehaviour を core から contents へ移行する。
 
-**参照:** 残課題・改善候補は [improvement-plan.md](../improvement-plan.md) の「残課題（シーン管理 → contents 移行タスクより）」に統合済み。
+**参照:** 残課題・改善候補は [improvement-plan.md](../plan/improvement-plan.md) の「残課題（シーン管理 → contents 移行タスクより）」に統合済み。
 
 **状況:** Phase 1〜6 完了。`Core.SceneManager`・`Core.SceneBehaviour` を削除し、`Contents.SceneStack`・`Contents.SceneBehaviour` に移行済み。
 
@@ -237,7 +237,7 @@
 
 **方針:** オプション B（責務分離）を採用。contents に `Contents.GameEvents` / `Contents.GameEvents.Diagnostics` を移行。core の責務を「ループ制御・イベント受信・ContentBehaviour インターフェース」に限定。BatLord 固有ロジックは `on_engine_message/2` 汎用ディスパッチに置き換え済み。
 
-**未解決事項・確認ポイント:** [improvement-plan.md](../improvement-plan.md) の「GameEvents → contents 移行タスクより」を参照。
+**未解決事項・確認ポイント:** [improvement-plan.md](../plan/improvement-plan.md) の「GameEvents → contents 移行タスクより」を参照。
 
 ---
 

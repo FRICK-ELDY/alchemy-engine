@@ -124,82 +124,14 @@ alchemy-engine/
 │   ├── Cargo.lock
 │   │
 │   ├── physics/                  # 物理演算・ECS（依存: rustc-hash / rayon / log）
-│   │   └── src/
-│   │       ├── lib.rs
-│   │       ├── constants.rs         # 画面定数（スクリーンサイズ等）
-│   │       ├── entity_params.rs     # EntityParamTables（NIF で外部注入）
-│   │       ├── enemy.rs             # EnemyKind enum
-│   │       ├── weapon.rs            # WeaponSlot（クールダウン管理）
-│   │       ├── boss.rs              # BossState
-│   │       ├── item.rs              # ItemKind / ItemWorld SoA
-│   │       ├── util.rs              # ユーティリティ
-│   │       ├── physics/
-│   │       │   ├── rng.rs           # LCG 乱数（決定論的）
-│   │       │   ├── spatial_hash.rs  # FxHashMap ベース空間ハッシュ
-│   │       │   ├── separation.rs    # 敵分離アルゴリズム
-│   │       │   └── obstacle_resolve.rs # 障害物押し出し
-│   │       ├── world/
-│   │       │   ├── mod.rs           # world モジュール再エクスポート
-│   │       │   ├── game_world.rs    # GameWorld / GameWorldInner
-│   │       │   ├── player.rs        # PlayerState
-│   │       │   ├── enemy.rs         # EnemyWorld SoA
-│   │       │   ├── bullet.rs        # BulletWorld SoA
-│   │       │   ├── particle.rs      # ParticleWorld SoA
-│   │       │   ├── boss.rs          # BossState
-│   │       │   ├── game_loop_control.rs # AtomicBool pause/resume
-│   │       │   └── frame_event.rs   # FrameEvent enum
-│   │       └── game_logic/
-│   │           ├── mod.rs
-│   │           ├── physics_step.rs  # 1 フレーム物理ステップ
-│   │           ├── chase_ai.rs      # SSE2 SIMD / rayon 並列 AI
-│   │           └── systems/
-│   │               ├── mod.rs
-│   │               ├── weapons.rs   # 武器発射ロジック（FirePattern 対応）
-│   │               ├── projectiles.rs # 弾丸移動・衝突・ドロップ
-│   │               ├── boss.rs      # ボス物理（AI は Elixir 側）
-│   │               ├── effects.rs   # パーティクル更新
-│   │               ├── items.rs     # アイテム収集
-│   │               ├── collision.rs # 敵 vs 障害物押し出し
-│   │               └── spawn.rs     # スポーン位置生成
-│   │
 │   ├── nif/                         # NIF 通信インターフェース・ゲームループ
-│   │   └── src/
-│   │       ├── lib.rs               # Rustler エントリポイント・アトム定義
-│   │       ├── nif/
-│   │       │   ├── mod.rs
-│   │       │   ├── load.rs          # パニックフック・リソース登録
-│   │       │   ├── world_nif.rs     # ワールド生成・入力・スポーン・パラメータ注入
-│   │       │   ├── action_nif.rs    # 武器スロット・ボス操作・HUD 状態注入
-│   │       │   ├── read_nif.rs      # 状態読み取り（軽量クエリ）
-│   │       │   ├── game_loop_nif.rs # ゲームループ制御
-│   │       │   ├── push_tick_nif.rs # Elixir プッシュ型同期
-│   │       │   ├── render_nif.rs    # レンダースレッド起動
-│   │       │   ├── save_nif.rs      # セーブ/ロードスナップショット
-│   │       │   ├── events.rs        # FrameEvent → Elixir アトム変換
-│   │       │   └── util.rs          # 共通ユーティリティ
-│   │       ├── render_bridge.rs     # RenderBridge 実装
-│   │       ├── render_snapshot.rs   # RenderFrame 構築・補間
-│   │       └── lock_metrics.rs      # RwLock 待機時間メトリクス
-│   │
 │   ├── audio/                       # rodio オーディオ管理
-│   │   └── src/
-│   │       ├── lib.rs
-│   │       ├── audio.rs             # AudioManager・コマンドループ
-│   │       └── asset/mod.rs         # アセット管理
-│   │
-│   └── render/                      # wgpu 描画パイプライン
-│       └── src/
-│           ├── lib.rs               # 公開型（RenderFrame / HudData）
-│           ├── window.rs            # winit ウィンドウ管理・イベントループ
-│           ├── headless.rs          # ヘッドレスモード（CI / テスト用）
-│           └── renderer/
-│               ├── mod.rs           # Renderer 構造体（wgpu 初期化・描画）
-│               └── ui.rs            # egui HUD
+│   ├── render/                      # wgpu 描画パイプライン
+│   ├── input/                       # デスクトップ入力・winit イベントループ（render に依存）
+│   └── input_openxr/                # OpenXR 入力ブリッジ（VR）
 │
 ├── assets/                          # スプライト・音声アセット
 └── saves/                           # セーブデータ
-    ├── session.dat                  # セッションデータ（Erlang term binary）
-    └── high_scores.dat              # ハイスコア上位 10 件
 ```
 
 ---
@@ -291,12 +223,303 @@ graph LR
 
 ---
 
+# データフロー・通信
+
+## 起動シーケンス
+
+```mermaid
+sequenceDiagram
+    participant MX as mix run
+    participant APP as GameServer.Application
+    participant RS as RoomSupervisor
+    participant GEV as GameEvents
+    participant NIF as NifBridge (nif)
+    participant COMP as Component 群（on_ready）
+
+    MX->>APP: start/2
+    APP->>APP: Registry / Contents.SceneStack / InputHandler / EventBus 起動
+    APP->>RS: RoomSupervisor 起動
+    APP->>APP: StressMonitor / Stats / Telemetry 起動
+    APP->>RS: start_room(:main)
+    RS->>GEV: GameEvents 起動（:main ルーム）
+    GEV->>NIF: create_world()
+    NIF-->>GEV: GameWorld リソース
+    GEV->>COMP: on_ready(world_ref) × コンポーネント数
+    Note over COMP: set_world_size / set_entity_params NIF を呼び出す
+    GEV->>NIF: set_map_obstacles(world_ref, obstacles)
+    GEV->>NIF: create_game_loop_control()
+    GEV->>NIF: start_rust_game_loop(world_ref, control_ref, self())
+    GEV->>NIF: start_render_thread(world_ref, self())
+    Note over NIF: Rust 60Hz ループ開始
+```
+
+---
+
+## メインゲームループ（定常状態）
+
+### Rust 側（60Hz 固定ループ）
+
+```mermaid
+flowchart TD
+    LOOP[Rust ゲームループスレッド 60Hz]
+    PS[physics_step]
+    PM[プレイヤー移動]
+    OB[障害物押し出し]
+    AI[Chase AI\nSSE2 SIMD / rayon]
+    SEP[敵分離]
+    COL[衝突判定]
+    WEP[武器攻撃]
+    PAR[パーティクル更新]
+    ITEM[アイテム更新]
+    BUL[弾丸更新]
+    BOSS[ボス物理]
+    DFE[drain_frame_events]
+    SEND["send {:frame_events, [...]}"]
+    GEV[Elixir Contents.GameEvents プロセス]
+
+    LOOP --> PS
+    PS --> PM --> OB --> AI --> SEP --> COL --> WEP --> PAR --> ITEM --> BUL --> BOSS
+    LOOP --> DFE --> SEND --> GEV
+```
+
+### Elixir 側（イベント駆動）
+
+```mermaid
+flowchart TD
+    GEV[Contents.GameEvents GenServer\nhandle_info :frame_events]
+    EK[EnemyKilled]
+    PD[PlayerDamaged]
+    SE[SpecialEntitySpawned\nSpecialEntityDamaged\nSpecialEntityDefeated]
+    IP[ItemPickup]
+    PER[60フレームごと]
+
+    COMP[Component 群\non_frame_event/2\non_physics_process/1\non_nif_sync/1]
+    EB[EventBus.broadcast]
+    ST[Stats.record]
+    LOG[Logger.debug\nFPS・敵数]
+    TEL[:telemetry.execute]
+    FC[FrameCache.put]
+
+    GEV --> EK --> COMP
+    GEV --> PD --> COMP
+    GEV --> SE --> COMP
+    GEV --> IP --> EB --> ST
+    GEV --> PER --> LOG
+    PER --> TEL
+    PER --> FC
+```
+
+**フレーム処理の順序（毎フレーム）:**
+
+1. `on_frame_event/2` — 全コンポーネントにフレームイベントを配信（スコア・HP・ボス HP 更新）
+2. `Scene.update/2` — シーン遷移判断
+3. `on_physics_process/1` — ボス AI 等の物理コールバック（NIF 書き込みを含む）
+4. `on_nif_sync/1` — Elixir state を Rust 側に差分注入
+
+---
+
+## レンダリングスレッド（非同期）
+
+```mermaid
+sequenceDiagram
+    participant W as winit EventLoop
+    participant GW as GameWorld
+    participant R as Renderer
+    participant GPU as GPU
+
+    loop RedrawRequested（VSync）
+        W->>GW: next_frame()
+        Note over GW: read lock 取得
+        GW->>GW: 最小データをコピー
+        Note over GW: read lock 解放（最小化）
+        GW->>GW: 補間計算（ロック外）<br/>alpha = (now - prev) / (curr - prev)<br/>player_pos = lerp(prev, curr, alpha)
+        GW-->>W: RenderFrame
+        W->>R: update_instances(frame)
+        R->>GPU: インスタンスバッファ更新
+        W->>R: render()
+        R->>GPU: スプライトパス
+        R->>GPU: egui HUD パス
+        W->>GW: on_ui_action(pending_action)
+        Note over GW: write lock で UI アクションをキュー
+    end
+```
+
+---
+
+## ユーザー入力フロー
+
+### キーボード入力（移動）
+
+```mermaid
+flowchart LR
+    KI[winit KeyboardInput]
+    VEC["移動ベクトル計算\n斜め正規化"]
+    OMI["GameWorld.on_move_input(dx, dy)\nRenderBridge / write lock"]
+    PI["GameWorldInner\nplayer_input = [dx, dy]"]
+    PS[次の physics_step で消費\nプレイヤー移動計算]
+
+    KI -->|WASD / 矢印キー| VEC --> OMI --> PI --> PS
+```
+
+### UI アクション（武器選択・セーブ等）
+
+```mermaid
+flowchart TD
+    UI[egui ボタン / キー入力]
+    OUA["GameWorld.on_ui_action(action)\nMutex pending_action"]
+    Q[on_ui_action キュー]
+    SEND["Elixir プロセスに send\nRedrawRequested 末尾で取り出し"]
+    GEV["Contents.GameEvents.handle_info\n{:ui_action, action}"]
+    W1["Component.on_event/2\n:select_weapon_1/2/3 等"]
+    W2["SaveManager.save_session()\n:__save__"]
+    W3["SaveManager.load_session()\n→ NifBridge.load_save_snapshot()\n:__load__"]
+
+    UI --> OUA --> Q --> SEND --> GEV
+    GEV --> W1
+    GEV --> W2
+    GEV --> W3
+```
+
+---
+
+## NIF 通信詳細
+
+### RwLock 競合戦略
+
+```mermaid
+graph TD
+    GW["GameWorld\n(RwLock&lt;GameWorldInner&gt;)"]
+
+    subgraph RL["read lock（複数スレッド同時取得可）"]
+        R1[レンダースレッド\nnext_frame]
+        R2[Elixir query_light 系 NIF]
+    end
+
+    subgraph WL["write lock（排他・1スレッドのみ）"]
+        W1[ゲームループスレッド\nphysics_step]
+        W2[Elixir control 系 NIF\nspawn_enemies 等]
+        W3[UI アクション\non_ui_action]
+    end
+
+    GW --> RL
+    GW --> WL
+```
+
+**競合監視（`lock_metrics.rs`）:**
+- read lock 待機 > 300μs → `log::warn!`
+- write lock 待機 > 500μs → `log::warn!`
+- 5 秒ごとに平均待機時間をレポート
+
+### NIF 関数カテゴリ別ロック種別
+
+| カテゴリ | 代表関数 | ロック | 呼び出し頻度 |
+|:---|:---|:---|:---|
+| control | `create_world`, `spawn_enemies`, `set_entity_params` | write | 低（起動時・イベント時） |
+| inject | `set_hud_state`, `set_hud_level_state`, `set_boss_velocity`, `set_weapon_slots` | write | 高（毎フレーム） |
+| query_light | `get_player_hp`, `get_enemy_count`, `get_boss_state` | read | 高（毎フレーム可） |
+| snapshot_heavy | `get_save_snapshot`, `load_save_snapshot` | write | 低（明示操作時） |
+| game_loop | `physics_step`, `drain_frame_events` | write | 高（60Hz） |
+
+---
+
+## イベントバス（Elixir 内）
+
+```mermaid
+graph LR
+    EB[EventBus GenServer]
+    SUB["subscribe(pid)\nProcess.monitor で死活監視"]
+    BC["broadcast(event)"]
+    ST[Stats GenServer\n統計集計]
+    GN["GameNetwork\n外部配信等"]
+    DOWN[":DOWN メッセージ\n→ 自動購読解除"]
+
+    EB --> SUB
+    EB --> BC
+    BC --> ST
+    BC -.->| | GN
+    SUB -->|死亡検知| DOWN
+```
+
+サブスクライバーが死亡した場合、`{:DOWN, ...}` メッセージで自動的に購読解除されます。
+
+---
+
+## セーブ/ロードフロー
+
+### セーブ
+
+```mermaid
+sequenceDiagram
+    participant SM as SaveManager
+    participant NIF as NifBridge (nif)
+    participant FS as ファイルシステム
+
+    SM->>NIF: get_save_snapshot(world)
+    Note over NIF: read lock → SaveSnapshot 生成
+    NIF-->>SM: SaveSnapshot (NifMap)
+    SM->>SM: :erlang.term_to_binary(snapshot)
+    SM->>FS: File.write("saves/session.dat")
+```
+
+### ロード
+
+```mermaid
+sequenceDiagram
+    participant SM as SaveManager
+    participant NIF as NifBridge (nif)
+    participant FS as ファイルシステム
+
+    SM->>FS: File.read("saves/session.dat")
+    FS-->>SM: binary
+    SM->>SM: :erlang.binary_to_term(binary)
+    SM->>NIF: load_save_snapshot(world, snapshot)
+    Note over NIF: write lock → ワールド状態を復元
+```
+
+### ハイスコア
+
+```mermaid
+flowchart LR
+    SHS["save_high_score(score)"]
+    LHS["load_high_scores()\n既存リスト取得"]
+    SORT["[score | list]\n|> sort(:desc)\n|> take(10)"]
+    FW["File.write\nsaves/high_scores.dat"]
+
+    SHS --> LHS --> SORT --> FW
+```
+
+---
+
+## スレッドモデル
+
+```mermaid
+graph TB
+    subgraph BEAM["Elixir BEAM VM"]
+        GEV[Contents.GameEvents\nGenServer]
+        SS[Contents.SceneStack\nGenServer]
+        EVB[EventBus\nGenServer]
+        STS[Stats\nGenServer]
+    end
+
+    BEAM <-->|NIF Rustler| GW
+
+    subgraph RUST["Rust スレッド群（nif / physics / render / audio）"]
+        GL[ゲームループスレッド\n60Hz physics\nnif]
+        RT[レンダースレッド\nwinit EventLoop\nrender]
+        AT[オーディオスレッド\nrodio / コマンド\naudio]
+        GW["GameWorld\n(RwLock&lt;GameWorldInner&gt;)\nphysics"]
+
+        GL <-->|write lock| GW
+        RT <-->|read lock| GW
+    end
+```
+
+---
+
 ## 関連ドキュメント
 
-- [**ビジョンと設計思想**](./vision.md) ← エンジン・ワールド・ルール・ゲームの定義
-- [Elixir レイヤー詳細](./elixir-layer.md)
-- [Rust レイヤー詳細](./rust-layer.md)
-- [データフロー・通信](./data-flow.md)
-- [ゲームコンテンツ詳細](./game-content.md)
-- [ビジュアルエディタ アーキテクチャ](./visual-editor-architecture.md)
-- [改善計画](./improvement-plan.md) ← 既知の弱点と改善方針
+- [**ビジョンと設計思想**](../vision.md) ← エンジン・ワールド・ルール・ゲームの定義
+- **Elixir レイヤー**: [server](./elixir/server.md) / [core](./elixir/core.md) / [contents](./elixir/contents.md)（ゲームコンテンツ一覧・設計パターン含む）/ [network](./elixir/network.md)
+- **Rust レイヤー**: [nif](./rust/nif.md) / [physics](./rust/physics.md) / [render](./rust/render.md) / [audio](./rust/audio.md) / [input_openxr](./rust/input_openxr.md)
+- [ビジュアルエディタ アーキテクチャ](../plan/visual-editor-architecture.md)
+- [改善計画](../plan/improvement-plan.md) ← 既知の弱点と改善方針

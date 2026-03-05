@@ -253,4 +253,4 @@ Rust → Elixir:
 - [ProtoFlux:DataModelStore](https://wiki.resonite.com/ProtoFlux:DataModelStore)
 - [ProtoFlux:Add](https://wiki.resonite.com/ProtoFlux:Add)
 - [game-world-inner-flow.md](./game-world-inner-flow.md)
-- [pending-issues.md](../pending-issues.md) 課題19
+- [pending-issues.md](./pending-issues.md) 課題19
