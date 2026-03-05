@@ -1,6 +1,6 @@
 # AlchemyEngine — マイナス点 詳細一覧
 
-> 最終更新: 2026-03-05（evaluation-2026-03-05 に基づく）
+> 最終更新: 2026-03-06（evaluation-2026-03-06 に基づく）
 
 ## 採点基準
 
@@ -28,9 +28,9 @@
   > `hmac_secret/0` のデフォルト値 `"alchemy-engine-save-secret-v1"` がソースコードに公開されており、セーブデータの改ざん検証が実質的に無効化されている。本番環境で環境変数等で上書きしなければ全ユーザーのセーブデータが改ざん可能。強制機構がない。
   > 対象ファイル: `apps/core/lib/core/save_manager.ex`（L162）
 
-- **Contents.SceneStack・GameEvents・EventBus・SaveManager のテストがゼロ** `-4`
-  > エンジンコアの中核モジュール群（`Contents.SceneStack`・`GameEvents`・`EventBus`・`SaveManager`・`StressMonitor`・`Stats`）に対するテストが一切存在しない。`improvement-plan.md` でも自己認識されているが、エンジンコアのリグレッションを検出する手段がなく、リファクタリングの安全網がない。（※ `Core.SceneManager` は `Contents.SceneStack` に移行済み）
-  > 対象ファイル: `apps/core/test/`（存在しない）
+- **Contents.SceneStack・GameEvents のテストがゼロ** `-3`
+  > `EventBus` と `SaveManager` には `event_bus_test.exs`・`save_manager_test.exs` が追加され改善済み。一方、`Contents.SceneStack` と `Contents.GameEvents` に対するテストは依然として存在しない。シーン遷移・フレームループの中核ロジックが未検証で、リファクタリングの安全網が不足している。
+  > 対象ファイル: `apps/core/test/core/`, `apps/contents/test/`
 
 ---
 
@@ -74,21 +74,17 @@
 
 ### ❌ マイナス点
 
-- **bench/chase_ai_bench.rs のクレート名不一致（コンパイル不可）** `-3`
-  > ベンチマークが `game_simulation` クレートをインポートしているが、`Cargo.toml` のパッケージ名は `physics`。ベンチマークがコンパイルできない状態であり、`bench-regression` CIジョブが実際には機能していない可能性がある。
-  > 対象ファイル: `native/physics/benches/chase_ai_bench.rs`（L5-8）
+- ~~**bench/chase_ai_bench.rs のクレート名不一致（コンパイル不可）**~~ **解決済み**
+  > `chase_ai_bench.rs` が `physics::` を正しく参照するよう修正済み。
 
-- **spawn_elite_enemy の脆弱なスロット特定ロジック** `-3`
-  > `spawn` が `free_list` を使ってスロットを再利用する場合、`before_len..after_len` の範囲外のスロットが使われる。`i >= before_len` の条件では `free_list` 再利用スロットを捕捉できず、同じ `kind_id` の既存エネミーが `base_max_hp` と同じ HP を持つ場合、誤って既存エネミーの HP を変更する可能性がある。
-  > 対象ファイル: `native/nif/src/nif/action_nif.rs`（L182-194）
+- ~~**spawn_elite_enemy の脆弱なスロット特定ロジック**~~ **解決済み**
+  > `EnemyWorld::spawn` が `Vec<usize>`（使用したスロットインデックス）を返すようになり、`action_nif.rs` は `let used = w.enemies.spawn(...)` で取得したインデックスを直接使用。free_list 再利用スロットの誤特定リスクが解消された。
 
-- **FrameEvent::PlayerDamaged の固定小数点変換でu32オーバーフローリスク** `-2`
-  > `(damage * 1000.0) as u32` キャストで `damage` が大きい場合（ボスの接触ダメージ等）に `u32` オーバーフローが発生する。Rustの `as u32` キャストは飽和変換ではなく切り捨て変換のため、意図しない結果になる。`(damage * 1000.0).min(u32::MAX as f32) as u32` が安全。
-  > 対象ファイル: `native/nif/src/nif/events.rs`（L21）
+- ~~**FrameEvent::PlayerDamaged の固定小数点変換でu32オーバーフローリスク**~~ **解決済み**
+  > `(damage * 1000.0).clamp(0.0, u32::MAX as f32) as u32` でオーバーフロー防止が実装済み。`SpecialEntityDamaged` も同様に clamp 済み。
 
-- **#[cfg(target_arch = "x86_64")] の pub use 漏れ（非x86_64でリンクエラー）** `-2`
-  > `game_logic/mod.rs` で `update_chase_ai_simd` が非 x86_64 環境でも `pub use` でエクスポートされているが、実際の定義は `#[cfg(target_arch = "x86_64")]` で条件付きのため、ARM/WASM でコンパイルするとリンクエラーになる。
-  > 対象ファイル: `native/physics/src/game_logic/mod.rs`（L9）
+- ~~**#[cfg(target_arch = "x86_64")] の pub use 漏れ（非x86_64でリンクエラー）**~~ **解決済み**
+  > `mod.rs` の `pub use chase_ai::update_chase_ai_simd` に `#[cfg(target_arch = "x86_64")]` が付与され、非 x86_64 環境ではエクスポートされない設計になった。
 
 ---
 
@@ -160,9 +156,8 @@
 
 ### ❌ マイナス点
 
-- **bin/ci.bat がエラーゼロで通過しない（README の保証と矛盾）** `-4`
-  > 評価ルールの DX 原則「ローカル CI として `bin\ci.bat` が **エラーゼロで通過すること** を前提とする」に違反。現状: cargo fmt が複数ファイルで差分検出、cargo clippy が input_openxr（未使用変数・不要な mut）および render（too many arguments・needless_range_loop）で失敗。README の「品質保証」セクションで「cargo fmt / cargo clippy が PASS」と謳いながら、実際には CI が通らない状態。プロジェクトの信頼性を損なう。
-  > 対象ファイル: `bin/ci.bat`, `README.md`, `native/input_openxr/src/lib.rs`, `native/render/`
+- ~~**bin/ci.bat がエラーゼロで通過しない（README の保証と矛盾）**~~ **解決済み**
+  > ローカル環境で `bin\ci.bat` がエラーゼロで通過することを確認済み。README の品質保証と実態が一致している。
 
 - **CI の pull_request トリガーが未設定** `-2`
   > `.github/workflows/ci.yml` が `push` イベントのみをトリガーとしており、`pull_request:` イベントが未設定。PRへの自動チェックが走らず、PRマージ前の品質保証が機能しない。

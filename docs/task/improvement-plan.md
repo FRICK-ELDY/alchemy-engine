@@ -1,35 +1,55 @@
 # AlchemyEngine — 改善提案書
 
-> 最終更新: 2026-03-05  
-> 前回評価スコア: +80点（2026-03-05 evaluation）
+> 最終更新: 2026-03-06  
+> 前回評価スコア: +102点（2026-03-06 evaluation、前回 +80 → +22 改善）
 
 ---
 
 ## スコアカード
 
-| カテゴリ | 前回 | 現在 |
+| カテゴリ | 2026-03-05 | 2026-03-06 |
 |:---|:---:|:---:|
 | Rust 物理演算・SoA 設計 | 9/10 | 9/10 |
 | Rust SIMD 最適化 | 9/10 | 9/10 |
 | Rust 並行性設計 | 8/10 | 8/10 |
-| Rust 安全性 | 8/10 | 7/10 ↓ |
+| Rust 安全性 | 7/10 | 8/10 ↑ |
+| Rust プラットフォーム対応 | — | 8/10 |
 | Elixir OTP 設計 | 8/10 | 8/10 |
 | Elixir 耐障害性 | 6/10 | 6/10 |
-| Elixir 並行性・分散 | 1/10 | 1/10 |
-| Elixir ビヘイビア活用 | 7/10 | 8/10 ↑ |
+| Elixir 並行性・分散 | 1/10 | 2/10 ↑ |
+| Elixir ビヘイビア活用 | 8/10 | 8/10 |
 | アーキテクチャ（ビジョン一致度） | 7/10 | 7/10 |
-| テスト | 6/10 | 5/10 ↓ |
-| セキュリティ | — | 3/10 |
-| 開発者体験（DX） | 7/10 | 5/10 ↓ |
-| **総合** | **7/10** | **6/10** ↓ |
+| テスト | 5/10 | 6/10 ↑ |
+| セキュリティ | 3/10 | 3/10 |
+| 開発者体験（DX） | 5/10 | 6/10 ↑ |
+| **総合** | **6/10** | **7/10** ↑ |
 
-> DX が 7→5 に低下: `bin/ci.bat` が cargo fmt / cargo clippy で失敗し、評価ルールの「エラーゼロで通過」前提に違反。README の品質保証記述と実態が乖離。  
-> Rust 安全性 8→7: `spawn_elite_enemy`・`FrameEvent::PlayerDamaged` オーバーフロー。  
-> テスト 6→5: `nif`・`render`・`audio` の Rust テストがゼロ。
+> **改善済み（2026-03-06）**:  
+> - Rust 安全性: `spawn_elite_enemy` の spawn 返却値使用・`PlayerDamaged` の clamp 実装  
+> - テスト: EventBus・SaveManager のテスト追加、chase_ai_bench クレート参照修正  
+> - 並行性・分散: Network.DistributedTest による移行シナリオ検証  
+> - DX: bin/ci.bat のローカルエラーゼロ通過を確認済み  
+> - Rust プラットフォーム: `update_chase_ai_simd` の pub use に `#[cfg(target_arch = "x86_64")]` 付与（非 x86_64 でリンクエラー回避）
+> **残課題**: SceneStack・GameEvents のテスト、pull_request トリガー
 
 ---
 
 ## 未解決課題
+
+### I-F: Contents.SceneStack・GameEvents のテスト整備（優先度: 高）
+
+**問題:** シーン遷移・フレームループの中核ロジック（`Contents.SceneStack`・`Contents.GameEvents`）に対するテストが存在しない。リファクタリングの安全網が不足している。
+
+**影響ファイル:**
+- `apps/contents/lib/contents/scene_stack.ex`
+- `apps/contents/lib/contents/game_events.ex`
+
+**作業ステップ:**
+1. `NifBridgeMock`（Mox）を使い NIF 依存なしに `SceneStack` のシーン遷移をテストする
+2. `GameEvents` のフレームループ・バックプレッシャー設計をユニットテストで検証する
+3. `async: true` が使える範囲で並列実行可能なテストに設計する
+
+---
 
 ### I-M: renderer/mod.rs のゲーム固有パラメータを contents へ移行（優先度: 中）
 

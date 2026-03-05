@@ -1,6 +1,6 @@
 # AlchemyEngine — 提案（0点）詳細一覧
 
-> 最終更新: 2026-03-05（evaluation-2026-03-05 に基づく）
+> 最終更新: 2026-03-06（evaluation-2026-03-06 に基づく）
 
 ## 採点基準
 
@@ -109,7 +109,7 @@
 ### 💡 提案
 
 - **bin/ci.bat の完全通過を最優先で達成する** `0`
-  > `cargo fmt` で全対象ファイルをフォーマットし、`cargo clippy -D warnings` を通過させる。具体的には: input_openxr の未使用変数・不要な mut を修正、render の多引数関数を構造体に集約、needless_range_loop を iterator に置き換え。chase_ai_bench.rs の `game_simulation` を `physics` に修正し、cargo bench がコンパイルできる状態にする。README の保証と実態を一致させる。
+  > `cargo fmt` で全対象ファイルをフォーマットし、`cargo clippy -D warnings` を通過させる。chase_ai_bench.rs の `physics` 参照は修正済み。README の保証と実態を一致させ、ローカル環境で `bin\ci.bat` がエラーゼロで通過することを確認する。
 
 ---
 
