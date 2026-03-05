@@ -1,12 +1,18 @@
 defmodule Content.VampireSurvivor.Scenes.BossAlert do
   @moduledoc """
-  ボス出現警告シーン。一定時間後にボスをスポーンして Playing に戻る。
+  ボス出現警告シーン。一定時間後に Elixir SSoT でボスをスポーンして Playing に戻る。
+
+  spawn_special_entity は呼ばず、Playing state を直接更新する。
   """
   @behaviour Contents.SceneBehaviour
 
   alias Content.VampireSurvivor.BossSystem
+  alias Content.VampireSurvivor.Scenes.Playing
 
   require Logger
+
+  @map_width 4096.0
+  @map_height 4096.0
 
   @impl Contents.SceneBehaviour
   def init(%{boss_kind: boss_kind, boss_name: boss_name, alert_ms: alert_ms}) do
@@ -18,7 +24,6 @@ defmodule Content.VampireSurvivor.Scenes.BossAlert do
 
   @impl Contents.SceneBehaviour
   def update(context, %{boss_kind: boss_kind, boss_name: boss_name, alert_ms: alert_ms} = state) do
-    world_ref = context.world_ref
     now = context.now
     elapsed = now - alert_ms
 
@@ -27,7 +32,22 @@ defmodule Content.VampireSurvivor.Scenes.BossAlert do
         Content.VampireSurvivor.entity_registry().bosses[boss_kind] ||
           raise "Unknown boss kind: #{inspect(boss_kind)}"
 
-      Core.NifBridge.spawn_special_entity(world_ref, kind_id)
+      {px, py} = Core.NifBridge.get_player_pos(context.world_ref)
+      runner = Core.Config.current().flow_runner(:main)
+
+      if runner do
+        Contents.SceneStack.update_by_module(runner, Playing, fn playing_state ->
+          Playing.apply_boss_spawn_full(
+            playing_state,
+            kind_id,
+            px,
+            py,
+            @map_width,
+            @map_height
+          )
+        end)
+      end
+
       Logger.info("[BOSS] Spawned: #{boss_name}")
       {:transition, :pop, state}
     else

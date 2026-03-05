@@ -1,7 +1,7 @@
 //! Path: native/physics/src/world/game_world.rs
 //! Summary: ゲームワールド（GameWorldInner, GameWorld）
 
-use super::{BossState, BulletWorld, EnemyWorld, ParticleWorld, PlayerState};
+use super::{BulletWorld, EnemyWorld, ParticleWorld, PlayerState, SpecialEntitySnapshot};
 use crate::entity_params::EntityParamTables;
 use crate::item::ItemWorld;
 use crate::physics::rng::SimpleRng;
@@ -57,9 +57,9 @@ pub struct GameWorldInner {
     pub player_max_hp: f32,
     /// I-2: 装備中の武器スロット（クールダウン管理のみ）- Elixir から毎フレーム set_weapon_slots NIF で注入
     pub weapon_slots: Vec<WeaponSlot>,
-    /// I-2: ボスエネミー物理状態（boss.hp は Elixir から毎フレーム注入）
-    /// ボス種別の概念は Elixir 側 Rule state で管理する。
-    pub boss: Option<BossState>,
+    /// Elixir SSoT 移行: 衝突用スナップショット（永続状態なし）
+    /// 毎フレーム set_special_entity_snapshot NIF で注入される。
+    pub special_entity_snapshot: Option<SpecialEntitySnapshot>,
     /// 1.3.1: このフレームで発生したイベント（毎フレーム drain される）
     pub frame_events: Vec<FrameEvent>,
     /// 1.7.5: スコアポップアップ [(world_x, world_y, value, lifetime)]（描画用）

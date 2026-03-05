@@ -84,7 +84,7 @@ pub fn load_save_snapshot(
     w.bullets = BulletWorld::new();
     w.particles = ParticleWorld::new(PARTICLE_RNG_SEED);
     w.items = ItemWorld::new();
-    w.boss = None;
+    w.special_entity_snapshot = None;
     w.frame_events.clear();
     w.magnet_timer = 0.0;
     w.score_popups.clear();

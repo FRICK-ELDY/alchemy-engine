@@ -44,6 +44,19 @@ defmodule Content.EntityParams do
     @boss_stone_golem => 5000.0
   }
 
+  # ボス描画用 render_kind（Rust アトラス・renderer と一致）
+  @render_kind_slime_king 11
+  @render_kind_bat_lord 12
+  @render_kind_stone_golem 13
+
+  # ── ボススポーン用パラメータ（radius, render_kind, damage_per_sec）────────
+  # SSoT 移行で Elixir がボス初期化に使用する
+  @boss_spawn_params %{
+    @boss_slime_king => %{radius: 48.0, render_kind: @render_kind_slime_king, damage_per_sec: 30.0},
+    @boss_bat_lord => %{radius: 48.0, render_kind: @render_kind_bat_lord, damage_per_sec: 50.0},
+    @boss_stone_golem => %{radius: 64.0, render_kind: @render_kind_stone_golem, damage_per_sec: 80.0}
+  }
+
   # ── ボスパラメータ（Phase 3-B: ボスAI制御用）──────────────────────
   # {boss_kind_id => %{speed, special_interval, ...}}
   @boss_params %{
@@ -129,4 +142,8 @@ defmodule Content.EntityParams do
   @doc "Phase 3-B: ボス種別 ID のパラメータ（speed, special_interval）を返す"
   @spec boss_params_by_id(non_neg_integer()) :: map()
   def boss_params_by_id(kind_id), do: Map.fetch!(@boss_params, kind_id)
+
+  @doc "ボススポーン用パラメータ（radius, render_kind, damage_per_sec）を返す"
+  @spec boss_spawn_params(non_neg_integer()) :: map()
+  def boss_spawn_params(kind_id), do: Map.fetch!(@boss_spawn_params, kind_id)
 end

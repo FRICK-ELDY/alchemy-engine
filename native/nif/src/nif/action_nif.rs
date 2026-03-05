@@ -2,14 +2,14 @@
 //! Summary: アクション NIF（set_weapon_slots, spawn_item, 汎用エンティティ操作 等）
 
 use super::util::{lock_poisoned_err, params_not_loaded_err};
-use physics::constants::{PLAYER_RADIUS, POPUP_LIFETIME, POPUP_Y_OFFSET};
+use physics::constants::{POPUP_LIFETIME, POPUP_Y_OFFSET};
 use physics::game_logic::systems::spawn::get_spawn_positions_around_player;
 use physics::item::ItemKind;
 use physics::weapon::WeaponSlot;
-use physics::world::{BossState, FrameEvent, GameWorld};
+use physics::world::{GameWorld, SpecialEntitySnapshot};
 use rustler::{Atom, NifResult, ResourceArc};
 
-use crate::ok;
+use crate::{alive, ok};
 
 /// I-2: 武器スロットを Elixir 側から毎フレーム注入する NIF。
 /// Elixir 側 Rule state が武器の SSoT となり、毎フレームこの NIF で Rust に反映する。
@@ -37,106 +37,57 @@ pub fn set_weapon_slots(world: ResourceArc<GameWorld>, slots: Vec<(u8, u32)>) ->
     Ok(ok())
 }
 
-/// Phase R-3: 特殊エンティティ（ボス）の物理エントリを生成する汎用 NIF。
-/// 「ボス」という概念は Elixir 側 Rule state で管理する。
-/// kind_id は FrameEvent::SpecialEntitySpawned でのみ使用し、Rust 内部では保持しない。
+/// Elixir SSoT 移行: 特殊エンティティの衝突用スナップショットを注入する NIF。
+/// 毎フレーム on_nif_sync で呼ばれる。
+/// snapshot: :none | {:alive, x, y, radius, damage_per_sec, invincible}
 #[rustler::nif]
-pub fn spawn_special_entity(world: ResourceArc<GameWorld>, kind_id: u8) -> NifResult<Atom> {
+pub fn set_special_entity_snapshot(
+    world: ResourceArc<GameWorld>,
+    snapshot: rustler::Term<'_>,
+) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
-    if w.boss.is_some() {
+
+    if snapshot.is_atom() {
+        w.special_entity_snapshot = None;
         return Ok(ok());
     }
-    if let Some(bp) = w.params.get_boss(kind_id).cloned() {
-        let px = w.player.x + PLAYER_RADIUS;
-        let py = w.player.y + PLAYER_RADIUS;
-        let bx = (px + 600.0).min(w.map_width - bp.radius);
-        let by = py.clamp(bp.radius, w.map_height - bp.radius);
-        w.boss = Some(BossState::new(bx, by, &bp));
-        w.frame_events.push(FrameEvent::SpecialEntitySpawned {
-            entity_kind: kind_id,
-        });
-    }
-    Ok(ok())
-}
 
-/// Phase R-3: エンティティの速度ベクトルを Elixir 側 AI から注入する汎用 NIF。
-///
-/// 現在対応している entity_id:
-/// - `:boss` — ボスエンティティ
-///
-/// 未対応の entity_id は無視して `:ok` を返す（将来の拡張を妨げないため）。
-/// 新しい entity_id を追加する際はここに分岐を追加すること。
-#[rustler::nif]
-pub fn set_entity_velocity(
-    world: ResourceArc<GameWorld>,
-    entity_id: Atom,
-    vx: f64,
-    vy: f64,
-) -> NifResult<Atom> {
-    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
-    if entity_id == crate::boss() {
-        if let Some(ref mut boss) = w.boss {
-            boss.vx = vx as f32;
-            boss.vy = vy as f32;
+    if let Ok(tuple) = snapshot.decode::<(Atom, f64, f64, f64, f64, bool)>() {
+        if tuple.0 == alive() {
+            w.special_entity_snapshot = Some(SpecialEntitySnapshot {
+                x: tuple.1 as f32,
+                y: tuple.2 as f32,
+                radius: tuple.3 as f32,
+                damage_per_sec: tuple.4 as f32,
+                invincible: tuple.5,
+            });
+        } else {
+            w.special_entity_snapshot = None;
         }
+    } else {
+        w.special_entity_snapshot = None;
     }
-    // 未対応 entity_id はサイレント無視（現在は :boss のみ対応）
-    Ok(ok())
-}
 
-/// Phase R-3: エンティティのフラグを Elixir 側から設定する汎用 NIF。
-///
-/// 現在対応している組み合わせ:
-/// - entity_id `:boss` × flag `:invincible` — ボスの無敵フラグ
-///
-/// 未対応の entity_id / flag は無視して `:ok` を返す（将来の拡張を妨げないため）。
-#[rustler::nif]
-pub fn set_entity_flag(
-    world: ResourceArc<GameWorld>,
-    entity_id: Atom,
-    flag: Atom,
-    value: bool,
-) -> NifResult<Atom> {
-    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
-    if entity_id == crate::boss() {
-        if let Some(ref mut boss) = w.boss {
-            if flag == crate::invincible() {
-                boss.invincible = value;
-            }
-            // 未対応 flag はサイレント無視（現在は :invincible のみ対応）
-        }
-    }
-    // 未対応 entity_id はサイレント無視（現在は :boss のみ対応）
     Ok(ok())
 }
 
 /// Phase R-3: エンティティの HP を Elixir 側から設定する汎用 NIF。
 ///
 /// entity_id の形式:
-/// - `:boss`           — ボスエンティティ（Atom）
 /// - `{:enemy, index}` — 敵エンティティのインデックス（タプル）
 ///
-/// 未対応の entity_id は無視して `:ok` を返す。
-/// ボスが存在しない場合、または敵インデックスが範囲外・死亡済みの場合も無視する。
+/// ボス用は廃止（Elixir SSoT 移行）。未対応の entity_id は無視する。
 #[rustler::nif]
 pub fn set_entity_hp(
     world: ResourceArc<GameWorld>,
-    entity_id: rustler::Term,
+    entity_id: rustler::Term<'_>,
     hp: f64,
 ) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
-    if let Ok(atom) = entity_id.decode::<Atom>() {
-        if atom == crate::boss() {
-            if let Some(ref mut boss) = w.boss {
-                boss.hp = hp as f32;
-            }
-        }
-        // 未対応 atom はサイレント無視
-    } else if let Ok((tag, index)) = entity_id.decode::<(Atom, usize)>() {
+    if let Ok((tag, index)) = entity_id.decode::<(Atom, usize)>() {
         if tag == crate::enemy() && index < w.enemies.hp.len() && w.enemies.alive[index] != 0 {
             w.enemies.hp[index] = hp as f32;
         }
-        // 未対応 tag はサイレント無視
     }
     Ok(ok())
 }
