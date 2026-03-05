@@ -53,21 +53,23 @@ defmodule Content.VRTest.RenderComponent do
       Contents.SceneStack.update_by_module(
         runner,
         Content.VRTest.Scenes.Playing,
-        fn state ->
-          if state.cursor_grab_request == cursor_grab do
-            new_grabbed = cursor_grab == :grab
-
-            state
-            |> Map.put(:cursor_grab_request, :no_change)
-            |> Map.put(:cursor_grabbed, new_grabbed)
-          else
-            state
-          end
-        end
+        &apply_cursor_grab_sync(&1, cursor_grab)
       )
     end
 
     :ok
+  end
+
+  defp apply_cursor_grab_sync(state, cursor_grab) do
+    if state.cursor_grab_request == cursor_grab do
+      new_grabbed = cursor_grab == :grab
+
+      state
+      |> Map.put(:cursor_grab_request, :no_change)
+      |> Map.put(:cursor_grabbed, new_grabbed)
+    else
+      state
+    end
   end
 
   # ── DrawCommand 組み立て ──────────────────────────────────────────

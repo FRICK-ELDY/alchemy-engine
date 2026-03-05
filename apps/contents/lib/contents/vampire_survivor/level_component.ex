@@ -49,15 +49,14 @@ defmodule Content.VampireSurvivor.LevelComponent do
     damage = damage_x1000 / 1000.0
     content = Core.Config.current()
     runner = content.flow_runner(:main)
+    invincible_until_ms = context.now + @invincible_ms
 
     if runner do
-      invincible_until_ms = context.now + @invincible_ms
-
-      Contents.SceneStack.update_by_module(runner, content.playing_scene(), fn state ->
-        state
-        |> Map.update(:player_hp, 100.0, fn hp -> max(0.0, hp - damage) end)
-        |> Map.put(:invincible_until_ms, invincible_until_ms)
-      end)
+      Contents.SceneStack.update_by_module(
+        runner,
+        content.playing_scene(),
+        &apply_player_damage(&1, damage, invincible_until_ms)
+      )
     end
 
     :ok
@@ -103,6 +102,12 @@ defmodule Content.VampireSurvivor.LevelComponent do
   end
 
   def on_frame_event(_event, _context), do: :ok
+
+  defp apply_player_damage(state, damage, invincible_until_ms) do
+    state
+    |> Map.update(:player_hp, 100.0, fn hp -> max(0.0, hp - damage) end)
+    |> Map.put(:invincible_until_ms, invincible_until_ms)
+  end
 
   # ── on_nif_sync: 毎フレーム NIF 注入 ─────────────────────────────
 

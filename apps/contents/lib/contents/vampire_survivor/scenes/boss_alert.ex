@@ -28,30 +28,29 @@ defmodule Content.VampireSurvivor.Scenes.BossAlert do
     elapsed = now - alert_ms
 
     if elapsed >= BossSystem.alert_duration_ms() do
-      kind_id =
-        Content.VampireSurvivor.entity_registry().bosses[boss_kind] ||
-          raise "Unknown boss kind: #{inspect(boss_kind)}"
-
-      {px, py} = Core.NifBridge.get_player_pos(context.world_ref)
-      runner = Core.Config.current().flow_runner(:main)
-
-      if runner do
-        Contents.SceneStack.update_by_module(runner, Playing, fn playing_state ->
-          Playing.apply_boss_spawn_full(
-            playing_state,
-            kind_id,
-            px,
-            py,
-            @map_width,
-            @map_height
-          )
-        end)
-      end
-
-      Logger.info("[BOSS] Spawned: #{boss_name}")
+      do_spawn_boss(context, boss_kind, boss_name)
       {:transition, :pop, state}
     else
       {:continue, state}
     end
+  end
+
+  defp do_spawn_boss(context, boss_kind, boss_name) do
+    kind_id =
+      Content.VampireSurvivor.entity_registry().bosses[boss_kind] ||
+        raise "Unknown boss kind: #{inspect(boss_kind)}"
+
+    {px, py} = Core.NifBridge.get_player_pos(context.world_ref)
+    runner = Core.Config.current().flow_runner(:main)
+
+    if runner do
+      Contents.SceneStack.update_by_module(
+        runner,
+        Playing,
+        &Playing.apply_boss_spawn_full(&1, kind_id, px, py, @map_width, @map_height)
+      )
+    end
+
+    Logger.info("[BOSS] Spawned: #{boss_name}")
   end
 end

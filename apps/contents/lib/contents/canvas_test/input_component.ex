@@ -73,19 +73,7 @@ defmodule Content.CanvasTest.InputComponent do
       Contents.SceneStack.update_by_module(
         runner,
         Content.CanvasTest.Scenes.Playing,
-        fn state ->
-          if state.hud_visible do
-            # HUD表示中: HUDを閉じてカーソルをグラブ（ゲームに戻る）
-            state
-            |> Map.put(:hud_visible, false)
-            |> Map.put(:cursor_grab_request, :grab)
-          else
-            # HUD非表示: HUDを表示してカーソルを解放（HUDを操作できる状態へ）
-            state
-            |> Map.put(:hud_visible, true)
-            |> Map.put(:cursor_grab_request, :release)
-          end
-        end
+        &toggle_hud_and_cursor/1
       )
     end
 
@@ -98,4 +86,18 @@ defmodule Content.CanvasTest.InputComponent do
   end
 
   def on_event(_event, _context), do: :ok
+
+  defp toggle_hud_and_cursor(state) do
+    if state.hud_visible do
+      # HUD表示中: HUDを閉じてカーソルをグラブ（ゲームに戻る）
+      state
+      |> Map.put(:hud_visible, false)
+      |> Map.put(:cursor_grab_request, :grab)
+    else
+      # HUD非表示: HUDを表示してカーソルを解放（HUDを操作できる状態へ）
+      state
+      |> Map.put(:hud_visible, true)
+      |> Map.put(:cursor_grab_request, :release)
+    end
+  end
 end

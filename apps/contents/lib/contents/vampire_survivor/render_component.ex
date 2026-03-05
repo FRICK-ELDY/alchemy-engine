@@ -56,19 +56,20 @@ defmodule Content.VampireSurvivor.RenderComponent do
 
     camera = build_camera(player_x, player_y)
 
-    ui =
-      build_ui(
-        context,
-        playing_state,
-        current_scene,
-        content,
-        enemy_count,
-        bullet_count,
-        boss,
-        score_popups,
-        magnet_timer,
-        invincible_timer
-      )
+    ui_ctx = %{
+      context: context,
+      playing_state: playing_state,
+      current_scene: current_scene,
+      content: content,
+      enemy_count: enemy_count,
+      bullet_count: bullet_count,
+      boss: boss,
+      score_popups: score_popups,
+      magnet_timer: magnet_timer,
+      invincible_timer: invincible_timer
+    }
+
+    ui = build_ui(ui_ctx)
 
     Core.NifBridge.push_render_frame(
       context.render_buf_ref,
@@ -160,34 +161,21 @@ defmodule Content.VampireSurvivor.RenderComponent do
 
   # ── UiCanvas 組み立て ─────────────────────────────────────────────
 
-  defp build_ui(
-         context,
-         playing_state,
-         current_scene,
-         content,
-         enemy_count,
-         bullet_count,
-         boss,
-         score_popups,
-         magnet_timer,
-         invincible_timer
-       ) do
+  defp build_ui(%{current_scene: current_scene, content: content} = ctx) do
     nodes =
-      cond do
-        current_scene == content.game_over_scene() ->
-          [build_game_over_panel(playing_state)]
-
-        true ->
-          build_playing_nodes(
-            context,
-            playing_state,
-            enemy_count,
-            bullet_count,
-            boss,
-            score_popups,
-            magnet_timer,
-            invincible_timer
-          )
+      if current_scene == content.game_over_scene() do
+        [build_game_over_panel(ctx.playing_state)]
+      else
+        build_playing_nodes(
+          ctx.context,
+          ctx.playing_state,
+          ctx.enemy_count,
+          ctx.bullet_count,
+          ctx.boss,
+          ctx.score_popups,
+          ctx.magnet_timer,
+          ctx.invincible_timer
+        )
       end
 
     {:canvas, nodes}

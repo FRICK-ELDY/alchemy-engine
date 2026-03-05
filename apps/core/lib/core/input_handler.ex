@@ -38,7 +38,7 @@ defmodule Core.InputHandler do
   フォーカス喪失時。Rust から届く。
   押下状態をすべてリセットする。
   """
-  def focus_lost(), do: GenServer.cast(__MODULE__, :focus_lost)
+  def focus_lost, do: GenServer.cast(__MODULE__, :focus_lost)
 
   # 後方互換: 既存の key_down/key_up は raw_key に委譲
   def key_down(key), do: raw_key(key, :pressed)

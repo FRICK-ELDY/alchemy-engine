@@ -90,6 +90,9 @@ defmodule Network.DistributedTest do
         assert :ok = Network.close_room(room_id)
         refute room_id in Network.list_rooms()
 
+        # Registry の DOWN 処理が完了するまで待機（close 直後の open で :already_started になる競合を回避）
+        Process.sleep(50)
+
         # 移行: 同一または別ノードで open_room により再作成
         assert {:ok, _pid} = Network.open_room(room_id)
         assert room_id in Network.list_rooms()

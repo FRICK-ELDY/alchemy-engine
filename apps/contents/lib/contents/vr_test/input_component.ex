@@ -56,10 +56,7 @@ defmodule Content.VRTest.InputComponent do
       Contents.SceneStack.update_by_module(
         runner,
         Content.VRTest.Scenes.Playing,
-        fn state ->
-          grabbed = Map.get(state, :cursor_grabbed, false)
-          Map.put(state, :cursor_grab_request, if(grabbed, do: :release, else: :grab))
-        end
+        &toggle_cursor_grab_request/1
       )
     end
 
@@ -82,4 +79,9 @@ defmodule Content.VRTest.InputComponent do
   end
 
   def on_event(_event, _context), do: :ok
+
+  defp toggle_cursor_grab_request(state) do
+    grabbed = Map.get(state, :cursor_grabbed, false)
+    Map.put(state, :cursor_grab_request, if(grabbed, do: :release, else: :grab))
+  end
 end
