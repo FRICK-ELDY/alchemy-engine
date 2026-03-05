@@ -250,7 +250,10 @@ pub fn get_render_entities(world: ResourceArc<GameWorld>) -> NifResult<RenderEnt
             w.enemies.count,
             w.bullets.count,
         ),
-        (w.magnet_timer as f64, w.player_invincible_timer_injected as f64),
+        (
+            w.magnet_timer as f64,
+            w.player_invincible_timer_injected as f64,
+        ),
         (enemies, bullets, particles),
         (items, obstacles, boss, score_popups),
     ))

@@ -5,11 +5,11 @@
 use super::chase_ai::update_chase_ai;
 #[cfg(target_arch = "x86_64")]
 use super::chase_ai::update_chase_ai_simd;
-use super::systems::special_entity_collision::collide_special_entity_snapshot;
 use super::systems::collision::resolve_obstacles_enemy;
 use super::systems::effects::{update_particles, update_score_popups};
 use super::systems::items::update_items;
 use super::systems::projectiles::update_projectiles_and_enemy_hits;
+use super::systems::special_entity_collision::collide_special_entity_snapshot;
 use super::systems::weapons::update_weapon_attacks;
 use crate::constants::{
     ENEMY_SEPARATION_FORCE, ENEMY_SEPARATION_RADIUS, FRAME_BUDGET_MS, PLAYER_RADIUS, PLAYER_SIZE,

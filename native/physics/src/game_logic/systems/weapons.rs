@@ -230,9 +230,7 @@ fn fire_whip(
         };
         if let Some((bx, by)) = special_hit {
             w.frame_events
-                .push(FrameEvent::SpecialEntityDamaged {
-                    damage: dmg as f32,
-                });
+                .push(FrameEvent::SpecialEntityDamaged { damage: dmg as f32 });
             w.particles.emit(bx, by, 4, [1.0, 0.8, 0.2, 1.0]);
         }
     }
@@ -353,9 +351,7 @@ fn fire_chain(
         };
         if let Some((bx, by)) = special_hit {
             w.frame_events
-                .push(FrameEvent::SpecialEntityDamaged {
-                    damage: dmg as f32,
-                });
+                .push(FrameEvent::SpecialEntityDamaged { damage: dmg as f32 });
             w.bullets.spawn_effect(bx, by, 0.10, BULLET_KIND_LIGHTNING);
             w.particles.emit(bx, by, 5, [0.3, 0.8, 1.0, 1.0]);
         }
