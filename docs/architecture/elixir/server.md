@@ -56,7 +56,7 @@ graph TD
 
 ```elixir
 # 使用するコンテンツモジュールを指定する
-# Content.VampireSurvivor / Content.AsteroidArena / Content.SimpleBox3D /
+# 例: Content.VampireSurvivor / Content.AsteroidArena / Content.SimpleBox3D /
 # Content.BulletHell3D / Content.RollingBall / Content.VRTest / Content.CanvasTest
 config :server, :current, Content.SimpleBox3D
 config :server, :map, :plain

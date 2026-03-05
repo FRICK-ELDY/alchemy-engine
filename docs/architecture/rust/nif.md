@@ -50,11 +50,14 @@ graph TD
     LOOP[game_loop_nif.rs<br/>ゲームループ制御]
     PUSH[push_tick_nif.rs<br/>Elixir プッシュ型同期]
     RENDER[render_nif.rs<br/>レンダースレッド起動]
-    RFRAME[render_frame_nif.rs<br/>レンダーフレーム]
+    RFRAME[render_frame_nif.rs<br/>RenderFrameBuffer / push_render_frame]
     SAVE[save_nif.rs<br/>セーブ/ロード]
     EVENTS[events.rs<br/>FrameEvent → Elixir アトム変換]
     UTIL[util.rs<br/>ユーティリティ]
+    DECODE[decode/<br/>DrawCommand・Camera・UiCanvas デコード]
+    KEY[key_map.rs<br/>キーコードマッピング]
     XR[xr_nif.rs<br/>OpenXR VR ブリッジ<br/>feature=xr]
+    RFB[render_frame_buffer.rs<br/>Elixir から push された RenderFrame を保持]
 
     NIF --> LOAD
     NIF --> WORLD
@@ -67,7 +70,10 @@ graph TD
     NIF --> SAVE
     NIF --> EVENTS
     NIF --> UTIL
+    RFRAME --> DECODE
+    NIF --> KEY
     NIF --> XR
+    NIF --> RFB
 ```
 
 ### NIF 関数一覧
@@ -88,6 +94,15 @@ graph TD
 | `set_boss_hp(world, hp)` | ボス HP を注入 |
 | `set_hud_state(world, score, kill_count)` | HUD スコア・キル数を注入 |
 | `set_hud_level_state(world, level, exp, ...)` | HUD レベル・EXP 状態を注入（描画専用） |
+
+**`render_frame_nif.rs`（Phase R-2 描画）:**
+
+| NIF 関数 | 説明 |
+|:---|:---|
+| `create_render_frame_buffer()` | RenderFrameBuffer リソースを生成 |
+| `push_render_frame(buf, commands, camera, ui, cursor_grab)` | Elixir から DrawCommand リスト・CameraParams・UiCanvas を受け取りバッファに書き込む |
+
+デコードは `decode/` モジュールで分割: `decode/draw_command.rs`, `decode/camera.rs`, `decode/ui_canvas.rs`。
 
 **`action_nif.rs`（武器・ボス操作）:**
 
@@ -122,10 +137,11 @@ graph TD
 
 | NIF 関数 | 説明 |
 |:---|:---|
-| `physics_step(world, dt)` | 1 フレーム物理ステップ（DirtyCpu） |
+| `physics_step(world, dt)` | 1 フレーム物理ステップ |
 | `drain_frame_events(world)` | フレームイベントを取り出す |
 | `create_game_loop_control()` | `GameLoopControl` リソース生成 |
 | `start_rust_game_loop(world, control, pid)` | 別スレッドで 60Hz 固定ループ開始 |
+| `start_render_thread(world, render_buf, pid, title, atlas_path)` | レンダースレッド起動（ title / atlas_path は Elixir から渡す） |
 | `pause_physics(control)` | 物理演算を一時停止 |
 | `resume_physics(control)` | 物理演算を再開 |
 
@@ -133,21 +149,9 @@ graph TD
 
 ## `render_bridge.rs` — RenderBridge 実装
 
-ロック競合を最小化するため、ロック内でのデータコピーを最小限に抑えます。
+Phase R-2: `next_frame()` は **RenderFrameBuffer** から RenderFrame を取得する。2D の場合は GameWorld の read lock で補間データを読み取り、PlayerSprite の座標を補間する。3D の場合は Elixir 側が毎フレームカメラを push するため補間不要。
 
-```mermaid
-sequenceDiagram
-    participant RT as レンダースレッド
-    participant RB as RenderBridge
-    participant GW as GameWorld RwLock
-
-    RT->>RB: next_frame()
-    RB->>GW: read lock 取得
-    GW-->>RB: 最小データをコピー
-    RB->>GW: read lock 解放（即座）
-    RB->>RB: 補間計算（ロック外）<br/>lerp(prev_pos, curr_pos, alpha)
-    RB-->>RT: RenderFrame
-```
+- **title** / **atlas_path**: Elixir の `content.title()` / `content.assets_path()` から解決したパスを引数で受け取る。アトラスのロードは render_bridge 内で行い、ファイルが存在しない場合は AssetLoader の埋め込みフォールバックを使用。
 
 ---
 
