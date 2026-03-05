@@ -6,8 +6,10 @@ pub mod systems;
 
 pub use chase_ai::{
     find_nearest_enemy, find_nearest_enemy_spatial, find_nearest_enemy_spatial_excluding,
-    update_chase_ai, update_chase_ai_simd,
+    update_chase_ai,
 };
+#[cfg(target_arch = "x86_64")]
+pub use chase_ai::update_chase_ai_simd;
 
 pub mod physics_step;
 
