@@ -35,12 +35,27 @@ defmodule Network.Channel do
   `assert_push` はチャンネルプロセス内の値を検査するため、
   テストでは文字列 `"hello"` を期待すること。
 
+  ## 認証
+
+  `join/3` では `params["token"]` を必須とする。トークンは `POST /api/room_token`
+  に `%{room_id: "my_room"}` を送って取得する。トークンは5分間有効で、
+  指定した room_id への参加のみに使用できる（スコープ制限）。
+
   ## 使い方（JavaScript クライアント側）
 
-      import { Socket } from "phoenix"
+      1. POST /api/room_token でトークン取得
+      2. Socket 接続後、channel.join に token を渡す
+
+      const res = await fetch("/api/room_token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ room_id: "my_room" })
+      })
+      const { token } = await res.json()
+
       const socket = new Socket("/socket", {})
       socket.connect()
-      const channel = socket.channel("room:my_room", {})
+      const channel = socket.channel("room:my_room", { token })
       channel.join()
         .receive("ok", () => console.log("joined"))
         .receive("error", ({reason}) => console.error(reason))
@@ -54,17 +69,40 @@ defmodule Network.Channel do
   # ── join ────────────────────────────────────────────────────────────
 
   @impl true
-  def join("room:" <> room_id, _params, socket) do
-    case Network.Local.register_room(room_id) do
+  def join("room:" <> room_id, params, socket) do
+    token = params["token"] || params[:token]
+
+    case Network.RoomToken.verify(token, room_id) do
       :ok ->
-        Logger.info("[Network.Channel] Client joined room=#{room_id}")
-        socket = assign(socket, :room_id, room_id)
-        {:ok, %{room_id: room_id}, socket}
+        case Network.Local.register_room(room_id) do
+          :ok ->
+            Logger.info("[Network.Channel] Client joined room=#{room_id}")
+            socket = assign(socket, :room_id, room_id)
+            {:ok, %{room_id: room_id}, socket}
 
-      {:error, reason} ->
-        Logger.warning("[Network.Channel] Failed to register room=#{room_id}: #{inspect(reason)}")
+          {:error, reason} ->
+            Logger.warning(
+              "[Network.Channel] Failed to register room=#{room_id}: #{inspect(reason)}"
+            )
 
-        {:error, %{reason: "register_failed", detail: inspect(reason)}}
+            {:error, %{reason: "register_failed", detail: inspect(reason)}}
+        end
+
+      {:error, :missing} ->
+        Logger.warning("[Network.Channel] Join rejected: missing token room=#{room_id}")
+        {:error, %{reason: "unauthorized", detail: "token_required"}}
+
+      {:error, :expired} ->
+        Logger.warning("[Network.Channel] Join rejected: expired token room=#{room_id}")
+        {:error, %{reason: "unauthorized", detail: "token_expired"}}
+
+      {:error, :invalid} ->
+        Logger.warning("[Network.Channel] Join rejected: invalid token room=#{room_id}")
+        {:error, %{reason: "unauthorized", detail: "invalid_token"}}
+
+      {:error, :scope_mismatch} ->
+        Logger.warning("[Network.Channel] Join rejected: token scope mismatch room=#{room_id}")
+        {:error, %{reason: "unauthorized", detail: "token_scope_mismatch"}}
     end
   end
 

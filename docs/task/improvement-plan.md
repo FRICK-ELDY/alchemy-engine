@@ -59,21 +59,6 @@
 
 ---
 
-### I-G: WebSocket 認証・認可が未実装（優先度: 高）
-
-**問題:** `channel.ex` の `join/3` でルームIDの存在確認のみを行い、認証・認可のロジックがない。誰でも任意のルームに参加できる状態。
-
-**影響ファイル:**
-- `apps/network/lib/network/channel.ex`
-
-**作業ステップ:**
-1. `Phoenix.Token.sign/3` でサーバーサイドトークンを生成するエンドポイントを追加する
-2. `channel.ex` の `join/3` で `Phoenix.Token.verify/4` を使ってトークンを検証する
-3. トークンの有効期限・ルームIDのスコープ制限を実装する
-4. 認証テストを `network_channel_test.exs` に追加する
-
----
-
 ### I-H: EntityParams の Single Source of Truth 化（優先度: 中）
 
 **問題:** `entity_params.ex`・`spawn_component.ex` の `boss_params/0`・Rust側の値の3箇所に同じ値が散在している。

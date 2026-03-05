@@ -19,10 +19,13 @@ config :libcluster,
 # ── Network.Endpoint（Phoenix WebSocket サーバー）────────────────
 # ポートはコンパイル時固定値として設定する。
 # 実行時に変更したい場合は config/runtime.exs の NETWORK_PORT を使用する。
+# secret_key_base は Phoenix.Token（ルーム参加認証）で使用する。
+# 本番では config/runtime.exs の SECRET_KEY_BASE で上書きすること。
 config :network, Network.Endpoint,
   http: [port: 4000],
   pubsub_server: Network.PubSub,
-  server: true
+  server: true,
+  secret_key_base: "alchemy-engine-secret-key-base-dev-test-minimum-64-chars-required-xxxx"
 
 config :network, :json_library, Jason
 

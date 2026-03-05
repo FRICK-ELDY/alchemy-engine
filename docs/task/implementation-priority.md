@@ -84,7 +84,6 @@ flowchart LR
 |:---|:---|:---:|:---:|
 | I-D | x86_64 cfg pub use 漏れ | 中 | 4 |
 | I-F | Elixir テスト整備 | 中 | 4 |
-| I-G | WebSocket 認証・認可 | 高 | 2 |
 | I-H | EntityParams SSoT 化 | 中 | 3 |
 | I-I | CI pull_request トリガー | 中 | 4 |
 | I-L | render_frame_nif.rs 肥大化 | 中 | 3 |
