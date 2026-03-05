@@ -154,4 +154,29 @@ defmodule Content.EntityParams do
   @doc "ボススポーン用パラメータ（radius, render_kind, damage_per_sec）を返す"
   @spec boss_spawn_params(non_neg_integer()) :: map()
   def boss_spawn_params(kind_id), do: Map.fetch!(@boss_spawn_params, kind_id)
+
+  @doc """
+  set_entity_params NIF に渡すボスパラメータリストを返す。
+
+  順序は decode_boss_params の想定に従い、kind_id 0, 1, 2 の順。
+  SSoT: この戻り値が Rust 側に注入される唯一の経路。
+  """
+  @spec boss_params() :: [map()]
+  def boss_params do
+    [@boss_slime_king, @boss_bat_lord, @boss_stone_golem]
+    |> Enum.map(fn kind_id ->
+      spawn = Map.fetch!(@boss_spawn_params, kind_id)
+      ai = Map.fetch!(@boss_params, kind_id)
+      max_hp = Map.fetch!(@boss_max_hp, kind_id)
+
+      %{
+        max_hp: max_hp,
+        speed: ai.speed,
+        radius: spawn.radius,
+        damage_per_sec: spawn.damage_per_sec,
+        render_kind: spawn.render_kind,
+        special_interval: ai.special_interval
+      }
+    end)
+  end
 end
