@@ -59,6 +59,7 @@ flowchart LR
 
     subgraph Phase3["Phase 3: アーキテクチャ整理"]
         IH["I-H: EntityParams SSoT"]
+        IM["I-M: renderer パラメータを contents へ"]
         I18["課題18: render 汎用化"]
         IL["I-L: render_frame_nif 分割"]
     end
@@ -81,17 +82,14 @@ flowchart LR
 
 | ID | 課題 | 優先度 | Phase |
 |:---|:---|:---:|:---:|
-| I-B | spawn_elite_enemy スロットロジック | 高 | 1 |
-| I-C | PlayerDamaged u32 オーバーフロー | 高 | 1 |
 | I-D | x86_64 cfg pub use 漏れ | 中 | 4 |
 | I-E | network 実装 | 高 | 2 |
 | I-F | Elixir テスト整備 | 中 | 4 |
 | I-G | WebSocket 認証・認可 | 高 | 2 |
 | I-H | EntityParams SSoT 化 | 中 | 3 |
 | I-I | CI pull_request トリガー | 中 | 4 |
-| I-J | build_instances 重複解消 | 低 | — |
-| I-K | Skeleton/Ghost スプライト | 低 | — |
 | I-L | render_frame_nif.rs 肥大化 | 中 | 3 |
+| I-M | renderer のゲーム固有パラメータを contents へ移行 | 中 | 3 |
 
 ### docs/plan 設計タスクの依存関係
 
