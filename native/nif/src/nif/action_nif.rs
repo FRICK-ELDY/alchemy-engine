@@ -177,24 +177,11 @@ pub fn spawn_enemies_with_hp_multiplier(
         .get_enemy(kind_id)
         .ok_or_else(params_not_loaded_err)?
         .clone();
-    let base_max_hp = ep.max_hp;
     let positions = get_spawn_positions_around_player(&mut w, count);
-    let before_len = w.enemies.positions_x.len();
-    w.enemies.spawn(&positions, kind_id, &ep);
-    let after_len = w.enemies.positions_x.len();
-    let base_hp = base_max_hp * hp_multiplier as f32;
-    let mut applied = 0;
-    for i in (0..after_len).rev() {
-        if applied >= count {
-            break;
-        }
-        if w.enemies.alive[i] != 0
-            && w.enemies.kind_ids[i] == kind_id
-            && (i >= before_len || (w.enemies.hp[i] - base_max_hp).abs() < 0.01)
-        {
-            w.enemies.hp[i] = base_hp;
-            applied += 1;
-        }
+    let used = w.enemies.spawn(&positions, kind_id, &ep);
+    let base_hp = ep.max_hp * hp_multiplier as f32;
+    for i in used {
+        w.enemies.hp[i] = base_hp;
     }
     Ok(ok())
 }

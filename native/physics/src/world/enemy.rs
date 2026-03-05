@@ -67,15 +67,17 @@ impl EnemyWorld {
         }
     }
 
-    /// 指定 ID の敵を `positions` の座標にスポーン（O(1) でスロット取得）
+    /// 指定 ID の敵を `positions` の座標にスポーン（O(1) でスロット取得）。
+    /// 使用したスロットインデックスを返す（呼び出し元で HP 倍率などの後処理に利用可能）。
     /// `ep` は呼び出し元で `params.get_enemy(kind_id).clone()` して渡す。
     /// （可変借用と不変借用の競合を避けるため、テーブルではなく値を受け取る）
-    pub fn spawn(&mut self, positions: &[(f32, f32)], kind_id: u8, ep: &EnemyParams) {
+    pub fn spawn(&mut self, positions: &[(f32, f32)], kind_id: u8, ep: &EnemyParams) -> Vec<usize> {
         let speed = ep.speed;
         let max_hp = ep.max_hp;
+        let mut used = Vec::with_capacity(positions.len());
 
         for &(x, y) in positions {
-            if let Some(i) = self.free_list.pop() {
+            let i = if let Some(i) = self.free_list.pop() {
                 self.positions_x[i] = x;
                 self.positions_y[i] = y;
                 self.velocities_x[i] = 0.0;
@@ -86,6 +88,7 @@ impl EnemyWorld {
                 self.kind_ids[i] = kind_id;
                 self.sep_x[i] = 0.0;
                 self.sep_y[i] = 0.0;
+                i
             } else {
                 self.positions_x.push(x);
                 self.positions_y.push(y);
@@ -97,9 +100,12 @@ impl EnemyWorld {
                 self.kind_ids.push(kind_id);
                 self.sep_x.push(0.0);
                 self.sep_y.push(0.0);
-            }
+                self.positions_x.len() - 1
+            };
+            used.push(i);
             self.count += 1;
         }
+        used
     }
 }
 
@@ -178,6 +184,24 @@ mod tests {
         let ep = default_params();
         world.spawn(&[(0.0, 0.0)], 3, &ep);
         assert_eq!(world.kind_ids[0], 3);
+    }
+
+    /// spawn_enemies_with_hp_multiplier が返却インデックスを正しく使うための前提テスト。
+    /// free_list 再利用時、spawn は使用したスロットインデックスを返す。
+    /// 同じ kind_id の既存エネミーが base_max_hp と同じ HP を持つ場合でも、
+    /// 返却インデックスのみに HP 倍率を適用すれば既存エネミーを誤って変更しない。
+    #[test]
+    fn spawn_returns_used_indices_including_free_list_reuse() {
+        let mut world = EnemyWorld::new();
+        let ep = default_params();
+        world.spawn(&[(0.0, 0.0), (10.0, 10.0)], 0, &ep);
+        world.kill(0);
+        let used = world.spawn(&[(99.0, 99.0)], 0, &ep);
+
+        // free_list から pop するのでスロット 0 が再利用される
+        assert_eq!(used, [0], "再利用スロット 0 が返るべき");
+        assert!((world.positions_x[0] - 99.0).abs() < 0.001);
+        assert_eq!(world.len(), 2);
     }
 }
 
