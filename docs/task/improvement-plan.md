@@ -24,7 +24,7 @@
 | **総合** | **7/10** | **6/10** ↓ |
 
 > DX が 7→5 に低下: `bin/ci.bat` が cargo fmt / cargo clippy で失敗し、評価ルールの「エラーゼロで通過」前提に違反。README の品質保証記述と実態が乖離。  
-> Rust 安全性 8→7: `spawn_elite_enemy`・`FrameEvent::PlayerDamaged` オーバーフロー・bench コンパイル不可。  
+> Rust 安全性 8→7: `spawn_elite_enemy`・`FrameEvent::PlayerDamaged` オーバーフロー。  
 > テスト 6→5: `nif`・`render`・`audio` の Rust テストがゼロ。
 
 ---
@@ -36,30 +36,12 @@
 **問題:** `bin/ci.bat` がエラーゼロで通過しない。評価ルールの DX 原則「ローカル CI がエラーゼロで通過すること」に違反。README の「品質保証」セクションの記述と実態が乖離している。
 
 **影響:**
-- cargo fmt: 複数ファイルでフォーマット差分（native/nif, render 等）
 - cargo clippy: input_openxr（未使用変数 `on_event`、不要な mut）、render（too many arguments、needless_range_loop）
-- cargo bench: chase_ai_bench.rs の `game_simulation` → `physics` 修正が必要
 
 **作業ステップ:**
-1. `cargo fmt --manifest-path native/Cargo.toml --all` で全ファイルをフォーマット
-2. input_openxr: 未使用変数の削除・`mut` の除去
-3. render: 多引数関数を構造体に集約、needless_range_loop を iterator に置き換え
-4. chase_ai_bench.rs: `use game_simulation::` を `use physics::` に変更
-5. `bin/ci.bat` を実行し、全ジョブ PASS を確認
-
----
-
-### I-A: bench/chase_ai_bench.rs のクレート名不一致（優先度: 緊急・I-0 に含む）
-
-**問題:** ベンチマークが `game_simulation` クレートをインポートしているが、`Cargo.toml` のパッケージ名は `physics`。ベンチマークがコンパイルできない状態であり、`bench-regression` CIジョブが機能していない可能性がある。
-
-**影響ファイル:**
-- `native/physics/benches/chase_ai_bench.rs`（L5-8）
-
-**作業ステップ:**
-1. `use game_simulation::` を `use physics::` に変更する
-2. `cargo bench -p physics` でコンパイルを確認する
-3. `bench-regression` CIジョブが正常に動作することを確認する
+1. input_openxr: 未使用変数の削除・`mut` の除去
+2. render: 多引数関数を構造体に集約、needless_range_loop を iterator に置き換え
+3. `bin/ci.bat` を実行し、全ジョブ PASS を確認
 
 ---
 
@@ -240,15 +222,3 @@
 **未解決事項・確認ポイント:** [improvement-plan.md](../plan/improvement-plan.md) の「GameEvents → contents 移行タスクより」を参照。
 
 ---
-
-## 完了済みタスク（フェーズ1・1.5）
-
-~~I-G: HUD 型修正~~  
-~~I-H: SIMD alive_mask テスト追加~~  
-~~I-I: 命名明確化（EnemyWorld.alive を Vec<u8> に変更）~~  
-~~I-J: rayon 並列化閾値の定数化（RAYON_THRESHOLD）~~  
-~~I-K: lock_metrics の AtomicU64 実装~~  
-~~I-L: DirtyCpu スケジューラ指定~~  
-~~I-M: ResourceArc GC 連動実装~~  
-~~I-N: Ghost・Skeleton の UV に TODO コメント追加~~  
-~~I-O: ベンチマーク回帰 CI ジョブ追加~~
