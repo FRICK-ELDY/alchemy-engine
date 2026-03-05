@@ -31,19 +31,6 @@
 
 ## 未解決課題
 
-### I-D: #[cfg(target_arch = "x86_64")] の pub use 漏れ（優先度: 中）
-
-**問題:** `game_logic/mod.rs` で `update_chase_ai_simd` が非 x86_64 環境でも `pub use` でエクスポートされているが、実際の定義は `#[cfg(target_arch = "x86_64")]` で条件付きのため、ARM/WASMでコンパイルするとリンクエラーになる。
-
-**影響ファイル:**
-- `native/physics/src/game_logic/mod.rs`（L9）
-
-**作業ステップ:**
-1. `pub use chase_ai::update_chase_ai_simd;` を `#[cfg(target_arch = "x86_64")] pub use chase_ai::update_chase_ai_simd;` に変更する
-2. ARM/WASM ターゲットでのコンパイルを確認する（`cargo check --target aarch64-unknown-linux-gnu`）
-
----
-
 ### I-F: Elixir 側テストがほぼ未整備（優先度: 中）
 
 **問題:** `Contents.SceneStack`・`Core.GameEvents`・`Core.EventBus`・`Core.SaveManager` のテストが存在しない。エンジンコアのリグレッションを検出する手段がない。（※ `Core.SceneManager` は scene-management-to-contents タスクにより `Contents.SceneStack` に移行済み）
@@ -71,36 +58,6 @@
 1. `spawn_component.ex` の `boss_params/0` を削除し、`EntityParams.boss_params/0` を呼び出すよう変更する
 2. `EntityParams` が `boss_params/0` を公開APIとして提供するよう整理する
 3. Rust側の値が `set_entity_params` NIF経由でのみ設定されることを確認する
-
----
-
-### I-I: CI の pull_request トリガー追加（優先度: 中）
-
-**問題:** `.github/workflows/ci.yml` が `push` イベントのみをトリガーとしており、PRへの自動チェックが走らない。
-
-**影響ファイル:**
-- `.github/workflows/ci.yml`
-
-**作業ステップ:**
-1. `on:` セクションに `pull_request: { branches: [main] }` を追加する
-2. `concurrency` の `group` を `${{ github.workflow }}-${{ github.ref }}` に変更してPRとpushで独立したキャンセルが動作するようにする
-
----
-
-### I-L: render_frame_nif.rs の肥大化（優先度: 中）
-
-**問題:** `native/nif/src/nif/render_frame_nif.rs` が DrawCommand・CameraParams・UiComponent の全デコードロジックを1ファイルに集約しており、コンテンツ追加のたびに肥大化する。現時点で634行あり、新しい DrawCommand や UiComponent を追加するたびに同ファイルへの変更が集中する。
-
-**影響ファイル:**
-- `native/nif/src/nif/render_frame_nif.rs`
-
-**作業ステップ:**
-1. `native/nif/src/nif/decode/` ディレクトリを作成し、以下の3モジュールに分割する
-   - `decode/draw_command.rs` — `decode_commands` / `decode_command`
-   - `decode/camera.rs` — `decode_camera`
-   - `decode/ui_canvas.rs` — `decode_ui_canvas` / `decode_ui_node` / `decode_ui_component` 等
-2. `render_frame_nif.rs` は NIF エントリポイント（`push_render_frame`・`create_render_frame_buffer`）のみに絞る
-3. 共通ヘルパー（`decode_color`・`atom_str`・`tag_of` 等）は `decode/mod.rs` に集約する
 
 ---
 

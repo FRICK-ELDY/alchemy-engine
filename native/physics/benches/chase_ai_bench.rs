@@ -4,9 +4,11 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use physics::{
     entity_params::EnemyParams,
-    game_logic::{update_chase_ai, update_chase_ai_simd},
+    game_logic::update_chase_ai,
     world::EnemyWorld,
 };
+#[cfg(target_arch = "x86_64")]
+use physics::game_logic::update_chase_ai_simd;
 
 fn make_params() -> EnemyParams {
     EnemyParams {
