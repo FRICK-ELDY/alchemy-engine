@@ -2,13 +2,9 @@
 //! Summary: Chase AI の rayon 並列版と SIMD 版のベンチマーク（敵数 100〜10000 体）
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use physics::{
-    entity_params::EnemyParams,
-    game_logic::update_chase_ai,
-    world::EnemyWorld,
-};
 #[cfg(target_arch = "x86_64")]
 use physics::game_logic::update_chase_ai_simd;
+use physics::{entity_params::EnemyParams, game_logic::update_chase_ai, world::EnemyWorld};
 
 fn make_params() -> EnemyParams {
     EnemyParams {

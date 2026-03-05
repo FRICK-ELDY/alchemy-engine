@@ -9,8 +9,8 @@
 //! - decode/camera.rs     — CameraParams
 //! - decode/ui_canvas.rs  — UiCanvas / UiNode / UiComponent
 
-use crate::render_frame_buffer::RenderFrameBuffer;
 use super::decode::{decode_camera, decode_commands, decode_cursor_grab, decode_ui_canvas};
+use crate::render_frame_buffer::RenderFrameBuffer;
 use render::RenderFrame;
 use rustler::{Atom, NifResult, ResourceArc, Term};
 
