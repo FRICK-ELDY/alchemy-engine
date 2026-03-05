@@ -154,7 +154,7 @@
 ### 💡 提案
 
 - **visual-editor-architecture.md の実装着手** `0`
-  > `docs/visual-editor-architecture.md`（245行）に詳細な設計が記述されているビジュアルエディタを実装する。`Phoenix LiveView` + `wgpu` のヘッドレスレンダラーを組み合わせることで、ブラウザ上でコンテンツをリアルタイム編集できるエディタが実現できる。これが完成すれば「エンジン」としての価値命題が大幅に向上する。
+  > `docs/plan/visual-editor-architecture.md`（245行）に詳細な設計が記述されているビジュアルエディタを実装する。`Phoenix LiveView` + `wgpu` のヘッドレスレンダラーを組み合わせることで、ブラウザ上でコンテンツをリアルタイム編集できるエディタが実現できる。これが完成すれば「エンジン」としての価値命題が大幅に向上する。
 
 - **CHANGELOG.md の整備** `0`
   > バージョン履歴・破壊的変更・新機能を記録する `CHANGELOG.md` を追加する。`git-cliff` を使って `Conventional Commits` から自動生成することで、メンテナンスコストを最小化できる。
