@@ -83,7 +83,6 @@ flowchart LR
 | ID | 課題 | 優先度 | Phase |
 |:---|:---|:---:|:---:|
 | I-D | x86_64 cfg pub use 漏れ | 中 | 4 |
-| I-E | network 実装 | 高 | 2 |
 | I-F | Elixir テスト整備 | 中 | 4 |
 | I-G | WebSocket 認証・認可 | 高 | 2 |
 | I-H | EntityParams SSoT 化 | 中 | 3 |

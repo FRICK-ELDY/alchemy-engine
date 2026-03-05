@@ -44,20 +44,6 @@
 
 ---
 
-### I-E: network が実質スタブ（優先度: 高）
-
-**問題:** `network.ex` は実装なしのスタブ。「なぜElixir + Rustか」というプロジェクトの価値命題の核心（OTPによる分散・耐障害性）がコードで証明されていない。
-
-**影響ファイル:**
-- `apps/network/lib/network.ex`
-
-**作業ステップ:**
-1. `network.ex` に `open_room/1`・`close_room/1`・`broadcast/2` 等の公開APIを定義する
-2. `libcluster` を追加し、複数ノード間でのルーム管理を実装する
-3. ノードクラッシュ時のルーム移行シナリオをテストで検証する
-
----
-
 ### I-F: Elixir 側テストがほぼ未整備（優先度: 中）
 
 **問題:** `Contents.SceneStack`・`Core.GameEvents`・`Core.EventBus`・`Core.SaveManager` のテストが存在しない。エンジンコアのリグレッションを検出する手段がない。（※ `Core.SceneManager` は scene-management-to-contents タスクにより `Contents.SceneStack` に移行済み）

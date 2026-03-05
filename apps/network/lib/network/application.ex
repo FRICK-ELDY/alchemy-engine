@@ -3,6 +3,8 @@ defmodule Network.Application do
   `network` アプリケーションの Supervisor。
 
   起動するプロセス:
+  - `Cluster.Supervisor` — libcluster（複数ノードクラスタリング、topologies が空の場合は待機）。
+    戦略は `:one_for_one` のため、Cluster がクラッシュしても他プロセスには影響しない。
   - `Network.PubSub` — Phoenix.PubSub（ルーム間ブロードキャスト）
   - `Network.Local` — ローカルマルチルーム管理 GenServer
   - `Network.Endpoint` — Phoenix Endpoint（WebSocket + HTTP）
@@ -33,7 +35,10 @@ defmodule Network.Application do
 
   @impl true
   def start(_type, _args) do
+    topologies = Application.get_env(:libcluster, :topologies, [])
+
     children = [
+      {Cluster.Supervisor, [topologies, [name: Network.ClusterSupervisor]]},
       {Phoenix.PubSub, name: Network.PubSub},
       Network.Local,
       Network.Endpoint,

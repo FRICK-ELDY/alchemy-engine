@@ -77,6 +77,20 @@ flowchart TB
    # iex -S mix
   ```
 
+### 分散クラスタ起動（複数ノード）
+
+複数ノードでクラスタを形成する場合は、`config/runtime.exs` に libcluster の topologies を設定したうえで、別ターミナルで各ノードを起動します。
+
+```bash
+# ターミナル 1
+elixir --name a@127.0.0.1 -S mix run
+
+# ターミナル 2
+elixir --name b@127.0.0.1 -S mix run
+```
+
+`a` と `b` はノード名（ノードを識別するための名前）で、`127.0.0.1` はホストです。libcluster の設定例は `config/config.exs` の libcluster コメントを参照してください。
+
 ---
 
 ## ✅ 品質保証
