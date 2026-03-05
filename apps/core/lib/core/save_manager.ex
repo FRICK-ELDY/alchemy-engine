@@ -31,16 +31,22 @@ defmodule Core.SaveManager do
   defp high_scores_path, do: Path.join(save_dir(), "high_scores.json")
 
   # ── セッション保存 ───────────────────────────────────────────────────────
-
-  def save_session(world_ref) do
+  #
+  # weapon_slots はコンテンツ層 SSoT。opts[:weapon_slots] で渡す。
+  def save_session(world_ref, opts \\ []) do
     snapshot = Core.NifBridge.get_save_snapshot(world_ref)
-    write_json(session_path(), snapshot_to_map(snapshot))
+    weapon_slots = Keyword.get(opts, :weapon_slots, [])
+    state_map = snapshot_to_map(snapshot, weapon_slots)
+    write_json(session_path(), state_map)
   rescue
     e -> {:error, Exception.message(e)}
   end
 
   # ── セッションロード ─────────────────────────────────────────────────────
-
+  #
+  # 成功時は {:ok, state_map} を返す。state_map の "weapon_slots" を
+  # コンテンツの weapon_slots_to_levels/1 で weapon_levels に変換し、
+  # シーン replace の initial_state に渡す。
   def load_session(world_ref) do
     case read_json(session_path()) do
       {:ok, data} -> do_load_session(world_ref, data)
@@ -50,9 +56,10 @@ defmodule Core.SaveManager do
   end
 
   defp do_load_session(world_ref, data) do
-    snapshot = map_to_snapshot(data["state"])
-    Core.NifBridge.load_save_snapshot(world_ref, snapshot)
-    :ok
+    state = data["state"] || %{}
+    rust_snapshot = map_to_rust_snapshot(state)
+    Core.NifBridge.load_save_snapshot(world_ref, rust_snapshot)
+    {:ok, state}
   rescue
     e -> {:error, Exception.message(e)}
   end
@@ -187,34 +194,34 @@ defmodule Core.SaveManager do
 
   # ── SaveSnapshot ↔ map 変換 ──────────────────────────────────────────────
 
-  defp snapshot_to_map(snapshot) do
-    %{
+  defp snapshot_to_map(snapshot, weapon_slots) do
+    base = %{
       "player_hp" => snapshot.player_hp,
       "player_x" => snapshot.player_x,
       "player_y" => snapshot.player_y,
       "player_max_hp" => snapshot.player_max_hp,
-      "elapsed_seconds" => snapshot.elapsed_seconds,
-      "weapon_slots" =>
-        Enum.map(snapshot.weapon_slots, fn ws ->
-          %{"kind_id" => ws.kind_id, "level" => ws.level}
-        end)
+      "elapsed_seconds" => snapshot.elapsed_seconds
     }
+
+    if weapon_slots == [] do
+      Map.put(base, "weapon_slots", [])
+    else
+      slots =
+        Enum.map(weapon_slots, fn ws ->
+          %{"kind_id" => ws[:kind_id] || ws["kind_id"], "level" => ws[:level] || ws["level"]}
+        end)
+
+      Map.put(base, "weapon_slots", slots)
+    end
   end
 
-  defp map_to_snapshot(map) do
-    weapon_slots =
-      (map["weapon_slots"] || [])
-      |> Enum.map(fn ws ->
-        %{kind_id: ws["kind_id"], level: ws["level"]}
-      end)
-
+  defp map_to_rust_snapshot(map) do
     %{
       player_hp: map["player_hp"],
       player_x: map["player_x"],
       player_y: map["player_y"],
       player_max_hp: map["player_max_hp"],
-      elapsed_seconds: map["elapsed_seconds"],
-      weapon_slots: weapon_slots
+      elapsed_seconds: map["elapsed_seconds"]
     }
   end
 end

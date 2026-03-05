@@ -30,4 +30,9 @@ pub enum FrameEvent {
     SpecialEntityDamaged {
         damage: f32,
     },
+    /// weapon_slots SSoT 移行: 武器スロットのクールダウン更新。全スロット分が順に emit される。
+    WeaponCooldownUpdated {
+        kind_id: u8,
+        cooldown_timer: f32,
+    },
 }

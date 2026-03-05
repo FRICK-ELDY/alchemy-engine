@@ -124,7 +124,10 @@ defmodule Contents.GameEvents do
   end
 
   def handle_cast(:save_session, state) do
-    case Core.SaveManager.save_session(state.world_ref) do
+    weapon_slots = get_weapon_slots_for_save(state)
+    opts = [weapon_slots: weapon_slots]
+
+    case Core.SaveManager.save_session(state.world_ref, opts) do
       :ok -> Logger.info("[SAVE] Session saved")
       {:error, reason} -> Logger.warning("[SAVE] Failed: #{inspect(reason)}")
     end
@@ -140,19 +143,23 @@ defmodule Contents.GameEvents do
     result = Core.SaveManager.load_session(state.world_ref)
 
     case result do
-      :ok ->
+      {:ok, loaded_state} ->
         case content.flow_runner(state.room_id) do
           nil ->
             {:reply, {:error, :flow_runner_unavailable}, state}
 
           runner ->
+            initial_state = build_loaded_scene_state(content, loaded_state)
             physics_scene = content.physics_scenes() |> List.first()
-            GenServer.call(runner, {:replace, physics_scene, %{}})
+            GenServer.call(runner, {:replace, physics_scene, initial_state})
             {:reply, :ok, state}
         end
 
-      other ->
-        {:reply, other, state}
+      :no_save ->
+        {:reply, :no_save, state}
+
+      {:error, _} = err ->
+        {:reply, err, state}
     end
   end
 
@@ -383,7 +390,7 @@ defmodule Contents.GameEvents do
 
   defp do_load_session(state) do
     case Core.SaveManager.load_session(state.world_ref) do
-      :ok ->
+      {:ok, loaded_state} ->
         content = current_content()
 
         case content.flow_runner(state.room_id) do
@@ -395,8 +402,9 @@ defmodule Contents.GameEvents do
             state
 
           runner ->
+            initial_state = build_loaded_scene_state(content, loaded_state)
             physics_scene = content.physics_scenes() |> List.first()
-            GenServer.call(runner, {:replace, physics_scene, %{}})
+            GenServer.call(runner, {:replace, physics_scene, initial_state})
             state
         end
 
@@ -407,6 +415,31 @@ defmodule Contents.GameEvents do
       {:error, reason} ->
         Logger.warning("[LOAD] Failed: #{inspect(reason)}")
         state
+    end
+  end
+
+  defp get_weapon_slots_for_save(state) do
+    content = current_content()
+    runner = content.flow_runner(state.room_id)
+
+    if runner && function_exported?(content, :weapon_levels_to_save_format, 1) do
+      playing_state =
+        Contents.SceneStack.get_scene_state(runner, content.playing_scene()) || %{}
+
+      weapon_levels = Map.get(playing_state, :weapon_levels, %{})
+      content.weapon_levels_to_save_format(weapon_levels)
+    else
+      []
+    end
+  end
+
+  defp build_loaded_scene_state(content, loaded_state) do
+    if function_exported?(content, :weapon_slots_to_levels, 1) do
+      slots = loaded_state["weapon_slots"] || []
+      weapon_levels = content.weapon_slots_to_levels(slots)
+      %{weapon_levels: weapon_levels, weapon_cooldowns: %{}}
+    else
+      %{}
     end
   end
 

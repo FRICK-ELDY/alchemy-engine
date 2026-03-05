@@ -44,7 +44,7 @@ pub fn create_world() -> ResourceArc<GameWorld> {
         last_frame_time_ms: 0.0,
         elapsed_seconds: 0.0,
         player_max_hp: 100.0,
-        weapon_slots: vec![],
+        weapon_slots_input: vec![],
         special_entity_snapshot: None,
         frame_events: Vec::new(),
         score_popups: Vec::new(),

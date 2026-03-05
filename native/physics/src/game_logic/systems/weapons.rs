@@ -21,21 +21,22 @@ pub(crate) fn update_weapon_attacks(w: &mut GameWorldInner, dt: f32, px: f32, py
         }
     };
 
-    let slot_count = w.weapon_slots.len();
+    let slot_count = w.weapon_slots_input.len();
     for si in 0..slot_count {
-        w.weapon_slots[si].cooldown_timer = (w.weapon_slots[si].cooldown_timer - dt).max(0.0);
-        if w.weapon_slots[si].cooldown_timer > 0.0 {
+        w.weapon_slots_input[si].cooldown_timer =
+            (w.weapon_slots_input[si].cooldown_timer - dt).max(0.0);
+        if w.weapon_slots_input[si].cooldown_timer > 0.0 {
             continue;
         }
 
-        let kind_id = w.weapon_slots[si].kind_id;
+        let kind_id = w.weapon_slots_input[si].kind_id;
         let Some(wp) = w.params.get_weapon(kind_id) else {
             continue;
         };
-        let cd = w.weapon_slots[si].effective_cooldown(wp);
-        let dmg = w.weapon_slots[si].effective_damage(wp);
-        let level = w.weapon_slots[si].level;
-        let bcount = w.weapon_slots[si].bullet_count(wp);
+        let cd = w.weapon_slots_input[si].effective_cooldown(wp);
+        let dmg = w.weapon_slots_input[si].effective_damage(wp);
+        let level = w.weapon_slots_input[si].level;
+        let bcount = w.weapon_slots_input[si].bullet_count(wp);
         let pattern = wp.fire_pattern.clone();
 
         match pattern {
@@ -47,6 +48,13 @@ pub(crate) fn update_weapon_attacks(w: &mut GameWorldInner, dt: f32, px: f32, py
             FirePattern::Chain => fire_chain(w, si, px, py, dmg, level, kind_id, cd),
             FirePattern::Aura => fire_aura(w, si, px, py, dmg, level, kind_id, cd),
         }
+    }
+
+    for si in 0..slot_count {
+        w.frame_events.push(FrameEvent::WeaponCooldownUpdated {
+            kind_id: w.weapon_slots_input[si].kind_id,
+            cooldown_timer: w.weapon_slots_input[si].cooldown_timer,
+        });
     }
 }
 
@@ -83,14 +91,14 @@ fn fire_aimed(
             let vy = angle.sin() * BULLET_SPEED;
             w.bullets.spawn(px, py, vx, vy, dmg, BULLET_LIFETIME);
         }
-        w.weapon_slots[si].cooldown_timer = cd;
+        w.weapon_slots_input[si].cooldown_timer = cd;
     }
 }
 
 fn fire_fixed_up(w: &mut GameWorldInner, si: usize, px: f32, py: f32, dmg: i32, cd: f32) {
     w.bullets
         .spawn(px, py, 0.0, -BULLET_SPEED, dmg, BULLET_LIFETIME);
-    w.weapon_slots[si].cooldown_timer = cd;
+    w.weapon_slots_input[si].cooldown_timer = cd;
 }
 
 fn fire_radial(
@@ -125,7 +133,7 @@ fn fire_radial(
             BULLET_LIFETIME,
         );
     }
-    w.weapon_slots[si].cooldown_timer = cd;
+    w.weapon_slots_input[si].cooldown_timer = cd;
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -228,7 +236,7 @@ fn fire_whip(
             w.particles.emit(bx, by, 4, [1.0, 0.8, 0.2, 1.0]);
         }
     }
-    w.weapon_slots[si].cooldown_timer = cd;
+    w.weapon_slots_input[si].cooldown_timer = cd;
 }
 
 fn fire_piercing(w: &mut GameWorldInner, si: usize, px: f32, py: f32, dmg: i32, cd: f32) {
@@ -252,7 +260,7 @@ fn fire_piercing(w: &mut GameWorldInner, si: usize, px: f32, py: f32, dmg: i32, 
         let vy = base_angle.sin() * BULLET_SPEED;
         w.bullets
             .spawn_piercing(px, py, vx, vy, dmg, BULLET_LIFETIME);
-        w.weapon_slots[si].cooldown_timer = cd;
+        w.weapon_slots_input[si].cooldown_timer = cd;
     }
 }
 
@@ -352,7 +360,7 @@ fn fire_chain(
             w.particles.emit(bx, by, 5, [0.3, 0.8, 1.0, 1.0]);
         }
     }
-    w.weapon_slots[si].cooldown_timer = cd;
+    w.weapon_slots_input[si].cooldown_timer = cd;
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -407,5 +415,5 @@ fn fire_aura(
             w.particles.emit(hit_x, hit_y, 2, [0.9, 0.9, 0.3, 0.6]);
         }
     }
-    w.weapon_slots[si].cooldown_timer = cd;
+    w.weapon_slots_input[si].cooldown_timer = cd;
 }
