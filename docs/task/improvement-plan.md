@@ -31,20 +31,6 @@
 
 ## 未解決課題
 
-### I-0: bin/ci.bat の完全通過（優先度: 最優先）
-
-**問題:** `bin/ci.bat` がエラーゼロで通過しない。評価ルールの DX 原則「ローカル CI がエラーゼロで通過すること」に違反。README の「品質保証」セクションの記述と実態が乖離している。
-
-**影響:**
-- cargo clippy: input_openxr（未使用変数 `on_event`、不要な mut）、render（too many arguments、needless_range_loop）
-
-**作業ステップ:**
-1. input_openxr: 未使用変数の削除・`mut` の除去
-2. render: 多引数関数を構造体に集約、needless_range_loop を iterator に置き換え
-3. `bin/ci.bat` を実行し、全ジョブ PASS を確認
-
----
-
 ### I-B: spawn_elite_enemy の脆弱なスロット特定ロジック（優先度: 高）
 
 **問題:** `spawn` が `free_list` を使ってスロットを再利用する場合、`before_len..after_len` の範囲外のスロットが使われる。`i >= before_len` の条件では `free_list` 再利用スロットを捕捉できず、同じ `kind_id` の既存エネミーが `base_max_hp` と同じ HP を持つ場合、誤って既存エネミーの HP を変更する可能性がある。
