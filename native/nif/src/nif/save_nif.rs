@@ -24,7 +24,7 @@ pub struct SaveSnapshot {
 pub fn get_save_snapshot(world: ResourceArc<GameWorld>) -> NifResult<SaveSnapshot> {
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;
     Ok(SaveSnapshot {
-        player_hp: w.player.hp,
+        player_hp: w.player_hp_injected,
         player_x: w.player.x,
         player_y: w.player.y,
         player_max_hp: w.player_max_hp,
@@ -39,12 +39,14 @@ pub fn load_save_snapshot(
 ) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
 
-    w.player.hp = snapshot.player_hp;
+    // player_hp, invincible_timer は contents SSoT。build_loaded_scene_state で
+    // Playing に渡し、初回 on_nif_sync で set_player_snapshot が注入する。
+    w.player_hp_injected = snapshot.player_hp;
+    w.player_invincible_timer_injected = 0.0;
     w.player.x = snapshot.player_x;
     w.player.y = snapshot.player_y;
     w.player.input_dx = 0.0;
     w.player.input_dy = 0.0;
-    w.player.invincible_timer = 0.0;
 
     w.player_max_hp = snapshot.player_max_hp;
     w.elapsed_seconds = snapshot.elapsed_seconds;

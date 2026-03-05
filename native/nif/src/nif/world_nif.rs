@@ -29,9 +29,9 @@ pub fn create_world() -> ResourceArc<GameWorld> {
             y: SCREEN_HEIGHT / 2.0 - PLAYER_SIZE / 2.0,
             input_dx: 0.0,
             input_dy: 0.0,
-            hp: 100.0,
-            invincible_timer: 0.0,
         },
+        player_hp_injected: 0.0,
+        player_invincible_timer_injected: 0.0,
         enemies: EnemyWorld::new(),
         bullets: BulletWorld::new(),
         particles: ParticleWorld::new(PARTICLE_RNG_SEED),
@@ -109,10 +109,25 @@ pub fn spawn_enemies_at(
     Ok(ok())
 }
 
+/// PlayerState SSoT 移行: contents から毎フレーム呼ぶ。hp と invincible_timer を注入する。
 #[rustler::nif]
-pub fn set_player_hp(world: ResourceArc<GameWorld>, hp: f64) -> NifResult<Atom> {
+pub fn set_player_snapshot(
+    world: ResourceArc<GameWorld>,
+    hp: f64,
+    invincible_timer: f64,
+) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
-    w.player.hp = hp as f32;
+    w.player_hp_injected = hp as f32;
+    w.player_invincible_timer_injected = invincible_timer as f32;
+    Ok(ok())
+}
+
+/// プレイヤー位置を設定（ロード時・テレポート用）。通常は物理演算で更新される。
+#[rustler::nif]
+pub fn set_player_position(world: ResourceArc<GameWorld>, x: f64, y: f64) -> NifResult<Atom> {
+    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
+    w.player.x = x as f32;
+    w.player.y = y as f32;
     Ok(ok())
 }
 

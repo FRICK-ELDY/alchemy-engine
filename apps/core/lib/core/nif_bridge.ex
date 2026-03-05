@@ -111,7 +111,11 @@ defmodule Core.NifBridge do
   def is_player_dead(_world), do: :erlang.nif_error(:nif_not_loaded)
 
   # ── Elixir SSoT 注入 NIF（毎フレーム呼ばれる）──────────────────────
-  def set_player_hp(_world, _hp), do: :erlang.nif_error(:nif_not_loaded)
+  # PlayerState SSoT: hp と invincible_timer を毎フレーム注入
+  def set_player_snapshot(_world, _hp, _invincible_timer),
+    do: :erlang.nif_error(:nif_not_loaded)
+
+  def set_player_position(_world, _x, _y), do: :erlang.nif_error(:nif_not_loaded)
   def set_elapsed_seconds(_world, _elapsed), do: :erlang.nif_error(:nif_not_loaded)
 
   # ── Phase 3-A: World パラメータ注入 NIF ──────────────────────────

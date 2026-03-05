@@ -53,6 +53,20 @@
 
 ---
 
+### PlayerState コンテンツ層移行（完了）— 懸念点・残課題
+
+**実施日**: 2026-03-05。PlayerState 移行計画に基づき Phase 1〜4 を実施済み。hp と invincible_timer の SSoT を contents 層に移行。
+
+**懸念点**
+
+| 項目 | 内容 | 優先度 |
+|:---|:---|:---|
+| **1 tick 遅れ** | Boss SSoT と同様、`on_nif_sync` の注入が 1 tick 遅れる可能性あり。被ダメージ・無敵のタイミングが 1 フレームずれるが、ゲームプレイ上許容範囲と判断。 | 低 |
+| **INVINCIBLE_DURATION の二重管理** | 旧 `physics` constants から移行し、VampireSurvivor では `LevelComponent` に `@invincible_ms 500` として定義。他コンテンツが player 無敵を持つ場合、各コンテンツで定義が必要。 | 低 |
+| **他コンテンツの対応** | AsteroidArena, BulletHell3D 等が PlayerState を使用しているか未確認。VampireSurvivor 以外で `set_player_snapshot` を呼ばない場合、create_world 直後は `player_hp_injected` が 0 のまま。LevelComponent を持つコンテンツのみ問題なし。 | 低 |
+
+---
+
 ### 課題9: クラウドセーブ（独自サーバーによるセーブデータ同期）
 
 **優先度**: 低（`network` の実装が前提）
@@ -586,7 +600,7 @@ PlayerState 移行や Boss SSoT 移行と同様、状態の所有権を contents
 
 **注記**
 
-PlayerState 移行（`docs/plan/player-state-migration.md`）は現状の手順で進める。本課題はその先の長期的な設計方針として追跡する。
+PlayerState 移行は完了済み。本課題はその先の長期的な設計方針として追跡する。
 
 ---
 

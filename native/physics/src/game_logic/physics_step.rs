@@ -12,8 +12,8 @@ use super::systems::items::update_items;
 use super::systems::projectiles::update_projectiles_and_enemy_hits;
 use super::systems::weapons::update_weapon_attacks;
 use crate::constants::{
-    ENEMY_SEPARATION_FORCE, ENEMY_SEPARATION_RADIUS, FRAME_BUDGET_MS, INVINCIBLE_DURATION,
-    PLAYER_RADIUS, PLAYER_SIZE, PLAYER_SPEED,
+    ENEMY_SEPARATION_FORCE, ENEMY_SEPARATION_RADIUS, FRAME_BUDGET_MS, PLAYER_RADIUS, PLAYER_SIZE,
+    PLAYER_SPEED,
 };
 use crate::physics::obstacle_resolve;
 use crate::physics::separation::apply_separation;
@@ -78,10 +78,8 @@ pub fn physics_step_inner(w: &mut GameWorldInner, delta_ms: f64) {
     // 1. 動的 Spatial Hash を再構築
     w.rebuild_collision();
 
-    // 無敵タイマーを更新
-    if w.player.invincible_timer > 0.0 {
-        w.player.invincible_timer = (w.player.invincible_timer - dt).max(0.0);
-    }
+    // 無敵タイマー: contents SSoT。毎フレーム set_player_snapshot で注入済み。
+    let inv = w.player_invincible_timer_injected;
 
     // 2. プレイヤー周辺の敵を取得して円-円判定
     // 最大の敵半径（Golem: 32px）を考慮してクエリ半径を広げる
@@ -108,12 +106,11 @@ pub fn physics_step_inner(w: &mut GameWorldInner, delta_ms: f64) {
         let dist_sq = ddx * ddx + ddy * ddy;
 
         if dist_sq < hit_radius * hit_radius {
-            // HP の権威は Elixir 側。ここではイベント発行のみ行い、
-            // Elixir が PlayerDamaged を受信して player_hp を減算し、
-            // 次フレームで set_player_hp NIF で注入する。
-            if w.player.invincible_timer <= 0.0 && w.player.hp > 0.0 {
+            // HP・無敵は contents SSoT。ここではイベント発行のみ。
+            // Elixir が PlayerDamaged を受信して player_hp 減算・invincible_until 設定し、
+            // 次フレームで set_player_snapshot で注入する。
+            if inv <= 0.0 && w.player_hp_injected > 0.0 {
                 let dmg = params.damage_per_sec * dt;
-                w.player.invincible_timer = INVINCIBLE_DURATION;
                 w.frame_events
                     .push(FrameEvent::PlayerDamaged { damage: dmg });
                 // 赤いパーティクルをプレイヤー位置に発生

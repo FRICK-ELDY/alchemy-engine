@@ -44,7 +44,7 @@ pub(crate) fn update_items(w: &mut GameWorldInner, dt: f32, px: f32, py: f32) {
                     // EXP は撃破時に加算済みのため、収集イベント発行のみ
                 }
                 ItemKind::Potion => {
-                    w.player.hp = (w.player.hp + w.items.value[i] as f32).min(w.player_max_hp);
+                    // HP は contents SSoT。回復は FrameEvent::ItemPickup で Elixir に委譲。
                     w.particles.emit(px, py, 6, [0.2, 1.0, 0.4, 1.0]);
                 }
                 ItemKind::Magnet => {
@@ -54,6 +54,7 @@ pub(crate) fn update_items(w: &mut GameWorldInner, dt: f32, px: f32, py: f32) {
             }
             w.frame_events.push(FrameEvent::ItemPickup {
                 item_kind: item_k as u8,
+                value: w.items.value[i],
             });
             w.items.kill(i);
         }
