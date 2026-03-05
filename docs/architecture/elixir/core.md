@@ -32,8 +32,9 @@
 | `create_world/0` | GameWorld リソースを生成 |
 | `set_map_obstacles/2` | 障害物リストを設定 |
 | `create_game_loop_control/0` | GameLoopControl リソースを生成 |
+| `create_render_frame_buffer/0` | RenderFrameBuffer リソースを生成 |
 | `start_rust_game_loop/3` | Rust 60Hz ゲームループを開始 |
-| `start_render_thread/2` | レンダースレッドを起動 |
+| `start_render_thread/5` | レンダースレッドを起動（world, render_buf, pid, title, atlas_path） |
 | `pause_physics/1` | 物理演算を一時停止 |
 | `resume_physics/1` | 物理演算を再開 |
 | `physics_step/2` | 1 フレーム物理ステップ |
@@ -68,6 +69,8 @@ NIF 関数は 3 カテゴリに分類されます：
 
 ```elixir
 @callback components()        :: [module()]
+@callback flow_runner(room_id())       :: pid() | nil   # シーンスタックの pid
+@callback event_handler(room_id())    :: pid() | nil   # GameEvents の pid
 @callback initial_scenes()    :: [%{module: scene_module(), init_arg: map()}]
 @callback physics_scenes()    :: [scene_module()]
 @callback playing_scene()     :: scene_module()
@@ -78,6 +81,8 @@ NIF 関数は 3 カテゴリに分類されます：
 @callback wave_label(elapsed_sec :: float()) :: String.t()
 @callback context_defaults()  :: map()
 ```
+
+**オプショナル: `scene_stack_spec/1`** — ルーム用 SceneStack の `child_spec`。マルチルーム時などに使用。
 
 **オプショナルコールバック（武器・ボスの概念を持つコンテンツのみ）:**
 
@@ -103,7 +108,8 @@ NIF 関数は 3 カテゴリに分類されます：
 @callback on_physics_process(context())  :: :ok  # 物理フレーム（60Hz）
 @callback on_event(event(), context())   :: :ok  # UI アクション・内部イベント
 @callback on_frame_event(event(), context()) :: :ok  # Rust フレームイベント
-@callback on_nif_sync(context())         :: :ok  # 毎フレームの NIF 注入
+@callback on_nif_sync(context())         :: :ok  # 毎フレームの NIF 注入・push_render_frame
+@callback on_engine_message(msg(), context()) :: :ok  # 遅延コールバック等のディスパッチ
 ```
 
 **context マップのフィールド:**
@@ -111,6 +117,7 @@ NIF 関数は 3 カテゴリに分類されます：
 | フィールド | 説明 |
 |:---|:---|
 | `context.world_ref` | Rust ワールドへの参照 |
+| `context.render_buf_ref` | RenderFrameBuffer への参照（push_render_frame NIF に渡す） |
 | `context.now` | 現在時刻（monotonic ms） |
 | `context.elapsed` | ゲーム開始からの経過 ms |
 | `context.frame_count` | フレームカウンタ |
@@ -202,8 +209,10 @@ Rust から受信したフレームイベントを複数のサブスクライバ
 
 | ファイル | 形式 | 内容 |
 |:---|:---|:---|
-| `saves/session.dat` | Erlang term binary | セッション全データ |
+| `saves/session.dat` | Erlang term binary（HMAC 署名付き） | セッション全データ |
 | `saves/high_scores.dat` | Erlang term binary | ハイスコア上位 10 件リスト |
+
+`config :core, :save_hmac_secret` で署名鍵を設定。本番では環境変数 `SAVE_HMAC_SECRET` で上書き推奨。
 
 ---
 

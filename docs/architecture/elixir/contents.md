@@ -2,7 +2,7 @@
 
 ## 概要
 
-`contents` はゲームコンテンツ（VampireSurvivor / AsteroidArena / SimpleBox3D / BulletHell3D / RollingBall / VRTest / CanvasTest）の実装と、シーン管理・メインゲームループのディスパッチを担当します。エンジン本体（[core](./core.md)）はゲームロジックを知らず、ContentBehaviour で定義されたインターフェースに従ってコンポーネントへ委譲します。
+`contents` はゲームコンテンツ（VampireSurvivor / AsteroidArena / SimpleBox3D / BulletHell3D / RollingBall / VRTest / CanvasTest）の実装と、シーン管理・メインゲームループのディスパッチを担当します。エンジン本体（[core](./core.md)）はゲームロジックを知らず、ContentBehaviour で定義されたインターフェースに従ってコンポーネントへ委譲します。Phase R-2 以降、描画は Elixir 側の RenderComponent が DrawCommand・Camera・UiCanvas を組み立て、`push_render_frame` NIF で RenderFrameBuffer に書き込む。
 
 使用するコンテンツは `config.exs` で指定します。
 
@@ -81,6 +81,7 @@ Rust の 60Hz ゲームループから `{:frame_events, events}` を受信し、
   room_id: atom(),
   world_ref: reference(),
   control_ref: reference(),
+  render_buf_ref: reference(),   # RenderFrameBuffer（push_render_frame 用）
   last_tick: integer(),
   frame_count: integer(),
   start_ms: integer(),
@@ -131,7 +132,7 @@ stateDiagram-v2
 | `Content.BulletHell3D` | 3D 弾幕避けゲーム | - |
 | `Content.RollingBall` | 玉転がしゲーム | - |
 | `Content.VRTest` | VR 動作検証（Phase A: マウスで見回し） | - |
-| `Content.CanvasTest` | 描画テスト用 | - |
+| `Content.CanvasTest` | 描画テスト用（DrawCommand・UiCanvas・CanvasUI 動作検証） | [docs/task/canvas-test-design.md](../../task/canvas-test-design.md) |
 
 ---
 

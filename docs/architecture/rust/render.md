@@ -2,7 +2,7 @@
 
 ## 概要
 
-`render` クレートは wgpu による GPU 描画パイプライン・egui HUD・winit ウィンドウ管理・ヘッドレスモードを担当します。デスクトップのウィンドウとイベントループは **`input` クレート**（render に依存）が担当し、winit を共有します。
+`render` クレートは wgpu による GPU 描画パイプライン・egui HUD・winit ウィンドウ管理・ヘッドレスモードを担当します。Phase R-2 以降、**RenderFrame**（DrawCommand リスト・CameraParams・UiCanvas）は Elixir 側の RenderComponent が `push_render_frame` NIF で RenderFrameBuffer に書き込み、RenderBridge の `next_frame()` がそれを取得して描画する。デスクトップのウィンドウとイベントループは **`input` クレート**（render に依存）が担当し、winit を共有します。
 
 ---
 
@@ -46,10 +46,12 @@ CI / テスト環境向け。`[features] headless = []` で有効化。winit ウ
 
 ### `renderer/mod.rs` — 描画パス
 
-- `update_instances(RenderFrame)` — SpriteInstance 配列を構築（最大 14,502 エントリ）
-- インスタンスバッファ更新 → スプライトパス（render pass）→ egui HUD パス
+- `update_instances(RenderFrame)` — RenderFrame の `commands`（DrawCommand 配列）から SpriteInstance 等を構築
+- インスタンスバッファ更新 → スプライトパス（render pass）→ egui HUD パス（`frame.ui`）
+- DrawCommand: PlayerSprite, Sprite, Particle, Item, Obstacle, Box3D, GridPlane, Skybox, SpriteRaw 等
+- UiCanvas: vertical_layout, horizontal_layout, text, rect, progress_bar, button, world_text, screen_flash 等
 
-**スプライトアトラスレイアウト（1600×64px）:**
+**スプライトアトラスレイアウト（1600×64px、VampireSurvivor 等 2D コンテンツ用）:**
 
 | オフセット | 内容 |
 |:---|:---|

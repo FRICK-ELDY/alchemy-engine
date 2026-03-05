@@ -45,7 +45,7 @@ alchemy-engine/
 ├── mix.exs                          # Umbrella ルートプロジェクト定義
 ├── mix.lock                         # Elixir 依存ロックファイル
 ├── config/
-│   ├── config.exs                   # :current（コンテンツモジュール）/ :map 設定
+│   ├── config.exs                   # :current / :map / libcluster / save_hmac_secret 等
 │   └── runtime.exs                  # 実行時設定（ポート等）
 │
 ├── apps/                            # Elixir アプリケーション群
@@ -60,7 +60,7 @@ alchemy-engine/
 │   │       ├── config.ex            # :current コンテンツモジュール解決
 │   │       ├── room_supervisor.ex   # DynamicSupervisor
 │   │       ├── room_registry.ex     # Registry ラッパー
-│   │       ├── event_bus.ex         # フレームイベント配信 GenServer
+│   │       ├── event_bus.ex         # フレームイベント配信 GenServer（subscribe / broadcast）
 │   │       ├── input_handler.ex     # キー入力 GenServer
 │   │       ├── frame_cache.ex       # フレームスナップショット ETS
 │   │       ├── map_loader.ex        # マップ障害物定義
@@ -128,11 +128,13 @@ alchemy-engine/
 │   │           └── scenes/ playing.ex
 │   │
 │   └── network/                     # 通信レイヤー
-│       ├── mix.exs                  # deps: phoenix ~> 1.8, phoenix_pubsub, plug_cowboy
+│       ├── mix.exs                  # deps: phoenix ~> 1.8, phoenix_pubsub, plug_cowboy, libcluster
 │       └── lib/network/
-│           ├── network.ex
+│           ├── network.ex           # Distributed / Local / Channel / UDP 委譲
 │           ├── application.ex
 │           ├── local.ex             # ローカルマルチルーム管理 GenServer
+│           ├── distributed.ex       # 複数ノード間ルーム管理（libcluster クラスタ時）
+│           ├── room_token.ex        # Phoenix.Token によるルーム参加認証
 │           ├── channel.ex           # Phoenix Channels / WebSocket
 │           ├── endpoint.ex          # Phoenix Endpoint（ポート 4000）
 │           ├── router.ex
@@ -146,7 +148,7 @@ alchemy-engine/
 │   ├── Cargo.lock
 │   │
 │   ├── physics/                  # 物理演算・ECS（依存: rustc-hash / rayon / log）
-│   ├── nif/                         # NIF 通信インターフェース・ゲームループ
+│   ├── nif/                         # NIF ブリッジ・ゲームループ・RenderFrameBuffer
 │   ├── audio/                       # rodio オーディオ管理
 │   ├── render/                      # wgpu 描画パイプライン
 │   ├── input/                       # デスクトップ入力・winit イベントループ（render に依存）
@@ -166,7 +168,7 @@ alchemy-engine/
 | `core` | ゲームループ制御・イベント受信・セーブ・ContentBehaviour / Component インターフェース定義 | Elixir GenServer / ETS |
 | `contents` | GameEvents・シーンスタック・SceneBehaviour・ContentBehaviour 実装・Component 群・エンティティパラメータ | Elixir |
 | `network` | Phoenix Channels（WebSocket）・UDP トランスポート・ローカルマルチルーム管理 | Elixir / Phoenix |
-| `nif` | Elixir-Rust 間 NIF ブリッジ・ゲームループ・レンダーブリッジ | Rust / Rustler |
+| `nif` | Elixir-Rust 間 NIF ブリッジ・ゲームループ・RenderFrameBuffer・push_render_frame デコード | Rust / Rustler |
 | `physics` | 物理演算・空間ハッシュ・ECS・外部注入パラメータテーブル | Rust |
 | `render` | GPU 描画パイプライン・HUD・winit ウィンドウ管理・ヘッドレスモード | Rust / wgpu / egui / winit |
 | `audio` | オーディオ管理・アセット読み込み | Rust / rodio |
@@ -223,7 +225,11 @@ sequenceDiagram
     end
 ```
 
-### 4. ContentBehaviour + Component による拡張設計
+### 4. Phase R-2: Elixir 側による描画命令 push
+
+Elixir 側（contents）が DrawCommand リスト・CameraParams・UiCanvas を組み立て、`push_render_frame` NIF 経由で `RenderFrameBuffer` に書き込む。Rust の `RenderBridge::next_frame()` はこのバッファから RenderFrame を取得し、2D の場合は GameWorld から補間データを読み取ってプレイヤー座標を補間する。
+
+### 5. ContentBehaviour + Component による拡張設計
 
 ```mermaid
 graph LR
@@ -270,8 +276,10 @@ sequenceDiagram
     Note over COMP: set_world_size / set_entity_params NIF を呼び出す
     GEV->>NIF: set_map_obstacles(world_ref, obstacles)
     GEV->>NIF: create_game_loop_control()
+    GEV->>NIF: create_render_frame_buffer()
+    NIF-->>GEV: RenderFrameBuffer リソース
     GEV->>NIF: start_rust_game_loop(world_ref, control_ref, self())
-    GEV->>NIF: start_render_thread(world_ref, self())
+    GEV->>NIF: start_render_thread(world_ref, render_buf_ref, self(), title, atlas_path)
     Note over NIF: Rust 60Hz ループ開始
 ```
 
@@ -336,33 +344,35 @@ flowchart TD
 1. `on_frame_event/2` — 全コンポーネントにフレームイベントを配信（スコア・HP・ボス HP 更新）
 2. `Scene.update/2` — シーン遷移判断
 3. `on_physics_process/1` — ボス AI 等の物理コールバック（NIF 書き込みを含む）
-4. `on_nif_sync/1` — Elixir state を Rust 側に差分注入
+4. `on_nif_sync/1` — Elixir state を Rust 側に注入。RenderComponent は `push_render_frame` で DrawCommand・Camera・UiCanvas を RenderFrameBuffer に書き込む
 
 ---
 
 ## レンダリングスレッド（非同期）
 
+Phase R-2: RenderBridge は `RenderFrameBuffer` から RenderFrame を取得する。Elixir の RenderComponent が `push_render_frame` で毎フレーム書き込む。2D の場合は GameWorld から補間データを読み取り PlayerSprite の座標を補間する。
+
 ```mermaid
 sequenceDiagram
-    participant W as winit EventLoop
+    participant E as Elixir RenderComponent
+    participant RB as RenderBridge
+    participant RFB as RenderFrameBuffer
     participant GW as GameWorld
     participant R as Renderer
-    participant GPU as GPU
+
+    loop 毎フレーム（Elixir on_nif_sync）
+        E->>RFB: push_render_frame(commands, camera, ui, cursor_grab)
+    end
 
     loop RedrawRequested（VSync）
-        W->>GW: next_frame()
-        Note over GW: read lock 取得
-        GW->>GW: 最小データをコピー
-        Note over GW: read lock 解放（最小化）
-        GW->>GW: 補間計算（ロック外）<br/>alpha = (now - prev) / (curr - prev)<br/>player_pos = lerp(prev, curr, alpha)
-        GW-->>W: RenderFrame
-        W->>R: update_instances(frame)
-        R->>GPU: インスタンスバッファ更新
-        W->>R: render()
-        R->>GPU: スプライトパス
-        R->>GPU: egui HUD パス
-        W->>GW: on_ui_action(pending_action)
-        Note over GW: write lock で UI アクションをキュー
+        RB->>RFB: get()
+        RFB-->>RB: RenderFrame
+        RB->>GW: read lock（補間データ取得・2D 時のみ PlayerSprite 補間）
+        RB-->>R: RenderFrame
+        R->>R: update_instances(frame)
+        R->>R: render()
+        RB->>RB: on_ui_action(pending_action)
+        Note over RB: Elixir に UI アクション送信
     end
 ```
 
@@ -436,8 +446,9 @@ graph TD
 
 | カテゴリ | 代表関数 | ロック | 呼び出し頻度 |
 |:---|:---|:---|:---|
-| control | `create_world`, `spawn_enemies`, `set_entity_params` | write | 低（起動時・イベント時） |
+| control | `create_world`, `create_render_frame_buffer`, `spawn_enemies`, `set_entity_params` | write | 低（起動時・イベント時） |
 | inject | `set_hud_state`, `set_hud_level_state`, `set_boss_velocity`, `set_weapon_slots` | write | 高（毎フレーム） |
+| render_push | `push_render_frame` | RenderFrameBuffer（別 RwLock） | 高（毎フレーム・on_nif_sync） |
 | query_light | `get_player_hp`, `get_enemy_count`, `get_boss_state` | read | 高（毎フレーム可） |
 | snapshot_heavy | `get_save_snapshot`, `load_save_snapshot` | write | 低（明示操作時） |
 | game_loop | `physics_step`, `drain_frame_events` | write | 高（60Hz） |
