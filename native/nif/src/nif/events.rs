@@ -17,9 +17,13 @@ pub(crate) fn drain_frame_events_inner(w: &mut GameWorldInner) -> Vec<(Atom, u32
                 y.to_bits(),
                 0,
             ),
-            FrameEvent::PlayerDamaged { damage } => {
-                (crate::player_damaged(), (damage * 1000.0) as u32, 0, 0, 0)
-            }
+            FrameEvent::PlayerDamaged { damage } => (
+                crate::player_damaged(),
+                (damage * 1000.0).clamp(0.0, u32::MAX as f32) as u32,
+                0,
+                0,
+                0,
+            ),
             FrameEvent::ItemPickup { item_kind, value } => {
                 (crate::item_pickup(), item_kind as u32, value, 0, 0)
             }
@@ -29,9 +33,13 @@ pub(crate) fn drain_frame_events_inner(w: &mut GameWorldInner) -> Vec<(Atom, u32
             FrameEvent::SpecialEntitySpawned { entity_kind } => {
                 (crate::boss_spawn(), entity_kind as u32, 0, 0, 0)
             }
-            FrameEvent::SpecialEntityDamaged { damage } => {
-                (crate::boss_damaged(), (damage * 1000.0) as u32, 0, 0, 0)
-            }
+            FrameEvent::SpecialEntityDamaged { damage } => (
+                crate::boss_damaged(),
+                (damage * 1000.0).clamp(0.0, u32::MAX as f32) as u32,
+                0,
+                0,
+                0,
+            ),
             FrameEvent::WeaponCooldownUpdated {
                 kind_id,
                 cooldown_timer,

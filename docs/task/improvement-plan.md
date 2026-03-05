@@ -31,33 +31,6 @@
 
 ## 未解決課題
 
-### I-B: spawn_elite_enemy の脆弱なスロット特定ロジック（優先度: 高）
-
-**問題:** `spawn` が `free_list` を使ってスロットを再利用する場合、`before_len..after_len` の範囲外のスロットが使われる。`i >= before_len` の条件では `free_list` 再利用スロットを捕捉できず、同じ `kind_id` の既存エネミーが `base_max_hp` と同じ HP を持つ場合、誤って既存エネミーの HP を変更する可能性がある。
-
-**影響ファイル:**
-- `native/nif/src/nif/action_nif.rs`（L182-194）
-
-**作業ステップ:**
-1. `EnemyWorld::spawn` が使用したスロットインデックスを返すよう変更する（`pub fn spawn(...) -> Vec<usize>`）
-2. `action_nif.rs` の `spawn_elite_enemy` が返されたインデックスを直接使用するよう変更する
-3. テストで `free_list` 再利用ケース（既存エネミーを kill してから spawn）を検証する
-
----
-
-### I-C: FrameEvent::PlayerDamaged の u32 オーバーフローリスク（優先度: 高）
-
-**問題:** `(damage * 1000.0) as u32` キャストで `damage` が大きい場合（ボスの接触ダメージ等）に `u32` オーバーフローが発生する。Rustの `as u32` キャストは飽和変換ではなく切り捨て変換のため、意図しない結果になる。
-
-**影響ファイル:**
-- `native/nif/src/nif/events.rs`（L21）
-
-**作業ステップ:**
-1. `(damage * 1000.0) as u32` を `(damage * 1000.0).clamp(0.0, u32::MAX as f32) as u32` に変更する
-2. 同様のパターンが他の `FrameEvent` 変換にないか確認する
-
----
-
 ### I-D: #[cfg(target_arch = "x86_64")] の pub use 漏れ（優先度: 中）
 
 **問題:** `game_logic/mod.rs` で `update_chase_ai_simd` が非 x86_64 環境でも `pub use` でエクスポートされているが、実際の定義は `#[cfg(target_arch = "x86_64")]` で条件付きのため、ARM/WASMでコンパイルするとリンクエラーになる。
@@ -143,35 +116,6 @@
 
 ---
 
-### I-J: render の build_instances 重複解消（優先度: 低）
-
-**問題:** `renderer/mod.rs` の `update_instances` と `headless.rs` の `build_instances` にほぼ同一のスプライトUV・サイズ計算ロジックが重複している。
-
-**影響ファイル:**
-- `native/render/src/renderer/mod.rs`（L719-906）
-- `native/render/src/headless.rs`（L556-715）
-
-**作業ステップ:**
-1. スプライト種別ごとのUV・サイズ計算ロジックを `pub(crate) fn build_sprite_instance(...)` として `renderer/mod.rs` に切り出す
-2. `headless.rs` の `build_instances` がこの共有関数を呼び出すよう変更する
-3. スプライト種別を追加した際に1箇所のみ変更すればよいことをテストで確認する
-
----
-
-### I-K: Skeleton/Ghost のスプライト実装（優先度: 低）
-
-**問題:** Skeleton と Ghost が Golem と Bat の UV を流用しており、視覚的に区別できない。
-
-**影響ファイル:**
-- `native/render/src/renderer/mod.rs`（L258-266）
-
-**作業ステップ:**
-1. テクスチャアトラスに Skeleton・Ghost 専用のスプライトスロットを確保する
-2. `skeleton_anim_uv` と `ghost_anim_uv` を専用UVに変更する
-3. TODO コメントを削除する
-
----
-
 ### I-L: render_frame_nif.rs の肥大化（優先度: 中）
 
 **問題:** `native/nif/src/nif/render_frame_nif.rs` が DrawCommand・CameraParams・UiComponent の全デコードロジックを1ファイルに集約しており、コンテンツ追加のたびに肥大化する。現時点で634行あり、新しい DrawCommand や UiComponent を追加するたびに同ファイルへの変更が集中する。
@@ -186,6 +130,21 @@
    - `decode/ui_canvas.rs` — `decode_ui_canvas` / `decode_ui_node` / `decode_ui_component` 等
 2. `render_frame_nif.rs` は NIF エントリポイント（`push_render_frame`・`create_render_frame_buffer`）のみに絞る
 3. 共通ヘルパー（`decode_color`・`atom_str`・`tag_of` 等）は `decode/mod.rs` に集約する
+
+---
+
+### I-M: renderer/mod.rs のゲーム固有パラメータを contents へ移行（優先度: 中）
+
+**問題:** `native/render/src/renderer/mod.rs` に、アトラスオフセット・敵種別サイズ・スプライト種別の UV 計算など、多数のゲーム固有パラメータがハードコードされている。アーキテクチャ原則「Elixir = SSoT」「Rust = 演算層」に照らすと、これらの値は contents 側で持ち、NIF 経由で注入するべきである。
+
+**影響ファイル:**
+- `native/render/src/renderer/mod.rs`（アトラス定数・`enemy_sprite_size`・`enemy_anim_uv`・`sprite_instance_from_command` 等）
+
+**作業ステップ:**
+1. contents にスプライトパラメータ（UV 座標・サイズ・kind_id マッピング等）の SSoT を定義する
+2. NIF で `DrawCommand` に加え、パラメータ（UV・サイズ）を Elixir から渡せるようにする
+3. renderer 側は汎用的な「kind_id → パラメータ」の lookup のみ行い、値をハードコードしない
+4. 既存の挙動を変えずに段階的に移行する
 
 ---
 

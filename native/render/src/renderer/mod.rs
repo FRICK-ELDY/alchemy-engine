@@ -71,7 +71,9 @@ pub struct SpriteInstance {
 //   [1344..1407] Bat Lord
 //   [1408..1471] Stone Golem
 //   [1472..1535] 岩弾
-const ATLAS_W: f32 = 1600.0;
+//   [1536..1599] Skeleton（専用スロット）
+//   [1600..1663] Ghost（専用スロット）※ atlas.png を 1664px 幅に拡張すること
+const ATLAS_W: f32 = 1664.0;
 const FRAME_W: f32 = 64.0; // 1 フレームの幅（px）
 
 // アトラス X オフセット（px）— レイアウト変更時はここだけ修正
@@ -91,6 +93,8 @@ const SLIME_KING_ATLAS_OFFSET_X: f32 = 1280.0;
 const BAT_LORD_ATLAS_OFFSET_X: f32 = 1344.0;
 const STONE_GOLEM_ATLAS_OFFSET_X: f32 = 1408.0;
 const ROCK_BULLET_ATLAS_OFFSET_X: f32 = 1472.0;
+const SKELETON_ATLAS_OFFSET_X: f32 = 1536.0;
+const GHOST_ATLAS_OFFSET_X: f32 = 1600.0;
 
 /// プレイヤーのアニメーション UV（フレーム番号 0〜3）
 pub fn player_anim_uv(frame: u8) -> ([f32; 2], [f32; 2]) {
@@ -248,15 +252,17 @@ pub(crate) fn enemy_sprite_size(kind: u8) -> f32 {
     }
 }
 
-/// Skeleton 用 UV（Golem と同スロットでプレースホルダー）
-/// TODO: 専用スプライトスロットを確保するまでの暫定措置。Golem の UV を流用中。
+/// Skeleton 専用 UV（フレーム番号 0〜1）
 fn skeleton_anim_uv(frame: u8) -> ([f32; 2], [f32; 2]) {
-    golem_anim_uv(frame)
+    let frame2 = (frame % 2) as f32;
+    let x = SKELETON_ATLAS_OFFSET_X + frame2 * FRAME_W;
+    ([x / ATLAS_W, 0.0], [FRAME_W / ATLAS_W, 1.0])
 }
-/// Ghost 用 UV（Bat と同スロットでプレースホルダー）
-/// TODO: 専用スプライトスロットを確保するまでの暫定措置。Bat の UV を流用中。
+/// Ghost 専用 UV（フレーム番号 0〜1）
 fn ghost_anim_uv(frame: u8) -> ([f32; 2], [f32; 2]) {
-    bat_anim_uv(frame)
+    let frame2 = (frame % 2) as f32;
+    let x = GHOST_ATLAS_OFFSET_X + frame2 * FRAME_W;
+    ([x / ATLAS_W, 0.0], [FRAME_W / ATLAS_W, 1.0])
 }
 
 /// 1.2.8/1.2.9: アニメーションフレームを考慮した敵 UV（ボスは静止スプライト）
