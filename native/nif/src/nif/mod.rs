@@ -2,6 +2,7 @@
 //! Summary: NIF エントリモジュール
 
 mod action_nif;
+mod decode;
 pub(crate) mod events;
 mod game_loop_nif;
 mod load;
