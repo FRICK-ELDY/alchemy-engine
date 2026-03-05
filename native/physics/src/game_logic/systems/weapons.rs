@@ -195,19 +195,19 @@ fn fire_whip(
             }
         }
     }
-    // Whip vs ボス
+    // Whip vs 特殊エンティティ（スナップショット）
     {
-        let boss_hit_pos: Option<(f32, f32)> = if let Some(ref boss) = w.boss {
-            if !boss.invincible {
-                let ddx = boss.x - px;
-                let ddy = boss.y - py;
+        let special_hit: Option<(f32, f32)> = if let Some(ref snap) = w.special_entity_snapshot {
+            if !snap.invincible {
+                let ddx = snap.x - px;
+                let ddy = snap.y - py;
                 if ddx * ddx + ddy * ddy <= whip_range_sq {
                     let angle = ddy.atan2(ddx);
                     let diff = (angle - facing_angle + std::f32::consts::PI)
                         .rem_euclid(std::f32::consts::TAU)
                         - std::f32::consts::PI;
                     if diff.abs() < whip_half_angle {
-                        Some((boss.x, boss.y))
+                        Some((snap.x, snap.y))
                     } else {
                         None
                     }
@@ -220,10 +220,11 @@ fn fire_whip(
         } else {
             None
         };
-        if let Some((bx, by)) = boss_hit_pos {
-            if let Some(ref mut boss) = w.boss {
-                boss.hp -= dmg as f32;
-            }
+        if let Some((bx, by)) = special_hit {
+            w.frame_events
+                .push(FrameEvent::SpecialEntityDamaged {
+                    damage: dmg as f32,
+                });
             w.particles.emit(bx, by, 4, [1.0, 0.8, 0.2, 1.0]);
         }
     }
@@ -325,14 +326,14 @@ fn fire_chain(
             break;
         }
     }
-    // Chain vs ボス（600px 以内なら連鎖先としてダメージ）
+    // Chain vs 特殊エンティティ（600px 以内なら連鎖先としてダメージ）
     {
-        let boss_hit_pos: Option<(f32, f32)> = if let Some(ref boss) = w.boss {
-            if !boss.invincible {
-                let ddx = boss.x - px;
-                let ddy = boss.y - py;
+        let special_hit: Option<(f32, f32)> = if let Some(ref snap) = w.special_entity_snapshot {
+            if !snap.invincible {
+                let ddx = snap.x - px;
+                let ddy = snap.y - py;
                 if ddx * ddx + ddy * ddy < CHAIN_BOSS_RANGE * CHAIN_BOSS_RANGE {
-                    Some((boss.x, boss.y))
+                    Some((snap.x, snap.y))
                 } else {
                     None
                 }
@@ -342,10 +343,11 @@ fn fire_chain(
         } else {
             None
         };
-        if let Some((bx, by)) = boss_hit_pos {
-            if let Some(ref mut boss) = w.boss {
-                boss.hp -= dmg as f32;
-            }
+        if let Some((bx, by)) = special_hit {
+            w.frame_events
+                .push(FrameEvent::SpecialEntityDamaged {
+                    damage: dmg as f32,
+                });
             w.bullets.spawn_effect(bx, by, 0.10, BULLET_KIND_LIGHTNING);
             w.particles.emit(bx, by, 5, [0.3, 0.8, 1.0, 1.0]);
         }

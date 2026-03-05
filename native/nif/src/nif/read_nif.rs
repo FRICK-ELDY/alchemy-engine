@@ -5,7 +5,7 @@ use super::util::lock_poisoned_err;
 use physics::world::GameWorld;
 use rustler::{Atom, NifResult, ResourceArc};
 
-use crate::{alive, none};
+use crate::none;
 
 type FrameMetadata = ((f64, f64, u32, f64), (usize, usize, f64), (bool, f64, f64));
 
@@ -61,9 +61,9 @@ pub fn get_frame_time_ms(world: ResourceArc<GameWorld>) -> NifResult<f64> {
 #[rustler::nif]
 pub fn debug_dump_world(world: ResourceArc<GameWorld>) -> NifResult<String> {
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;
-    let boss_str = match &w.boss {
-        Some(b) => format!("boss hp={:.0}/{:.0}", b.hp, b.max_hp),
-        None => "boss=none".to_string(),
+    let boss_str = match &w.special_entity_snapshot {
+        Some(_) => "special_entity=snapshot".to_string(),
+        None => "special_entity=none".to_string(),
     };
     Ok(format!(
         "enemies={} bullets={} player=({:.1},{:.1}) hp={:.0}/{:.0} {}",
@@ -103,8 +103,8 @@ pub fn get_hud_data(world: ResourceArc<GameWorld>) -> NifResult<(f64, f64, u32, 
 #[rustler::nif]
 pub fn get_frame_metadata(world: ResourceArc<GameWorld>) -> NifResult<FrameMetadata> {
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;
-    let (boss_alive, boss_hp, boss_max_hp) = match &w.boss {
-        Some(boss) => (true, boss.hp as f64, boss.max_hp as f64),
+    let (boss_alive, boss_hp, boss_max_hp) = match &w.special_entity_snapshot {
+        Some(_) => (true, 0.0, 0.0),
         None => (false, 0.0, 0.0),
     };
     Ok((
@@ -123,25 +123,6 @@ pub fn get_frame_metadata(world: ResourceArc<GameWorld>) -> NifResult<FrameMetad
 pub fn get_magnet_timer(world: ResourceArc<GameWorld>) -> NifResult<f64> {
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;
     Ok(w.magnet_timer as f64)
-}
-
-/// I-2: Elixir 側の update_boss_ai コールバックに渡すボス物理状態を返す NIF。
-/// ボス種別（kind_id）は Elixir 側 Rule state で管理するため、物理状態のみを返す。
-/// 戻り値: {:alive, x, y, hp, max_hp, phase_timer} または :none
-#[rustler::nif]
-pub fn get_boss_state(world: ResourceArc<GameWorld>) -> NifResult<(Atom, f64, f64, f64, f64, f64)> {
-    let w = world.0.read().map_err(|_| lock_poisoned_err())?;
-    Ok(match &w.boss {
-        Some(boss) => (
-            alive(),
-            boss.x as f64,
-            boss.y as f64,
-            boss.hp as f64,
-            boss.max_hp as f64,
-            boss.phase_timer as f64,
-        ),
-        None => (none(), 0.0, 0.0, 0.0, 0.0, 0.0),
-    })
 }
 
 #[rustler::nif]
@@ -251,16 +232,8 @@ pub fn get_render_entities(world: ResourceArc<GameWorld>) -> NifResult<RenderEnt
         .map(|o| (o.x as f64, o.y as f64, o.radius as f64, o.kind as u32))
         .collect();
 
-    let boss = match &w.boss {
-        Some(b) => (
-            alive(),
-            b.x as f64,
-            b.y as f64,
-            b.radius as f64,
-            b.render_kind as u32,
-        ),
-        None => (none(), 0.0, 0.0, 0.0, 0),
-    };
+    // boss は Elixir state から描画するため、常に :none
+    let boss = (none(), 0.0, 0.0, 0.0, 0);
 
     let score_popups: Vec<(f64, f64, u32, f64)> = w
         .score_popups

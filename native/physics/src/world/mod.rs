@@ -1,7 +1,6 @@
 //! Path: native/physics/src/world/mod.rs
-//! Summary: ワールド型（PlayerState, EnemyWorld, BulletWorld, ParticleWorld, BossState, GameWorld）
+//! Summary: ワールド型（PlayerState, EnemyWorld, BulletWorld, ParticleWorld, GameWorld）
 
-mod boss;
 mod bullet;
 mod enemy;
 mod frame_event;
@@ -9,8 +8,9 @@ mod game_loop_control;
 mod game_world;
 mod particle;
 mod player;
+mod special_entity;
 
-pub use boss::BossState;
+pub use special_entity::SpecialEntitySnapshot;
 pub use bullet::{
     BulletWorld, BULLET_KIND_FIREBALL, BULLET_KIND_LIGHTNING, BULLET_KIND_NORMAL, BULLET_KIND_ROCK,
     BULLET_KIND_WHIP,

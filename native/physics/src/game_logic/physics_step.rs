@@ -5,7 +5,7 @@
 use super::chase_ai::update_chase_ai;
 #[cfg(target_arch = "x86_64")]
 use super::chase_ai::update_chase_ai_simd;
-use super::systems::boss::update_boss;
+use super::systems::special_entity_collision::collide_special_entity_snapshot;
 use super::systems::collision::resolve_obstacles_enemy;
 use super::systems::effects::{update_particles, update_score_popups};
 use super::systems::items::update_items;
@@ -136,8 +136,8 @@ pub fn physics_step_inner(w: &mut GameWorldInner, delta_ms: f64) {
     // ── 弾丸移動 + 弾丸 vs 敵衝突判定 ───────────────────────────
     update_projectiles_and_enemy_hits(w, dt);
 
-    // ── ボス更新 ─────────────────────────────────────────────────
-    update_boss(w, dt);
+    // ── 特殊エンティティ衝突判定（スナップショット、永続状態なし）────────────
+    collide_special_entity_snapshot(w, dt);
 
     // ── フレーム時間計測 ──────────────────────────────────────────
     let elapsed_ms = t_start.elapsed().as_secs_f64() * 1000.0;

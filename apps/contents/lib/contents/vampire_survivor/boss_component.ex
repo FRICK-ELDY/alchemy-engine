@@ -1,56 +1,48 @@
 defmodule Content.VampireSurvivor.BossComponent do
   @moduledoc """
-  ボスAI制御・ボス HP NIF 注入・ボスフレームイベント処理を担うコンポーネント。
+  ボスAI制御・ボス HP 管理・ボスフレームイベント処理を担うコンポーネント。
+
+  Elixir SSoT 移行後: ボス状態は Playing state に保持。
+  on_physics_process で移動計算・AI、on_nif_sync で set_special_entity_snapshot を呼ぶ。
 
   ## on_frame_event
-  - `{:boss_spawn, ...}`   — ボス状態の初期化（Playing シーン state を更新）
-  - `{:boss_damaged, ...}` — ボス HP 減算（Playing シーン state を更新）
-  - `{:boss_defeated, ...}` — スコア更新・アイテムドロップ
+  - `{:boss_damaged, ...}` — ボス HP 減算。boss_hp <= 0 なら撃破処理（Rust は発行しない）。
 
   ## on_nif_sync
-  毎フレーム、Playing シーン state の boss_hp を NIF に注入する。
-  ダーティフラグはプロセス辞書で管理する。
+  毎フレーム、Playing state から set_special_entity_snapshot を呼ぶ。
   """
   @behaviour Core.Component
 
   require Logger
 
   @item_gem Content.EntityParams.item_kind_gem()
-
   @boss_slime_king Content.EntityParams.boss_kind_slime_king()
   @boss_bat_lord Content.EntityParams.boss_kind_bat_lord()
   @boss_stone_golem Content.EntityParams.boss_kind_stone_golem()
+  @map_width 4096.0
+  @map_height 4096.0
 
   # ── on_frame_event: Rust フレームイベント処理 ──────────────────────
 
   @impl Core.Component
-  def on_frame_event({:boss_spawn, boss_kind, _, _, _}, _context) do
-    content = Core.Config.current()
-    runner = content.flow_runner(:main)
-
-    if runner do
-      Contents.SceneStack.update_by_module(runner, content.playing_scene(), fn state ->
-        max_hp = Content.EntityParams.boss_max_hp(boss_kind)
-        %{state | boss_hp: max_hp, boss_max_hp: max_hp, boss_kind_id: boss_kind}
-      end)
-    end
-
-    # phase_timer をリセットする（Elixir 側で管理）
-    bp = Content.EntityParams.boss_params_by_id(boss_kind)
-    Process.put({__MODULE__, :boss_phase_timer}, bp.special_interval)
-
-    :ok
-  end
-
-  def on_frame_event({:boss_damaged, damage_x1000, _, _, _}, _context) do
+  def on_frame_event({:boss_damaged, damage_x1000, _, _, _}, context) do
     damage = damage_x1000 / 1000.0
     content = Core.Config.current()
     runner = content.flow_runner(:main)
 
     if runner do
-      Contents.SceneStack.update_by_module(runner, content.playing_scene(), fn state ->
+      playing_scene = content.playing_scene()
+
+      Contents.SceneStack.update_by_module(runner, playing_scene, fn state ->
         if state.boss_hp != nil do
-          %{state | boss_hp: max(0.0, state.boss_hp - damage)}
+          new_hp = max(0.0, state.boss_hp - damage)
+          state = %{state | boss_hp: new_hp}
+
+          if new_hp <= 0.0 do
+            apply_defeated(state, context)
+          else
+            state
+          end
         else
           state
         end
@@ -60,31 +52,27 @@ defmodule Content.VampireSurvivor.BossComponent do
     :ok
   end
 
-  def on_frame_event({:boss_defeated, world_ref, boss_kind, x, y}, _context) do
-    content = Core.Config.current()
-    runner = content.flow_runner(:main)
-
-    if function_exported?(content, :boss_exp_reward, 1) and runner do
-      exp = content.boss_exp_reward(boss_kind)
-      score_delta = content.score_from_exp(exp)
-
-      Contents.SceneStack.update_by_module(runner, content.playing_scene(), fn state ->
-        state
-        |> Map.update(:score, score_delta, &(&1 + score_delta))
-        |> Map.update(:kill_count, 1, &(&1 + 1))
-        |> content.playing_scene().accumulate_exp(exp)
-        |> content.playing_scene().apply_boss_defeated()
-      end)
-
-      drop_boss_gems(world_ref, x, y, exp)
-    end
-
-    :ok
-  end
-
   def on_frame_event(_event, _context), do: :ok
 
-  # ── on_nif_sync: 毎フレーム NIF 注入 ─────────────────────────────
+  defp apply_defeated(state, context) do
+    content = Core.Config.current()
+    boss_kind = state.boss_kind_id
+    exp = content.boss_exp_reward(boss_kind)
+    score_delta = content.score_from_exp(exp)
+    x = state.boss_x || 0.0
+    y = state.boss_y || 0.0
+
+    drop_boss_gems(context.world_ref, x, y, exp)
+    Process.delete({__MODULE__, :boss_phase_timer})
+
+    state
+    |> Map.update(:score, score_delta, &(&1 + score_delta))
+    |> Map.update(:kill_count, 1, &(&1 + 1))
+    |> content.playing_scene().accumulate_exp(exp)
+    |> content.playing_scene().apply_boss_defeated()
+  end
+
+  # ── on_nif_sync: 毎フレームスナップショット注入 ───────────────────
 
   @impl Core.Component
   def on_nif_sync(context) do
@@ -94,22 +82,29 @@ defmodule Content.VampireSurvivor.BossComponent do
     playing_state =
       (runner && Contents.SceneStack.get_scene_state(runner, content.playing_scene())) || %{}
 
-    boss_hp = Map.get(playing_state, :boss_hp)
-    prev = Process.get({__MODULE__, :last_boss_hp}, :unset)
-
-    if boss_hp != prev do
-      push_boss_hp_to_nif(context.world_ref, boss_hp)
-      Process.put({__MODULE__, :last_boss_hp}, boss_hp)
-    end
+    snapshot = build_snapshot(playing_state)
+    Core.NifBridge.set_special_entity_snapshot(context.world_ref, snapshot)
 
     :ok
   end
 
-  # ── on_physics_process: ボス AI 制御 ─────────────────────────────
+  defp build_snapshot(%{boss_kind_id: nil}), do: :none
+  defp build_snapshot(%{boss_hp: nil}), do: :none
+  defp build_snapshot(%{boss_hp: hp}) when hp <= 0, do: :none
+
+  defp build_snapshot(state) do
+    x = state.boss_x || 0.0
+    y = state.boss_y || 0.0
+    radius = state.boss_radius || 48.0
+    damage = state.boss_damage_per_sec || 30.0
+    inv = Map.get(state, :boss_invincible, false)
+    {:alive, x, y, radius, damage, inv}
+  end
+
+  # ── on_physics_process: ボス AI・移動 ──────────────────────────────
 
   @impl Core.Component
   def on_physics_process(context) do
-    world_ref = context.world_ref
     content = Core.Config.current()
     runner = content.flow_runner(:main)
 
@@ -118,11 +113,10 @@ defmodule Content.VampireSurvivor.BossComponent do
          Contents.SceneStack.get_scene_state(runner, Content.VampireSurvivor.Scenes.Playing)) ||
         %{}
 
-    kind_id = Map.get(playing_state || %{}, :boss_kind_id)
+    kind_id = Map.get(playing_state, :boss_kind_id)
 
     if kind_id != nil do
-      boss_state = Core.NifBridge.get_boss_state(world_ref)
-      update_boss_ai(context, boss_state, kind_id)
+      update_boss_ai(context, playing_state, kind_id)
     end
 
     :ok
@@ -131,33 +125,27 @@ defmodule Content.VampireSurvivor.BossComponent do
   @impl Core.Component
   def on_event(_event, _context), do: :ok
 
-  # ── on_engine_message: 遅延コールバック（BatLord ダッシュ終了等）──────
+  # ── on_engine_message: 遅延コールバック（BatLord ダッシュ終了）──────
 
   @impl Core.Component
-  def on_engine_message({:boss_dash_end, world_ref}, %{world_ref: state_world_ref}) do
-    if state_world_ref == world_ref do
-      Core.NifBridge.set_entity_flag(world_ref, :boss, :invincible, false)
-      Core.NifBridge.set_entity_velocity(world_ref, :boss, 0.0, 0.0)
+  def on_engine_message({:boss_dash_end, _world_ref}, _context) do
+    content = Core.Config.current()
+    runner = content.flow_runner(:main)
+
+    if runner do
+      Contents.SceneStack.update_by_module(runner, content.playing_scene(), fn state ->
+        if state.boss_kind_id != nil do
+          %{state | boss_invincible: false, boss_vx: 0.0, boss_vy: 0.0}
+        else
+          state
+        end
+      end)
     end
 
     :ok
   end
 
   def on_engine_message(_msg, _context), do: :ok
-
-  # ── プライベート: NIF 注入 ────────────────────────────────────────
-
-  defp push_boss_hp_to_nif(_world_ref, nil), do: :ok
-
-  defp push_boss_hp_to_nif(world_ref, boss_hp) do
-    case Core.NifBridge.set_entity_hp(world_ref, :boss, boss_hp) do
-      {:error, reason} ->
-        Logger.error("[NIF ERROR] set_entity_hp(:boss) failed: #{inspect(reason)}")
-
-      _ ->
-        :ok
-    end
-  end
 
   # ── プライベート: アイテムドロップ ────────────────────────────────
 
@@ -173,47 +161,72 @@ defmodule Content.VampireSurvivor.BossComponent do
 
   # ── プライベート: ボス AI ─────────────────────────────────────────
 
-  # phase_timer は GameEvents GenServer のプロセス辞書で管理する。
-  # GameEvents は単一プロセスであり、BossComponent の on_physics_process は
-  # 常にその GenServer プロセス内で呼ばれるため、プロセス辞書の混在は発生しない。
-  defp update_boss_ai(context, {:alive, bx, by, _hp, _max_hp, _phase_timer}, kind_id) do
+  defp update_boss_ai(context, state, kind_id) do
     world_ref = context.world_ref
     dt = context.tick_ms / 1000.0
     {px, py} = Core.NifBridge.get_player_pos(world_ref)
     bp = Content.EntityParams.boss_params_by_id(kind_id)
 
+    bx = state.boss_x || px
+    by = state.boss_y || py
+
     {vx, vy} = chase_velocity(px, py, bx, by, bp.speed)
-    Core.NifBridge.set_entity_velocity(world_ref, :boss, vx, vy)
 
-    # phase_timer は Elixir 側プロセス辞書で管理する（Rust への書き込み NIF なし）
     phase_timer = Process.get({__MODULE__, :boss_phase_timer}, bp.special_interval)
+    new_timer = phase_timer - dt
 
-    new_timer =
-      if phase_timer - dt <= 0.0 do
+    {final_vx, final_vy, new_state} =
+      if new_timer <= 0.0 do
         handle_boss_special_action(world_ref, kind_id, px, py, bx, by, bp)
-        bp.special_interval
       else
-        phase_timer - dt
+        Process.put({__MODULE__, :boss_phase_timer}, new_timer)
+        {vx, vy, nil}
       end
 
-    Process.put({__MODULE__, :boss_phase_timer}, new_timer)
-    :ok
+    runner = Core.Config.current().flow_runner(:main)
+    playing_scene = Core.Config.current().playing_scene()
+
+    if runner do
+      Contents.SceneStack.update_by_module(runner, playing_scene, fn s ->
+        new_x = (s.boss_x || 0) + (final_vx || vx) * dt
+        new_y = (s.boss_y || 0) + (final_vy || vy) * dt
+        r = s.boss_radius || 48.0
+        new_x = clamp(new_x, r, @map_width - r)
+        new_y = clamp(new_y, r, @map_height - r)
+
+        s
+        |> Map.put(:boss_x, new_x)
+        |> Map.put(:boss_y, new_y)
+        |> Map.put(:boss_vx, final_vx || vx)
+        |> Map.put(:boss_vy, final_vy || vy)
+        |> maybe_apply_special_state(new_state)
+      end)
+    end
   end
 
-  defp update_boss_ai(_context, _boss_state, _kind_id), do: :ok
+  defp maybe_apply_special_state(state, nil), do: state
 
-  defp handle_boss_special_action(world_ref, @boss_slime_king, _px, _py, bx, by, _bp) do
+  defp maybe_apply_special_state(state, %{invincible: true, vx: vx, vy: vy}) do
+    %{state | boss_invincible: true, boss_vx: vx, boss_vy: vy}
+  end
+
+  defp maybe_apply_special_state(state, _), do: state
+
+  defp handle_boss_special_action(world_ref, @boss_slime_king, px, py, bx, by, bp) do
     spawn_slimes_around(world_ref, bx, by)
+    Process.put({__MODULE__, :boss_phase_timer}, bp.special_interval)
+    {vx, vy} = chase_velocity(px, py, bx, by, bp.speed)
+    {vx, vy, nil}
   end
 
-  defp handle_boss_special_action(world_ref, @boss_bat_lord, px, py, bx, by, bp) do
+  defp handle_boss_special_action(_world_ref, @boss_bat_lord, px, py, bx, by, bp) do
     {dvx, dvy} = chase_velocity(px, py, bx, by, bp.dash_speed)
-    Core.NifBridge.set_entity_velocity(world_ref, :boss, dvx, dvy)
-    Core.NifBridge.set_entity_flag(world_ref, :boss, :invincible, true)
-    Process.send_after(self(), {:boss_dash_end, world_ref}, bp.dash_duration_ms)
+    Process.put({__MODULE__, :boss_phase_timer}, bp.special_interval)
+    Process.send_after(self(), {:boss_dash_end, nil}, bp.dash_duration_ms)
+    {dvx, dvy, %{invincible: true, vx: dvx, vy: dvy}}
   end
 
-  defp handle_boss_special_action(world_ref, @boss_stone_golem, _px, _py, boss_x, boss_y, bp) do
+  defp handle_boss_special_action(world_ref, @boss_stone_golem, px, py, boss_x, boss_y, bp) do
     for {dx, dy} <- [{1.0, 0.0}, {-1.0, 0.0}, {0.0, 1.0}, {0.0, -1.0}] do
       Core.NifBridge.spawn_projectile(
         world_ref,
@@ -226,9 +239,16 @@ defmodule Content.VampireSurvivor.BossComponent do
         14
       )
     end
+
+    Process.put({__MODULE__, :boss_phase_timer}, bp.special_interval)
+    {vx, vy} = chase_velocity(px, py, boss_x, boss_y, bp.speed)
+    {vx, vy, nil}
   end
 
-  defp handle_boss_special_action(_world_ref, _kind_id, _px, _py, _bx, _by, _bp), do: :ok
+  defp handle_boss_special_action(_world_ref, _kind_id, _px, _py, _bx, _by, bp) do
+    Process.put({__MODULE__, :boss_phase_timer}, bp.special_interval)
+    {0.0, 0.0, nil}
+  end
 
   defp chase_velocity(px, py, bx, by, speed) do
     ddx = px - bx
@@ -255,4 +275,8 @@ defmodule Content.VampireSurvivor.BossComponent do
       positions
     )
   end
+
+  defp clamp(v, lo, _hi) when v < lo, do: lo
+  defp clamp(v, _lo, hi) when v > hi, do: hi
+  defp clamp(v, _, _), do: v
 end

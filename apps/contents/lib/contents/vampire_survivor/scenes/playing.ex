@@ -31,6 +31,14 @@ defmodule Content.VampireSurvivor.Scenes.Playing do
        boss_hp: nil,
        boss_max_hp: nil,
        boss_kind_id: nil,
+       boss_x: nil,
+       boss_y: nil,
+       boss_vx: nil,
+       boss_vy: nil,
+       boss_invincible: false,
+       boss_radius: nil,
+       boss_render_kind: nil,
+       boss_damage_per_sec: nil,
        score: 0,
        kill_count: 0,
        player_hp: 100.0,
@@ -173,6 +181,35 @@ defmodule Content.VampireSurvivor.Scenes.Playing do
     %{state | boss_hp: max_hp, boss_max_hp: max_hp, boss_kind_id: boss_kind}
   end
 
+  @doc """
+  ボスを Elixir SSoT でスポーンする。BossAlert pop 時に呼ばれる。
+  player_x, player_y はワールド座標、map_width, map_height はマップサイズ。
+  """
+  def apply_boss_spawn_full(state, boss_kind_id, player_x, player_y, map_width, map_height) do
+    max_hp = EntityParams.boss_max_hp(boss_kind_id)
+    sp = EntityParams.boss_spawn_params(boss_kind_id)
+    r = sp.radius
+
+    # Rust spawn_special_entity と同じ位置計算
+    bx = min(player_x + 600.0, map_width - r)
+    by = max(r, min(player_y, map_height - r))
+
+    %{
+      state
+      | boss_hp: max_hp,
+        boss_max_hp: max_hp,
+        boss_kind_id: boss_kind_id,
+        boss_x: bx,
+        boss_y: by,
+        boss_vx: 0.0,
+        boss_vy: 0.0,
+        boss_invincible: false,
+        boss_radius: r,
+        boss_render_kind: sp.render_kind,
+        boss_damage_per_sec: sp.damage_per_sec
+    }
+  end
+
   def apply_boss_damaged(state, damage) do
     if state.boss_hp != nil do
       new_hp = max(0.0, state.boss_hp - damage)
@@ -183,7 +220,20 @@ defmodule Content.VampireSurvivor.Scenes.Playing do
   end
 
   def apply_boss_defeated(state) do
-    %{state | boss_hp: nil, boss_max_hp: nil, boss_kind_id: nil}
+    %{
+      state
+      | boss_hp: nil,
+        boss_max_hp: nil,
+        boss_kind_id: nil,
+        boss_x: nil,
+        boss_y: nil,
+        boss_vx: nil,
+        boss_vy: nil,
+        boss_invincible: false,
+        boss_radius: nil,
+        boss_render_kind: nil,
+        boss_damage_per_sec: nil
+    }
   end
 
   # ── weapon_slots 変換（I-2: set_weapon_slots NIF 用）──────────────

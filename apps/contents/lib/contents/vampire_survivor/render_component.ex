@@ -45,11 +45,12 @@ defmodule Content.VampireSurvivor.RenderComponent do
       end
 
     {{player_x, player_y, frame_id, enemy_count, bullet_count}, {magnet_timer, invincible_timer},
-     {enemies, bullets, particles}, {items, obstacles, boss, score_popups}} =
+     {enemies, bullets, particles}, {items, obstacles, _boss_nif, score_popups}} =
       Core.NifBridge.get_render_entities(context.world_ref)
 
     anim_frame = rem(div(frame_id, 4), 4)
 
+    boss = boss_from_playing_state(playing_state)
     entities = {enemies, bullets, particles, items, obstacles, boss}
     commands = build_commands(player_x, player_y, anim_frame, entities)
 
@@ -106,6 +107,18 @@ defmodule Content.VampireSurvivor.RenderComponent do
   end
 
   defp push_boss(acc, {:none, _, _, _, _}), do: acc
+
+  defp boss_from_playing_state(%{boss_kind_id: nil}), do: {:none, 0, 0, 0, 0}
+  defp boss_from_playing_state(%{boss_hp: nil}), do: {:none, 0, 0, 0, 0}
+  defp boss_from_playing_state(%{boss_hp: hp}) when hp <= 0, do: {:none, 0, 0, 0, 0}
+
+  defp boss_from_playing_state(state) do
+    x = state.boss_x || 0
+    y = state.boss_y || 0
+    radius = state.boss_radius || 48
+    render_kind = state.boss_render_kind || 11
+    {:alive, x, y, radius, render_kind}
+  end
 
   defp push_enemies(acc, enemies, anim_frame) do
     Enum.reduce(enemies, acc, fn {x, y, kind_id}, a ->

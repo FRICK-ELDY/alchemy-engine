@@ -99,9 +99,9 @@ pub use physics::game_logic::{
     find_nearest_enemy, find_nearest_enemy_spatial, find_nearest_enemy_spatial_excluding,
 };
 pub use physics::world::{
-    BossState, BulletWorld, EnemyWorld, FrameEvent, GameLoopControl, GameWorld, GameWorldInner,
-    ParticleWorld, PlayerState, BULLET_KIND_FIREBALL, BULLET_KIND_LIGHTNING, BULLET_KIND_NORMAL,
-    BULLET_KIND_ROCK, BULLET_KIND_WHIP,
+    BulletWorld, EnemyWorld, FrameEvent, GameLoopControl, GameWorld, GameWorldInner, ParticleWorld,
+    PlayerState, SpecialEntitySnapshot, BULLET_KIND_FIREBALL, BULLET_KIND_LIGHTNING,
+    BULLET_KIND_NORMAL, BULLET_KIND_ROCK, BULLET_KIND_WHIP,
 };
 pub use render::RenderFrame;
 

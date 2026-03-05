@@ -18,6 +18,20 @@
 
 ---
 
+### Boss SSoT 移行（完了）— 懸念点・残課題
+
+**実施日**: 2026-03-05。手順書 `boss-to-contents-migration.md` に基づき Phase 1〜5 を実施済み。
+
+**懸念点・課題**
+
+| 項目 | 内容 | 優先度 |
+|:---|:---|:---|
+| **1 tick 遅れ** | Elixir の `on_nif_sync` で注入した `set_special_entity_snapshot` は、Rust ゲームループの非同期性により 1 tick 遅れて `physics_step` に反映される。ボス衝突程度であれば許容範囲と判断。必要に応じてループ構造の見直しを検討する。 | 低 |
+| **パラメータ重複** | `EntityParams.boss_spawn_params/1` と `SpawnComponent.boss_params/1` で radius, render_kind, damage_per_sec が二重管理。将来 `entity_params.ex` を唯一の SSoT とし spawn_component の重複を除去する。 | 低 |
+| **FrameEvent 整理** | `SpecialEntitySpawned` / `SpecialEntityDefeated` は Rust から発行しなくなった。`events.rs` のマッピングは他コンテンツで未使用なら削除可能。 | 低 |
+
+---
+
 ### 課題9: クラウドセーブ（独自サーバーによるセーブデータ同期）
 
 **優先度**: 低（`network` の実装が前提）

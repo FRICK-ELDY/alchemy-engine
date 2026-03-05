@@ -29,8 +29,10 @@ defmodule Core.NifBridge do
   # I-2: 武器スロットを Elixir 側から毎フレーム注入する NIF（add_weapon の代替）
   # slots: [{kind_id, level}] のリスト
   def set_weapon_slots(_world, _slots), do: :erlang.nif_error(:nif_not_loaded)
-  # Phase R-3: spawn_boss を汎用化（ボスという概念を NIF 層から排除）
-  def spawn_special_entity(_world, _kind_id), do: :erlang.nif_error(:nif_not_loaded)
+
+  # Elixir SSoT 移行: 衝突用スナップショット注入（毎フレーム on_nif_sync で呼ぶ）
+  # snapshot: :none | {:alive, x, y, radius, damage_per_sec, invincible}
+  def set_special_entity_snapshot(_world, _snapshot), do: :erlang.nif_error(:nif_not_loaded)
 
   # Phase R-3: spawn_elite_enemy を汎用化（エリートという概念を NIF 層から排除）
   def spawn_enemies_with_hp_multiplier(_world, _kind_id, _count, _hp_multiplier),
@@ -42,12 +44,7 @@ defmodule Core.NifBridge do
   # kind: 0=Gem, 1=Potion, 2=Magnet
   def spawn_item(_world, _x, _y, _kind, _value), do: :erlang.nif_error(:nif_not_loaded)
 
-  # Phase R-3: 汎用エンティティ操作 NIF
-  # entity_id: :boss
-  def set_entity_velocity(_world, _entity_id, _vx, _vy), do: :erlang.nif_error(:nif_not_loaded)
-  # entity_id: :boss, flag: :invincible
-  def set_entity_flag(_world, _entity_id, _flag, _value), do: :erlang.nif_error(:nif_not_loaded)
-  # entity_id: :boss または {:enemy, index}
+  # entity_id: {:enemy, index}（ボス用は廃止・Elixir SSoT）
   def set_entity_hp(_world, _entity_id, _hp), do: :erlang.nif_error(:nif_not_loaded)
 
   # x/y は発射座標、vx/vy は速度ベクトル（正規化済み × speed）、kind は BULLET_KIND_* 定数
@@ -110,9 +107,6 @@ defmodule Core.NifBridge do
   def get_hud_data(_world), do: :erlang.nif_error(:nif_not_loaded)
   def get_frame_metadata(_world), do: :erlang.nif_error(:nif_not_loaded)
   def get_magnet_timer(_world), do: :erlang.nif_error(:nif_not_loaded)
-  # I-2: ボスAI制御用（{:alive, x, y, hp, max_hp, phase_timer} または :none）
-  # ボス種別（kind_id）は Elixir 側 Rule state で管理するため返り値から除去
-  def get_boss_state(_world), do: :erlang.nif_error(:nif_not_loaded)
   # credo:disable-for-next-line Credo.Check.Readability.PredicateFunctionNames
   def is_player_dead(_world), do: :erlang.nif_error(:nif_not_loaded)
 
