@@ -33,7 +33,7 @@ rustler::atoms! {
 }
 
 #[cfg(feature = "umbrella")]
-rustler::init!("Elixir.GameEngine.NifBridge", load = nif::load);
+rustler::init!("Elixir.Core.NifBridge", load = nif::load);
 ```
 
 ---
@@ -50,8 +50,11 @@ graph TD
     LOOP[game_loop_nif.rs<br/>ゲームループ制御]
     PUSH[push_tick_nif.rs<br/>Elixir プッシュ型同期]
     RENDER[render_nif.rs<br/>レンダースレッド起動]
+    RFRAME[render_frame_nif.rs<br/>レンダーフレーム]
     SAVE[save_nif.rs<br/>セーブ/ロード]
     EVENTS[events.rs<br/>FrameEvent → Elixir アトム変換]
+    UTIL[util.rs<br/>ユーティリティ]
+    XR[xr_nif.rs<br/>OpenXR VR ブリッジ<br/>feature=xr]
 
     NIF --> LOAD
     NIF --> WORLD
@@ -60,8 +63,11 @@ graph TD
     NIF --> LOOP
     NIF --> PUSH
     NIF --> RENDER
+    NIF --> RFRAME
     NIF --> SAVE
     NIF --> EVENTS
+    NIF --> UTIL
+    NIF --> XR
 ```
 
 ### NIF 関数一覧

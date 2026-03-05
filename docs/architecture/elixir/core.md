@@ -8,7 +8,7 @@
 
 ## `core.ex` — 公開 API
 
-外部から呼び出す全操作の窓口。エンティティ ID は `Config.current().entity_registry()` から解決します。
+外部から呼び出す全操作の窓口。エンティティ ID は `Core.Config.current().entity_registry()` から解決します。
 
 **ゲームコンテンツ向け:**
 
@@ -127,8 +127,8 @@ NIF 関数は 3 カテゴリに分類されます：
 `:current` の Application 設定を解決する。
 
 ```elixir
-GameEngine.Config.current()     # ContentBehaviour 実装モジュールを返す
-GameEngine.Config.components()  # current().components() を呼び出す
+Core.Config.current()     # ContentBehaviour 実装モジュールを返す
+Core.Config.components()  # current().components() を呼び出す
 ```
 
 ---

@@ -2,13 +2,14 @@
 
 ## 概要
 
-`contents` はゲームコンテンツ（VampireSurvivor / AsteroidArena）の実装と、シーン管理・メインゲームループのディスパッチを担当します。エンジン本体（[core](./core.md)）はゲームロジックを知らず、ContentBehaviour で定義されたインターフェースに従ってコンポーネントへ委譲します。
+`contents` はゲームコンテンツ（VampireSurvivor / AsteroidArena / SimpleBox3D / BulletHell3D / RollingBall / VRTest / CanvasTest）の実装と、シーン管理・メインゲームループのディスパッチを担当します。エンジン本体（[core](./core.md)）はゲームロジックを知らず、ContentBehaviour で定義されたインターフェースに従ってコンポーネントへ委譲します。
 
 使用するコンテンツは `config.exs` で指定します。
 
 ```elixir
-# Content.VampireSurvivor または Content.AsteroidArena
-config :server, :current, Content.VampireSurvivor
+# Content.VampireSurvivor / Content.AsteroidArena / Content.SimpleBox3D /
+# Content.BulletHell3D / Content.RollingBall / Content.VRTest / Content.CanvasTest
+config :server, :current, Content.SimpleBox3D
 ```
 
 ---
@@ -126,6 +127,11 @@ stateDiagram-v2
 |:---|:---|:---|
 | `Content.VampireSurvivor` | Spawn / Level / Boss コンポーネント、レベルアップ・ボスアラート・ゲームオーバーシーン | [vampire_survivor.md](./contents/vampire_survivor.md) |
 | `Content.AsteroidArena` | Spawn / Split コンポーネント、playing / game_over シーンのみ | [asteroid_arena.md](./contents/asteroid_arena.md) |
+| `Content.SimpleBox3D` | Phase R-6 動作検証用 3D ゲーム | - |
+| `Content.BulletHell3D` | 3D 弾幕避けゲーム | - |
+| `Content.RollingBall` | 玉転がしゲーム | - |
+| `Content.VRTest` | VR 動作検証（Phase A: マウスで見回し） | - |
+| `Content.CanvasTest` | 描画テスト用 | - |
 
 ---
 

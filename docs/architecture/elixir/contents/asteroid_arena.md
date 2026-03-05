@@ -2,7 +2,7 @@
 
 ## 概要
 
-武器・ボス・レベルアップの概念を持たないシンプルなシューター。`GameContent.AsteroidArena` モジュール。エンジンがゲーム固有概念を持たなくても動作することを実証する設計です。
+武器・ボス・レベルアップの概念を持たないシンプルなシューター。`Content.AsteroidArena` モジュール。エンジンがゲーム固有概念を持たなくても動作することを実証する設計です。
 
 ---
 
@@ -11,8 +11,8 @@
 ```elixir
 def components do
   [
-    GameContent.AsteroidArena.SpawnComponent,  # ワールド初期化・エンティティ登録
-    GameContent.AsteroidArena.SplitComponent   # 小惑星分裂処理
+    Content.AsteroidArena.SpawnComponent,  # ワールド初期化・エンティティ登録
+    Content.AsteroidArena.SplitComponent   # 小惑星分裂処理
   ]
 end
 ```
