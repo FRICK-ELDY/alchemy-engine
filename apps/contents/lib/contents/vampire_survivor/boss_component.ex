@@ -226,6 +226,7 @@ defmodule Content.VampireSurvivor.BossComponent do
   defp handle_boss_special_action(_world_ref, @boss_bat_lord, px, py, bx, by, bp) do
     {dvx, dvy} = chase_velocity(px, py, bx, by, bp.dash_speed)
     Process.put({__MODULE__, :boss_phase_timer}, bp.special_interval)
+
     # 現状は単一ワールドのため world_ref は渡さない（複数ワールド時は要検討）
     Process.send_after(self(), {:boss_dash_end, nil}, bp.dash_duration_ms)
     {dvx, dvy, %{invincible: true, vx: dvx, vy: dvy}}

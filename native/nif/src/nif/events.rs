@@ -32,6 +32,16 @@ pub(crate) fn drain_frame_events_inner(w: &mut GameWorldInner) -> Vec<(Atom, u32
             FrameEvent::SpecialEntityDamaged { damage } => {
                 (crate::boss_damaged(), (damage * 1000.0) as u32, 0, 0, 0)
             }
+            FrameEvent::WeaponCooldownUpdated {
+                kind_id,
+                cooldown_timer,
+            } => (
+                crate::weapon_cooldown_updated(),
+                kind_id as u32,
+                cooldown_timer.to_bits(),
+                0,
+                0,
+            ),
         })
         .collect()
 }

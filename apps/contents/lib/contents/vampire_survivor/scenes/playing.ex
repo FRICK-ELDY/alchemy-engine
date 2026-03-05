@@ -18,38 +18,45 @@ defmodule Content.VampireSurvivor.Scenes.Playing do
   require Logger
 
   @impl Contents.SceneBehaviour
-  def init(_init_arg) do
-    {:ok,
-     %{
-       spawned_bosses: [],
-       weapon_levels: %{magic_wand: 1},
-       level_up_pending: false,
-       weapon_choices: [],
-       level: 1,
-       exp: 0,
-       exp_to_next: exp_required_for_next(1),
-       boss_hp: nil,
-       boss_max_hp: nil,
-       boss_kind_id: nil,
-       boss_x: nil,
-       boss_y: nil,
-       boss_vx: nil,
-       boss_vy: nil,
-       boss_invincible: false,
-       boss_radius: nil,
-       boss_render_kind: nil,
-       boss_damage_per_sec: nil,
-       score: 0,
-       kill_count: 0,
-       player_hp: 100.0,
-       player_max_hp: 100.0,
-       # nil の場合は sync_elapsed/3 内で context.elapsed にフォールバックする
-       # （init 時点では start_ms が不明なため nil で初期化）
-       elapsed_ms: nil,
-       # nil の場合は handle_no_boss 内で context.start_ms にフォールバックする
-       # （init 時点では start_ms が不明なため nil で初期化）
-       last_spawn_ms: nil
-     }}
+  def init(init_arg) when is_map(init_arg) do
+    default = default_playing_state()
+    {:ok, Map.merge(default, init_arg)}
+  end
+
+  def init(_), do: init(%{})
+
+  defp default_playing_state do
+    %{
+      spawned_bosses: [],
+      weapon_levels: %{magic_wand: 1},
+      weapon_cooldowns: %{},
+      level_up_pending: false,
+      weapon_choices: [],
+      level: 1,
+      exp: 0,
+      exp_to_next: exp_required_for_next(1),
+      boss_hp: nil,
+      boss_max_hp: nil,
+      boss_kind_id: nil,
+      boss_x: nil,
+      boss_y: nil,
+      boss_vx: nil,
+      boss_vy: nil,
+      boss_invincible: false,
+      boss_radius: nil,
+      boss_render_kind: nil,
+      boss_damage_per_sec: nil,
+      score: 0,
+      kill_count: 0,
+      player_hp: 100.0,
+      player_max_hp: 100.0,
+      # nil の場合は sync_elapsed/3 内で context.elapsed にフォールバックする
+      # （init 時点では start_ms が不明なため nil で初期化）
+      elapsed_ms: nil,
+      # nil の場合は handle_no_boss 内で context.start_ms にフォールバックする
+      # （init 時点では start_ms が不明なため nil で初期化）
+      last_spawn_ms: nil
+    }
   end
 
   @impl Contents.SceneBehaviour
@@ -241,20 +248,24 @@ defmodule Content.VampireSurvivor.Scenes.Playing do
     }
   end
 
-  # ── weapon_slots 変換（I-2: set_weapon_slots NIF 用）──────────────
+  # ── weapon_slots 変換（weapon_slots SSoT 移行: set_weapon_slots NIF 用）────
 
   @doc """
-  weapon_levels マップを set_weapon_slots NIF に渡す [{kind_id, level}] リストに変換する。
-  Elixir 側 Rule state が武器の SSoT であり、毎フレーム Rust に注入するために使用する。
+  weapon_levels と weapon_cooldowns を set_weapon_slots NIF 用の
+  [{kind_id, level, cooldown}] リストに変換する。
   """
-  def weapon_slots_for_nif(weapon_levels) do
+  def weapon_slots_for_nif(weapon_levels, weapon_cooldowns \\ %{}) do
     registry = Core.Config.current().entity_registry().weapons
 
     weapon_levels
     |> Enum.flat_map(fn {weapon_name, level} ->
       case Map.get(registry, weapon_name) do
-        nil -> []
-        kind_id -> [{kind_id, level}]
+        nil ->
+          []
+
+        kind_id ->
+          cooldown = Map.get(weapon_cooldowns, weapon_name, 0.0)
+          [{kind_id, level, cooldown}]
       end
     end)
   end

@@ -52,9 +52,17 @@ defmodule Content.EntityParams do
   # ── ボススポーン用パラメータ（radius, render_kind, damage_per_sec）────────
   # SSoT 移行で Elixir がボス初期化に使用する
   @boss_spawn_params %{
-    @boss_slime_king => %{radius: 48.0, render_kind: @render_kind_slime_king, damage_per_sec: 30.0},
+    @boss_slime_king => %{
+      radius: 48.0,
+      render_kind: @render_kind_slime_king,
+      damage_per_sec: 30.0
+    },
     @boss_bat_lord => %{radius: 48.0, render_kind: @render_kind_bat_lord, damage_per_sec: 50.0},
-    @boss_stone_golem => %{radius: 64.0, render_kind: @render_kind_stone_golem, damage_per_sec: 80.0}
+    @boss_stone_golem => %{
+      radius: 64.0,
+      render_kind: @render_kind_stone_golem,
+      damage_per_sec: 80.0
+    }
   }
 
   # ── ボスパラメータ（Phase 3-B: ボスAI制御用）──────────────────────

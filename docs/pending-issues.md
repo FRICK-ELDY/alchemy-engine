@@ -33,6 +33,26 @@
 
 ---
 
+### weapon_slots コンテンツ層移行（完了）— 懸念点・将来課題
+
+**実施日**: 2026-03-05。weapon_slots の SSoT を Elixir コンテンツ層に移行済み。Phase 4（セーブ/ロード委譲）まで実施。
+
+**将来課題（B案）**: `weapon_slots_input` を `physics_step` の引数として渡し、`GameWorldInner` から完全除去。NIF 呼び出し経路の変更が必要。
+
+| 項目 | 内容 | 優先度 |
+|:---|:---|:---|
+| **B案への移行** | `physics_step` の引数に `weapon_slots: &[WeaponSlot]` を追加し、`GameWorldInner.weapon_slots_input` を削除。 | 低 |
+
+**懸念点**
+
+| 項目 | 内容 | 優先度 |
+|:---|:---|:---|
+| **毎フレームの FrameEvent push** | 全スロット分の `WeaponCooldownUpdated` を毎フレーム push。スロット数が増えた場合は再検討の余地あり。 | 低 |
+| **kind_id の u8 範囲** | Elixir から渡す kind_id が u8 を超えると不正値になる。ドキュメントで許容範囲を明記済みだが、将来的に範囲チェックを検討。 | 低 |
+| **フレームイベントの順序** | イベント処理が `on_nif_sync` より前の同一フレーム内で完了する前提。処理順序の変更時は注意。 | 低 |
+
+---
+
 ### 課題9: クラウドセーブ（独自サーバーによるセーブデータ同期）
 
 **優先度**: 低（`network` の実装が前提）

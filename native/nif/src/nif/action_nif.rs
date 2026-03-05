@@ -11,29 +11,24 @@ use rustler::{Atom, NifResult, ResourceArc};
 
 use crate::{alive, ok};
 
-/// I-2: 武器スロットを Elixir 側から毎フレーム注入する NIF。
-/// Elixir 側 Rule state が武器の SSoT となり、毎フレームこの NIF で Rust に反映する。
-/// slots: [{kind_id: u8, level: u32}] のリスト
+/// weapon_slots SSoT 移行: 武器スロットを Elixir 側から毎フレーム注入する NIF。
+/// slots: [{kind_id, level, cooldown_timer}] — cooldown も Elixir が SSoT。
+/// kind_id は u8 範囲（0..=255）であること。Elixir 側 entity_registry と一致させる。
 #[rustler::nif]
-pub fn set_weapon_slots(world: ResourceArc<GameWorld>, slots: Vec<(u8, u32)>) -> NifResult<Atom> {
+pub fn set_weapon_slots(
+    world: ResourceArc<GameWorld>,
+    slots: Vec<(u8, u32, f64)>,
+) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
     let new_slots: Vec<WeaponSlot> = slots
         .into_iter()
-        .map(|(kind_id, level)| {
-            let existing_timer = w
-                .weapon_slots
-                .iter()
-                .find(|s| s.kind_id == kind_id)
-                .map(|s| s.cooldown_timer)
-                .unwrap_or(0.0);
-            WeaponSlot {
-                kind_id,
-                level,
-                cooldown_timer: existing_timer,
-            }
+        .map(|(kind_id, level, cooldown)| WeaponSlot {
+            kind_id,
+            level,
+            cooldown_timer: cooldown as f32,
         })
         .collect();
-    w.weapon_slots = new_slots;
+    w.weapon_slots_input = new_slots;
     Ok(ok())
 }
 

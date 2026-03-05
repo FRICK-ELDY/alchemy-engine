@@ -17,4 +17,4 @@ mod world_nif;
 mod xr_nif;
 
 pub use load::load;
-pub use save_nif::{SaveSnapshot, WeaponSlotSave};
+pub use save_nif::SaveSnapshot;

@@ -37,5 +37,6 @@ pub fn load(env: rustler::Env, _: rustler::Term) -> bool {
     let _ = crate::level_up_event();
     let _ = crate::item_pickup();
     let _ = crate::boss_defeated();
+    let _ = crate::weapon_cooldown_updated();
     true
 }

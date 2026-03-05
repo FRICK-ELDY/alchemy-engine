@@ -33,6 +33,7 @@ rustler::atoms! {
     // フェーズ4: ボスイベント用アトム
     boss_spawn,
     boss_damaged,
+    weapon_cooldown_updated,
     // Rust ゲームループ → Elixir 送信用
     frame_events,
     ui_action,
@@ -94,7 +95,7 @@ mod xr_bridge;
 pub use audio::{
     start_audio_thread, AssetId, AssetLoader, AudioCommand, AudioCommandSender, AudioManager,
 };
-pub use nif::{SaveSnapshot, WeaponSlotSave};
+pub use nif::SaveSnapshot;
 pub use physics::game_logic::{
     find_nearest_enemy, find_nearest_enemy_spatial, find_nearest_enemy_spatial_excluding,
 };

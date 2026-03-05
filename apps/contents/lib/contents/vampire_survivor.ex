@@ -79,6 +79,39 @@ defmodule Content.VampireSurvivor do
 
   defdelegate wave_label(elapsed_sec), to: Content.VampireSurvivor.SpawnSystem
 
+  # ── セーブ/ロード用（weapon_slots SSoT 移行 Phase 4）───────────────
+
+  @doc """
+  セーブ用に weapon_levels を [%{kind_id: x, level: y}] 形式に変換する。
+  """
+  def weapon_levels_to_save_format(weapon_levels) when is_map(weapon_levels) do
+    registry = entity_registry().weapons
+
+    weapon_levels
+    |> Enum.flat_map(fn {weapon_name, level} ->
+      case Map.get(registry, weapon_name) do
+        nil -> []
+        kind_id -> [%{kind_id: kind_id, level: level}]
+      end
+    end)
+  end
+
+  @doc """
+  ロード用に weapon_slots（[%{"kind_id"=>x,"level"=>y}]）を weapon_levels（%{name=>level}）に変換する。
+  """
+  def weapon_slots_to_levels(slots) when is_list(slots) do
+    registry = entity_registry().weapons
+    id_to_name = Enum.map(registry, fn {k, v} -> {v, k} end) |> Map.new()
+
+    Enum.reduce(slots, %{}, fn ws, acc ->
+      kid = ws["kind_id"] || ws[:kind_id]
+      lv = ws["level"] || ws[:level]
+      name = Map.get(id_to_name, kid)
+
+      if name && lv, do: Map.put(acc, name, lv), else: acc
+    end)
+  end
+
   # ── シーン push 時の物理一時停止判定 ─────────────────────────────
 
   def pause_on_push?(mod) do

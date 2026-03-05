@@ -23,7 +23,7 @@ use super::FrameEvent;
 /// - `boss.invincible`  → set_entity_flag(:boss, :invincible) NIF（Phase R-3）
 /// - `params`           → set_entity_params NIF
 /// - `map_width/height` → set_world_size NIF
-/// - `weapon_slots`     → set_weapon_slots NIF
+/// - `weapon_slots_input` → set_weapon_slots NIF（入力専用、永続状態なし）
 ///
 /// ## Phase R-3 以降のデッドフィールド
 /// 以下のフィールドは HUD データが push_render_frame 経由で直接 RenderFrameBuffer に
@@ -55,8 +55,9 @@ pub struct GameWorldInner {
     pub elapsed_seconds: f32,
     /// プレイヤーの最大 HP（HP バー計算用）
     pub player_max_hp: f32,
-    /// I-2: 装備中の武器スロット（クールダウン管理のみ）- Elixir から毎フレーム set_weapon_slots NIF で注入
-    pub weapon_slots: Vec<WeaponSlot>,
+    /// weapon_slots SSoT 移行（A案）: 入力専用バッファ。毎フレーム set_weapon_slots で上書きされ、
+    /// physics_step で参照される。永続状態ではなく、cooldown は FrameEvent で Elixir に返す。
+    pub weapon_slots_input: Vec<WeaponSlot>,
     /// Elixir SSoT 移行: 衝突用スナップショット（永続状態なし）
     /// 毎フレーム set_special_entity_snapshot NIF で注入される。
     pub special_entity_snapshot: Option<SpecialEntitySnapshot>,

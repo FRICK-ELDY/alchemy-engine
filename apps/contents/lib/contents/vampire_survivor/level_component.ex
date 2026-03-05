@@ -59,6 +59,24 @@ defmodule Content.VampireSurvivor.LevelComponent do
     :ok
   end
 
+  # 同一フレームでスロット数分のイベントが順次 dispatch される。
+  # update_by_module は同期的に実行されるため、各 Map.put は競合せずマージされる。
+  def on_frame_event({:weapon_cooldown_updated, kind_id, cooldown_bits, _, _}, _context) do
+    cooldown = bits_to_f32(cooldown_bits)
+    content = Core.Config.current()
+    runner = content.flow_runner(:main)
+    weapon_name = kind_id_to_weapon_name(kind_id, content)
+
+    if runner && weapon_name do
+      Contents.SceneStack.update_by_module(runner, content.playing_scene(), fn state ->
+        cooldowns = Map.get(state, :weapon_cooldowns, %{})
+        Map.put(state, :weapon_cooldowns, Map.put(cooldowns, weapon_name, cooldown))
+      end)
+    end
+
+    :ok
+  end
+
   def on_frame_event(_event, _context), do: :ok
 
   # ── on_nif_sync: 毎フレーム NIF 注入 ─────────────────────────────
@@ -222,20 +240,37 @@ defmodule Content.VampireSurvivor.LevelComponent do
 
   defp sync_weapon_slots(world_ref, content, playing_state) do
     weapon_levels = Map.get(playing_state, :weapon_levels)
-    prev = Process.get({__MODULE__, :last_weapon_levels})
+    weapon_cooldowns = Map.get(playing_state, :weapon_cooldowns, %{})
     playing_scene = content.playing_scene()
 
-    if weapon_levels != nil and weapon_levels != prev and
-         function_exported?(playing_scene, :weapon_slots_for_nif, 1) do
-      slots = playing_scene.weapon_slots_for_nif(weapon_levels)
+    slots =
+      cond do
+        weapon_levels == nil ->
+          nil
 
+        function_exported?(playing_scene, :weapon_slots_for_nif, 2) ->
+          playing_scene.weapon_slots_for_nif(weapon_levels, weapon_cooldowns)
+
+        function_exported?(playing_scene, :weapon_slots_for_nif, 1) ->
+          playing_scene.weapon_slots_for_nif(weapon_levels)
+          |> Enum.map(fn {k, l} -> {k, l, 0.0} end)
+
+        true ->
+          nil
+      end
+
+    if slots do
       call_nif(:set_weapon_slots, fn ->
         Core.NifBridge.set_weapon_slots(world_ref, slots)
       end)
-
-      # NIF を実際に呼んだときだけダーティフラグを更新する
-      Process.put({__MODULE__, :last_weapon_levels}, weapon_levels)
     end
+  end
+
+  defp kind_id_to_weapon_name(kind_id, content) do
+    registry = content.entity_registry().weapons
+
+    registry
+    |> Enum.find_value(fn {name, id} -> if id == kind_id, do: name end)
   end
 
   # ── プライベート: フレームイベント処理ヘルパー ────────────────────
