@@ -44,7 +44,7 @@ defmodule Content.VampireSurvivor.SpawnComponent do
       world_ref,
       enemy_params(),
       weapon_params(),
-      boss_params()
+      Content.EntityParams.boss_params()
     )
 
     # I-2: 初期武器は Playing シーン state の weapon_levels から毎フレーム set_weapon_slots で注入する。
@@ -53,8 +53,9 @@ defmodule Content.VampireSurvivor.SpawnComponent do
   end
 
   # ── エンティティパラメータ定義 ────────────────────────────────────
-  # 各タプルの要素は Rust 側 decode_enemy_params / decode_weapon_params /
-  # decode_boss_params の順序と一致させること。
+  # enemy_params / weapon_params の順序は Rust 側 decode_enemy_params /
+  # decode_weapon_params と一致させること。
+  # boss_params は Content.EntityParams.boss_params/0（SSoT）を参照。
 
   defp enemy_params do
     [
@@ -186,38 +187,6 @@ defmodule Content.VampireSurvivor.SpawnComponent do
         fire_pattern: "aura",
         range: 80.0,
         chain_count: 0
-      }
-    ]
-  end
-
-  defp boss_params do
-    [
-      # 0: Slime King
-      %{
-        max_hp: 1000.0,
-        speed: 60.0,
-        radius: 48.0,
-        damage_per_sec: 30.0,
-        render_kind: 11,
-        special_interval: 5.0
-      },
-      # 1: Bat Lord
-      %{
-        max_hp: 2000.0,
-        speed: 200.0,
-        radius: 48.0,
-        damage_per_sec: 50.0,
-        render_kind: 12,
-        special_interval: 4.0
-      },
-      # 2: Stone Golem
-      %{
-        max_hp: 5000.0,
-        speed: 30.0,
-        radius: 64.0,
-        damage_per_sec: 80.0,
-        render_kind: 13,
-        special_interval: 6.0
       }
     ]
   end
