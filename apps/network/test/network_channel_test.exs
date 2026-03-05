@@ -14,6 +14,8 @@ defmodule Network.ChannelTest do
 
   import Phoenix.ChannelTest
 
+  require Phoenix.ConnTest
+
   @endpoint Network.Endpoint
 
   alias Network.Test.StubRoom
@@ -27,12 +29,60 @@ defmodule Network.ChannelTest do
   end
 
   describe "join" do
-    test "room:* トピックに join できる" do
+    test "room:* トピックに有効なトークンで join できる" do
       track("test_room")
       {:ok, socket} = connect(Network.UserSocket, %{})
 
       assert {:ok, %{room_id: "test_room"}, _socket} =
-               subscribe_and_join(socket, Network.Channel, "room:test_room")
+               subscribe_and_join(socket, Network.Channel, "room:test_room", %{
+                 "token" => token_for("test_room")
+               })
+    end
+
+    test "トークンなしでは join が拒否される" do
+      track("no_token_room")
+      {:ok, socket} = connect(Network.UserSocket, %{})
+
+      assert {:error, %{reason: "unauthorized", detail: "token_required"}} =
+               subscribe_and_join(socket, Network.Channel, "room:no_token_room", %{})
+    end
+
+    test "無効なトークンでは join が拒否される" do
+      track("invalid_token_room")
+      {:ok, socket} = connect(Network.UserSocket, %{})
+
+      assert {:error, %{reason: "unauthorized", detail: "invalid_token"}} =
+               subscribe_and_join(socket, Network.Channel, "room:invalid_token_room", %{
+                 "token" => "invalid-token-value"
+               })
+    end
+
+    test "別ルーム用トークンでは join が拒否される（スコープ不一致）" do
+      track("scope_room")
+      track("other_room")
+      {:ok, socket} = connect(Network.UserSocket, %{})
+      token_for_other = token_for("other_room")
+
+      assert {:error, %{reason: "unauthorized", detail: "token_scope_mismatch"}} =
+               subscribe_and_join(socket, Network.Channel, "room:scope_room", %{
+                 "token" => token_for_other
+               })
+    end
+
+    test "POST /api/room_token で取得したトークンで join できる" do
+      track("api_room")
+
+      conn =
+        Phoenix.ConnTest.build_conn()
+        |> Plug.Conn.put_req_header("content-type", "application/json")
+        |> Phoenix.ConnTest.post("/api/room_token", Jason.encode!(%{room_id: "api_room"}))
+
+      assert %{"token" => token} = Phoenix.ConnTest.json_response(conn, 200)
+
+      {:ok, socket} = connect(Network.UserSocket, %{})
+
+      assert {:ok, %{room_id: "api_room"}, _socket} =
+               subscribe_and_join(socket, Network.Channel, "room:api_room", %{"token" => token})
     end
 
     test "不明なトピックは拒否される" do
@@ -47,7 +97,12 @@ defmodule Network.ChannelTest do
     setup do
       track("ping_room")
       {:ok, socket} = connect(Network.UserSocket, %{})
-      {:ok, _, socket} = subscribe_and_join(socket, Network.Channel, "room:ping_room")
+
+      {:ok, _, socket} =
+        subscribe_and_join(socket, Network.Channel, "room:ping_room", %{
+          "token" => token_for("ping_room")
+        })
+
       %{socket: socket}
     end
 
@@ -64,7 +119,12 @@ defmodule Network.ChannelTest do
       track("input_room")
       start_supervised!({StubRoom, {"input_room", notify: test_pid}}, id: :stub_input)
       {:ok, socket} = connect(Network.UserSocket, %{})
-      {:ok, _, socket} = subscribe_and_join(socket, Network.Channel, "room:input_room")
+
+      {:ok, _, socket} =
+        subscribe_and_join(socket, Network.Channel, "room:input_room", %{
+          "token" => token_for("input_room")
+        })
+
       %{socket: socket}
     end
 
@@ -76,7 +136,11 @@ defmodule Network.ChannelTest do
     test "存在しないルームへの input はエラーを返す" do
       track("ghost_room")
       {:ok, socket} = connect(Network.UserSocket, %{})
-      {:ok, _, socket} = subscribe_and_join(socket, Network.Channel, "room:ghost_room")
+
+      {:ok, _, socket} =
+        subscribe_and_join(socket, Network.Channel, "room:ghost_room", %{
+          "token" => token_for("ghost_room")
+        })
 
       push(socket, "input", %{"dx" => 0.0, "dy" => 0.0})
       assert_push("error", %{reason: "room_not_found"})
@@ -89,7 +153,12 @@ defmodule Network.ChannelTest do
       track("action_room")
       start_supervised!({StubRoom, {"action_room", notify: test_pid}}, id: :stub_action)
       {:ok, socket} = connect(Network.UserSocket, %{})
-      {:ok, _, socket} = subscribe_and_join(socket, Network.Channel, "room:action_room")
+
+      {:ok, _, socket} =
+        subscribe_and_join(socket, Network.Channel, "room:action_room", %{
+          "token" => token_for("action_room")
+        })
+
       %{socket: socket}
     end
 
@@ -104,7 +173,11 @@ defmodule Network.ChannelTest do
       track("net_room")
       start_supervised!({StubRoom, "net_room"}, id: :stub_net)
       {:ok, socket} = connect(Network.UserSocket, %{})
-      {:ok, _, socket} = subscribe_and_join(socket, Network.Channel, "room:net_room")
+
+      {:ok, _, socket} =
+        subscribe_and_join(socket, Network.Channel, "room:net_room", %{
+          "token" => token_for("net_room")
+        })
 
       send(socket.channel_pid, {:network_event, "other_room", :hello})
 
@@ -114,6 +187,11 @@ defmodule Network.ChannelTest do
   end
 
   # ── テスト専用ヘルパー ──────────────────────────────────────────────
+
+  defp token_for(room_id) do
+    {:ok, token} = Network.RoomToken.sign(room_id)
+    token
+  end
 
   # テスト終了時に register_room で登録した room_id を unregister_room でクリーンアップする。
   # on_exit のキーに {:unregister, room_id} を使うため、同一 room_id の重複登録は

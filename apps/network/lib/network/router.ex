@@ -11,6 +11,24 @@ defmodule Network.Router do
   plug(:match)
   plug(:dispatch)
 
+  post "/api/room_token" do
+    case conn.body_params do
+      %{"room_id" => room_id} when is_binary(room_id) and room_id != "" ->
+        {:ok, token} = Network.RoomToken.sign(room_id)
+        body = Phoenix.json_library().encode!(%{token: token})
+        send_json(conn, 200, body)
+
+      _ ->
+        body =
+          Phoenix.json_library().encode!(%{
+            error: "missing_room_id",
+            message: "room_id is required and must be a non-empty string"
+          })
+
+        send_json(conn, 400, body)
+    end
+  end
+
   get "/health" do
     {status_code, body} =
       case fetch_rooms() do
@@ -41,6 +59,12 @@ defmodule Network.Router do
 
   match _ do
     send_resp(conn, 404, "not found")
+  end
+
+  defp send_json(conn, status, body) do
+    conn
+    |> put_resp_content_type("application/json")
+    |> send_resp(status, body)
   end
 
   # Network.Local がダウンしている場合（プロセス不在・タイムアウト・TOCTOU）は

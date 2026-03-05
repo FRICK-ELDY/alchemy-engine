@@ -14,6 +14,12 @@ if udp_port_str = System.get_env("NETWORK_UDP_PORT") do
     port: String.to_integer(udp_port_str)
 end
 
+# ── Network.Endpoint secret_key_base（本番向け）──────────────────
+# 本番では mix phx.gen.secret で生成した値を SECRET_KEY_BASE に設定すること。
+if secret = System.get_env("SECRET_KEY_BASE") do
+  config :network, Network.Endpoint, secret_key_base: secret
+end
+
 # ── セーブデータ HMAC 署名鍵（実行時設定）────────────────────────────
 # 本番環境では必ず環境変数で上書きすること。
 if secret = System.get_env("SAVE_HMAC_SECRET") do
