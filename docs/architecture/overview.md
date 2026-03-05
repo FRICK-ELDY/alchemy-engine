@@ -45,7 +45,8 @@ alchemy-engine/
 ├── mix.exs                          # Umbrella ルートプロジェクト定義
 ├── mix.lock                         # Elixir 依存ロックファイル
 ├── config/
-│   └── config.exs                   # :current（コンテンツモジュール）/ :map 設定
+│   ├── config.exs                   # :current（コンテンツモジュール）/ :map 設定
+│   └── runtime.exs                  # 実行時設定（ポート等）
 │
 ├── apps/                            # Elixir アプリケーション群
 │   ├── core/                        # SSoT コアエンジン
@@ -77,33 +78,54 @@ alchemy-engine/
 │   ├── contents/                    # ゲームコンテンツ
 │   │   ├── mix.exs
 │   │   └── lib/contents/
+│   │       ├── contents.ex                # Content モジュール（コンテンツ一覧）
 │   │       ├── game_events.ex             # メインゲームループ GenServer（contents 層）
 │   │       ├── game_events/
 │   │       │   └── diagnostics.ex         # ログ・FrameCache 更新ヘルパー
 │   │       ├── scene_behaviour.ex         # シーンコールバック定義（contents 層）
 │   │       ├── scene_stack.ex             # シーンスタック管理 GenServer（contents 層）
-│   │       ├── vampire_survivor.ex        # ContentBehaviour 実装（VampireSurvivor）
-│   │       ├── asteroid_arena.ex          # ContentBehaviour 実装（AsteroidArena）
 │   │       ├── entity_params.ex           # EXP・スコア・ボスパラメータ（Elixir SSoT）
+│   │       ├── content_loader.ex          # 将来用: descriptor ベースコンテンツ（stub）
+│   │       ├── content_runner.ex          # 将来用: descriptor ベースコンテンツ（stub）
+│   │       ├── component_registry.ex      # 将来用: descriptor ベースコンテンツ（stub）
+│   │       ├── vampire_survivor.ex        # Content.VampireSurvivor
 │   │       ├── vampire_survivor/
-│   │       │   ├── spawn_component.ex     # Component: ワールド初期化・エンティティ登録
-│   │       │   ├── level_component.ex     # Component: EXP・レベル・スコア管理
-│   │       │   ├── boss_component.ex      # Component: ボス HP・AI 制御
-│   │       │   ├── spawn_system.ex        # ウェーブスポーン
-│   │       │   ├── boss_system.ex         # ボス出現スケジュール
-│   │       │   ├── level_system.ex        # 武器選択肢生成
-│   │       │   └── scenes/
-│   │       │       ├── playing.ex         # プレイ中シーン
-│   │       │       ├── level_up.ex        # レベルアップ選択シーン
-│   │       │       ├── boss_alert.ex      # ボス出現アラートシーン
-│   │       │       └── game_over.ex       # ゲームオーバーシーン
-│   │       └── asteroid_arena/
-│   │           ├── spawn_component.ex     # Component: ワールド初期化
-│   │           ├── split_component.ex     # Component: 小惑星分裂処理
-│   │           ├── spawn_system.ex        # スポーン制御
-│   │           └── scenes/
-│   │               ├── playing.ex
-│   │               └── game_over.ex
+│   │       │   ├── spawn_component.ex
+│   │       │   ├── level_component.ex
+│   │       │   ├── boss_component.ex
+│   │       │   ├── render_component.ex
+│   │       │   ├── spawn_system.ex
+│   │       │   ├── boss_system.ex
+│   │       │   ├── level_system.ex
+│   │       │   └── scenes/ playing.ex, level_up.ex, boss_alert.ex, game_over.ex
+│   │       ├── asteroid_arena.ex          # Content.AsteroidArena
+│   │       ├── asteroid_arena/
+│   │       │   ├── spawn_component.ex
+│   │       │   ├── split_component.ex
+│   │       │   ├── spawn_system.ex
+│   │       │   └── scenes/ playing.ex, game_over.ex
+│   │       ├── simple_box_3d.ex           # Content.SimpleBox3D（Phase R-6 動作検証）
+│   │       ├── simple_box_3d/
+│   │       │   ├── spawn_component.ex, input_component.ex, render_component.ex
+│   │       │   └── scenes/ playing.ex, game_over.ex
+│   │       ├── bullet_hell_3d.ex          # Content.BulletHell3D（3D 弾幕避け）
+│   │       ├── bullet_hell_3d/
+│   │       │   ├── spawn_component.ex, input_component.ex, render_component.ex
+│   │       │   ├── bullet_component.ex, damage_component.ex
+│   │       │   └── scenes/ playing.ex, game_over.ex
+│   │       ├── rolling_ball.ex            # Content.RollingBall（玉転がし）
+│   │       ├── rolling_ball/
+│   │       │   ├── spawn_component.ex, physics_component.ex, render_component.ex
+│   │       │   ├── stage_data.ex
+│   │       │   └── scenes/ title.ex, playing.ex, stage_clear.ex, ending.ex, game_over.ex
+│   │       ├── vr_test.ex                 # Content.VRTest（VR 動作検証）
+│   │       ├── vr_test/
+│   │       │   ├── spawn_component.ex, input_component.ex, render_component.ex
+│   │       │   └── scenes/ playing.ex, game_over.ex
+│   │       ├── canvas_test.ex             # Content.CanvasTest（描画テスト）
+│   │       └── canvas_test/
+│   │           ├── input_component.ex, render_component.ex
+│   │           └── scenes/ playing.ex
 │   │
 │   └── network/                     # 通信レイヤー
 │       ├── mix.exs                  # deps: phoenix ~> 1.8, phoenix_pubsub, plug_cowboy
@@ -521,5 +543,4 @@ graph TB
 - [**ビジョンと設計思想**](../vision.md) ← エンジン・ワールド・ルール・ゲームの定義
 - **Elixir レイヤー**: [server](./elixir/server.md) / [core](./elixir/core.md) / [contents](./elixir/contents.md)（ゲームコンテンツ一覧・設計パターン含む）/ [network](./elixir/network.md)
 - **Rust レイヤー**: [nif](./rust/nif.md) / [physics](./rust/physics.md) / [render](./rust/render.md) / [audio](./rust/audio.md) / [input_openxr](./rust/input_openxr.md)
-- [ビジュアルエディタ アーキテクチャ](../plan/visual-editor-architecture.md)
-- [改善計画](../plan/improvement-plan.md) ← 既知の弱点と改善方針
+- [改善計画](../task/improvement-plan.md) ← 既知の弱点と改善方針
