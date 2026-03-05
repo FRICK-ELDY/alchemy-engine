@@ -31,36 +31,6 @@
 
 ## 未解決課題
 
-### I-F: Elixir 側テストがほぼ未整備（優先度: 中）
-
-**問題:** `Contents.SceneStack`・`Core.GameEvents`・`Core.EventBus`・`Core.SaveManager` のテストが存在しない。エンジンコアのリグレッションを検出する手段がない。（※ `Core.SceneManager` は scene-management-to-contents タスクにより `Contents.SceneStack` に移行済み）
-
-**影響ファイル:**
-- `apps/core/test/`（存在しない）
-
-**作業ステップ:**
-1. `apps/core/test/core/scene_manager_test.exs` を作成し、シーン遷移（push/pop/replace）をテストする
-2. `apps/core/test/core/save_manager_test.exs` を作成し、セーブ/ロード・HMAC検証をテストする
-3. `apps/core/test/core/event_bus_test.exs` を作成し、サブスクライバー配信をテストする
-4. `Core.NifBridgeMock`（`apps/core/test/support/mocks.ex` に既に定義済み）を使ってNIF依存を排除する
-
----
-
-### I-H: EntityParams の Single Source of Truth 化（優先度: 中）
-
-**問題:** `entity_params.ex`・`spawn_component.ex` の `boss_params/0`・Rust側の値の3箇所に同じ値が散在している。
-
-**影響ファイル:**
-- `apps/contents/lib/contents/entity_params.ex`
-- `apps/contents/lib/contents/vampire_survivor/spawn_component.ex`
-
-**作業ステップ:**
-1. `spawn_component.ex` の `boss_params/0` を削除し、`EntityParams.boss_params/0` を呼び出すよう変更する
-2. `EntityParams` が `boss_params/0` を公開APIとして提供するよう整理する
-3. Rust側の値が `set_entity_params` NIF経由でのみ設定されることを確認する
-
----
-
 ### I-M: renderer/mod.rs のゲーム固有パラメータを contents へ移行（優先度: 中）
 
 **問題:** `native/render/src/renderer/mod.rs` に、アトラスオフセット・敵種別サイズ・スプライト種別の UV 計算など、多数のゲーム固有パラメータがハードコードされている。アーキテクチャ原則「Elixir = SSoT」「Rust = 演算層」に照らすと、これらの値は contents 側で持ち、NIF 経由で注入するべきである。
