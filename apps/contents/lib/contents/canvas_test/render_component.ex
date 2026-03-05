@@ -65,17 +65,19 @@ defmodule Content.CanvasTest.RenderComponent do
       Contents.SceneStack.update_by_module(
         runner,
         Content.CanvasTest.Scenes.Playing,
-        fn state ->
-          if state.cursor_grab_request == cursor_grab do
-            Map.put(state, :cursor_grab_request, :no_change)
-          else
-            state
-          end
-        end
+        &apply_cursor_grab_request(&1, cursor_grab)
       )
     end
 
     :ok
+  end
+
+  defp apply_cursor_grab_request(state, cursor_grab) do
+    if state.cursor_grab_request == cursor_grab do
+      Map.put(state, :cursor_grab_request, :no_change)
+    else
+      state
+    end
   end
 
   # ── DrawCommand 組み立て ──────────────────────────────────────────

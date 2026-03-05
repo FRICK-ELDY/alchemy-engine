@@ -33,26 +33,30 @@ defmodule Content.VampireSurvivor.BossComponent do
     if runner do
       playing_scene = content.playing_scene()
 
-      Contents.SceneStack.update_by_module(runner, playing_scene, fn state ->
-        if state.boss_hp != nil do
-          new_hp = max(0.0, state.boss_hp - damage)
-          state = %{state | boss_hp: new_hp}
-
-          if new_hp <= 0.0 do
-            apply_defeated(state, context)
-          else
-            state
-          end
-        else
-          state
-        end
-      end)
+      Contents.SceneStack.update_by_module(
+        runner,
+        playing_scene,
+        &apply_boss_damage(&1, damage, context)
+      )
     end
 
     :ok
   end
 
   def on_frame_event(_event, _context), do: :ok
+
+  defp apply_boss_damage(state, _damage, _context) when state.boss_hp == nil, do: state
+
+  defp apply_boss_damage(state, damage, context) do
+    new_hp = max(0.0, state.boss_hp - damage)
+    state = %{state | boss_hp: new_hp}
+
+    if new_hp <= 0.0 do
+      apply_defeated(state, context)
+    else
+      state
+    end
+  end
 
   defp apply_defeated(state, context) do
     content = Core.Config.current()
@@ -137,19 +141,22 @@ defmodule Content.VampireSurvivor.BossComponent do
     runner = content.flow_runner(:main)
 
     if runner do
-      Contents.SceneStack.update_by_module(runner, content.playing_scene(), fn state ->
-        if state.boss_kind_id != nil do
-          %{state | boss_invincible: false, boss_vx: 0.0, boss_vy: 0.0}
-        else
-          state
-        end
-      end)
+      Contents.SceneStack.update_by_module(
+        runner,
+        content.playing_scene(),
+        &clear_boss_dash_state/1
+      )
     end
 
     :ok
   end
 
   def on_engine_message(_msg, _context), do: :ok
+
+  defp clear_boss_dash_state(%{boss_kind_id: nil} = state), do: state
+
+  defp clear_boss_dash_state(state),
+    do: %{state | boss_invincible: false, boss_vx: 0.0, boss_vy: 0.0}
 
   # ── プライベート: アイテムドロップ ────────────────────────────────
 
@@ -189,23 +196,30 @@ defmodule Content.VampireSurvivor.BossComponent do
 
     runner = Core.Config.current().flow_runner(:main)
     playing_scene = Core.Config.current().playing_scene()
+    mv = {final_vx || vx, final_vy || vy}
 
     if runner do
-      Contents.SceneStack.update_by_module(runner, playing_scene, fn s ->
-        new_x = (s.boss_x || 0) + (final_vx || vx) * dt
-        new_y = (s.boss_y || 0) + (final_vy || vy) * dt
-        r = s.boss_radius || 48.0
-        new_x = clamp(new_x, r, @map_width - r)
-        new_y = clamp(new_y, r, @map_height - r)
-
-        s
-        |> Map.put(:boss_x, new_x)
-        |> Map.put(:boss_y, new_y)
-        |> Map.put(:boss_vx, final_vx || vx)
-        |> Map.put(:boss_vy, final_vy || vy)
-        |> maybe_apply_special_state(new_state)
-      end)
+      Contents.SceneStack.update_by_module(
+        runner,
+        playing_scene,
+        &apply_boss_position_update(&1, mv, dt, new_state)
+      )
     end
+  end
+
+  defp apply_boss_position_update(s, {vel_x, vel_y}, dt, new_state) do
+    new_x = (s.boss_x || 0) + vel_x * dt
+    new_y = (s.boss_y || 0) + vel_y * dt
+    r = s.boss_radius || 48.0
+    clamped_x = clamp(new_x, r, @map_width - r)
+    clamped_y = clamp(new_y, r, @map_height - r)
+
+    s
+    |> Map.put(:boss_x, clamped_x)
+    |> Map.put(:boss_y, clamped_y)
+    |> Map.put(:boss_vx, vel_x)
+    |> Map.put(:boss_vy, vel_y)
+    |> maybe_apply_special_state(new_state)
   end
 
   defp maybe_apply_special_state(state, nil), do: state

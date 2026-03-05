@@ -182,15 +182,7 @@ defmodule Network.Distributed do
         {:error, {:room_not_found, room_b}}
 
       {{target_node, _}, {target_node, _}} ->
-        if target_node == node() do
-          Network.Local.connect_rooms(room_a, room_b)
-        else
-          case :rpc.call(target_node, Network.Local, :connect_rooms, [room_a, room_b]) do
-            :ok -> :ok
-            {:error, _} = err -> err
-            {:badrpc, reason} -> {:error, {:rpc_failed, reason}}
-          end
-        end
+        rpc_local_or_remote(target_node, Network.Local, :connect_rooms, [room_a, room_b])
     end
   end
 
@@ -212,36 +204,35 @@ defmodule Network.Distributed do
 
   defp list_rooms_clustered do
     cluster_nodes()
-    |> Enum.flat_map(fn n ->
-      if n == node() do
-        Network.Local.list_rooms()
-      else
-        case :rpc.call(n, Network.Local, :list_rooms, []) do
-          rooms when is_list(rooms) -> rooms
-          _ -> []
-        end
-      end
-    end)
+    |> Enum.flat_map(&fetch_rooms_from_node/1)
     |> Enum.uniq()
+  end
+
+  defp fetch_rooms_from_node(n) when n == node(), do: Network.Local.list_rooms()
+
+  defp fetch_rooms_from_node(n) do
+    case :rpc.call(n, Network.Local, :list_rooms, []) do
+      rooms when is_list(rooms) -> rooms
+      _ -> []
+    end
   end
 
   defp connected_clustered?(room_a, room_b) do
     case {find_room_node(room_a), find_room_node(room_b)} do
-      {{node_a, _}, {node_b, _}} when node_a != node_b ->
-        false
+      {{node_a, _}, {node_b, _}} when node_a != node_b -> false
+      {{target_node, _}, {target_node, _}} -> rpc_connected?(target_node, room_a, room_b)
+      _ -> false
+    end
+  end
 
-      {{target_node, _}, {target_node, _}} ->
-        if target_node == node() do
-          Network.Local.connected?(room_a, room_b)
-        else
-          case :rpc.call(target_node, Network.Local, :connected?, [room_a, room_b]) do
-            result when is_boolean(result) -> result
-            _ -> false
-          end
-        end
-
-      _ ->
-        false
+  defp rpc_connected?(target_node, room_a, room_b) do
+    if target_node == node() do
+      Network.Local.connected?(room_a, room_b)
+    else
+      case :rpc.call(target_node, Network.Local, :connected?, [room_a, room_b]) do
+        result when is_boolean(result) -> result
+        _ -> false
+      end
     end
   end
 
@@ -250,17 +241,20 @@ defmodule Network.Distributed do
   # キャッシュする余地あり。
   defp find_room_node(room_id) do
     Enum.find_value(cluster_nodes(), fn n ->
-      rooms =
-        if n == node() do
-          Network.Local.list_rooms()
-        else
-          case :rpc.call(n, Network.Local, :list_rooms, []) do
-            r when is_list(r) -> r
-            _ -> []
-          end
-        end
-
+      rooms = fetch_rooms_from_node(n)
       if room_id in rooms, do: {n, room_id}, else: nil
     end)
+  end
+
+  defp rpc_local_or_remote(target_node, module, fun, args) do
+    if target_node == node() do
+      apply(module, fun, args)
+    else
+      case :rpc.call(target_node, module, fun, args) do
+        :ok -> :ok
+        {:error, _} = err -> err
+        {:badrpc, reason} -> {:error, {:rpc_failed, reason}}
+      end
+    end
   end
 end
