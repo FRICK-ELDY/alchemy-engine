@@ -59,8 +59,7 @@ pub(crate) fn collide_special_entity_snapshot(w: &mut GameWorldInner, dt: f32) {
         if total_dmg > 0.0 {
             w.frame_events
                 .push(FrameEvent::SpecialEntityDamaged { damage: total_dmg });
-            w.particles
-                .emit(snap.x, snap.y, 4, [1.0, 0.8, 0.2, 1.0]);
+            w.particles.emit(snap.x, snap.y, 4, [1.0, 0.8, 0.2, 1.0]);
             for (bi, _, kill_bullet) in bullet_hits {
                 if kill_bullet {
                     w.bullets.kill(bi);

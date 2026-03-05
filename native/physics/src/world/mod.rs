@@ -10,7 +10,6 @@ mod particle;
 mod player;
 mod special_entity;
 
-pub use special_entity::SpecialEntitySnapshot;
 pub use bullet::{
     BulletWorld, BULLET_KIND_FIREBALL, BULLET_KIND_LIGHTNING, BULLET_KIND_NORMAL, BULLET_KIND_ROCK,
     BULLET_KIND_WHIP,
@@ -21,3 +20,4 @@ pub use game_loop_control::GameLoopControl;
 pub use game_world::{GameWorld, GameWorldInner};
 pub use particle::ParticleWorld;
 pub use player::PlayerState;
+pub use special_entity::SpecialEntitySnapshot;
