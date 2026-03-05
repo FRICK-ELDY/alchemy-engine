@@ -181,18 +181,23 @@ defmodule Content.VampireSurvivor.Scenes.Playing do
     %{state | boss_hp: max_hp, boss_max_hp: max_hp, boss_kind_id: boss_kind}
   end
 
+  # get_player_pos はプレイヤー左上を返す。Rust 旧実装と合わせて中心基準にする（PLAYER_RADIUS = 32）
+  @player_radius 32
+
   @doc """
   ボスを Elixir SSoT でスポーンする。BossAlert pop 時に呼ばれる。
-  player_x, player_y はワールド座標、map_width, map_height はマップサイズ。
+  player_x, player_y は get_player_pos の戻り値（プレイヤー左上）。map_width, map_height はマップサイズ。
   """
   def apply_boss_spawn_full(state, boss_kind_id, player_x, player_y, map_width, map_height) do
     max_hp = EntityParams.boss_max_hp(boss_kind_id)
     sp = EntityParams.boss_spawn_params(boss_kind_id)
     r = sp.radius
 
-    # Rust spawn_special_entity と同じ位置計算
-    bx = min(player_x + 600.0, map_width - r)
-    by = max(r, min(player_y, map_height - r))
+    # Rust 旧 spawn_special_entity と同じ位置計算（プレイヤー中心 = 左上 + PLAYER_RADIUS）
+    center_x = player_x + @player_radius
+    center_y = player_y + @player_radius
+    bx = min(center_x + 600.0, map_width - r)
+    by = max(r, min(center_y, map_height - r))
 
     %{
       state

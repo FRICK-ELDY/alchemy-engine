@@ -29,6 +29,7 @@
 | **1 tick 遅れ** | Elixir の `on_nif_sync` で注入した `set_special_entity_snapshot` は、Rust ゲームループの非同期性により 1 tick 遅れて `physics_step` に反映される。ボス衝突程度であれば許容範囲と判断。必要に応じてループ構造の見直しを検討する。 | 低 |
 | **パラメータ重複** | `EntityParams.boss_spawn_params/1` と `SpawnComponent.boss_params/1` で radius, render_kind, damage_per_sec が二重管理。将来 `entity_params.ex` を唯一の SSoT とし spawn_component の重複を除去する。 | 低 |
 | **FrameEvent 整理** | `SpecialEntitySpawned` / `SpecialEntityDefeated` は Rust から発行しなくなった。`events.rs` のマッピングは他コンテンツで未使用なら削除可能。 | 低 |
+| **テスト不足** | `apply_boss_spawn_full/6` やボス撃破フローに直接のテストがない。Boss SSoT 移行後はこれらの経路のテスト追加を検討する。 | 低 |
 
 ---
 

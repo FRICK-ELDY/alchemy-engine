@@ -100,6 +100,7 @@ pub fn get_hud_data(world: ResourceArc<GameWorld>) -> NifResult<(f64, f64, u32, 
     ))
 }
 
+/// フレームメタデータ。boss_hp / boss_max_hp は Elixir SSoT のため Rust 側では持たず、常に 0.0 を返す。
 #[rustler::nif]
 pub fn get_frame_metadata(world: ResourceArc<GameWorld>) -> NifResult<FrameMetadata> {
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;

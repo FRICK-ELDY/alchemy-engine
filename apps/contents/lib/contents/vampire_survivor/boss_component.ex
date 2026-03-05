@@ -65,11 +65,15 @@ defmodule Content.VampireSurvivor.BossComponent do
     drop_boss_gems(context.world_ref, x, y, exp)
     Process.delete({__MODULE__, :boss_phase_timer})
 
-    state
-    |> Map.update(:score, score_delta, &(&1 + score_delta))
-    |> Map.update(:kill_count, 1, &(&1 + 1))
-    |> content.playing_scene().accumulate_exp(exp)
-    |> content.playing_scene().apply_boss_defeated()
+    # パイプラインの戻り値が SceneStack.update_by_module の新 state として使われる
+    new_state =
+      state
+      |> Map.update(:score, score_delta, &(&1 + score_delta))
+      |> Map.update(:kill_count, 1, &(&1 + 1))
+      |> content.playing_scene().accumulate_exp(exp)
+      |> content.playing_scene().apply_boss_defeated()
+
+    new_state
   end
 
   # ── on_nif_sync: 毎フレームスナップショット注入 ───────────────────
@@ -222,6 +226,7 @@ defmodule Content.VampireSurvivor.BossComponent do
   defp handle_boss_special_action(_world_ref, @boss_bat_lord, px, py, bx, by, bp) do
     {dvx, dvy} = chase_velocity(px, py, bx, by, bp.dash_speed)
     Process.put({__MODULE__, :boss_phase_timer}, bp.special_interval)
+    # 現状は単一ワールドのため world_ref は渡さない（複数ワールド時は要検討）
     Process.send_after(self(), {:boss_dash_end, nil}, bp.dash_duration_ms)
     {dvx, dvy, %{invincible: true, vx: dvx, vy: dvy}}
   end
