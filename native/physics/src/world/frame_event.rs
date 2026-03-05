@@ -13,8 +13,11 @@ pub enum FrameEvent {
     PlayerDamaged {
         damage: f32,
     },
+    /// item_kind: 0=Gem, 1=Potion, 2=Magnet
+    /// value: Gem=EXP, Potion=回復量, Magnet=0
     ItemPickup {
         item_kind: u8,
+        value: u32,
     },
     /// 特殊エンティティ（ボス等）が撃破された。
     /// I-4: ボス種別は Elixir 側 Rule state で管理するため entity_kind フィールドを除去。

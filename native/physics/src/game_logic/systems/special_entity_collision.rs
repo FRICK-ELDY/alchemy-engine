@@ -4,7 +4,7 @@
 //! Elixir SSoT 移行後: Rust は永続状態を持たず、スナップショットで衝突のみ判定。
 //! SpecialEntityDamaged / PlayerDamaged を発行。SpecialEntityDefeated は発行しない。
 
-use crate::constants::{BULLET_RADIUS, INVINCIBLE_DURATION, PLAYER_RADIUS};
+use crate::constants::{BULLET_RADIUS, PLAYER_RADIUS};
 use crate::world::{FrameEvent, GameWorldInner};
 
 /// 特殊エンティティスナップショットと弾丸・プレイヤーとの衝突を判定する。
@@ -20,14 +20,13 @@ pub(crate) fn collide_special_entity_snapshot(w: &mut GameWorldInner, dt: f32) {
     let ddx = px - snap.x;
     let ddy = py - snap.y;
 
-    // ボス vs プレイヤー接触ダメージ
+    // ボス vs プレイヤー接触ダメージ（HP・無敵は contents SSoT）
     if ddx * ddx + ddy * ddy < hit_r * hit_r
         && !snap.invincible
-        && w.player.invincible_timer <= 0.0
-        && w.player.hp > 0.0
+        && w.player_invincible_timer_injected <= 0.0
+        && w.player_hp_injected > 0.0
     {
         let dmg = snap.damage_per_sec * dt;
-        w.player.invincible_timer = INVINCIBLE_DURATION;
         w.frame_events
             .push(FrameEvent::PlayerDamaged { damage: dmg });
         w.particles.emit(px, py, 8, [1.0, 0.15, 0.15, 1.0]);

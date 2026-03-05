@@ -45,7 +45,7 @@ pub fn push_tick(
     let frame_id = w.frame_id;
     let player_x = w.player.x as f64;
     let player_y = w.player.y as f64;
-    let player_hp = w.player.hp as f64;
+    let player_hp = w.player_hp_injected as f64;
     let enemy_count = w
         .enemies
         .positions_x

@@ -42,7 +42,7 @@ pub fn get_player_pos(world: ResourceArc<GameWorld>) -> NifResult<(f64, f64)> {
 #[rustler::nif]
 pub fn get_player_hp(world: ResourceArc<GameWorld>) -> NifResult<f64> {
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;
-    Ok(w.player.hp as f64)
+    Ok(w.player_hp_injected as f64)
 }
 
 #[rustler::nif]
@@ -71,7 +71,7 @@ pub fn debug_dump_world(world: ResourceArc<GameWorld>) -> NifResult<String> {
         w.bullets.count,
         w.player.x,
         w.player.y,
-        w.player.hp,
+        w.player_hp_injected,
         w.player_max_hp,
         boss_str
     ))
@@ -93,7 +93,7 @@ pub fn get_enemy_count(world: ResourceArc<GameWorld>) -> NifResult<usize> {
 pub fn get_hud_data(world: ResourceArc<GameWorld>) -> NifResult<(f64, f64, u32, f64)> {
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;
     Ok((
-        w.player.hp as f64,
+        w.player_hp_injected as f64,
         w.player_max_hp as f64,
         w.score,
         w.elapsed_seconds as f64,
@@ -110,7 +110,7 @@ pub fn get_frame_metadata(world: ResourceArc<GameWorld>) -> NifResult<FrameMetad
     };
     Ok((
         (
-            w.player.hp as f64,
+            w.player_hp_injected as f64,
             w.player_max_hp as f64,
             w.score,
             w.elapsed_seconds as f64,
@@ -129,7 +129,7 @@ pub fn get_magnet_timer(world: ResourceArc<GameWorld>) -> NifResult<f64> {
 #[rustler::nif]
 pub fn is_player_dead(world: ResourceArc<GameWorld>) -> NifResult<bool> {
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;
-    Ok(w.player.hp <= 0.0)
+    Ok(w.player_hp_injected <= 0.0)
 }
 
 #[rustler::nif]
@@ -137,7 +137,7 @@ pub fn get_full_game_state(world: ResourceArc<GameWorld>) -> NifResult<(u32, f64
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;
     Ok((
         w.score,
-        w.player.hp as f64,
+        w.player_hp_injected as f64,
         w.elapsed_seconds as f64,
         w.kill_count,
     ))
@@ -250,7 +250,7 @@ pub fn get_render_entities(world: ResourceArc<GameWorld>) -> NifResult<RenderEnt
             w.enemies.count,
             w.bullets.count,
         ),
-        (w.magnet_timer as f64, w.player.invincible_timer as f64),
+        (w.magnet_timer as f64, w.player_invincible_timer_injected as f64),
         (enemies, bullets, particles),
         (items, obstacles, boss, score_popups),
     ))

@@ -20,8 +20,8 @@ pub(crate) fn drain_frame_events_inner(w: &mut GameWorldInner) -> Vec<(Atom, u32
             FrameEvent::PlayerDamaged { damage } => {
                 (crate::player_damaged(), (damage * 1000.0) as u32, 0, 0, 0)
             }
-            FrameEvent::ItemPickup { item_kind } => {
-                (crate::item_pickup(), item_kind as u32, 0, 0, 0)
+            FrameEvent::ItemPickup { item_kind, value } => {
+                (crate::item_pickup(), item_kind as u32, value, 0, 0)
             }
             FrameEvent::SpecialEntityDefeated { x, y } => {
                 (crate::boss_defeated(), 0, x.to_bits(), y.to_bits(), 0)

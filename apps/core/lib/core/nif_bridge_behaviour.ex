@@ -86,7 +86,8 @@ defmodule Core.NifBridge.Behaviour do
   @callback is_player_dead(reference()) :: boolean()
 
   # ── Elixir SSoT 注入 NIF ─────────────────────────────────────────
-  @callback set_player_hp(reference(), float()) :: :ok
+  @callback set_player_snapshot(reference(), float(), float()) :: :ok
+  @callback set_player_position(reference(), float(), float()) :: :ok
   @callback set_elapsed_seconds(reference(), float()) :: :ok
 
   # ── Phase 3-A: World パラメータ注入 NIF ──────────────────────────

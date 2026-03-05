@@ -23,6 +23,7 @@ defmodule Content.VampireSurvivor.LevelComponent do
   @item_magnet Content.EntityParams.item_kind_magnet()
 
   @potion_heal_value 20
+  @invincible_ms 500
 
   # ── on_frame_event: Rust フレームイベント処理 ──────────────────────
 
@@ -44,20 +45,44 @@ defmodule Content.VampireSurvivor.LevelComponent do
     :ok
   end
 
-  def on_frame_event({:player_damaged, damage_x1000, _, _, _}, _context) do
+  def on_frame_event({:player_damaged, damage_x1000, _, _, _}, context) do
     damage = damage_x1000 / 1000.0
     content = Core.Config.current()
     runner = content.flow_runner(:main)
 
     if runner do
+      invincible_until_ms = context.now + @invincible_ms
+
       Contents.SceneStack.update_by_module(runner, content.playing_scene(), fn state ->
-        new_hp = max(0.0, Map.get(state, :player_hp, 100.0) - damage)
+        state
+        |> Map.update(:player_hp, 100.0, fn hp -> max(0.0, hp - damage) end)
+        |> Map.put(:invincible_until_ms, invincible_until_ms)
+      end)
+    end
+
+    :ok
+  end
+
+  def on_frame_event({:item_pickup, item_kind, value, _, _}, _context)
+      when item_kind == @item_potion do
+    content = Core.Config.current()
+    runner = content.flow_runner(:main)
+
+    if runner do
+      heal = value
+
+      Contents.SceneStack.update_by_module(runner, content.playing_scene(), fn state ->
+        max_hp = Map.get(state, :player_max_hp, 100.0)
+        current_hp = Map.get(state, :player_hp, 100.0)
+        new_hp = min(max_hp, current_hp + heal)
         Map.put(state, :player_hp, new_hp)
       end)
     end
 
     :ok
   end
+
+  def on_frame_event({:item_pickup, _item_kind, _value, _, _}, _context), do: :ok
 
   # 同一フレームでスロット数分のイベントが順次 dispatch される。
   # update_by_module は同期的に実行されるため、各 Map.put は競合せずマージされる。
@@ -89,7 +114,7 @@ defmodule Content.VampireSurvivor.LevelComponent do
     playing_state =
       (runner && Contents.SceneStack.get_scene_state(runner, content.playing_scene())) || %{}
 
-    sync_player_hp(context.world_ref, playing_state)
+    sync_player_snapshot(context.world_ref, playing_state, context)
     sync_elapsed(context.world_ref, playing_state, context)
     sync_weapon_slots(context.world_ref, content, playing_state)
 
@@ -207,16 +232,26 @@ defmodule Content.VampireSurvivor.LevelComponent do
 
   # ── プライベート: NIF 同期 ────────────────────────────────────────
 
-  defp sync_player_hp(world_ref, playing_state) do
+  defp sync_player_snapshot(world_ref, playing_state, context) do
     player_hp = Map.get(playing_state, :player_hp, 100.0)
-    prev = Process.get({__MODULE__, :last_player_hp})
+    invincible_until_ms = Map.get(playing_state, :invincible_until_ms)
+    now_ms = context.now
 
-    if player_hp != prev do
-      call_nif(:set_player_hp, fn ->
-        Core.NifBridge.set_player_hp(world_ref, player_hp)
+    invincible_timer =
+      case invincible_until_ms do
+        nil -> 0.0
+        until when until > now_ms -> (until - now_ms) / 1000.0
+        _ -> 0.0
+      end
+
+    prev = Process.get({__MODULE__, :last_player_snapshot})
+
+    if {player_hp, invincible_timer} != prev do
+      call_nif(:set_player_snapshot, fn ->
+        Core.NifBridge.set_player_snapshot(world_ref, player_hp, invincible_timer)
       end)
 
-      Process.put({__MODULE__, :last_player_hp}, player_hp)
+      Process.put({__MODULE__, :last_player_snapshot}, {player_hp, invincible_timer})
     end
   end
 

@@ -15,7 +15,7 @@ use super::FrameEvent;
 ///
 /// ## Elixir as SSoT 移行後の構造
 /// 以下のフィールドは Elixir 側が権威を持ち、毎フレーム NIF で注入される:
-/// - `player.hp`        → set_player_hp NIF
+/// - `player_hp_injected` / `player_invincible_timer_injected` → set_player_snapshot NIF
 /// - `player.input_dx/dy` → set_player_input NIF
 /// - `elapsed_seconds`  → set_elapsed_seconds NIF
 /// - `boss.hp`          → set_entity_hp(:boss) NIF（Phase R-3）
@@ -36,6 +36,9 @@ use super::FrameEvent;
 pub struct GameWorldInner {
     pub frame_id: u32,
     pub player: PlayerState,
+    /// PlayerState SSoT 移行: contents から毎フレーム set_player_snapshot で注入。
+    pub player_hp_injected: f32,
+    pub player_invincible_timer_injected: f32,
     pub enemies: EnemyWorld,
     pub bullets: BulletWorld,
     pub particles: ParticleWorld,

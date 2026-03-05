@@ -434,14 +434,28 @@ defmodule Contents.GameEvents do
   end
 
   defp build_loaded_scene_state(content, loaded_state) do
+    base =
+      %{}
+      |> maybe_put(:player_hp, loaded_state["player_hp"])
+      |> maybe_put(:player_max_hp, loaded_state["player_max_hp"])
+      |> maybe_put(:elapsed_ms, elapsed_ms_from_loaded(loaded_state))
+
     if function_exported?(content, :weapon_slots_to_levels, 1) do
       slots = loaded_state["weapon_slots"] || []
       weapon_levels = content.weapon_slots_to_levels(slots)
-      %{weapon_levels: weapon_levels, weapon_cooldowns: %{}}
+      Map.merge(base, %{weapon_levels: weapon_levels, weapon_cooldowns: %{}})
     else
-      %{}
+      base
     end
   end
+
+  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, key, val), do: Map.put(map, key, val)
+
+  defp elapsed_ms_from_loaded(%{"elapsed_seconds" => sec}) when is_number(sec),
+    do: trunc(sec * 1000)
+
+  defp elapsed_ms_from_loaded(_), do: nil
 
   # ── メインフレームループ ──────────────────────────────────────────
 
