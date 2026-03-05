@@ -104,7 +104,8 @@ defmodule Core.NifBridge.Behaviour do
   @callback get_full_game_state(reference()) :: map()
 
   # ── snapshot_heavy ────────────────────────────────────────────────
-  @callback get_save_snapshot(reference()) :: binary()
-  @callback load_save_snapshot(reference(), binary()) :: :ok
+  # 戻り値・第2引数は Rust SaveSnapshot に対応する map（atom キー: player_hp, player_x 等）
+  @callback get_save_snapshot(reference()) :: map()
+  @callback load_save_snapshot(reference(), map()) :: :ok
   @callback debug_dump_world(reference()) :: binary()
 end

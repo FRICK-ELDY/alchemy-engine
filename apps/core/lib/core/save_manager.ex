@@ -10,8 +10,15 @@ defmodule Core.SaveManager do
   @high_scores_max 10
 
   # ── パス解決 ────────────────────────────────────────────────────────────
-
+  # テスト時は config :core, :save_dir で一時ディレクトリを指定する
   defp save_dir do
+    case Application.get_env(:core, :save_dir) do
+      nil -> default_save_dir()
+      dir -> dir
+    end
+  end
+
+  defp default_save_dir do
     base =
       case :os.type() do
         {:win32, _} ->
@@ -34,7 +41,7 @@ defmodule Core.SaveManager do
   #
   # weapon_slots はコンテンツ層 SSoT。opts[:weapon_slots] で渡す。
   def save_session(world_ref, opts \\ []) do
-    snapshot = Core.NifBridge.get_save_snapshot(world_ref)
+    snapshot = nif_bridge().get_save_snapshot(world_ref)
     weapon_slots = Keyword.get(opts, :weapon_slots, [])
     state_map = snapshot_to_map(snapshot, weapon_slots)
     write_json(session_path(), state_map)
@@ -55,10 +62,13 @@ defmodule Core.SaveManager do
     end
   end
 
+  # read_json はエンベロープをデコードした payload を返す。
+  # payload は %{"version" => _, "saved_at" => _, "state" => 実データ}（JSON 由来で文字列キー）。
+  # セッションの実データは data["state"] に格納されている。
   defp do_load_session(world_ref, data) do
     state = data["state"] || %{}
     rust_snapshot = map_to_rust_snapshot(state)
-    Core.NifBridge.load_save_snapshot(world_ref, rust_snapshot)
+    nif_bridge().load_save_snapshot(world_ref, rust_snapshot)
     {:ok, state}
   rescue
     e -> {:error, Exception.message(e)}
@@ -87,10 +97,13 @@ defmodule Core.SaveManager do
   def save_high_score(_), do: {:error, :invalid_score}
 
   # ── ハイスコアロード ─────────────────────────────────────────────────────
+  # read_json の戻り値は JSON 由来のためキーはすべて文字列。
+  # 現行: %{"version" => _, "saved_at" => _, "state" => %{"scores" => [...]}}
+  # 旧式: %{"scores" => [...]}（エンベロープなし）
 
   def load_high_scores do
     case read_json(high_scores_path()) do
-      # 現行フォーマット: エンベロープ構造 %{version, saved_at, state: %{scores: [...]}}
+      # 現行フォーマット: エンベロープ内 state に scores を格納
       {:ok, %{"state" => %{"scores" => scores}}} when is_list(scores) ->
         scores
 
@@ -215,13 +228,26 @@ defmodule Core.SaveManager do
     end
   end
 
+  defp nif_bridge do
+    Application.get_env(:core, :nif_bridge, Core.NifBridge)
+  end
+
   defp map_to_rust_snapshot(map) do
+    # 必須キーの検証（旧セーブ・破損データ対策）。nil の場合はデフォルトを使用し、NIF に nil を渡さない。
+    safe_float = fn key, default ->
+      case map[key] do
+        nil -> default
+        n when is_number(n) -> n
+        _ -> raise ArgumentError, "Invalid save data: #{key} must be a number"
+      end
+    end
+
     %{
-      player_hp: map["player_hp"],
-      player_x: map["player_x"],
-      player_y: map["player_y"],
-      player_max_hp: map["player_max_hp"],
-      elapsed_seconds: map["elapsed_seconds"]
+      player_hp: safe_float.("player_hp", 0.0),
+      player_x: safe_float.("player_x", 0.0),
+      player_y: safe_float.("player_y", 0.0),
+      player_max_hp: safe_float.("player_max_hp", 100.0),
+      elapsed_seconds: safe_float.("elapsed_seconds", 0.0)
     }
   end
 end
