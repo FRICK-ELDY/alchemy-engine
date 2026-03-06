@@ -81,6 +81,8 @@ pub struct GameWorldInner {
     pub curr_tick_ms: u64,
     /// Phase 3-A: エンティティパラメータテーブル（set_entity_params NIF で注入）
     pub params: EntityParamTables,
+    /// R-P2: 敵接触ダメージ（kind_id → damage_this_frame）。毎フレーム set_enemy_damage_this_frame NIF で注入。
+    pub enemy_damage_this_frame: Vec<f32>,
     /// Phase 3-A: マップサイズ（set_world_size NIF で注入）
     pub map_width: f32,
     pub map_height: f32,

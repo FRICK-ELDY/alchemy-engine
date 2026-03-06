@@ -123,6 +123,7 @@ defmodule Content.VampireSurvivor.LevelComponent do
     sync_player_snapshot(context.world_ref, playing_state, context)
     sync_elapsed(context.world_ref, playing_state, context)
     sync_weapon_slots(context.world_ref, content, playing_state)
+    sync_enemy_damage_this_frame(context.world_ref, content, context)
 
     :ok
   end
@@ -277,6 +278,18 @@ defmodule Content.VampireSurvivor.LevelComponent do
 
       Process.put({__MODULE__, :last_elapsed_ms}, elapsed_ms)
     end
+  end
+
+  defp sync_enemy_damage_this_frame(world_ref, content, context) do
+    if function_exported?(content, :enemy_damage_this_frame, 1) do
+      list = content.enemy_damage_this_frame(context)
+
+      call_nif(:set_enemy_damage_this_frame, fn ->
+        Core.NifBridge.set_enemy_damage_this_frame(world_ref, list)
+      end)
+    end
+
+    :ok
   end
 
   defp sync_weapon_slots(world_ref, content, playing_state) do

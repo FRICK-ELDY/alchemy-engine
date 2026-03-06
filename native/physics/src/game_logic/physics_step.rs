@@ -110,8 +110,12 @@ pub fn physics_step_inner(w: &mut GameWorldInner, delta_ms: f64) {
             // Elixir が PlayerDamaged を受信して player_hp 減算・invincible_until 設定し、
             // 次フレームで set_player_snapshot で注入する。
             if inv <= 0.0 && w.player_hp_injected > 0.0 {
-                // R-P1: damage_per_sec は Elixir 注入。x * dt は物理フレームに基づく演算で physics 層の責務。
-                let dmg = params.damage_per_sec * dt;
+                // R-P2: damage_this_frame は contents が damage_per_sec * dt で事前計算して注入済み。
+                // kind_id は set_entity_params 由来で u8 想定。get は範囲外で None を返す。
+                let dmg = w.enemy_damage_this_frame
+                    .get(kind_id as usize)
+                    .copied()
+                    .unwrap_or(0.0);
                 w.frame_events
                     .push(FrameEvent::PlayerDamaged { damage: dmg });
                 // 赤いパーティクルをプレイヤー位置に発生
@@ -135,7 +139,7 @@ pub fn physics_step_inner(w: &mut GameWorldInner, delta_ms: f64) {
     update_projectiles_and_enemy_hits(w, dt);
 
     // ── 特殊エンティティ衝突判定（スナップショット、永続状態なし）────────────
-    collide_special_entity_snapshot(w, dt);
+    collide_special_entity_snapshot(w);
 
     // ── フレーム時間計測 ──────────────────────────────────────────
     let elapsed_ms = t_start.elapsed().as_secs_f64() * 1000.0;

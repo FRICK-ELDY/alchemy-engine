@@ -128,6 +128,9 @@ defmodule Core.NifBridge do
   def set_entity_params(_world, _enemies, _weapons, _bosses),
     do: :erlang.nif_error(:nif_not_loaded)
 
+  # R-P2: 敵接触の damage_this_frame。list: [{kind_id, damage}, ...] — 毎フレーム on_nif_sync で呼ぶ
+  def set_enemy_damage_this_frame(_world, _list), do: :erlang.nif_error(:nif_not_loaded)
+
   # ── Push 型同期 NIF ────────────────────────────────────────────
   def push_tick(_world, _dx, _dy, _delta_ms), do: :erlang.nif_error(:nif_not_loaded)
 

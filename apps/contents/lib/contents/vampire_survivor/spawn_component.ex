@@ -69,6 +69,16 @@ defmodule Content.VampireSurvivor.SpawnComponent do
   """
   def weapon_params, do: weapon_params_impl()
 
+  @doc """
+  R-P2: 敵種別の damage_per_sec リスト。[{kind_id, damage_per_sec}, ...]。
+  LevelComponent が damage_this_frame 計算に使用する。
+  """
+  def enemy_damage_per_sec_list do
+    enemy_params()
+    |> Enum.with_index()
+    |> Enum.map(fn {p, i} -> {i, p[:damage_per_sec] || 0} end)
+  end
+
   defp enemy_params do
     [
       # 0: Slime

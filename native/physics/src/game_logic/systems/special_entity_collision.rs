@@ -9,7 +9,7 @@ use crate::world::{FrameEvent, GameWorldInner};
 
 /// 特殊エンティティスナップショットと弾丸・プレイヤーとの衝突を判定する。
 /// HP 減算・撃破判定は Elixir が行う。
-pub(crate) fn collide_special_entity_snapshot(w: &mut GameWorldInner, dt: f32) {
+pub(crate) fn collide_special_entity_snapshot(w: &mut GameWorldInner) {
     let Some(ref snap) = w.special_entity_snapshot else {
         return;
     };
@@ -26,8 +26,8 @@ pub(crate) fn collide_special_entity_snapshot(w: &mut GameWorldInner, dt: f32) {
         && w.player_invincible_timer_injected <= 0.0
         && w.player_hp_injected > 0.0
     {
-        // R-P1: damage_per_sec は Elixir 注入。x * dt は physics 層の責務。
-        let dmg = snap.damage_per_sec * dt;
+        // R-P2: damage_this_frame は contents が damage_per_sec * dt で事前計算して注入済み。
+        let dmg = snap.damage_this_frame;
         w.frame_events
             .push(FrameEvent::PlayerDamaged { damage: dmg });
         w.particles.emit(px, py, 8, [1.0, 0.15, 0.15, 1.0]);

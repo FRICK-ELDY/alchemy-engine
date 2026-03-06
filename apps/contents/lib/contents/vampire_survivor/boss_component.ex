@@ -90,23 +90,26 @@ defmodule Content.VampireSurvivor.BossComponent do
     playing_state =
       (runner && Contents.SceneStack.get_scene_state(runner, content.playing_scene())) || %{}
 
-    snapshot = build_snapshot(playing_state)
+    snapshot = build_snapshot(playing_state, context)
     Core.NifBridge.set_special_entity_snapshot(context.world_ref, snapshot)
 
     :ok
   end
 
-  defp build_snapshot(%{boss_kind_id: nil}), do: :none
-  defp build_snapshot(%{boss_hp: nil}), do: :none
-  defp build_snapshot(%{boss_hp: hp}) when hp <= 0, do: :none
+  defp build_snapshot(%{boss_kind_id: nil}, _context), do: :none
+  defp build_snapshot(%{boss_hp: nil}, _context), do: :none
+  defp build_snapshot(%{boss_hp: hp}, _context) when hp <= 0, do: :none
 
-  defp build_snapshot(state) do
+  defp build_snapshot(state, context) do
     x = state.boss_x || 0.0
     y = state.boss_y || 0.0
     radius = state.boss_radius || 48.0
-    damage = state.boss_damage_per_sec || 30.0
+    damage_per_sec = state.boss_damage_per_sec || 30.0
     inv = Map.get(state, :boss_invincible, false)
-    {:alive, x, y, radius, damage, inv}
+    # R-P2: contents 側で damage_per_sec * dt を事前計算して注入
+    dt = Map.get(context, :dt, 16 / 1000.0)
+    damage_this_frame = damage_per_sec * dt
+    {:alive, x, y, radius, damage_this_frame, inv}
   end
 
   # ── on_physics_process: ボス AI・移動 ──────────────────────────────

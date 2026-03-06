@@ -14,6 +14,16 @@ defmodule Content.AsteroidArena.SpawnComponent do
   def assets_path, do: "asteroid_arena"
 
   @doc """
+  R-P2: 敵種別の damage_per_sec リスト。[{kind_id, damage_per_sec}, ...]。
+  enemy_damage_this_frame 計算に使用する。
+  """
+  def enemy_damage_per_sec_list do
+    enemy_params()
+    |> Enum.with_index()
+    |> Enum.map(fn {p, i} -> {i, p[:damage_per_sec] || 0} end)
+  end
+
+  @doc """
   エンティティ種別の ID マッピングを返す。
 
   weapons / bosses は空マップ（AsteroidArena は武器・ボスを持たない）。
