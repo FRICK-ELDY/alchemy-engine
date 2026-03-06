@@ -149,4 +149,10 @@ defmodule Core.NifBridge do
   def get_save_snapshot(_world), do: :erlang.nif_error(:nif_not_loaded)
   def load_save_snapshot(_world, _snapshot), do: :erlang.nif_error(:nif_not_loaded)
   def debug_dump_world(_world), do: :erlang.nif_error(:nif_not_loaded)
+
+  # ── Formula（コンテンツ数式エンジン）────────────────────────────────
+  # bytecode: バイナリ形式のバイトコード
+  # inputs: %{"name" => value} のマップ。value は integer | float | boolean
+  # 戻り値: {:ok, [output_values]} | {:error, reason}
+  def run_formula_bytecode(_bytecode, _inputs), do: :erlang.nif_error(:nif_not_loaded)
 end
