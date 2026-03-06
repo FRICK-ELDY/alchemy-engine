@@ -51,6 +51,44 @@
 
 ---
 
+### I-LB: FormulaStore.LocalBackend の起動順保証（優先度: 中）
+
+**問題:** `Core.FormulaStore.LocalBackend` は `Server.Application` の children に含まれるが、起動順の依存関係が明文化されていない。`FormulaStore.read_local/2` は LocalBackend が未起動だとクラッシュする。core 単体テストでは setup で起動しているが、本番の起動順が変わった場合の保証がない。
+
+**影響ファイル:**
+- `apps/server/lib/server/application.ex`
+- `apps/core/lib/core/formula_store.ex`
+
+**作業ステップ:**
+1. LocalBackend を Registry・RoomSupervisor より前に起動する起動順の前提をドキュメント化する
+2. アーキテクチャドキュメント（例: `docs/architecture/elixir/`）に起動順の依存関係を追記する
+3. （任意）起動時に LocalBackend の存在を検証する assert や監視を検討する
+
+---
+
+### I-FB: formula_store_broadcast 接続時の確認 UX とユーザーセキュリティ設定（優先度: 中）
+
+**問題:** `formula_store_broadcast` の MFA による自由度は利点だが、他ルームへの synced データ送信がユーザー知情・同意なく行われるリスクがある。接続時に何が送られるか明示し、ユーザーが許可・拒否を判断できる仕組みが必要である。
+
+**要件（接続時ダイアログ）:**
+- **どこに接続するか** — 対象ネットワーク／ルームを表示する
+- **何を送るか** — 同期される synced キー（例: score, wave）の内容を表示する
+- **許可／拒否** — ユーザーが選択できる
+- **毎回確認するか** — チェックボックス。「毎回確認しない」を選択した場合はユーザーのセキュリティ設定に登録し、以後はその設定に従って自動で許可／拒否する
+
+**影響想定:**
+- フロントエンド（接続ダイアログ UI）
+- ユーザー設定・セキュリティ保存（local または永続ストア）
+- `formula_store_broadcast` 呼び出し前に「許可済みか」を参照するフロー
+
+**作業ステップ:**
+1. 接続確認ダイアログの仕様（表示項目・文言・遷移）を設計する
+2. ユーザーセキュリティ設定の保存形式（例: room_id + 接続先 → allow/deny）を定義する
+3. broadcast 実行前に設定を参照するフックを検討する
+4. 「毎回確認しない」で登録した設定の編集・削除 UI を用意する
+
+---
+
 ### I-M: renderer/mod.rs のゲーム固有パラメータを contents へ移行（優先度: 中）
 
 **問題:** `native/render/src/renderer/mod.rs` に、アトラスオフセット・敵種別サイズ・スプライト種別の UV 計算など、多数のゲーム固有パラメータがハードコードされている。アーキテクチャ原則「Elixir = SSoT」「Rust = 演算層」に照らすと、これらの値は contents 側で持ち、NIF 経由で注入するべきである。

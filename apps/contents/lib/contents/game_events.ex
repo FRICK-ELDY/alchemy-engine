@@ -347,6 +347,13 @@ defmodule Contents.GameEvents do
     {:noreply, state}
   end
 
+  # ── インフォ: ネットワークイベント（接続ルームからのブロードキャスト）──
+  # FormulaStore.synced の更新を他ルームから受信したときに適用する
+  def handle_info({:network_event, _from_room, {:formula_store_synced, key, value}}, state) do
+    Core.FormulaStore.apply_synced_from_network(state.room_id, key, value)
+    {:noreply, state}
+  end
+
   # ── インフォ: フレームイベント ────────────────────────────────────
 
   # 60Hz × 2秒分のバッファ。これを超えた場合、Elixir が GC ポーズや重いシーン遷移で
