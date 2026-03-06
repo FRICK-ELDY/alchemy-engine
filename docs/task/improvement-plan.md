@@ -123,3 +123,35 @@
 **未解決事項・確認ポイント:** [improvement-plan.md](../plan/improvement-plan.md) の「GameEvents → contents 移行タスクより」を参照。
 
 ---
+
+## Formula エンジン（Phase 1〜4 完了、Phase 5 以降は課題）
+
+### I-F5: Phase 5 — ビジュアルエディタ（優先度: 低・将来）
+
+**内容:** ProtoFlux のような 3D/2D ノードエディタを実装する。グラフを視覚的に編集し、バイトコード（または FormulaGraph 形式）を出力する。
+
+**参考:**
+- ProtoFlux - Resonite Wiki
+- ProtoFlux:Add、ProtoFlux:Store 等
+
+**作業ステップ:**
+1. エディタの技術選定（Web/ネイティブ/ゲーム内 UI）
+2. FormulaGraph の入出力形式との統合設計
+3. ノード接続・エッジの UI 設計
+4. バイトコード／グラフのエクスポート機能
+
+---
+
+### I-FO: Formula エンジン — オープンな検討事項（優先度: 低）
+
+| 項目 | 内容 |
+|:---|:---|
+| バイトコード形式 | スタック vs レジスタ、OpCode の詳細 |
+| Store の永続化 | Elixir の ETS / Agent と Rust 側の境界 |
+| 型システム | f32, i32, bool, vec2 等のサポート範囲 |
+| physics_step との統合 | 毎フレームの計算をグラフで表現するか、既存 NIF のままか |
+| デバッグ | グラフのトレース、途中値の可視化 |
+
+**関連:** game-world-inner-flow.md、課題19（計算式・アルゴリズムの Rust 実行）
+
+---
