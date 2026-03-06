@@ -34,9 +34,10 @@ defmodule Content.VampireSurvivor.WeaponFormulasTest do
 
       assert length(descs) == 1
       [lines] = descs
-      assert "DMG:" in Enum.join(lines, " ")
-      assert "CD:" in Enum.join(lines, " ")
-      assert Enum.any?(lines, &String.contains?(&1, "Shots"))
+      joined = Enum.join(List.wrap(lines), " ")
+      assert String.contains?(joined, "DMG:")
+      assert String.contains?(joined, "CD:")
+      assert Enum.any?(List.wrap(lines), &String.contains?(&1, "Shots"))
     end
 
     test "whip で Range 説明を返す" do
@@ -45,7 +46,7 @@ defmodule Content.VampireSurvivor.WeaponFormulasTest do
 
       assert length(descs) == 1
       [lines] = descs
-      assert Enum.any?(lines, &String.contains?(&1, "Range"))
+      assert Enum.any?(List.wrap(lines), &String.contains?(&1, "Range"))
     end
 
     test "未登録 weapon 名では Upgrade weapon にフォールバック" do

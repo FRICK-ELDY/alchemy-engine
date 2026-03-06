@@ -99,15 +99,11 @@ defmodule Content.VampireSurvivor.RenderComponent do
   end
 
   defp push_player(acc, x, y, frame) do
-    # R-R1: SpriteParams を SSoT として SpriteRaw で描画。case で他と揃え将来の :error 対応に備える
-    case Content.VampireSurvivor.SpriteParams.player_sprite_raw_params(x, y, frame) do
-      {:ok, {pos_x, pos_y, w, h, uv_off, uv_sz, color}} ->
-        [{:sprite_raw, pos_x, pos_y, w, h, {uv_off, uv_sz, color}} | acc]
+    # R-R1: SpriteParams を SSoT として SpriteRaw で描画
+    {:ok, {pos_x, pos_y, w, h, uv_off, uv_sz, color}} =
+      Content.VampireSurvivor.SpriteParams.player_sprite_raw_params(x, y, frame)
 
-      :error ->
-        Logger.debug("player_sprite_raw_params: unexpected error")
-        acc
-    end
+    [{:sprite_raw, pos_x, pos_y, w, h, {uv_off, uv_sz, color}} | acc]
   end
 
   defp push_boss(acc, {:alive, x, y, radius, render_kind}) do
