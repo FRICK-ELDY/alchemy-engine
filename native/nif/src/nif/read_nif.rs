@@ -259,47 +259,5 @@ pub fn get_render_entities(world: ResourceArc<GameWorld>) -> NifResult<RenderEnt
     ))
 }
 
-/// Phase R-2: 武器アップグレード説明文を返す汎用 NIF。
-///
-/// `weapon_choices` の各武器名に対応するアップグレード説明文を返す。
-/// Elixir 側（contents）が UiCanvas のレベルアップモーダルを組み立てるために使用する。
-///
-/// # 引数
-/// - `world`: ゲームワールド（`params` フィールドを参照する）
-/// - `weapon_choices`: 武器名文字列のリスト（例: `["weapon_0", "weapon_2"]`）
-/// - `weapon_slots`: 現在の武器スロット `[{kind_id, level}]`
-///
-/// # 戻り値
-/// `[[desc_string]]` — `weapon_choices` と同順の説明文リスト
-#[rustler::nif]
-pub fn get_weapon_upgrade_descs(
-    world: ResourceArc<GameWorld>,
-    weapon_choices: Vec<String>,
-    weapon_slots: Vec<(u32, u32)>,
-) -> NifResult<Vec<Vec<String>>> {
-    use physics::weapon::weapon_upgrade_desc;
-
-    let w = world.0.read().map_err(|_| lock_poisoned_err())?;
-
-    let descs = weapon_choices
-        .iter()
-        .map(|choice| {
-            let kind_id_opt = choice
-                .strip_prefix("weapon_")
-                .and_then(|s| s.parse::<u8>().ok());
-            match kind_id_opt {
-                Some(kind_id) => {
-                    let current_lv = weapon_slots
-                        .iter()
-                        .find(|&&(id, _)| id == kind_id as u32)
-                        .map(|&(_, lv)| lv)
-                        .unwrap_or(0);
-                    weapon_upgrade_desc(kind_id, current_lv, &w.params)
-                }
-                None => vec!["Upgrade weapon".to_string()],
-            }
-        })
-        .collect();
-
-    Ok(descs)
-}
+// R-W1: get_weapon_upgrade_descs は削除。レベルアップカード表示は contents の
+// WeaponFormulas.weapon_upgrade_descs で Elixir 側完結。

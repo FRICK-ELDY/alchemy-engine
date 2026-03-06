@@ -37,19 +37,20 @@
 ### 進捗
 
 - **2026-03**: `Content.VampireSurvivor.WeaponFormulas` を contents に追加。レベルアップカード表示（`weapon_upgrade_desc`）は Elixir 側で完結。`get_weapon_upgrade_descs` NIF は RenderComponent で未使用に。
+- **2026-03**: R-W1 完了。`weapon.rs` の `weapon_upgrade_desc` を削除、NIF `get_weapon_upgrade_descs` を削除（contents の `WeaponFormulas.weapon_upgrade_descs` で Elixir 側完結）。
 
 ### 残作業
 
-1. **physics の damage 計算を Elixir 注入に移行**（オプション）  
+1. **physics の damage 計算を Elixir 注入に移行**（オプション、R-W2 で検討）  
    - 毎フレーム `set_weapon_slots` で渡すスロットに `effective_damage` を事前計算して含める  
    - または `spawn_projectile` 等の NIF で damage を Elixir から渡す設計に変更  
-2. `weapon.rs` の `weapon_upgrade_desc` を削除し、NIF `get_weapon_upgrade_descs` を非推奨化（将来的に削除）
+2. ~~`weapon.rs` の `weapon_upgrade_desc` を削除し、NIF `get_weapon_upgrade_descs` を非推奨化（将来的に削除）~~ → **2026-03 完了**
 
 ### 影響ファイル
 
-- `native/physics/src/weapon.rs`
-- `native/physics/src/game_logic/systems/weapons.rs`
-- `native/nif/src/nif/read_nif.rs`（get_weapon_upgrade_descs）
+- `native/physics/src/weapon.rs`（weapon_upgrade_desc 削除済み）
+- `native/physics/src/game_logic/systems/weapons.rs`（damage 計算は現状 Rust 側）
+- ~~`native/nif/src/nif/read_nif.rs`（get_weapon_upgrade_descs）~~ 削除済み
 
 ---
 

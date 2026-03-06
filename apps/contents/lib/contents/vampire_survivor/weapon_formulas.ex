@@ -159,7 +159,12 @@ defmodule Content.VampireSurvivor.WeaponFormulas do
         bullets = fn lv -> bullet_count(wp.bullet_table, max(1, lv)) end
         bullets_now = bullets.(lv_for_current)
         bullets_next = bullets.(next_lv)
-        extra = if bullets_next > bullets_now, do: ["Shots: #{bullets_now} -> #{bullets_next} (+)"], else: ["Shots: #{bullets_now}"]
+
+        extra =
+          if bullets_next > bullets_now,
+            do: ["Shots: #{bullets_now} -> #{bullets_next} (+)"],
+            else: ["Shots: #{bullets_now}"]
+
         base ++ extra
 
       "fixed_up" ->
@@ -168,7 +173,12 @@ defmodule Content.VampireSurvivor.WeaponFormulas do
       "radial" ->
         dirs_now = if current_lv == 0 or current_lv <= 3, do: 4, else: 8
         dirs_next = if next_lv <= 3, do: 4, else: 8
-        extra = if dirs_next > dirs_now, do: ["Dirs: #{dirs_now} -> #{dirs_next} (+)"], else: ["#{dirs_now}-way fire"]
+
+        extra =
+          if dirs_next > dirs_now,
+            do: ["Dirs: #{dirs_now} -> #{dirs_next} (+)"],
+            else: ["#{dirs_now}-way fire"]
+
         base ++ extra
 
       "whip" ->
