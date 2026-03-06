@@ -51,39 +51,39 @@ alchemy-engine/
 ├── apps/                            # Elixir アプリケーション群
 │   ├── core/                        # SSoT コアエンジン
 │   │   ├── mix.exs
-│   │   └── lib/core/
+│   │   └── lib/
 │   │       ├── core.ex              # 公開 API（エントリポイント）
-│   │       ├── nif_bridge.ex        # Rustler NIF ラッパー
-│   │       ├── nif_bridge_behaviour.ex  # NifBridge ビヘイビア（テスト用 Mock 対応）
-│   │       ├── content_behaviour.ex # ContentBehaviour（コンテンツ定義インターフェース）
-│   │       ├── component.ex         # Component ビヘイビア（コンテンツ構成単位）
-│   │       ├── config.ex            # :current コンテンツモジュール解決
-│   │       ├── room_supervisor.ex   # DynamicSupervisor
-│   │       ├── room_registry.ex     # Registry ラッパー
-│   │       ├── event_bus.ex         # フレームイベント配信 GenServer（subscribe / broadcast）
-│   │       ├── input_handler.ex     # キー入力 GenServer
-│   │       ├── frame_cache.ex       # フレームスナップショット ETS
-│   │       ├── map_loader.ex        # マップ障害物定義
-│   │       ├── save_manager.ex      # セーブ/ロード
-│   │       ├── stats.ex             # セッション統計 GenServer
-│   │       ├── telemetry.ex         # Telemetry Supervisor
-│   │       ├── stress_monitor.ex    # パフォーマンス監視 GenServer
-│   │       ├── formula.ex           # Formula 式評価 API
-│   │       ├── formula_graph.ex     # 式グラフ（DAG）構築
-│   │       ├── formula_store.ex     # Store バックエンド（read/write）
-│   │       └── formula_store/
-│   │           └── local_backend.ex # ローカル Store 実装
+│   │       └── core/
+│   │           ├── nif_bridge.ex        # Rustler NIF ラッパー
+│   │           ├── nif_bridge_behaviour.ex  # NifBridge ビヘイビア（テスト用 Mock 対応）
+│   │           ├── content_behaviour.ex # ContentBehaviour（コンテンツ定義インターフェース）
+│   │           ├── component.ex         # Component ビヘイビア（コンテンツ構成単位）
+│   │           ├── config.ex            # :current コンテンツモジュール解決
+│   │           ├── room_supervisor.ex   # DynamicSupervisor
+│   │           ├── room_registry.ex     # Registry ラッパー
+│   │           ├── event_bus.ex         # フレームイベント配信 GenServer（subscribe / broadcast）
+│   │           ├── input_handler.ex     # キー入力 GenServer
+│   │           ├── frame_cache.ex       # フレームスナップショット ETS
+│   │           ├── map_loader.ex        # マップ障害物定義
+│   │           ├── save_manager.ex      # セーブ/ロード
+│   │           ├── stats.ex             # セッション統計 GenServer
+│   │           ├── telemetry.ex         # Telemetry Supervisor
+│   │           ├── stress_monitor.ex    # パフォーマンス監視 GenServer
+│   │           ├── formula.ex           # Formula 式評価 API
+│   │           ├── formula_graph.ex     # 式グラフ（DAG）構築
+│   │           ├── formula_store.ex     # Store バックエンド（read/write）
+│   │           └── formula_store/
+│   │               └── local_backend.ex # ローカル Store 実装
 │   │
 │   ├── server/                      # 起動プロセス
 │   │   ├── mix.exs
 │   │   └── lib/server/
-│   │       ├── server.ex
 │   │       └── application.ex       # OTP Application / Supervisor ツリー
 │   │
 │   ├── contents/                    # ゲームコンテンツ
 │   │   ├── mix.exs
 │   │   └── lib/contents/
-│   │       ├── contents.ex                # Content モジュール（コンテンツ一覧）
+│   │       ├── contents.ex                # Content 名前空間モジュール
 │   │       ├── game_events.ex             # メインゲームループ GenServer（contents 層）
 │   │       ├── game_events/
 │   │       │   └── diagnostics.ex         # ログ・FrameCache 更新ヘルパー
@@ -99,6 +99,7 @@ alchemy-engine/
 │   │       │   ├── level_component.ex
 │   │       │   ├── boss_component.ex
 │   │       │   ├── render_component.ex
+│   │       │   ├── sprite_params.ex
 │   │       │   ├── spawn_system.ex
 │   │       │   ├── boss_system.ex
 │   │       │   ├── level_system.ex
@@ -139,19 +140,20 @@ alchemy-engine/
 │   │
 │   └── network/                     # 通信レイヤー
 │       ├── mix.exs                  # deps: phoenix ~> 1.8, phoenix_pubsub, plug_cowboy, libcluster
-│       └── lib/network/
-│           ├── network.ex           # Distributed / Local / Channel / UDP 委譲
-│           ├── application.ex
-│           ├── local.ex             # ローカルマルチルーム管理 GenServer
-│           ├── distributed.ex       # 複数ノード間ルーム管理（libcluster クラスタ時）
-│           ├── room_token.ex        # Phoenix.Token によるルーム参加認証
-│           ├── channel.ex           # Phoenix Channels / WebSocket
-│           ├── endpoint.ex          # Phoenix Endpoint（ポート 4000）
-│           ├── router.ex
-│           ├── user_socket.ex
-│           └── udp/
-│               ├── server.ex        # UDP サーバー（ポート 4001）
-│               └── protocol.ex
+│       └── lib/
+│           ├── network.ex           # Network 公開 API（Distributed / Local / Channel / UDP 委譲）
+│           └── network/
+│               ├── application.ex
+│               ├── local.ex             # ローカルマルチルーム管理 GenServer
+│               ├── distributed.ex       # 複数ノード間ルーム管理（libcluster クラスタ時）
+│               ├── room_token.ex        # Phoenix.Token によるルーム参加認証
+│               ├── channel.ex           # Phoenix Channels / WebSocket
+│               ├── endpoint.ex           # Phoenix Endpoint（ポート 4000）
+│               ├── router.ex
+│               ├── user_socket.ex
+│               └── udp/
+│                   ├── server.ex        # UDP サーバー（ポート 4001）
+│                   └── protocol.ex
 │
 ├── native/                          # Rust クレート群
 │   ├── Cargo.toml                   # Rust ワークスペース定義

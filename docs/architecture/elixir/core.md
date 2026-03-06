@@ -8,7 +8,7 @@
 
 ## `core.ex` — 公開 API
 
-外部から呼び出す全操作の窓口。エンティティ ID は `Core.Config.current().entity_registry()` から解決します。
+`apps/core/lib/core.ex` に配置。外部から呼び出す全操作の窓口。エンティティ ID は `Core.Config.current().entity_registry()` から解決します。
 
 **ゲームコンテンツ向け:**
 
@@ -32,7 +32,6 @@
 | `create_world/0` | GameWorld リソースを生成 |
 | `set_map_obstacles/2` | 障害物リストを設定 |
 | `create_game_loop_control/0` | GameLoopControl リソースを生成 |
-| `create_render_frame_buffer/0` | RenderFrameBuffer リソースを生成 |
 | `start_rust_game_loop/3` | Rust 60Hz ゲームループを開始 |
 | `start_render_thread/5` | レンダースレッドを起動（world, render_buf, pid, title, atlas_path） |
 | `pause_physics/1` | 物理演算を一時停止 |
@@ -40,6 +39,8 @@
 | `physics_step/2` | 1 フレーム物理ステップ |
 | `set_player_input/3` | 移動ベクトルを設定 |
 | `drain_frame_events/1` | フレームイベントを取り出す |
+
+`create_render_frame_buffer/0` は GameEvents が `Core.NifBridge` を直接呼び出して使用する（Core 公開 API には含まない）。
 
 ---
 

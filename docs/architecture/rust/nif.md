@@ -24,17 +24,7 @@ graph LR
 
 ## `lib.rs` — エントリポイント
 
-```rust
-rustler::atoms! {
-    ok, error, nil,
-    enemy_killed, player_damaged, item_pickup,
-    special_entity_spawned, special_entity_damaged, special_entity_defeated,
-    // ... ゲームアトム
-}
-
-#[cfg(feature = "umbrella")]
-rustler::init!("Elixir.Core.NifBridge", load = nif::load);
-```
+`native/nif/src/lib.rs` で `rustler::atoms!` によりゲームアトムを事前登録し、`rustler::init!("Elixir.Core.NifBridge", load = nif::load)` で NIF をロードする。クレート直下には `key_map.rs`（キーコードマッピング）・`lock_metrics.rs`（RwLock 待機メトリクス）・`render_bridge.rs`・`render_frame_buffer.rs`・`formula/` があり、`nif/` サブモジュールに NIF 関数群が格納される。`#[cfg(feature = "xr")]` で `xr_bridge` を有効化可能。
 
 ---
 
@@ -55,9 +45,9 @@ graph TD
     EVENTS[events.rs<br/>FrameEvent → Elixir アトム変換]
     UTIL[util.rs<br/>ユーティリティ]
     DECODE[decode/<br/>DrawCommand・Camera・UiCanvas デコード]
-    KEY[key_map.rs<br/>キーコードマッピング]
+    KEY[key_map.rs<br/>クレート直下 src/]
     XR[xr_nif.rs<br/>OpenXR VR ブリッジ<br/>feature=xr]
-    RFB[render_frame_buffer.rs<br/>Elixir から push された RenderFrame を保持]
+    RFB[render_frame_buffer.rs<br/>クレート直下 src/]
     FORMULA[formula_nif.rs<br/>Formula VM 評価 NIF]
     FORMULA_MOD[formula/<br/>VM・オペコード・Value]
 
@@ -93,9 +83,11 @@ graph TD
 | `set_map_obstacles(world, obstacles)` | 障害物リストを設定 |
 | `set_entity_params(world, enemies, weapons, bosses)` | エンティティパラメータを注入 |
 | `set_world_size(world, width, height)` | マップサイズを設定 |
-| `set_player_hp(world, hp)` | プレイヤー HP を注入 |
+| `set_world_params(world, params)` | 物理定数（player_speed, bullet_speed 等）を注入 |
 | `set_elapsed_seconds(world, elapsed)` | 経過時間を注入 |
-| `set_boss_hp(world, hp)` | ボス HP を注入 |
+| `set_player_snapshot(world, hp, invincible_timer)` | プレイヤー HP・無敵タイマーを注入（毎フレーム） |
+| `set_entity_hp(world, entity_id, hp)` | エンティティ（敵/ボス）HP を注入 |
+| `set_enemy_damage_this_frame(world, list)` | 敵接触ダメージを注入（毎フレーム） |
 | `set_hud_state(world, score, kill_count)` | HUD スコア・キル数を注入 |
 | `set_hud_level_state(world, level, exp, ...)` | HUD レベル・EXP 状態を注入（描画専用） |
 
@@ -108,22 +100,19 @@ graph TD
 
 デコードは `decode/` モジュールで分割: `decode/draw_command.rs`, `decode/camera.rs`, `decode/ui_canvas.rs`。
 
-**`action_nif.rs`（武器・ボス操作）:**
+**`action_nif.rs`（武器・ボス・アイテム・弾丸操作）:**
 
 | NIF 関数 | 説明 |
 |:---|:---|
 | `set_weapon_slots(world, slots)` | 武器スロット全体を注入（I-2: 毎フレーム差分注入） |
-| `spawn_boss(world, boss_id)` | ボスをスポーン |
-| `spawn_elite_enemy(world, kind_id, count, hp_mult)` | エリート敵をスポーン |
-| `spawn_item(world, x, y, kind, value)` | アイテムをスポーン |
-| `set_boss_velocity(world, vx, vy)` | ボス速度を注入（AI） |
-| `set_boss_invincible(world, invincible)` | ボス無敵状態を設定（AI） |
-| `set_boss_phase_timer(world, timer)` | ボス特殊行動タイマーを設定（AI） |
-| `fire_boss_projectile(world, dx, dy, speed, dmg, lifetime)` | ボス弾を発射（AI） |
-| `get_boss_state(world)` | ボス状態を取得（AI 用） |
+| `set_special_entity_snapshot(world, snapshot)` | 特殊エンティティ（ボス等）の衝突用スナップショットを注入（毎フレーム） |
+| `set_entity_hp(world, entity_id, hp)` | エンティティ（敵/ボス）HP を設定 |
+| `spawn_projectile(world, x, y, vx, vy, damage, lifetime, kind)` | 弾丸をスポーン |
 | `add_score_popup(world, x, y, value, lifetime)` | スコアポップアップを描画バッファに追加（R-E1: lifetime は contents SSoT） |
+| `spawn_item(world, x, y, kind, value)` | アイテムをスポーン |
+| `spawn_enemies_with_hp_multiplier(world, kind_id, count, hp_mult)` | HP 倍率付きで敵をスポーン（エリート敵用） |
 
-> 武器管理は `set_weapon_slots` で毎フレーム Elixir 側から全スロットを注入する設計（I-2）。
+ボススポーン・ボス AI は Elixir SSoT 側で制御し、`set_special_entity_snapshot` / `set_entity_hp` で Rust に状態を注入する設計。武器管理は `set_weapon_slots` で毎フレーム Elixir 側から全スロットを注入する設計（I-2）。
 
 **`read_nif.rs`（軽量・毎フレーム利用可）:**
 
@@ -132,10 +121,13 @@ graph TD
 | `get_player_pos(world)` | プレイヤー座標 `{x, y}` |
 | `get_player_hp(world)` | プレイヤー HP |
 | `get_enemy_count(world)` | 生存敵数 |
+| `get_bullet_count(world)` | 弾丸数 |
+| `get_frame_time_ms(world)` | フレーム時間（ms） |
 | `get_hud_data(world)` | HUD 表示データ全体 |
 | `get_frame_metadata(world)` | フレームメタデータ |
-| `get_weapon_levels(world)` | 全武器レベル（`%{kind_id => level}`） |
+| `get_magnet_timer(world)` | マグネット効果残り時間 |
 | `is_player_dead(world)` | 死亡判定 |
+| `get_render_entities(world)` | 描画用エンティティスナップショット（Phase R-2 以前のレガシー等） |
 
 **`formula_nif.rs`（Formula VM 評価）:**
 
