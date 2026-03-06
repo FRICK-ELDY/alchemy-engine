@@ -2,7 +2,7 @@
 //! Summary: アクション NIF（set_weapon_slots, spawn_item, 汎用エンティティ操作 等）
 
 use super::util::{lock_poisoned_err, params_not_loaded_err};
-use physics::constants::{POPUP_LIFETIME, POPUP_Y_OFFSET};
+use physics::constants::POPUP_Y_OFFSET;
 use physics::game_logic::systems::spawn::get_spawn_positions_around_player;
 use physics::item::ItemKind;
 use physics::weapon::WeaponSlot;
@@ -126,18 +126,20 @@ pub fn spawn_projectile(
 }
 
 /// Phase 3-C: Elixir 側がスコアポップアップを描画用バッファに追加する NIF。
+/// R-E1: lifetime を Elixir (contents) から注入。表示時間の SSoT を contents に移行。
 /// EnemyKilled / BossDefeated イベント受信時に Elixir 側から呼び出す。
-/// value: 表示するスコア値
+/// value: 表示するスコア値、lifetime: 表示時間（秒）
 #[rustler::nif]
 pub fn add_score_popup(
     world: ResourceArc<GameWorld>,
     x: f64,
     y: f64,
     value: u32,
+    lifetime: f64,
 ) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
     w.score_popups
-        .push((x as f32, y as f32 + POPUP_Y_OFFSET, value, POPUP_LIFETIME));
+        .push((x as f32, y as f32 + POPUP_Y_OFFSET, value, lifetime as f32));
     Ok(ok())
 }
 

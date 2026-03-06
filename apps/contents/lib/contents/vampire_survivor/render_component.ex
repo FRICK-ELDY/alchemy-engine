@@ -249,9 +249,14 @@ defmodule Content.VampireSurvivor.RenderComponent do
       end
 
     # スコアポップアップ（ワールド座標テキスト）
+    max_lifetime = Content.VampireSurvivor.SpawnComponent.score_popup_lifetime()
+
     nodes =
       Enum.reduce(score_popups, nodes, fn {wx, wy, value, lifetime}, acc ->
-        [world_text_node(wx, wy, "+#{value}", {1.0, 0.90, 0.20, 1.0}, lifetime, 0.8) | acc]
+        [
+          world_text_node(wx, wy, "+#{value}", {1.0, 0.90, 0.20, 1.0}, lifetime, max_lifetime)
+          | acc
+        ]
       end)
 
     # 上部 HUD バー

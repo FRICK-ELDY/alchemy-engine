@@ -36,6 +36,10 @@ defmodule Content.VampireSurvivor.SpawnComponent do
   @doc "初期武器リストを返す"
   def initial_weapons, do: [:magic_wand]
 
+  # R-E1: スコアポップアップの表示時間（秒）。add_score_popup NIF と RenderComponent の max_lifetime で使用。
+  @doc "スコアポップアップの表示時間（秒）。Rust POPUP_LIFETIME の SSoT。"
+  def score_popup_lifetime, do: 0.8
+
   @impl Core.Component
   def on_ready(world_ref) do
     Core.NifBridge.set_world_size(world_ref, @map_width, @map_height)
