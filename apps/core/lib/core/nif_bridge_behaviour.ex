@@ -92,6 +92,7 @@ defmodule Core.NifBridge.Behaviour do
 
   # ── Phase 3-A: World パラメータ注入 NIF ──────────────────────────
   @callback set_world_size(reference(), float(), float()) :: :ok
+  @callback set_world_params(reference(), map()) :: :ok
   @callback set_entity_params(reference(), list(), list(), list()) :: :ok
 
   # ── Push 型同期 NIF ────────────────────────────────────────────

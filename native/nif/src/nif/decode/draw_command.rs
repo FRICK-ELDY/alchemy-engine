@@ -29,19 +29,6 @@ fn decode_command(term: Term) -> NifResult<DrawCommand> {
                 frame: u32_to_u8(frame, "player_sprite frame")?,
             })
         }
-        // {:sprite, x, y, kind_id, frame}
-        "sprite" => {
-            let (_, x, y, kind_id, frame): (Atom, f64, f64, u32, u32) =
-                term.decode().map_err(|_| {
-                    NifError::Term(Box::new("sprite: expected {:sprite, x, y, kind_id, frame}"))
-                })?;
-            Ok(DrawCommand::Sprite {
-                x: x as f32,
-                y: y as f32,
-                kind_id: u32_to_u8(kind_id, "sprite kind_id")?,
-                frame: u32_to_u8(frame, "sprite frame")?,
-            })
-        }
         // {:particle, x, y, r, g, b, {alpha, size}}
         "particle" => {
             let (_, x, y, r, g, b, (alpha, size)): (Atom, f64, f64, f64, f64, f64, (f64, f64)) =

@@ -9,6 +9,21 @@ defmodule Content.VampireSurvivor.SpawnComponent do
   @map_width 4096.0
   @map_height 4096.0
 
+  # R-C1/R-I1/R-S1: 物理・アイテム・スポーン定数（set_world_params NIF で注入）。Rust デフォルトと同値。
+  defp world_params do
+    %{
+      player_speed: 200.0,
+      bullet_speed: 400.0,
+      bullet_lifetime: 3.0,
+      collect_radius: 60.0,
+      magnet_collect_radius: 9999.0,
+      magnet_duration: 10.0,
+      magnet_speed: 300.0,
+      spawn_min_dist: 800.0,
+      spawn_max_dist: 1200.0
+    }
+  end
+
   @doc "アセットファイルのベースパスを返す"
   def assets_path, do: "vampire_survivor"
 
@@ -43,6 +58,8 @@ defmodule Content.VampireSurvivor.SpawnComponent do
   @impl Core.Component
   def on_ready(world_ref) do
     Core.NifBridge.set_world_size(world_ref, @map_width, @map_height)
+
+    Core.NifBridge.set_world_params(world_ref, world_params())
 
     Core.NifBridge.set_entity_params(
       world_ref,
@@ -140,6 +157,8 @@ defmodule Content.VampireSurvivor.SpawnComponent do
       #               "whip"=扇形判定, "piercing"=貫通弾, "chain"=連鎖, "aura"=オーラ
       # range: Whip の基本半径 / Aura の基本半径
       # chain_count: Chain の基本連鎖数
+      # R-F1: whip_range_per_level, aura_radius_per_level, chain_count_per_level は
+      #       WeaponFormulas で計算したテーブルを注入（SSoT）
       # 0: magic_wand
       %{
         cooldown: 1.0,
@@ -178,7 +197,9 @@ defmodule Content.VampireSurvivor.SpawnComponent do
         bullet_table: nil,
         fire_pattern: "whip",
         range: 120.0,
-        chain_count: 0
+        chain_count: 0,
+        whip_range_per_level:
+          1..8 |> Enum.map(&Content.VampireSurvivor.WeaponFormulas.whip_range(120.0, &1))
       },
       # 4: fireball
       %{
@@ -198,7 +219,10 @@ defmodule Content.VampireSurvivor.SpawnComponent do
         bullet_table: nil,
         fire_pattern: "chain",
         range: 0.0,
-        chain_count: 2
+        chain_count: 2,
+        chain_count_per_level:
+          1..8
+          |> Enum.map(&Content.VampireSurvivor.WeaponFormulas.chain_count_for_level(2, &1))
       },
       # 6: garlic
       %{
@@ -208,7 +232,9 @@ defmodule Content.VampireSurvivor.SpawnComponent do
         bullet_table: nil,
         fire_pattern: "aura",
         range: 80.0,
-        chain_count: 0
+        chain_count: 0,
+        aura_radius_per_level:
+          1..8 |> Enum.map(&Content.VampireSurvivor.WeaponFormulas.aura_radius(80.0, &1))
       }
     ]
   end

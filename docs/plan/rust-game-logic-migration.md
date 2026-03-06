@@ -8,7 +8,7 @@
 
 ## 概要
 
-現状、以下のゲームロジックが Rust 側に残存している。contents 側への移行または NIF 注入による SSoT 化が望ましい。既に Elixir に移行済みの項目は「移行済み」と記載する。
+現状、以下のゲームロジックが Rust 側に残存している。contents 側への移行または NIF 注入による SSoT 化が望ましい。
 
 ---
 
@@ -17,16 +17,10 @@
 | 課題ID | 対象 | 優先度 | 状態 |
 |:---|:---|:---:|:---:|
 | R-R1 | renderer UV・スプライトパラメータ | 中 | 未対応 |
-| R-W1 | weapon.rs 武器数式（effective_cooldown 等） | 中 | 一部移行済み |
-| R-W2 | 弾丸・当たり判定の damage 注入 | 中 | 移行済み |
-| R-E1 | score_popup lifetime 減衰 | 低 | 移行済み |
-| R-P1 | PlayerDamaged / SpecialEntityDamaged の dt 乗算 | 低 | 移行済み |
 | R-C1 | constants.rs 物理・画面定数 | 中 | 未対応 |
 | R-F1 | FirePattern と武器発射パターン | 中 | 未対応 |
 | R-I1 | items.rs 磁石・収集半径 | 低 | 未対応 |
 | R-S1 | spawn.rs スポーン位置（800〜1200px） | 低 | 未対応 |
-| R-U1 | util.rs WAVES・is_elite_spawn | 低 | デッドコード |
-| R-B1 | boss.rs（レガシー） | 低 | 未使用 |
 | R-M1 | entity_params デフォルト定数 | 低 | 未対応 |
 
 ---
@@ -92,31 +86,6 @@
 ---
 
 ## 3. Physics 層 — 武器
-
-### R-W1: weapon.rs 武器数式（優先度: 中）
-
-**対象:** `native/physics/src/weapon.rs`
-
-**現状:**
-- `effective_cooldown`: `base * (1.0 - (level - 1) * 0.07).max(base * 0.5)` — レベルごとのクールダウン短縮率
-- `bullet_count`: `WeaponParams::bullet_table` から level で参照（params 注入済み）
-- `bullet_table` 自体は Elixir から `set_entity_params` で注入可能
-
-**移行済み:**
-- `weapon_upgrade_desc`: contents の `WeaponFormulas.weapon_upgrade_descs` へ移行
-- `precomputed_damage`: Elixir の `WeaponFormulas.effective_damage` で事前計算して `set_weapon_slots` で注入（R-W2）
-
-**対応方針:**
-- `effective_cooldown` の数式を contents に移し、Elixir が `set_weapon_slots` で `cooldown` にすでに計算済み値を渡す形にする
-- または `WeaponParams` に `effective_cooldown(level)` 相当のテーブルを注入
-
-### R-W2: 弾丸・当たり判定の damage 注入（優先度: 中）— 移行済み
-
-**対象:** `native/physics/src/weapon.rs`, `set_weapon_slots` NIF
-
-**現状:**
-- `WeaponSlot::precomputed_damage` に Elixir の `WeaponFormulas.effective_damage` で計算済み値を注入
-- 弾丸発射時は `precomputed_damage` をそのまま使用
 
 ### R-F1: FirePattern と武器発射パターン（優先度: 中）
 
@@ -184,86 +153,6 @@
 
 **対応方針:**
 - 800, 1200 を NIF 引数で受け取るか、`set_world_params` で注入
-
-### R-U1: util.rs WAVES・is_elite_spawn（優先度: 低）— デッドコード
-
-**対象:** `native/physics/src/util.rs`
-
-**現状:**
-- `WAVES`: 難易度カーブ `[(0,4,2), (60,2.5,4), (180,1.5,8), (360,1.0,12), (600,0.7,18)]`
-- `current_wave`, `is_elite_spawn` — `game_window` バイナリ専用、NIF 経由では Elixir SpawnSystem が使用
-- `#[allow(dead_code)]` 付与済み
-
-**対応方針:**
-- 残置または将来的に physics から削除
-
----
-
-## 6. Physics 層 — ボス（レガシー）
-
-### R-B1: boss.rs（優先度: 低）— 未使用
-
-**対象:** `native/physics/src/game_logic/systems/boss.rs`
-
-**現状:**
-- `update_boss` は `physics_step` から呼ばれていない
-- `systems/mod.rs` に `pub(crate) mod boss` が宣言されていないため、**未使用コード**
-- 現在は `special_entity_snapshot` + `collide_special_entity_snapshot` でボス衝突を処理
-- `GameWorldInner` に `boss` フィールドは存在しない（special_entity 方式に移行済み）
-
-**対応方針:**
-- 削除するか、レガシーとして明示的にドキュメント化
-
----
-
-## 7. NIF 層 — 初期値・ハードコード
-
-### world_nif.rs の create_world 初期値
-
-**対象:** `native/nif/src/nif/world_nif.rs`
-
-**現状:**
-- プレイヤー初期位置: `SCREEN_WIDTH/2 - PLAYER_SIZE/2`, `SCREEN_HEIGHT/2 - PLAYER_SIZE/2`
-- `player_max_hp`: 100
-- `map_width` / `map_height`: `MAP_WIDTH` / `MAP_HEIGHT`（set_world_size で上書き可能）
-- `rng` シード: 12345
-- `PARTICLE_RNG_SEED`: 67890 (constants)
-
-**対応方針:**
-- プレイヤー初期位置・player_max_hp は NIF 引数で受け取るか、初回 sync で注入
-
----
-
-## 8. Render 層 — 補間・プレイヤー前提
-
-### render_bridge.rs
-
-**対象:** `native/nif/src/render_bridge.rs`
-
-**現状:**
-- プレイヤー補間のため `PlayerSprite` を commands の先頭に置く規約を前提
-- `PLAYER_SIZE`, `SCREEN_WIDTH`, `SCREEN_HEIGHT` でカメラオフセット計算
-- ウィンドウタイトル・アトラスパスは引数で受け取り済み（Phase R-4）
-
-**層間インターフェース違反:**
-> 「本質的に知りたい情報か？」— プレイヤー座標の補間は描画のスムージングに必要。ただし「PlayerSprite が先頭」というコンテンツ固有の規約が render 層に漏れている。
-
-**対応方針:**
-- 補間対象を「カメラ追従エンティティ ID」等に抽象化するか、現状の規約をドキュメント化して維持
-
----
-
-## 9. 移行済み項目（参考）
-
-| 項目 | 移行先 |
-|:---|:---|
-| weapon_upgrade_desc | Content.VampireSurvivor.WeaponFormulas.weapon_upgrade_descs |
-| 弾丸 damage | set_weapon_slots の precomputed_damage |
-| score_popup lifetime | add_score_popup の lifetime 引数（Elixir から注入） |
-| PlayerDamaged damage | set_enemy_damage_this_frame / SpecialEntitySnapshot.damage_this_frame |
-| 敵・武器・ボス params | set_entity_params NIF |
-| マップサイズ | set_world_size NIF |
-| ボス永続状態 | special_entity_snapshot（スナップショット注入） |
 
 ---
 

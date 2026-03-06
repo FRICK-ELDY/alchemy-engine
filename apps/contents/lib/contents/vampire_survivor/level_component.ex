@@ -306,11 +306,11 @@ defmodule Content.VampireSurvivor.LevelComponent do
           playing_scene.weapon_slots_for_nif(weapon_levels, weapon_cooldowns)
 
         function_exported?(playing_scene, :weapon_slots_for_nif, 1) ->
-          # R-W2: 4 要素 (kind_id, level, cooldown, precomputed_damage) が必要。
-          # 1 引数版では precomputed_damage を計算できないため 0 を渡す（全武器ダメージ 0 になる）。
+          # R-W1/R-W2: 5 要素 (kind_id, level, cooldown_timer, cooldown_sec, precomputed_damage) が必要。
+          # 1 引数版では cooldown_sec=1.0, precomputed_damage=0 でフォールバック。
           # 新規 contents では weapon_slots_for_nif/2 を実装すること。
           playing_scene.weapon_slots_for_nif(weapon_levels)
-          |> Enum.map(fn {k, l} -> {k, l, 0.0, 0} end)
+          |> Enum.map(fn {k, l} -> {k, l, 0.0, 1.0, 0} end)
 
         true ->
           nil

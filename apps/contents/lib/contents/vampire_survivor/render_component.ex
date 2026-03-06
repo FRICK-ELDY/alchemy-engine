@@ -1,4 +1,6 @@
 defmodule Content.VampireSurvivor.RenderComponent do
+  require Logger
+
   @moduledoc """
   毎フレーム DrawCommand リストを組み立てて push_render_frame NIF に送るコンポーネント。
 
@@ -17,9 +19,6 @@ defmodule Content.VampireSurvivor.RenderComponent do
   @screen_width 1280.0
   @screen_height 720.0
   @player_size 64.0
-
-  # 武器レジストリ（atom → kind_id）をコンパイル時定数として保持する。
-  @weapon_registry Content.VampireSurvivor.SpawnComponent.entity_registry().weapons
 
   @weapon_display_names %{
     "magic_wand" => "Magic Wand",
@@ -100,12 +99,27 @@ defmodule Content.VampireSurvivor.RenderComponent do
   end
 
   defp push_player(acc, x, y, frame) do
-    [{:player_sprite, x, y, frame} | acc]
+    # NIF は x, y を f64、frame を u32 で期待
+    [{:player_sprite, x * 1.0, y * 1.0, frame} | acc]
   end
 
   defp push_boss(acc, {:alive, x, y, radius, render_kind}) do
-    sprite_size = radius * 2.0
-    [{:sprite, x - sprite_size / 2.0, y - sprite_size / 2.0, render_kind, 0} | acc]
+    entity_x = x - radius
+    entity_y = y - radius
+
+    case Content.VampireSurvivor.SpriteParams.sprite_raw_params(
+           entity_x,
+           entity_y,
+           render_kind,
+           0
+         ) do
+      {:ok, {pos_x, pos_y, w, h, uv_off, uv_sz, color}} ->
+        [{:sprite_raw, pos_x, pos_y, w, h, {uv_off, uv_sz, color}} | acc]
+
+      :error ->
+        Logger.debug("sprite_raw_params: unsupported render_kind=#{render_kind} for boss")
+        acc
+    end
   end
 
   defp push_boss(acc, {:none, _, _, _, _}), do: acc
@@ -124,13 +138,27 @@ defmodule Content.VampireSurvivor.RenderComponent do
 
   defp push_enemies(acc, enemies, anim_frame) do
     Enum.reduce(enemies, acc, fn {x, y, kind_id}, a ->
-      [{:sprite, x, y, kind_id, anim_frame} | a]
+      case Content.VampireSurvivor.SpriteParams.sprite_raw_params(x, y, kind_id, anim_frame) do
+        {:ok, {pos_x, pos_y, w, h, uv_off, uv_sz, color}} ->
+          [{:sprite_raw, pos_x, pos_y, w, h, {uv_off, uv_sz, color}} | a]
+
+        :error ->
+          Logger.debug("sprite_raw_params: unsupported kind_id=#{kind_id} for enemy")
+          a
+      end
     end)
   end
 
   defp push_bullets(acc, bullets) do
     Enum.reduce(bullets, acc, fn {x, y, render_kind}, a ->
-      [{:sprite, x, y, render_kind, 0} | a]
+      case Content.VampireSurvivor.SpriteParams.sprite_raw_params(x, y, render_kind, 0) do
+        {:ok, {pos_x, pos_y, w, h, uv_off, uv_sz, color}} ->
+          [{:sprite_raw, pos_x, pos_y, w, h, {uv_off, uv_sz, color}} | a]
+
+        :error ->
+          Logger.debug("sprite_raw_params: unsupported render_kind=#{render_kind} for bullet")
+          a
+      end
     end)
   end
 
@@ -428,7 +456,7 @@ defmodule Content.VampireSurvivor.RenderComponent do
 
   # ── レベルアップモーダル ──────────────────────────────────────────
 
-  defp build_level_up_modal(context, playing_state) do
+  defp build_level_up_modal(_context, playing_state) do
     level = Map.get(playing_state, :level, 1)
     weapon_choices = Map.get(playing_state, :weapon_choices, []) |> Enum.map(&to_string/1)
     weapon_levels = Map.get(playing_state, :weapon_levels, %{})
@@ -527,19 +555,6 @@ defmodule Content.VampireSurvivor.RenderComponent do
        {:node, {:top_left, {0.0, 0.0}, :wrap}, {:vertical_layout, 2.0, {16.0, 14.0, 16.0, 14.0}},
         card_children}
      ]}
-  end
-
-  # ── 武器スロット変換 ──────────────────────────────────────────────
-
-  defp weapon_slots_for_nif(playing_state) do
-    weapon_levels = Map.get(playing_state, :weapon_levels, %{})
-
-    Enum.flat_map(weapon_levels, fn {weapon_name, level} ->
-      case Map.get(@weapon_registry, weapon_name) do
-        nil -> []
-        kind_id -> [{kind_id, level}]
-      end
-    end)
   end
 
   # ── UiNode ヘルパー ───────────────────────────────────────────────

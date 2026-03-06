@@ -72,8 +72,7 @@ impl RenderBridge for NativeRenderBridge {
         // RenderFrameBuffer から最新フレームを取得する
         let mut frame = self.render_buf.get();
 
-        // プレイヤー補間: GameWorld から補間データを読み取り、
-        // PlayerSprite コマンドの座標と Camera2D オフセットを更新する
+        // プレイヤー補間: GameWorld から読み取り
         let wait_start = Instant::now();
         let interp_data = {
             let guard = match self.world.0.read() {

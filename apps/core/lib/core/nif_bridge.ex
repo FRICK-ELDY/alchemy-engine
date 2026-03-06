@@ -68,7 +68,6 @@ defmodule Core.NifBridge do
   # Phase R-2: Elixir 側から DrawCommand リストを RenderFrameBuffer に push する
   # commands: DrawCommand タプルのリスト
   #   {:player_sprite, x, y, frame}
-  #   {:sprite, x, y, kind_id, frame}
   #   {:sprite_raw, x, y, width, height, {{uv_ox, uv_oy}, {uv_sx, uv_sy}, {r, g, b, a}}}
   #   {:particle, x, y, r, g, b, {alpha, size}}
   #   {:item, x, y, kind}
@@ -122,6 +121,10 @@ defmodule Core.NifBridge do
   # ── Phase 3-A: World パラメータ注入 NIF ──────────────────────────
   # ワールド生成後に一度だけ呼び出す。
   def set_world_size(_world, _width, _height), do: :erlang.nif_error(:nif_not_loaded)
+
+  # R-C1: 物理定数注入。params: %{player_speed: 200, bullet_speed: 400, bullet_lifetime: 3.0} 等
+  def set_world_params(_world, _params), do: :erlang.nif_error(:nif_not_loaded)
+
   # enemies: [{max_hp, speed, radius, exp_reward, damage_per_sec, render_kind, passes_obstacles}]
   # weapons: [{cooldown, damage, as_u8, name, bullet_table_or_nil}]
   # bosses:  [{max_hp, speed, radius, exp_reward, damage_per_sec, render_kind, special_interval}]

@@ -1,4 +1,4 @@
-use crate::constants::{BULLET_LIFETIME, BULLET_SPEED, MAX_ENEMIES, WEAPON_SEARCH_RADIUS};
+use crate::constants::{MAX_ENEMIES, WEAPON_SEARCH_RADIUS};
 use crate::entity_params::{
     FirePattern, CHAIN_BOSS_RANGE, DEFAULT_AURA_RADIUS, DEFAULT_CHAIN_COUNT, DEFAULT_ENEMY_RADIUS,
     DEFAULT_PARTICLE_COLOR, DEFAULT_WHIP_RANGE,
@@ -33,7 +33,7 @@ pub(crate) fn update_weapon_attacks(w: &mut GameWorldInner, dt: f32, px: f32, py
         let Some(wp) = w.params.get_weapon(kind_id) else {
             continue;
         };
-        let cd = w.weapon_slots_input[si].effective_cooldown(wp);
+        let cd = w.weapon_slots_input[si].cooldown_sec;
         let dmg = w.weapon_slots_input[si].precomputed_damage;
         let level = w.weapon_slots_input[si].level;
         let bcount = w.weapon_slots_input[si].bullet_count(wp);
@@ -87,9 +87,9 @@ fn fire_aimed(
         let half = (bcount as f32 - 1.0) / 2.0;
         for bi in 0..bcount {
             let angle = base_angle + (bi as f32 - half) * spread;
-            let vx = angle.cos() * BULLET_SPEED;
-            let vy = angle.sin() * BULLET_SPEED;
-            w.bullets.spawn(px, py, vx, vy, dmg, BULLET_LIFETIME);
+            let vx = angle.cos() * w.bullet_speed;
+            let vy = angle.sin() * w.bullet_speed;
+            w.bullets.spawn(px, py, vx, vy, dmg, w.bullet_lifetime);
         }
         w.weapon_slots_input[si].cooldown_timer = cd;
     }
@@ -97,7 +97,7 @@ fn fire_aimed(
 
 fn fire_fixed_up(w: &mut GameWorldInner, si: usize, px: f32, py: f32, dmg: i32, cd: f32) {
     w.bullets
-        .spawn(px, py, 0.0, -BULLET_SPEED, dmg, BULLET_LIFETIME);
+        .spawn(px, py, 0.0, -w.bullet_speed, dmg, w.bullet_lifetime);
     w.weapon_slots_input[si].cooldown_timer = cd;
 }
 
@@ -127,10 +127,10 @@ fn fire_radial(
         w.bullets.spawn(
             px,
             py,
-            dx_dir * BULLET_SPEED,
-            dy_dir * BULLET_SPEED,
+            dx_dir * w.bullet_speed,
+            dy_dir * w.bullet_speed,
             dmg,
-            BULLET_LIFETIME,
+            w.bullet_lifetime,
         );
     }
     w.weapon_slots_input[si].cooldown_timer = cd;
@@ -254,10 +254,10 @@ fn fire_piercing(w: &mut GameWorldInner, si: usize, px: f32, py: f32, dmg: i32, 
         let tx = w.enemies.positions_x[ti] + target_r;
         let ty = w.enemies.positions_y[ti] + target_r;
         let base_angle = (ty - py).atan2(tx - px);
-        let vx = base_angle.cos() * BULLET_SPEED;
-        let vy = base_angle.sin() * BULLET_SPEED;
+        let vx = base_angle.cos() * w.bullet_speed;
+        let vy = base_angle.sin() * w.bullet_speed;
         w.bullets
-            .spawn_piercing(px, py, vx, vy, dmg, BULLET_LIFETIME);
+            .spawn_piercing(px, py, vx, vy, dmg, w.bullet_lifetime);
         w.weapon_slots_input[si].cooldown_timer = cd;
     }
 }

@@ -41,7 +41,7 @@ config :network, Network.UDP, port: 4001
 # Content.BulletHell3D    — 3D 弾幕避けゲーム
 # Content.VRTest          — VR 動作検証（Phase A: マウスで見回し）
 # Content.FormulaTest     — Formula エンジン検証（Elixir→Rust→Elixir）
-config :server, :current, Content.FormulaTest
+config :server, :current, Content.VampireSurvivor
 config :server, :map, :plain
 config :server, :game_events_module, Contents.GameEvents
 
