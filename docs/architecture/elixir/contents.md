@@ -4,14 +4,7 @@
 
 `contents` はゲームコンテンツ（VampireSurvivor / AsteroidArena / SimpleBox3D / BulletHell3D / RollingBall / VRTest / CanvasTest / FormulaTest）の実装と、シーン管理・メインゲームループのディスパッチを担当します。エンジン本体（[core](./core.md)）はゲームロジックを知らず、ContentBehaviour で定義されたインターフェースに従ってコンポーネントへ委譲します。Phase R-2 以降、描画は Elixir 側の RenderComponent が DrawCommand・Camera・UiCanvas を組み立て、`push_render_frame` NIF で RenderFrameBuffer に書き込む。
 
-使用するコンテンツは `config.exs` で指定します。
-
-```elixir
-# Content.VampireSurvivor / Content.AsteroidArena / Content.SimpleBox3D /
-# Content.BulletHell3D / Content.RollingBall / Content.VRTest / Content.CanvasTest /
-# Content.FormulaTest（Formula エンジン検証、デフォルト）
-config :server, :current, Content.FormulaTest
-```
+使用するコンテンツは `config/config.exs` の `config :server, :current, ...` で指定します（既定値は `Content.VampireSurvivor`）。
 
 ---
 
@@ -25,13 +18,15 @@ graph LR
     SC["SpawnComponent\non_ready: ワールド初期化"]
     LC["LevelComponent\non_frame_event: EXP・HP\non_nif_sync: NIF 注入"]
     BC["BossComponent\non_physics_process: ボス AI\non_nif_sync: ボス HP 注入"]
+    RC["RenderComponent\non_nif_sync: push_render_frame"]
 
     CB -->|components/0 で列挙| SC
     CB -->|components/0 で列挙| LC
     CB -->|components/0 で列挙| BC
+    CB -->|components/0 で列挙| RC
 ```
 
-> VampireSurvivor は Spawn / Level / Boss の 3 コンポーネント。AsteroidArena は Spawn / Split の 2 コンポーネント。
+> VampireSurvivor は Spawn / Level / Boss / Render の 4 コンポーネント。AsteroidArena は Spawn / Split の 2 コンポーネント。
 
 ---
 
@@ -127,7 +122,7 @@ stateDiagram-v2
 
 | コンテンツ | 説明 | 仕様 |
 |:---|:---|:---|
-| `Content.VampireSurvivor` | Spawn / Level / Boss コンポーネント、レベルアップ・ボスアラート・ゲームオーバーシーン | [vampire_survivor.md](./contents/vampire_survivor.md) |
+| `Content.VampireSurvivor` | Spawn / Level / Boss / Render コンポーネント、レベルアップ・ボスアラート・ゲームオーバーシーン | [vampire_survivor.md](./contents/vampire_survivor.md) |
 | `Content.AsteroidArena` | Spawn / Split コンポーネント、playing / game_over シーンのみ | [asteroid_arena.md](./contents/asteroid_arena.md) |
 | `Content.SimpleBox3D` | Phase R-6 動作検証用 3D ゲーム | - |
 | `Content.BulletHell3D` | 3D 弾幕避けゲーム | - |

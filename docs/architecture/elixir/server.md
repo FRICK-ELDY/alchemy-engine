@@ -12,7 +12,7 @@
 graph LR
     GS[server<br/>OTP Application 起動]
     GE[core<br/>SSoT コアエンジン]
-    GC[contents<br/>VampireSurvivor / AsteroidArena]
+    GC[contents<br/>VampireSurvivor / AsteroidArena 等]
     GN[network<br/>Phoenix Channels / UDP]
 
     GS -->|依存| GE
@@ -23,6 +23,8 @@ graph LR
 ---
 
 ## `application.ex`
+
+`apps/server/lib/server/application.ex` のみ。server アプリには `server.ex` はなく、OTP Application のエントリポイントは Application ビヘイビア実装のみ。
 
 ```mermaid
 graph TD
@@ -60,8 +62,8 @@ graph TD
 # 使用するコンテンツモジュールを指定する
 # 例: Content.VampireSurvivor / Content.AsteroidArena / Content.SimpleBox3D /
 # Content.BulletHell3D / Content.RollingBall / Content.VRTest / Content.CanvasTest /
-# Content.FormulaTest（デフォルト）
-config :server, :current, Content.FormulaTest
+# Content.FormulaTest
+config :server, :current, Content.VampireSurvivor
 config :server, :map, :plain
 config :server, :game_events_module, Contents.GameEvents
 ```
