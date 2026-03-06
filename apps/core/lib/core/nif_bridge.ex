@@ -27,7 +27,7 @@ defmodule Core.NifBridge do
   def spawn_enemies_at(_world, _kind, _positions), do: :erlang.nif_error(:nif_not_loaded)
 
   # I-2: 武器スロットを Elixir 側から毎フレーム注入する NIF（add_weapon の代替）
-  # slots: [{kind_id, level}] のリスト
+  # R-W2: slots: [{kind_id, level, cooldown_timer, precomputed_damage}] のリスト
   def set_weapon_slots(_world, _slots), do: :erlang.nif_error(:nif_not_loaded)
 
   # Elixir SSoT 移行: 衝突用スナップショット注入（毎フレーム on_nif_sync で呼ぶ）

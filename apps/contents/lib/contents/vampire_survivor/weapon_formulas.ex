@@ -23,6 +23,8 @@ defmodule Content.VampireSurvivor.WeaponFormulas do
   @doc """
   武器の実効ダメージを計算する。
 
+  レベルは MAX_WEAPON_LEVEL (8) でキャップする。Rust の MAX_WEAPON_LEVEL と一致。
+
   ## 例
       effective_damage(10, 1)  # => 10
       effective_damage(10, 2)  # => 12  (base + 1 * max(2, 1))

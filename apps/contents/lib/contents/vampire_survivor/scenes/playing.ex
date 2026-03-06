@@ -14,6 +14,7 @@ defmodule Content.VampireSurvivor.Scenes.Playing do
   alias Content.VampireSurvivor.Scenes.GameOver
   alias Content.VampireSurvivor.Scenes.LevelUp
   alias Content.VampireSurvivor.SpawnSystem
+  alias Content.VampireSurvivor.WeaponFormulas
 
   require Logger
 
@@ -252,10 +253,13 @@ defmodule Content.VampireSurvivor.Scenes.Playing do
 
   @doc """
   weapon_levels と weapon_cooldowns を set_weapon_slots NIF 用の
-  [{kind_id, level, cooldown}] リストに変換する。
+  [{kind_id, level, cooldown, precomputed_damage}] リストに変換する。
+
+  R-W2: precomputed_damage は WeaponFormulas.effective_damage で Elixir 側で計算して注入。
   """
   def weapon_slots_for_nif(weapon_levels, weapon_cooldowns \\ %{}) do
     registry = Core.Config.current().entity_registry().weapons
+    weapon_params = Content.VampireSurvivor.SpawnComponent.weapon_params()
 
     weapon_levels
     |> Enum.flat_map(fn {weapon_name, level} ->
@@ -265,7 +269,20 @@ defmodule Content.VampireSurvivor.Scenes.Playing do
 
         kind_id ->
           cooldown = Map.get(weapon_cooldowns, weapon_name, 0.0)
-          [{kind_id, level, cooldown}]
+          wp = Enum.at(weapon_params, kind_id)
+
+          precomputed_damage =
+            if wp do
+              WeaponFormulas.effective_damage(wp[:damage], max(1, level))
+            else
+              Logger.warning(
+                "weapon_slots_for_nif: kind_id=#{kind_id} not found in weapon_params"
+              )
+
+              0
+            end
+
+          [{kind_id, level, cooldown, precomputed_damage}]
       end
     end)
   end

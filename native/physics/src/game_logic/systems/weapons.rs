@@ -34,7 +34,7 @@ pub(crate) fn update_weapon_attacks(w: &mut GameWorldInner, dt: f32, px: f32, py
             continue;
         };
         let cd = w.weapon_slots_input[si].effective_cooldown(wp);
-        let dmg = w.weapon_slots_input[si].effective_damage(wp);
+        let dmg = w.weapon_slots_input[si].precomputed_damage;
         let level = w.weapon_slots_input[si].level;
         let bcount = w.weapon_slots_input[si].bullet_count(wp);
         let pattern = wp.fire_pattern.clone();
