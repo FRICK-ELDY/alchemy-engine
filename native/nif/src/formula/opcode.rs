@@ -29,6 +29,10 @@ pub enum OpCode {
     Eq = 10,
     /// レジスタ値を出力に追加
     StoreOutput = 11,
+    /// Store からキーで読んでレジスタへ。オペランド: dst, key_len, key_bytes...
+    ReadStore = 12,
+    /// レジスタ値を Store に書き込む。オペランド: src, key_len, key_bytes...
+    WriteStore = 13,
 }
 
 impl OpCode {
@@ -46,6 +50,8 @@ impl OpCode {
             9 => Some(OpCode::Gt),
             10 => Some(OpCode::Eq),
             11 => Some(OpCode::StoreOutput),
+            12 => Some(OpCode::ReadStore),
+            13 => Some(OpCode::WriteStore),
             _ => None,
         }
     }

@@ -9,6 +9,7 @@ use std::collections::HashMap;
 pub enum VmError {
     Decode(super::decode::DecodeError),
     InputNotFound(String),
+    StoreNotFound(String),
     TypeMismatch(String),
     RegisterOutOfRange(u8),
     DivisionByZero,
@@ -20,14 +21,17 @@ impl From<DecodeError> for VmError {
     }
 }
 
-/// バイトコードを実行し、出力値のリストを返す
+/// バイトコードを実行し、出力値のリストと更新後の Store を返す。
+/// store_values は Elixir が管理する初期値。永続化は Elixir の責務。
 pub fn run(
     bytecode: &[u8],
     inputs: &HashMap<String, Value>,
-) -> Result<Vec<Value>, VmError> {
+    store_values: &HashMap<String, Value>,
+) -> Result<(Vec<Value>, HashMap<String, Value>), VmError> {
     let instructions = decode_bytecode(bytecode)?;
     let mut registers: [Option<Value>; REGISTER_COUNT] = [None; REGISTER_COUNT];
     let mut outputs = Vec::new();
+    let mut store = store_values.clone();
 
     for inst in instructions {
         match inst {
@@ -90,10 +94,20 @@ pub fn run(
                 let value = get_register(&registers, src)?;
                 outputs.push(value);
             }
+            Instruction::ReadStore { dst, name } => {
+                let value = store
+                    .get(&name)
+                    .ok_or_else(|| VmError::StoreNotFound(name.clone()))?;
+                registers[dst as usize] = Some(*value);
+            }
+            Instruction::WriteStore { src, name } => {
+                let value = get_register(&registers, src)?;
+                store.insert(name, value);
+            }
         }
     }
 
-    Ok(outputs)
+    Ok((outputs, store))
 }
 
 fn get_register(registers: &[Option<Value>], r: u8) -> Result<Value, VmError> {

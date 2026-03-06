@@ -3,7 +3,7 @@ defmodule Core.FormulaTest do
 
   alias Core.Formula
 
-  describe "run/2" do
+  describe "run/3" do
     test "player_x + player_y を計算" do
       bytecode =
         Formula.build([
@@ -13,9 +13,8 @@ defmodule Core.FormulaTest do
           {:store_output, 2}
         ])
 
-      assert {:ok, [3.0]} = Formula.run(bytecode, %{"player_x" => 1.0, "player_y" => 2.0})
-      result = Formula.run(bytecode, %{"player_x" => -1.0, "player_y" => 1.0})
-      assert {:ok, [x]} = result
+      assert {:ok, {[3.0], _}} = Formula.run(bytecode, %{"player_x" => 1.0, "player_y" => 2.0})
+      assert {:ok, {[x], _}} = Formula.run(bytecode, %{"player_x" => -1.0, "player_y" => 1.0})
       assert abs(x - 0.0) < 1.0e-6
     end
 
@@ -28,7 +27,7 @@ defmodule Core.FormulaTest do
           {:store_output, 2}
         ])
 
-      assert {:ok, [13]} = Formula.run(bytecode, %{})
+      assert {:ok, {[13], _}} = Formula.run(bytecode, %{})
     end
 
     test "比較 (lt)" do
@@ -40,8 +39,8 @@ defmodule Core.FormulaTest do
           {:store_output, 2}
         ])
 
-      assert {:ok, [true]} = Formula.run(bytecode, %{"a" => 1.0, "b" => 2.0})
-      assert {:ok, [false]} = Formula.run(bytecode, %{"a" => 2.0, "b" => 1.0})
+      assert {:ok, {[true], _}} = Formula.run(bytecode, %{"a" => 1.0, "b" => 2.0})
+      assert {:ok, {[false], _}} = Formula.run(bytecode, %{"a" => 2.0, "b" => 1.0})
     end
 
     test "存在しない入力名でエラー" do
@@ -88,6 +87,33 @@ defmodule Core.FormulaTest do
       # LOAD_I32 r64, 0
       bytecode = <<1, 64, 0, 0, 0, 0>>
       assert {:error, :register_out_of_range, 64} = Formula.run(bytecode, %{})
+    end
+
+    test "Store の read/write" do
+      # score を読んで 1 足して書き戻す
+      bytecode =
+        Formula.build([
+          {:read_store, 0, "score"},
+          {:load_i32, 1, 1},
+          {:add, 2, 0, 1},
+          {:write_store, 2, "score"},
+          {:read_store, 3, "score"},
+          {:store_output, 3}
+        ])
+
+      assert {:ok, {[1], store_list}} = Formula.run(bytecode, %{}, %{"score" => 0})
+      assert {"score", 1} in store_list
+    end
+
+    test "Store に存在しないキーで read するとエラー" do
+      bytecode =
+        Formula.build([
+          {:read_store, 0, "missing"},
+          {:store_output, 0}
+        ])
+
+      assert {:error, :store_not_found, "missing"} =
+               Formula.run(bytecode, %{}, %{})
     end
   end
 end

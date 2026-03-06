@@ -152,7 +152,9 @@ defmodule Core.NifBridge do
 
   # ── Formula（コンテンツ数式エンジン）────────────────────────────────
   # bytecode: バイナリ形式のバイトコード
-  # inputs: %{"name" => value} のマップ。value は integer | float | boolean
-  # 戻り値: {:ok, [output_values]} | {:error, reason}
-  def run_formula_bytecode(_bytecode, _inputs), do: :erlang.nif_error(:nif_not_loaded)
+  # inputs: %{"name" => value} のマップ
+  # store_values: Store の初期値 %{"key" => value}（Phase 2）
+  # 戻り値: {:ok, {outputs, updated_store}} | {:error, reason, detail}
+  def run_formula_bytecode(_bytecode, _inputs, _store_values),
+    do: :erlang.nif_error(:nif_not_loaded)
 end
