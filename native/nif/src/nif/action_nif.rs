@@ -24,13 +24,15 @@ pub fn set_weapon_slots(
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
     let new_slots: Vec<WeaponSlot> = slots
         .into_iter()
-        .map(|(kind_id, level, cooldown, cooldown_sec, precomputed_damage)| WeaponSlot {
-            kind_id,
-            level,
-            cooldown_timer: cooldown as f32,
-            cooldown_sec: cooldown_sec as f32,
-            precomputed_damage,
-        })
+        .map(
+            |(kind_id, level, cooldown, cooldown_sec, precomputed_damage)| WeaponSlot {
+                kind_id,
+                level,
+                cooldown_timer: cooldown as f32,
+                cooldown_sec: cooldown_sec as f32,
+                precomputed_damage,
+            },
+        )
         .collect();
     w.weapon_slots_input = new_slots;
     Ok(ok())

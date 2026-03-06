@@ -9,13 +9,7 @@ pub fn get_spawn_positions_around_player(w: &mut GameWorldInner, count: usize) -
     let py = w.player.y + PLAYER_RADIUS;
     (0..count)
         .map(|_| {
-            spawn_position_around_player(
-                &mut w.rng,
-                px,
-                py,
-                w.spawn_min_dist,
-                w.spawn_max_dist,
-            )
+            spawn_position_around_player(&mut w.rng, px, py, w.spawn_min_dist, w.spawn_max_dist)
         })
         .collect()
 }

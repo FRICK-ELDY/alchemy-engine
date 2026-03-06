@@ -36,7 +36,9 @@ pub fn run(
     for inst in instructions {
         match inst {
             Instruction::LoadInput { dst, name } => {
-                let value = inputs.get(&name).ok_or_else(|| VmError::InputNotFound(name.clone()))?;
+                let value = inputs
+                    .get(&name)
+                    .ok_or_else(|| VmError::InputNotFound(name.clone()))?;
                 registers[dst as usize] = Some(*value);
             }
             Instruction::LoadI32 { dst, value } => {
@@ -114,7 +116,8 @@ fn get_register(registers: &[Option<Value>], r: u8) -> Result<Value, VmError> {
     if r >= REGISTER_COUNT as u8 {
         return Err(VmError::RegisterOutOfRange(r));
     }
-    registers[r as usize].ok_or_else(|| VmError::TypeMismatch(format!("register r{} uninitialized", r)))
+    registers[r as usize]
+        .ok_or_else(|| VmError::TypeMismatch(format!("register r{} uninitialized", r)))
 }
 
 fn binary_add(a: Value, b: Value) -> Option<Value> {
@@ -152,7 +155,9 @@ fn binary_div(a: Value, b: Value) -> Result<Value, VmError> {
         }
         return Ok(Value::I32(va / vb));
     }
-    let (fa, fb) = a.binary_op_f32(b).ok_or_else(|| VmError::TypeMismatch("div".into()))?;
+    let (fa, fb) = a
+        .binary_op_f32(b)
+        .ok_or_else(|| VmError::TypeMismatch("div".into()))?;
     if fb == 0.0 {
         return Err(VmError::DivisionByZero);
     }

@@ -111,7 +111,8 @@ pub fn physics_step_inner(w: &mut GameWorldInner, delta_ms: f64) {
             if inv <= 0.0 && w.player_hp_injected > 0.0 {
                 // R-P2: damage_this_frame は contents が damage_per_sec * dt で事前計算して注入済み。
                 // kind_id は set_entity_params 由来で u8 想定。get は範囲外で None を返す。
-                let dmg = w.enemy_damage_this_frame
+                let dmg = w
+                    .enemy_damage_this_frame
                     .get(kind_id as usize)
                     .copied()
                     .unwrap_or(0.0);

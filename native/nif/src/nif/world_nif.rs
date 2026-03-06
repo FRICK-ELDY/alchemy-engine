@@ -182,10 +182,7 @@ pub fn set_world_size(world: ResourceArc<GameWorld>, width: f64, height: f64) ->
 /// Elixir は atom キーで渡すが、map_get は "player_speed" 等の文字列でルックアップ（Rustler は
 /// 文字列からアトムを生成し、Elixir の :player_speed と一致する）。
 #[rustler::nif]
-pub fn set_world_params(
-    world: ResourceArc<GameWorld>,
-    params: Term,
-) -> NifResult<Atom> {
+pub fn set_world_params(world: ResourceArc<GameWorld>, params: Term) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
     if let Ok(v) = map_get::<f64>(params, "player_speed") {
         w.player_speed = v as f32;

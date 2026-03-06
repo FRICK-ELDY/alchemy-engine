@@ -101,24 +101,28 @@ impl RenderBridge for NativeRenderBridge {
             let alpha = calc_interpolation_alpha(&interp_data, now_ms);
             let (interp_x, interp_y) = interpolate_player_pos(&interp_data, alpha);
 
-            // RenderComponent は PlayerSprite を commands の先頭に配置する規約のため、
-            // O(1) で直接書き換える。先頭が PlayerSprite でない場合（空フレーム等）は
-            // 線形探索にフォールバックして安全性を保つ。
-            let player_cmd = match frame.commands.first_mut() {
-                Some(c @ render::DrawCommand::PlayerSprite { .. }) => Some(c),
-                _ => frame
-                    .commands
-                    .iter_mut()
-                    .find(|c| matches!(c, render::DrawCommand::PlayerSprite { .. })),
-            };
-            if let Some(render::DrawCommand::PlayerSprite {
-                ref mut x,
-                ref mut y,
-                ..
-            }) = player_cmd
-            {
-                *x = interp_x;
-                *y = interp_y;
+            // R-R1: RenderComponent は player を SpriteRaw で先頭に配置する規約。
+            // 補間後の座標で先頭の SpriteRaw（= プレイヤー）の x, y を上書きする。
+            // 契約違反検知: 先頭が SpriteRaw でない場合は補間をスキップしログを出す。
+            let player_cmd = frame.commands.first_mut();
+            match player_cmd {
+                Some(render::DrawCommand::SpriteRaw {
+                    ref mut x,
+                    ref mut y,
+                    ..
+                }) => {
+                    *x = interp_x;
+                    *y = interp_y;
+                }
+                Some(cmd) => {
+                    log::warn!(
+                        "render_bridge: expected first command to be SpriteRaw (player), got {:?}; interpolation skipped",
+                        std::mem::discriminant(cmd)
+                    );
+                }
+                None => {
+                    log::warn!("render_bridge: no draw commands; player interpolation skipped");
+                }
             }
             let cam_x = interp_x + PLAYER_SIZE / 2.0 - SCREEN_WIDTH / 2.0;
             let cam_y = interp_y + PLAYER_SIZE / 2.0 - SCREEN_HEIGHT / 2.0;

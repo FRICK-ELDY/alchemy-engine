@@ -99,8 +99,15 @@ defmodule Content.VampireSurvivor.RenderComponent do
   end
 
   defp push_player(acc, x, y, frame) do
-    # NIF は x, y を f64、frame を u32 で期待
-    [{:player_sprite, x * 1.0, y * 1.0, frame} | acc]
+    # R-R1: SpriteParams を SSoT として SpriteRaw で描画。case で他と揃え将来の :error 対応に備える
+    case Content.VampireSurvivor.SpriteParams.player_sprite_raw_params(x, y, frame) do
+      {:ok, {pos_x, pos_y, w, h, uv_off, uv_sz, color}} ->
+        [{:sprite_raw, pos_x, pos_y, w, h, {uv_off, uv_sz, color}} | acc]
+
+      :error ->
+        Logger.debug("player_sprite_raw_params: unexpected error")
+        acc
+    end
   end
 
   defp push_boss(acc, {:alive, x, y, radius, render_kind}) do
@@ -170,7 +177,18 @@ defmodule Content.VampireSurvivor.RenderComponent do
 
   defp push_items(acc, items) do
     Enum.reduce(items, acc, fn {x, y, render_kind}, a ->
-      [{:item, x, y, render_kind} | a]
+      case Content.VampireSurvivor.SpriteParams.item_sprite_raw_params(
+             x,
+             y,
+             render_kind
+           ) do
+        {:ok, {pos_x, pos_y, w, h, uv_off, uv_sz, color}} ->
+          [{:sprite_raw, pos_x, pos_y, w, h, {uv_off, uv_sz, color}} | a]
+
+        :error ->
+          Logger.debug("item_sprite_raw_params: unsupported render_kind=#{render_kind} for item")
+          a
+      end
     end)
   end
 

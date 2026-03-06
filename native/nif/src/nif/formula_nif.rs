@@ -55,20 +55,19 @@ pub fn run_formula_bytecode<'a>(
             "store value: integer {} out of i32 range",
             v
         ))),
-        InputDecodeError::ExpectedMap => rustler::Error::Term(Box::new("store_values: expected map")),
-        InputDecodeError::InvalidKey => rustler::Error::Term(Box::new(
-            "store key: expected string or atom",
-        )),
+        InputDecodeError::ExpectedMap => {
+            rustler::Error::Term(Box::new("store_values: expected map"))
+        }
+        InputDecodeError::InvalidKey => {
+            rustler::Error::Term(Box::new("store key: expected string or atom"))
+        }
         InputDecodeError::InvalidValue => rustler::Error::Term(Box::new(
             "store value: expected integer (i32 range), float, or boolean",
         )),
     })?;
     match run(bytecode.as_slice(), &input_map, &store_map) {
         Ok((outputs, updated_store)) => {
-            let terms: Vec<Term<'a>> = outputs
-                .iter()
-                .map(|v| value_to_term(env, v))
-                .collect();
+            let terms: Vec<Term<'a>> = outputs.iter().map(|v| value_to_term(env, v)).collect();
             let store_terms = map_value_map_to_elixir(env, &updated_store);
             let ok_atom = rustler::Atom::from_str(env, "ok")?;
             Ok((ok_atom, (terms, store_terms)).encode(env))
@@ -166,7 +165,7 @@ fn input_error_to_term<'a>(env: Env<'a>, e: &InputDecodeError) -> NifResult<Term
     let (reason, detail): (rustler::Atom, Term) = match e {
         InputDecodeError::IntegerOutOfRange(v) => (
             rustler::Atom::from_str(env, "integer_out_of_range")?,
-            (*v as i64).encode(env),
+            (*v).encode(env),
         ),
         _ => unreachable!("input_error_to_term only handles IntegerOutOfRange"),
     };
@@ -189,10 +188,9 @@ fn error_to_term<'a>(env: Env<'a>, e: VmError) -> NifResult<Term<'a>> {
 
     let (reason, detail): (rustler::Atom, Term) = match e {
         VmError::Decode(de) => match de {
-            crate::formula::DecodeError::UnexpectedEof => (
-                rustler::Atom::from_str(env, "unexpected_eof")?,
-                nil_term,
-            ),
+            crate::formula::DecodeError::UnexpectedEof => {
+                (rustler::Atom::from_str(env, "unexpected_eof")?, nil_term)
+            }
             crate::formula::DecodeError::InvalidOpCode(b) => (
                 rustler::Atom::from_str(env, "invalid_opcode")?,
                 b.encode(env),
@@ -201,10 +199,9 @@ fn error_to_term<'a>(env: Env<'a>, e: VmError) -> NifResult<Term<'a>> {
                 rustler::Atom::from_str(env, "register_out_of_range")?,
                 r.encode(env),
             ),
-            crate::formula::DecodeError::InvalidUtf8 => (
-                rustler::Atom::from_str(env, "invalid_utf8")?,
-                nil_term,
-            ),
+            crate::formula::DecodeError::InvalidUtf8 => {
+                (rustler::Atom::from_str(env, "invalid_utf8")?, nil_term)
+            }
         },
         VmError::InputNotFound(name) => (
             rustler::Atom::from_str(env, "input_not_found")?,
@@ -222,10 +219,7 @@ fn error_to_term<'a>(env: Env<'a>, e: VmError) -> NifResult<Term<'a>> {
             rustler::Atom::from_str(env, "register_out_of_range")?,
             r.encode(env),
         ),
-        VmError::DivisionByZero => (
-            rustler::Atom::from_str(env, "division_by_zero")?,
-            nil_term,
-        ),
+        VmError::DivisionByZero => (rustler::Atom::from_str(env, "division_by_zero")?, nil_term),
     };
 
     Ok((err_atom, reason, detail).encode(env))

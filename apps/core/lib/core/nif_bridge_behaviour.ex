@@ -8,8 +8,11 @@ defmodule Core.NifBridge.Behaviour do
   """
 
   # ── Phase R-2: push_render_frame 引数の型エイリアス ──────────────
+  # sprite_raw が推奨。player_sprite / item はレガシー（SpriteRaw で代用可能）。
   @type draw_command ::
-          {:player_sprite, float(), float(), non_neg_integer()}
+          {:sprite_raw, float(), float(), float(), float(),
+           {{float(), float()}, {float(), float()}, {float(), float(), float(), float()}}}
+          | {:player_sprite, float(), float(), non_neg_integer()}
           | {:sprite, float(), float(), non_neg_integer(), non_neg_integer()}
           | {:particle, float(), float(), float(), float(), float(), {float(), float()}}
           | {:item, float(), float(), non_neg_integer()}

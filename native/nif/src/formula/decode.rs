@@ -68,8 +68,8 @@ pub fn decode_bytecode(bytecode: &[u8]) -> Result<Vec<Instruction>, DecodeError>
                 ensure_len(&bytecode[pos..], name_len)?;
                 let name_bytes = &bytecode[pos..pos + name_len];
                 pos += name_len;
-                let name = String::from_utf8(name_bytes.to_vec())
-                    .map_err(|_| DecodeError::InvalidUtf8)?;
+                let name =
+                    String::from_utf8(name_bytes.to_vec()).map_err(|_| DecodeError::InvalidUtf8)?;
                 check_register(dst)?;
                 Instruction::LoadInput { dst, name }
             }
@@ -103,8 +103,13 @@ pub fn decode_bytecode(bytecode: &[u8]) -> Result<Vec<Instruction>, DecodeError>
                 check_register(dst)?;
                 Instruction::LoadBool { dst, value }
             }
-            OpCode::Add | OpCode::Sub | OpCode::Mul | OpCode::Div
-            | OpCode::Lt | OpCode::Gt | OpCode::Eq => {
+            OpCode::Add
+            | OpCode::Sub
+            | OpCode::Mul
+            | OpCode::Div
+            | OpCode::Lt
+            | OpCode::Gt
+            | OpCode::Eq => {
                 ensure_len(&bytecode[pos..], 3)?;
                 let dst = bytecode[pos];
                 let src_a = bytecode[pos + 1];
@@ -139,8 +144,8 @@ pub fn decode_bytecode(bytecode: &[u8]) -> Result<Vec<Instruction>, DecodeError>
                 ensure_len(&bytecode[pos..], name_len)?;
                 let name_bytes = &bytecode[pos..pos + name_len];
                 pos += name_len;
-                let name = String::from_utf8(name_bytes.to_vec())
-                    .map_err(|_| DecodeError::InvalidUtf8)?;
+                let name =
+                    String::from_utf8(name_bytes.to_vec()).map_err(|_| DecodeError::InvalidUtf8)?;
                 check_register(dst)?;
                 Instruction::ReadStore { dst, name }
             }
@@ -152,8 +157,8 @@ pub fn decode_bytecode(bytecode: &[u8]) -> Result<Vec<Instruction>, DecodeError>
                 ensure_len(&bytecode[pos..], name_len)?;
                 let name_bytes = &bytecode[pos..pos + name_len];
                 pos += name_len;
-                let name = String::from_utf8(name_bytes.to_vec())
-                    .map_err(|_| DecodeError::InvalidUtf8)?;
+                let name =
+                    String::from_utf8(name_bytes.to_vec()).map_err(|_| DecodeError::InvalidUtf8)?;
                 check_register(src)?;
                 Instruction::WriteStore { src, name }
             }
