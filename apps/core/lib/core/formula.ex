@@ -5,6 +5,11 @@ defmodule Core.Formula do
   Phase 1 ではバイトコードの生成と NIF 呼び出しを提供する。
   Phase 3 で FormulaGraph を追加。`Core.FormulaGraph` でグラフを定義しコンパイル可能。
 
+  ## 標準入力（推奨）
+  contents で数式を計算する際に渡すことを推奨する入力名：
+  - **dt** — 物理フレームの経過時間（秒）。`x * dt` のような時間ベースの演算に使用。
+  - **timer** — 経過タイマーやクールダウンなど、時間ベースの状態。`elapsed_seconds` や `cooldown_remaining` など用途に応じたキーを Store と組み合わせて利用可能。
+
   ## OpCode バイト値
   - 0: LOAD_INPUT
   - 1: LOAD_I32, 2: LOAD_F32, 3: LOAD_BOOL
