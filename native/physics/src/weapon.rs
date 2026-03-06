@@ -4,7 +4,7 @@
 //! Phase 3-A: WeaponKind enum を除去。
 //! パラメータは EntityParamTables 経由で参照する。
 
-use crate::entity_params::{FirePattern, WeaponParams};
+use crate::entity_params::WeaponParams;
 
 pub const MAX_WEAPON_LEVEL: u32 = 8;
 pub const MAX_WEAPON_SLOTS: usize = 6;
@@ -41,106 +41,8 @@ impl WeaponSlot {
     }
 }
 
-// ─── UI 用アップグレード説明（レベルアップカード表示）───────────────
-
-/// 武器の `as_u8` ID と現在レベルから、アップグレード説明行を返す。HUD のレベルアップカード用。
-/// `tables` は `GameWorldInner::params` を渡す。
-pub fn weapon_upgrade_desc(
-    weapon_id: u8,
-    current_lv: u32,
-    tables: &crate::entity_params::EntityParamTables,
-) -> Vec<String> {
-    if tables.weapons.is_empty() {
-        return vec!["Upgrade weapon".to_string()];
-    }
-    let wp = match tables.weapons.get(weapon_id as usize) {
-        Some(w) => w,
-        None => return vec!["Upgrade weapon".to_string()],
-    };
-    let next = current_lv + 1;
-
-    let slot = |lv: u32| WeaponSlot {
-        kind_id: weapon_id,
-        level: lv.max(1),
-        cooldown_timer: 0.0,
-    };
-    let dmg = |lv: u32| slot(lv).effective_damage(wp);
-    let cd = |lv: u32| slot(lv).effective_cooldown(wp);
-    let bullets = |lv: u32| wp.bullet_count(lv.max(1));
-
-    match wp.fire_pattern {
-        FirePattern::Aimed => {
-            let mut lines = vec![
-                format!("DMG: {} -> {}", dmg(current_lv), dmg(next)),
-                format!("CD:  {:.1}s -> {:.1}s", cd(current_lv), cd(next)),
-            ];
-            let bullets_now = bullets(current_lv);
-            let bullets_next = bullets(next);
-            if bullets_next > bullets_now {
-                lines.push(format!("Shots: {} -> {} (+)", bullets_now, bullets_next));
-            } else {
-                lines.push(format!("Shots: {}", bullets_now));
-            }
-            lines
-        }
-        FirePattern::FixedUp => vec![
-            format!("DMG: {} -> {}", dmg(current_lv), dmg(next)),
-            format!("CD:  {:.1}s -> {:.1}s", cd(current_lv), cd(next)),
-            "Throws upward".to_string(),
-        ],
-        FirePattern::Radial => {
-            let dirs_now = if current_lv == 0 || current_lv <= 3 {
-                4
-            } else {
-                8
-            };
-            let dirs_next = if next <= 3 { 4 } else { 8 };
-            let mut lines = vec![
-                format!("DMG: {} -> {}", dmg(current_lv), dmg(next)),
-                format!("CD:  {:.1}s -> {:.1}s", cd(current_lv), cd(next)),
-            ];
-            if dirs_next > dirs_now {
-                lines.push(format!("Dirs: {} -> {} (+)", dirs_now, dirs_next));
-            } else {
-                lines.push(format!("{}-way fire", dirs_now));
-            }
-            lines
-        }
-        FirePattern::Whip => vec![
-            format!("DMG: {} -> {}", dmg(current_lv), dmg(next)),
-            format!("CD:  {:.1}s -> {:.1}s", cd(current_lv), cd(next)),
-            format!(
-                "Range: {}px -> {}px",
-                wp.whip_range(current_lv.max(1)) as u32,
-                wp.whip_range(next) as u32,
-            ),
-            "Fan sweep (108°)".to_string(),
-        ],
-        FirePattern::Piercing => vec![
-            format!("DMG: {} -> {}", dmg(current_lv), dmg(next)),
-            format!("CD:  {:.1}s -> {:.1}s", cd(current_lv), cd(next)),
-            "Piercing shot".to_string(),
-        ],
-        FirePattern::Chain => vec![
-            format!("DMG: {} -> {}", dmg(current_lv), dmg(next)),
-            format!("CD:  {:.1}s -> {:.1}s", cd(current_lv), cd(next)),
-            format!(
-                "Chain: {} -> {} targets",
-                wp.chain_count_for_level(current_lv.max(1)),
-                wp.chain_count_for_level(next),
-            ),
-        ],
-        FirePattern::Aura => vec![
-            format!("DMG: {} -> {}", dmg(current_lv), dmg(next)),
-            format!("CD:  {:.1}s -> {:.1}s", cd(current_lv), cd(next)),
-            format!(
-                "Radius: {}px -> {}px",
-                wp.aura_radius(current_lv.max(1)) as u32,
-                wp.aura_radius(next) as u32,
-            ),
-        ],
-    }
-}
+// R-W1: weapon_upgrade_desc は contents の WeaponFormulas.weapon_upgrade_descs へ移行済み。
+// レベルアップカード表示は Elixir 側で完結する。
 
 #[cfg(test)]
 mod tests {

@@ -135,12 +135,7 @@ defmodule Core.NifBridge do
   #          items, obstacles, boss, score_popups}
   def get_render_entities(_world), do: :erlang.nif_error(:nif_not_loaded)
 
-  # Phase R-2: 武器アップグレード説明文を返す NIF
-  # weapon_choices: ["weapon_0", "weapon_2", ...]
-  # weapon_slots: [{kind_id, level}]
-  # 戻り値: [[desc_string]]
-  def get_weapon_upgrade_descs(_world, _weapon_choices, _weapon_slots),
-    do: :erlang.nif_error(:nif_not_loaded)
+  # R-W1: get_weapon_upgrade_descs は削除。WeaponFormulas.weapon_upgrade_descs で Elixir 側完結。
 
   # ── 移行検証用（フェーズ0）───────────────────────────────────────
   def get_full_game_state(_world), do: :erlang.nif_error(:nif_not_loaded)
