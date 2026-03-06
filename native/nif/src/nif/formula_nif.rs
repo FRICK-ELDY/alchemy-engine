@@ -16,18 +16,19 @@ enum InputDecodeError {
     InvalidValue,
 }
 
-/// バイトコードと入力マップを受け取り、出力値のリストを返す。
+/// バイトコードと入力マップ・Store 初期値を受け取り、出力と更新後の Store を返す。
 ///
 /// - bytecode: バイナリ形式のバイトコード
 /// - inputs: %{"name" => value} 形式のマップ。value は integer | float | boolean
+/// - store_values: Store の初期値。%{"key" => value}。READ_STORE で参照するキーは事前に含めること。
 ///
-/// 戻り値: {:ok, [output_values]} | {:error, reason_atom, detail}
-/// - detail は reason により nil または文字列・数値
+/// 戻り値: {:ok, {outputs, updated_store}} | {:error, reason_atom, detail}
 #[rustler::nif]
 pub fn run_formula_bytecode<'a>(
     env: Env<'a>,
     bytecode: rustler::Binary<'a>,
     inputs: Term<'a>,
+    store_values: Term<'a>,
 ) -> NifResult<Term<'a>> {
     let input_map = match decode_input_map(inputs) {
         Ok(m) => m,
@@ -49,14 +50,28 @@ pub fn run_formula_bytecode<'a>(
             )));
         }
     };
-    match run(bytecode.as_slice(), &input_map) {
-        Ok(outputs) => {
+    let store_map = decode_value_map(store_values).map_err(|e| match e {
+        InputDecodeError::IntegerOutOfRange(v) => rustler::Error::Term(Box::new(format!(
+            "store value: integer {} out of i32 range",
+            v
+        ))),
+        InputDecodeError::ExpectedMap => rustler::Error::Term(Box::new("store_values: expected map")),
+        InputDecodeError::InvalidKey => rustler::Error::Term(Box::new(
+            "store key: expected string or atom",
+        )),
+        InputDecodeError::InvalidValue => rustler::Error::Term(Box::new(
+            "store value: expected integer (i32 range), float, or boolean",
+        )),
+    })?;
+    match run(bytecode.as_slice(), &input_map, &store_map) {
+        Ok((outputs, updated_store)) => {
             let terms: Vec<Term<'a>> = outputs
                 .iter()
                 .map(|v| value_to_term(env, v))
                 .collect();
+            let store_terms = map_value_map_to_elixir(env, &updated_store);
             let ok_atom = rustler::Atom::from_str(env, "ok")?;
-            Ok((ok_atom, terms).encode(env))
+            Ok((ok_atom, (terms, store_terms)).encode(env))
         }
         Err(e) => {
             let err_term = error_to_term(env, e)?;
@@ -65,7 +80,7 @@ pub fn run_formula_bytecode<'a>(
     }
 }
 
-fn decode_input_map(term: Term) -> Result<HashMap<String, Value>, InputDecodeError> {
+fn decode_value_map(term: Term) -> Result<HashMap<String, Value>, InputDecodeError> {
     let iter = MapIterator::new(term).ok_or(InputDecodeError::ExpectedMap)?;
     let mut map = HashMap::new();
     for (key_term, value_term) in iter {
@@ -74,6 +89,43 @@ fn decode_input_map(term: Term) -> Result<HashMap<String, Value>, InputDecodeErr
         map.insert(key, value);
     }
     Ok(map)
+}
+
+fn decode_input_map(term: Term) -> Result<HashMap<String, Value>, InputDecodeError> {
+    decode_value_map(term)
+}
+
+fn map_value_map_to_elixir<'a>(env: Env<'a>, map: &HashMap<String, Value>) -> rustler::Term<'a> {
+    let pairs: Vec<(String, StoreEncodable)> = map
+        .iter()
+        .map(|(k, v)| (k.clone(), value_to_store_encodable(v)))
+        .collect();
+    pairs.encode(env)
+}
+
+#[derive(Clone, Copy)]
+enum StoreEncodable {
+    I32(i32),
+    F64(f64),
+    Bool(bool),
+}
+
+impl rustler::Encoder for StoreEncodable {
+    fn encode<'a>(&self, env: rustler::Env<'a>) -> rustler::Term<'a> {
+        match self {
+            StoreEncodable::I32(x) => x.encode(env),
+            StoreEncodable::F64(x) => x.encode(env),
+            StoreEncodable::Bool(x) => x.encode(env),
+        }
+    }
+}
+
+fn value_to_store_encodable(v: &Value) -> StoreEncodable {
+    match v {
+        Value::I32(x) => StoreEncodable::I32(*x),
+        Value::F32(x) => StoreEncodable::F64(*x as f64),
+        Value::Bool(x) => StoreEncodable::Bool(*x),
+    }
 }
 
 fn term_to_string(term: Term) -> NifResult<String> {
@@ -156,6 +208,10 @@ fn error_to_term<'a>(env: Env<'a>, e: VmError) -> NifResult<Term<'a>> {
         },
         VmError::InputNotFound(name) => (
             rustler::Atom::from_str(env, "input_not_found")?,
+            name.encode(env),
+        ),
+        VmError::StoreNotFound(name) => (
+            rustler::Atom::from_str(env, "store_not_found")?,
             name.encode(env),
         ),
         VmError::TypeMismatch(msg) => (

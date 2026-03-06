@@ -19,6 +19,8 @@ pub enum Instruction {
     Gt { dst: u8, src_a: u8, src_b: u8 },
     Eq { dst: u8, src_a: u8, src_b: u8 },
     StoreOutput { src: u8 },
+    ReadStore { dst: u8, name: String },
+    WriteStore { src: u8, name: String },
 }
 
 pub const REGISTER_COUNT: usize = 64;
@@ -128,6 +130,32 @@ pub fn decode_bytecode(bytecode: &[u8]) -> Result<Vec<Instruction>, DecodeError>
                 pos += 1;
                 check_register(src)?;
                 Instruction::StoreOutput { src }
+            }
+            OpCode::ReadStore => {
+                ensure_len(&bytecode[pos..], 2)?;
+                let dst = bytecode[pos];
+                let name_len = bytecode[pos + 1] as usize;
+                pos += 2;
+                ensure_len(&bytecode[pos..], name_len)?;
+                let name_bytes = &bytecode[pos..pos + name_len];
+                pos += name_len;
+                let name = String::from_utf8(name_bytes.to_vec())
+                    .map_err(|_| DecodeError::InvalidUtf8)?;
+                check_register(dst)?;
+                Instruction::ReadStore { dst, name }
+            }
+            OpCode::WriteStore => {
+                ensure_len(&bytecode[pos..], 2)?;
+                let src = bytecode[pos];
+                let name_len = bytecode[pos + 1] as usize;
+                pos += 2;
+                ensure_len(&bytecode[pos..], name_len)?;
+                let name_bytes = &bytecode[pos..pos + name_len];
+                pos += name_len;
+                let name = String::from_utf8(name_bytes.to_vec())
+                    .map_err(|_| DecodeError::InvalidUtf8)?;
+                check_register(src)?;
+                Instruction::WriteStore { src, name }
             }
         };
 

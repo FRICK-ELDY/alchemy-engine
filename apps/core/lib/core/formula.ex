@@ -7,33 +7,38 @@ defmodule Core.Formula do
 
   ## OpCode バイト値
   - 0: LOAD_INPUT
-  - 1: LOAD_I32
-  - 2: LOAD_F32
-  - 3: LOAD_BOOL
+  - 1: LOAD_I32, 2: LOAD_F32, 3: LOAD_BOOL
   - 4: ADD, 5: SUB, 6: MUL, 7: DIV
   - 8: LT, 9: GT, 10: EQ
   - 11: STORE_OUTPUT
+  - 12: READ_STORE, 13: WRITE_STORE（Phase 2）
   """
 
   alias Core.NifBridge
 
   @doc """
-  バイトコードを実行し、出力値のリストを返す。
+  バイトコードを実行し、出力値のリストと更新後の Store を返す。
+
+  store_values を省略した場合は空の map を渡し、Store を使わない実行になる。
+  戻り値の updated_store はキー・値のリスト形式。Map.new/1 で map に変換可能。
 
   ## 例
-      bytecode = Core.Formula.build([
-        {:load_input, 0, "player_x"},
-        {:load_input, 1, "player_y"},
-        {:add, 2, 0, 1},
-        {:store_output, 2}
-      ])
-      Core.Formula.run(bytecode, %{"player_x" => 1.0, "player_y" => 2.0})
-      # => {:ok, [3.0]}
+      bytecode = Core.Formula.build([...])
+      Core.Formula.run(bytecode, %{"player_x" => 1.0})
+      # => {:ok, {[3.0], []}}
+
+      Core.Formula.run(bytecode, %{}, %{"score" => 0})
+      # => {:ok, {outputs, [{"score", new_value}, ...]}}
   """
-  @spec run(binary(), map()) ::
-          {:ok, [number() | boolean()]} | {:error, atom(), String.t() | integer() | nil}
-  def run(bytecode, inputs) when is_binary(bytecode) and is_map(inputs) do
-    NifBridge.run_formula_bytecode(bytecode, inputs)
+  @spec run(binary(), map(), map()) ::
+          {:ok, {[number() | boolean()], [{String.t(), number() | boolean()}]}}
+          | {:error, atom(), String.t() | integer() | nil}
+  def run(bytecode, inputs, store_values \\ %{})
+      when is_binary(bytecode) and is_map(inputs) and is_map(store_values) do
+    case NifBridge.run_formula_bytecode(bytecode, inputs, store_values) do
+      {:ok, {outputs, store_list}} -> {:ok, {outputs, store_list}}
+      {:error, reason, detail} -> {:error, reason, detail}
+    end
   end
 
   @doc """
@@ -56,6 +61,8 @@ defmodule Core.Formula do
   - `{:gt, dst, src_a, src_b}` - GT
   - `{:eq, dst, src_a, src_b}` - EQ
   - `{:store_output, src}` - レジスタ src を出力へ
+  - `{:read_store, dst, key}` - Store の key をレジスタ dst へ（Phase 2）
+  - `{:write_store, src, key}` - レジスタ src を Store の key に書き込み（Phase 2）
   """
   @spec build([tuple()]) :: binary()
   def build(instructions) do
@@ -94,4 +101,24 @@ defmodule Core.Formula do
   defp encode_instruction({:gt, dst, src_a, src_b}), do: [9, dst, src_a, src_b]
   defp encode_instruction({:eq, dst, src_a, src_b}), do: [10, dst, src_a, src_b]
   defp encode_instruction({:store_output, src}), do: [11, src]
+
+  defp encode_instruction({:read_store, dst, key}) when is_binary(key) do
+    key_bin = key
+    len = byte_size(key_bin)
+    [12, dst, len] ++ :binary.bin_to_list(key_bin)
+  end
+
+  defp encode_instruction({:read_store, dst, key}) when is_atom(key) do
+    encode_instruction({:read_store, dst, to_string(key)})
+  end
+
+  defp encode_instruction({:write_store, src, key}) when is_binary(key) do
+    key_bin = key
+    len = byte_size(key_bin)
+    [13, src, len] ++ :binary.bin_to_list(key_bin)
+  end
+
+  defp encode_instruction({:write_store, src, key}) when is_atom(key) do
+    encode_instruction({:write_store, src, to_string(key)})
+  end
 end
