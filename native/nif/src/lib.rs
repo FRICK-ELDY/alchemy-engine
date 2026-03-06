@@ -83,6 +83,7 @@ rustler::atoms! {
     velocity,
 }
 
+mod formula;
 mod key_map;
 mod lock_metrics;
 mod nif;

@@ -3,6 +3,7 @@
 
 mod action_nif;
 mod decode;
+mod formula_nif;
 pub(crate) mod events;
 mod game_loop_nif;
 mod load;

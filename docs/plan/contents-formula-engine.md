@@ -160,6 +160,12 @@ flowchart TB
 
 ### 4.1 NIF 境界
 
+**エラーハンドリング方針**
+
+- ドメインエラー（input_not_found, division_by_zero, type_mismatch 等）は NIF としては成功とし、`Ok({:error, reason_atom, detail})` を返す。呼び出し側で分岐して扱う。
+- 他 NIF の `NifResult::Err` は NIF 層の異常（ロック失敗、不正な入力形式等）用。Formula NIF では、入力形式不正（map でない、型が合わない等）のみ `Err` とする。
+- エラー形式は常に 3 要素タプル `{:error, reason_atom, detail}` に統一。detail が不要な場合は nil。
+
 ```
 Elixir → Rust:
   - グラフ ID または グラフのバイトコード
