@@ -27,7 +27,8 @@ defmodule Content.VampireSurvivor.RenderComponent do
     "cross" => "Cross",
     "whip" => "Whip",
     "fireball" => "Fireball",
-    "lightning" => "Lightning"
+    "lightning" => "Lightning",
+    "garlic" => "Garlic"
   }
 
   @impl Core.Component
@@ -429,12 +430,13 @@ defmodule Content.VampireSurvivor.RenderComponent do
 
     weapon_upgrade_descs =
       if weapon_choices != [] do
-        slots = weapon_slots_for_nif(playing_state)
+        weapon_params = Content.VampireSurvivor.SpawnComponent.weapon_params()
+        choices_atoms = Enum.map(weapon_choices, &String.to_existing_atom/1)
 
-        Core.NifBridge.get_weapon_upgrade_descs(
-          context.world_ref,
-          weapon_choices,
-          slots
+        Content.VampireSurvivor.WeaponFormulas.weapon_upgrade_descs(
+          choices_atoms,
+          weapon_levels,
+          weapon_params
         )
       else
         []

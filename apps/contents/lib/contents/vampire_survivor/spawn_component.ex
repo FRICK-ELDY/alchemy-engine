@@ -43,7 +43,7 @@ defmodule Content.VampireSurvivor.SpawnComponent do
     Core.NifBridge.set_entity_params(
       world_ref,
       enemy_params(),
-      weapon_params(),
+      weapon_params_impl(),
       Content.EntityParams.boss_params()
     )
 
@@ -56,6 +56,14 @@ defmodule Content.VampireSurvivor.SpawnComponent do
   # enemy_params / weapon_params の順序は Rust 側 decode_enemy_params /
   # decode_weapon_params と一致させること。
   # boss_params は Content.EntityParams.boss_params/0（SSoT）を参照。
+
+  @doc """
+  武器パラメータリスト。WeaponFormulas 等で SSoT として参照する。
+
+  SpawnComponent 内部の on_ready では weapon_params_impl/0 を set_entity_params NIF に渡す。
+  WeaponFormulas.weapon_upgrade_descs/3 がレベルアップカード表示に使用する。
+  """
+  def weapon_params, do: weapon_params_impl()
 
   defp enemy_params do
     [
@@ -112,7 +120,7 @@ defmodule Content.VampireSurvivor.SpawnComponent do
     ]
   end
 
-  defp weapon_params do
+  defp weapon_params_impl do
     [
       # fire_pattern: "aimed"=最近接扇状, "fixed_up"=上方向固定, "radial"=全方向,
       #               "whip"=扇形判定, "piercing"=貫通弾, "chain"=連鎖, "aura"=オーラ

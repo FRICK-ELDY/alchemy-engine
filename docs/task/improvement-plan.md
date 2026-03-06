@@ -104,6 +104,26 @@
 
 ---
 
+### I-RG: Rust 側に残るゲームロジック計算（優先度: 中）
+
+**問題:** 武器数式・弾丸 damage・スコアポップ減衰・描画パラメータ等のゲームロジックが Rust 側に残存している。Elixir = SSoT の原則に沿い、contents へ移行または NIF 注入で SSoT 化する必要がある。
+
+**対応状況（2026-03）:**
+- 武器数式（weapon_upgrade_desc）: `Content.VampireSurvivor.WeaponFormulas` を contents に追加。レベルアップカード表示は Elixir で完結。
+- `SpawnComponent.weapon_params/0` を public 化し、WeaponFormulas から SSoT として参照。
+
+**残課題:** 詳細は [rust-game-logic-migration.md](../plan/rust-game-logic-migration.md) を参照。
+
+| 課題ID | 内容 | 優先度 |
+|:---|:---|:---:|
+| R-W1 | weapon.rs 武器数式（physics 側 damage 計算） | 中 |
+| R-W2 | 弾丸・当たり判定の damage 注入 | 中 |
+| R-R1 | renderer UV・スプライトパラメータ（I-M と同一） | 中 |
+| R-E1 | score_popup lifetime 減衰 | 低 |
+| R-P1 | PlayerDamaged / SpecialEntityDamaged の dt 乗算 | 低 |
+
+---
+
 ## 設計タスク（別ドキュメント）
 
 ### D-A: シーン管理を contents へ移行 ✅ 完了
@@ -121,6 +141,17 @@
 **方針:** オプション B（責務分離）を採用。contents に `Contents.GameEvents` / `Contents.GameEvents.Diagnostics` を移行。core の責務を「ループ制御・イベント受信・ContentBehaviour インターフェース」に限定。BatLord 固有ロジックは `on_engine_message/2` 汎用ディスパッチに置き換え済み。
 
 **未解決事項・確認ポイント:** [improvement-plan.md](../plan/improvement-plan.md) の「GameEvents → contents 移行タスクより」を参照。
+
+### D-C: ゲームロジックを contents に寄せる（Phase 1 完了 2026-03）
+
+**方針:** アーキテクチャ原則「Elixir = SSoT」に沿い、武器数式・スコア計算等のゲームロジックを contents 側に移行する。
+
+**Phase 1 完了（2026-03）:**
+- `Content.VampireSurvivor.WeaponFormulas` を新規作成（effective_damage, effective_cooldown, whip_range, aura_radius, chain_count_for_level, weapon_upgrade_descs）
+- `SpawnComponent.weapon_params/0` を public 化
+- `RenderComponent` のレベルアップモーダルで `get_weapon_upgrade_descs` NIF の代わりに `WeaponFormulas.weapon_upgrade_descs/3` を使用
+
+**残課題:** [rust-game-logic-migration.md](../plan/rust-game-logic-migration.md) の R-W1, R-W2, R-R1 等を参照。
 
 ---
 
