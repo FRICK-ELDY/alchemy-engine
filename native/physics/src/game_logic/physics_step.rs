@@ -13,7 +13,6 @@ use super::systems::special_entity_collision::collide_special_entity_snapshot;
 use super::systems::weapons::update_weapon_attacks;
 use crate::constants::{
     ENEMY_SEPARATION_FORCE, ENEMY_SEPARATION_RADIUS, FRAME_BUDGET_MS, PLAYER_RADIUS, PLAYER_SIZE,
-    PLAYER_SPEED,
 };
 use crate::physics::obstacle_resolve;
 use crate::physics::separation::apply_separation;
@@ -37,11 +36,11 @@ pub fn physics_step_inner(w: &mut GameWorldInner, delta_ms: f64) {
     let dx = w.player.input_dx;
     let dy = w.player.input_dy;
 
-    // 斜め移動を正規化して速度を一定に保つ
+    // 斜め移動を正規化して速度を一定に保つ（R-C1: player_speed は set_world_params で注入可能）
     let len = (dx * dx + dy * dy).sqrt();
     if len > 0.001 {
-        w.player.x += (dx / len) * PLAYER_SPEED * dt;
-        w.player.y += (dy / len) * PLAYER_SPEED * dt;
+        w.player.x += (dx / len) * w.player_speed * dt;
+        w.player.y += (dy / len) * w.player_speed * dt;
     }
 
     // プレイヤー vs 障害物（重なったら押し出し）

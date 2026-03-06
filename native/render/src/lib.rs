@@ -132,13 +132,6 @@ pub enum DrawCommand {
     /// `render_bridge.rs` が補間後にこのバリアントの座標を書き換える。
     /// `Sprite` と分離することで、補間対象を型安全に特定できる。
     PlayerSprite { x: f32, y: f32, frame: u8 },
-    /// スプライト描画（敵・弾・ボスなど）
-    Sprite {
-        x: f32,
-        y: f32,
-        kind_id: u8,
-        frame: u8,
-    },
     /// パーティクル描画
     Particle {
         x: f32,

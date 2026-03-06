@@ -829,7 +829,6 @@ impl Renderer {
 }
 
 /// `DrawCommand` リストから `SpriteInstance` リストを構築する。
-/// `Renderer::update_instances` と `HeadlessRenderer::render_frame_offscreen` の両方から使用する。
 pub(crate) fn build_sprite_instances(commands: &[DrawCommand]) -> Vec<SpriteInstance> {
     let mut instances: Vec<SpriteInstance> = Vec::with_capacity(commands.len());
 
@@ -847,7 +846,6 @@ pub(crate) fn build_sprite_instances(commands: &[DrawCommand]) -> Vec<SpriteInst
 }
 
 /// `DrawCommand` 1件を `SpriteInstance` に変換する。
-/// 描画対象外のコマンド（未知の kind_id 等）は `None` を返す。
 fn sprite_instance_from_command(cmd: &DrawCommand) -> Option<SpriteInstance> {
     match *cmd {
         DrawCommand::PlayerSprite {
@@ -864,98 +862,6 @@ fn sprite_instance_from_command(cmd: &DrawCommand) -> Option<SpriteInstance> {
                 color_tint: [1.0, 1.0, 1.0, 1.0],
             })
         }
-        DrawCommand::Sprite {
-            x,
-            y,
-            kind_id: kind,
-            frame: anim_frame,
-        } => match kind {
-            1..=3 => {
-                let sz = enemy_sprite_size(kind);
-                let (uv_off, uv_sz) = enemy_anim_uv(kind, anim_frame);
-                Some(SpriteInstance {
-                    position: [x, y],
-                    size: [sz, sz],
-                    uv_offset: uv_off,
-                    uv_size: uv_sz,
-                    color_tint: [1.0, 1.0, 1.0, 1.0],
-                })
-            }
-            21..=23 => {
-                let base = kind - ELITE_RENDER_KIND_OFFSET;
-                let sz = enemy_sprite_size(base) * ELITE_SIZE_MULTIPLIER;
-                let (uv_off, uv_sz) = enemy_anim_uv(base, anim_frame);
-                Some(SpriteInstance {
-                    position: [x - sz * 0.1, y - sz * 0.1],
-                    size: [sz, sz],
-                    uv_offset: uv_off,
-                    uv_size: uv_sz,
-                    color_tint: [1.0, 0.4, 0.4, 1.0],
-                })
-            }
-            crate::BULLET_KIND_NORMAL => {
-                let (uv_off, uv_sz) = bullet_uv();
-                Some(SpriteInstance {
-                    position: [x - 8.0, y - 8.0],
-                    size: [16.0, 16.0],
-                    uv_offset: uv_off,
-                    uv_size: uv_sz,
-                    color_tint: [1.0, 1.0, 1.0, 1.0],
-                })
-            }
-            crate::BULLET_KIND_FIREBALL => {
-                let (uv_off, uv_sz) = fireball_uv();
-                Some(SpriteInstance {
-                    position: [x - 11.0, y - 11.0],
-                    size: [22.0, 22.0],
-                    uv_offset: uv_off,
-                    uv_size: uv_sz,
-                    color_tint: [1.0, 1.0, 1.0, 1.0],
-                })
-            }
-            crate::BULLET_KIND_LIGHTNING => {
-                let (uv_off, uv_sz) = lightning_bullet_uv();
-                Some(SpriteInstance {
-                    position: [x - 9.0, y - 9.0],
-                    size: [18.0, 18.0],
-                    uv_offset: uv_off,
-                    uv_size: uv_sz,
-                    color_tint: [1.0, 1.0, 1.0, 1.0],
-                })
-            }
-            crate::BULLET_KIND_WHIP => {
-                let (uv_off, uv_sz) = whip_uv();
-                Some(SpriteInstance {
-                    position: [x - 20.0, y - 10.0],
-                    size: [40.0, 20.0],
-                    uv_offset: uv_off,
-                    uv_size: uv_sz,
-                    color_tint: [1.0, 1.0, 1.0, 1.0],
-                })
-            }
-            11..=13 => {
-                let sz = enemy_sprite_size(kind);
-                let (uv_off, uv_sz) = enemy_anim_uv(kind, 0);
-                Some(SpriteInstance {
-                    position: [x, y],
-                    size: [sz, sz],
-                    uv_offset: uv_off,
-                    uv_size: uv_sz,
-                    color_tint: [1.0, 1.0, 1.0, 1.0],
-                })
-            }
-            crate::BULLET_KIND_ROCK => {
-                let (uv_off, uv_sz) = rock_bullet_uv();
-                Some(SpriteInstance {
-                    position: [x - 14.0, y - 14.0],
-                    size: [28.0, 28.0],
-                    uv_offset: uv_off,
-                    uv_size: uv_sz,
-                    color_tint: [1.0, 1.0, 1.0, 1.0],
-                })
-            }
-            _ => None,
-        },
         DrawCommand::Particle {
             x,
             y,

@@ -3,7 +3,8 @@
 
 use super::util::{lock_poisoned_err, params_not_loaded_err};
 use physics::constants::{
-    CELL_SIZE, MAP_HEIGHT, MAP_WIDTH, PARTICLE_RNG_SEED, PLAYER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH,
+    BULLET_LIFETIME, BULLET_SPEED, CELL_SIZE, MAP_HEIGHT, MAP_WIDTH, PARTICLE_RNG_SEED,
+    PLAYER_SIZE, PLAYER_SPEED, SCREEN_HEIGHT, SCREEN_WIDTH,
 };
 use physics::entity_params::{
     BossParams, EnemyParams, EntityParamTables, FirePattern, WeaponParams,
@@ -58,6 +59,15 @@ pub fn create_world() -> ResourceArc<GameWorld> {
         enemy_damage_this_frame: Vec::new(),
         map_width: MAP_WIDTH,
         map_height: MAP_HEIGHT,
+        player_speed: PLAYER_SPEED,
+        bullet_speed: BULLET_SPEED,
+        bullet_lifetime: BULLET_LIFETIME,
+        collect_radius: 60.0,
+        magnet_collect_radius: 9999.0,
+        magnet_duration: 10.0,
+        magnet_speed: 300.0,
+        spawn_min_dist: 800.0,
+        spawn_max_dist: 1200.0,
         hud_level: 1,
         hud_exp: 0,
         hud_exp_to_next: 10,
@@ -167,6 +177,46 @@ pub fn set_world_size(world: ResourceArc<GameWorld>, width: f64, height: f64) ->
     Ok(ok())
 }
 
+/// R-C1: 物理定数を外部から注入する。
+/// params: %{player_speed: 200, bullet_speed: 400, bullet_lifetime: 3.0} 等。指定キーのみ更新。
+/// Elixir は atom キーで渡すが、map_get は "player_speed" 等の文字列でルックアップ（Rustler は
+/// 文字列からアトムを生成し、Elixir の :player_speed と一致する）。
+#[rustler::nif]
+pub fn set_world_params(
+    world: ResourceArc<GameWorld>,
+    params: Term,
+) -> NifResult<Atom> {
+    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
+    if let Ok(v) = map_get::<f64>(params, "player_speed") {
+        w.player_speed = v as f32;
+    }
+    if let Ok(v) = map_get::<f64>(params, "bullet_speed") {
+        w.bullet_speed = v as f32;
+    }
+    if let Ok(v) = map_get::<f64>(params, "bullet_lifetime") {
+        w.bullet_lifetime = v as f32;
+    }
+    if let Ok(v) = map_get::<f64>(params, "collect_radius") {
+        w.collect_radius = v as f32;
+    }
+    if let Ok(v) = map_get::<f64>(params, "magnet_collect_radius") {
+        w.magnet_collect_radius = v as f32;
+    }
+    if let Ok(v) = map_get::<f64>(params, "magnet_duration") {
+        w.magnet_duration = v as f32;
+    }
+    if let Ok(v) = map_get::<f64>(params, "magnet_speed") {
+        w.magnet_speed = v as f32;
+    }
+    if let Ok(v) = map_get::<f64>(params, "spawn_min_dist") {
+        w.spawn_min_dist = v as f32;
+    }
+    if let Ok(v) = map_get::<f64>(params, "spawn_max_dist") {
+        w.spawn_max_dist = v as f32;
+    }
+    Ok(ok())
+}
+
 /// Phase 3-A: エンティティパラメータテーブルを外部から注入する。
 ///
 /// 引数はいずれもアトムキーのマップのリスト。
@@ -240,6 +290,28 @@ fn decode_enemy_params(term: Term) -> NifResult<Vec<EnemyParams>> {
     .collect()
 }
 
+fn decode_optional_float_vec(item: Term, key: &str) -> Option<Vec<f32>> {
+    let term: Term = map_get(item, key).ok()?;
+    if term.is_atom() {
+        return None;
+    }
+    let list: ListIterator = term.decode().ok()?;
+    list.map(|x| x.decode::<f64>().map(|v| v as f32))
+        .collect::<Result<Vec<_>, _>>()
+        .ok()
+}
+
+fn decode_optional_usize_vec(item: Term, key: &str) -> Option<Vec<usize>> {
+    let term: Term = map_get(item, key).ok()?;
+    if term.is_atom() {
+        return None;
+    }
+    let list: ListIterator = term.decode().ok()?;
+    list.map(|x| x.decode::<usize>())
+        .collect::<Result<Vec<_>, _>>()
+        .ok()
+}
+
 fn decode_particle_color(item: Term) -> [f32; 4] {
     if let Ok(v) = map_get::<Vec<f64>>(item, "particle_color") {
         if v.len() == 4 {
@@ -284,6 +356,9 @@ fn decode_weapon_params(term: Term) -> NifResult<Vec<WeaponParams>> {
         let chain_count: u8 = map_get::<u64>(item, "chain_count")
             .or_else(|_| map_get::<i64>(item, "chain_count").map(|v| v as u64))
             .unwrap_or(0) as u8;
+        let whip_table = decode_optional_float_vec(item, "whip_range_per_level");
+        let aura_table = decode_optional_float_vec(item, "aura_radius_per_level");
+        let chain_table = decode_optional_usize_vec(item, "chain_count_per_level");
         Ok(WeaponParams {
             cooldown: map_get::<f64>(item, "cooldown")? as f32,
             damage: map_get::<i64>(item, "damage")? as i32,
@@ -294,6 +369,9 @@ fn decode_weapon_params(term: Term) -> NifResult<Vec<WeaponParams>> {
             fire_pattern,
             range,
             chain_count,
+            whip_range_per_level: whip_table,
+            aura_radius_per_level: aura_table,
+            chain_count_per_level: chain_table,
         })
     })
     .collect()

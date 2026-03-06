@@ -253,8 +253,9 @@ defmodule Content.VampireSurvivor.Scenes.Playing do
 
   @doc """
   weapon_levels と weapon_cooldowns を set_weapon_slots NIF 用の
-  [{kind_id, level, cooldown, precomputed_damage}] リストに変換する。
+  [{kind_id, level, cooldown_timer, cooldown_sec, precomputed_damage}] リストに変換する。
 
+  R-W1: cooldown_sec は WeaponFormulas.effective_cooldown で Elixir 側で計算して注入。
   R-W2: precomputed_damage は WeaponFormulas.effective_damage で Elixir 側で計算して注入。
   """
   def weapon_slots_for_nif(weapon_levels, weapon_cooldowns \\ %{}) do
@@ -268,21 +269,23 @@ defmodule Content.VampireSurvivor.Scenes.Playing do
           []
 
         kind_id ->
-          cooldown = Map.get(weapon_cooldowns, weapon_name, 0.0)
+          cooldown_timer = Map.get(weapon_cooldowns, weapon_name, 0.0)
           wp = Enum.at(weapon_params, kind_id)
 
-          precomputed_damage =
+          {precomputed_damage, cooldown_sec} =
             if wp do
-              WeaponFormulas.effective_damage(wp[:damage], max(1, level))
+              damage = WeaponFormulas.effective_damage(wp[:damage], max(1, level))
+              cd = WeaponFormulas.effective_cooldown(wp[:cooldown], max(1, level))
+              {damage, cd}
             else
               Logger.warning(
                 "weapon_slots_for_nif: kind_id=#{kind_id} not found in weapon_params"
               )
 
-              0
+              {0, 1.0}
             end
 
-          [{kind_id, level, cooldown, precomputed_damage}]
+          [{kind_id, level, cooldown_timer, cooldown_sec, precomputed_damage}]
       end
     end)
   end

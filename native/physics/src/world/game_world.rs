@@ -86,6 +86,18 @@ pub struct GameWorldInner {
     /// Phase 3-A: マップサイズ（set_world_size NIF で注入）
     pub map_width: f32,
     pub map_height: f32,
+    /// R-C1: 物理定数（set_world_params NIF で注入可能）。デフォルトは constants の値。
+    pub player_speed: f32,
+    pub bullet_speed: f32,
+    pub bullet_lifetime: f32,
+    /// R-I1: アイテム収集半径・磁石パラメータ（set_world_params で注入可能）
+    pub collect_radius: f32,
+    pub magnet_collect_radius: f32,
+    pub magnet_duration: f32,
+    pub magnet_speed: f32,
+    /// R-S1: 敵スポーン距離（set_world_params で注入可能）。プレイヤー周囲 min〜max px の円周上
+    pub spawn_min_dist: f32,
+    pub spawn_max_dist: f32,
     /// Phase R-3 以降デッドフィールド: push_render_frame の HudData に移行済み。
     /// ゲームロジック・レンダリングパイプラインのいずれも参照しない。
     pub hud_level: u32,

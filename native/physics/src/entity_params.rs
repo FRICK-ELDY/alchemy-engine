@@ -77,6 +77,12 @@ pub struct WeaponParams {
     pub range: f32,
     /// 連鎖数（Chain パターン用）
     pub chain_count: u8,
+    /// R-F1: Whip の level ごとの実効範囲。None の場合は range + (level-1)*20 で計算
+    pub whip_range_per_level: Option<Vec<f32>>,
+    /// R-F1: Aura の level ごとの実効半径。None の場合は range + (level-1)*15 で計算
+    pub aura_radius_per_level: Option<Vec<f32>>,
+    /// R-F1: Chain の level ごとの実効連鎖数。None の場合は chain_count + level/2 で計算
+    pub chain_count_per_level: Option<Vec<usize>>,
 }
 
 impl WeaponParams {
@@ -88,19 +94,34 @@ impl WeaponParams {
             .unwrap_or(1)
     }
 
-    /// Whip の実効範囲: base_range + (level - 1) * 20
+    /// Whip の実効範囲。R-F1: テーブル優先、未定義時は range + (level - 1) * 20
+    /// level 9 以上は index 7 の値を常に使用（テーブル長 8 の上限）。
     pub fn whip_range(&self, level: u32) -> f32 {
-        self.range + (level as f32 - 1.0) * 20.0
+        let idx = (level.clamp(1, 8) - 1) as usize;
+        self.whip_range_per_level
+            .as_ref()
+            .and_then(|t| t.get(idx).copied())
+            .unwrap_or_else(|| self.range + (level as f32 - 1.0) * 20.0)
     }
 
-    /// Aura の実効半径: base_range + (level - 1) * 15
+    /// Aura の実効半径。R-F1: テーブル優先、未定義時は range + (level - 1) * 15
+    /// level 9 以上は index 7 の値を常に使用（テーブル長 8 の上限）。
     pub fn aura_radius(&self, level: u32) -> f32 {
-        self.range + (level as f32 - 1.0) * 15.0
+        let idx = (level.clamp(1, 8) - 1) as usize;
+        self.aura_radius_per_level
+            .as_ref()
+            .and_then(|t| t.get(idx).copied())
+            .unwrap_or_else(|| self.range + (level as f32 - 1.0) * 15.0)
     }
 
-    /// Chain の実効連鎖数: base_chain_count + level / 2
+    /// Chain の実効連鎖数。R-F1: テーブル優先、未定義時は chain_count + level / 2
+    /// level 9 以上は index 7 の値を常に使用（テーブル長 8 の上限）。
     pub fn chain_count_for_level(&self, level: u32) -> usize {
-        self.chain_count as usize + level as usize / 2
+        let idx = (level.clamp(1, 8) - 1) as usize;
+        self.chain_count_per_level
+            .as_ref()
+            .and_then(|t| t.get(idx).copied())
+            .unwrap_or_else(|| self.chain_count as usize + level as usize / 2)
     }
 }
 
@@ -184,6 +205,9 @@ mod tests {
                 fire_pattern: FirePattern::Aimed,
                 range: 0.0,
                 chain_count: 0,
+                whip_range_per_level: None,
+                aura_radius_per_level: None,
+                chain_count_per_level: None,
             }],
             bosses: vec![BossParams {
                 max_hp: 1000.0,
