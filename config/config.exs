@@ -50,6 +50,12 @@ config :server, :game_events_module, Contents.GameEvents
 # 環境ごとに鍵を変えることで配布バイナリ間の互換性を制御できる。
 config :core, :save_hmac_secret, "alchemy-engine-save-secret-v1"
 
+# FormulaStore の synced 更新をネットワークブロードキャストする MFA。
+# 形式: {Mod, Fun, []}。apply(Mod, Fun, [room_id, event]) が呼ばれる。
+# 未設定・nil のときはブロードキャストしない。
+# core 単体利用（network 未ロード）の場合は config/test.exs のように nil を設定すること。
+config :core, :formula_store_broadcast, {Network.Distributed, :broadcast, []}
+
 # VR 対応 NIF をビルドする場合: features: ["xr"]
 # mix compile 時に nif に --features xr が渡される。
 config :core, Core.NifBridge, features: []
