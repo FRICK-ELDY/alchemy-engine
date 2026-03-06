@@ -4,8 +4,8 @@ defmodule Core.FormulaStoreTest do
   # テスト間でリソースが干渉する。並列実行を避け、setup で初期化する。
   use ExUnit.Case, async: false
 
-  alias Core.FormulaStore
   alias Core.FormulaGraph
+  alias Core.FormulaStore
 
   setup do
     Application.put_env(:core, :formula_store_broadcast, nil)

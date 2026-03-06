@@ -1,4 +1,6 @@
 defmodule Content.VampireSurvivor.LevelComponent do
+  alias Content.VampireSurvivor.SpawnComponent
+
   @moduledoc """
   レベル・EXP・スコア・プレイヤー HP・アイテムドロップ・武器選択 UI を担うコンポーネント。
 
@@ -37,7 +39,7 @@ defmodule Content.VampireSurvivor.LevelComponent do
     score_delta = apply_kill_to_scene(content, exp)
 
     call_nif(:add_score_popup, fn ->
-      lifetime = Content.VampireSurvivor.SpawnComponent.score_popup_lifetime()
+      lifetime = SpawnComponent.score_popup_lifetime()
       Core.NifBridge.add_score_popup(context.world_ref, x, y, score_delta, lifetime)
     end)
 

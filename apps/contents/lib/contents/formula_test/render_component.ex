@@ -38,17 +38,19 @@ defmodule Content.FormulaTest.RenderComponent do
       Contents.SceneStack.update_by_module(
         runner,
         Content.FormulaTest.Scenes.Playing,
-        fn s ->
-          if s.cursor_grab_request == cursor_grab do
-            Map.put(s, :cursor_grab_request, :no_change)
-          else
-            s
-          end
-        end
+        &clear_cursor_grab_if_matching(&1, cursor_grab)
       )
     end
 
     :ok
+  end
+
+  defp clear_cursor_grab_if_matching(state, cursor_grab) do
+    if state.cursor_grab_request == cursor_grab do
+      Map.put(state, :cursor_grab_request, :no_change)
+    else
+      state
+    end
   end
 
   defp build_commands do

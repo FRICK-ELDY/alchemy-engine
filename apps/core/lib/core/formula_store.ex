@@ -34,6 +34,8 @@ defmodule Core.FormulaStore do
 
   @synced_table :formula_store_synced
 
+  alias Core.FormulaStore.LocalBackend, as: LocalBackend
+
   @doc """
   ETS テーブルを初期化する。初回利用時に自動で呼ばれる。
 
@@ -165,16 +167,16 @@ defmodule Core.FormulaStore do
   end
 
   defp safe_local_get(key) do
-    if Process.whereis(Core.FormulaStore.LocalBackend) do
-      Core.FormulaStore.LocalBackend.get(key)
+    if Process.whereis(LocalBackend) do
+      LocalBackend.get(key)
     else
       :error
     end
   end
 
   defp safe_local_put(key, value) do
-    if Process.whereis(Core.FormulaStore.LocalBackend) do
-      Core.FormulaStore.LocalBackend.put(key, value)
+    if Process.whereis(LocalBackend) do
+      LocalBackend.put(key, value)
     end
 
     :ok
