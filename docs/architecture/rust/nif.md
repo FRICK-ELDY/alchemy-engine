@@ -117,7 +117,7 @@ graph TD
 | `set_boss_phase_timer(world, timer)` | ボス特殊行動タイマーを設定（AI） |
 | `fire_boss_projectile(world, dx, dy, speed, dmg, lifetime)` | ボス弾を発射（AI） |
 | `get_boss_state(world)` | ボス状態を取得（AI 用） |
-| `add_score_popup(world, x, y, value)` | スコアポップアップを描画バッファに追加 |
+| `add_score_popup(world, x, y, value, lifetime)` | スコアポップアップを描画バッファに追加（R-E1: lifetime は contents SSoT） |
 
 > 武器管理は `set_weapon_slots` で毎フレーム Elixir 側から全スロットを注入する設計（I-2）。
 

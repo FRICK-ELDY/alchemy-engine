@@ -39,7 +39,8 @@ defmodule Core.NifBridge do
     do: :erlang.nif_error(:nif_not_loaded)
 
   # Phase 3-C: スコアポップアップを描画用バッファに追加する NIF
-  def add_score_popup(_world, _x, _y, _value), do: :erlang.nif_error(:nif_not_loaded)
+  # R-E1: lifetime は contents から注入（表示時間の SSoT）
+  def add_score_popup(_world, _x, _y, _value, _lifetime), do: :erlang.nif_error(:nif_not_loaded)
   # Phase 3-B: Elixir 側のルールがアイテムドロップを制御するための NIF
   # kind: 0=Gem, 1=Potion, 2=Magnet
   def spawn_item(_world, _x, _y, _kind, _value), do: :erlang.nif_error(:nif_not_loaded)

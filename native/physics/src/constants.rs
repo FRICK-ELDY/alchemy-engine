@@ -62,8 +62,7 @@ pub const PARTICLE_RNG_SEED: u64 = 67890;
 // Score popup display parameters (score_popups buffer)
 /// スコアポップアップの Y 軸オフセット（エンティティ中心より上に表示）
 pub const POPUP_Y_OFFSET: f32 = -20.0;
-/// スコアポップアップの表示時間（秒）
-pub const POPUP_LIFETIME: f32 = 0.8;
+// R-E1: 表示時間は add_score_popup の lifetime 引数で Elixir (contents) から注入
 
 /// 武器の最近接敵探索半径（MagicWand / Fireball / Lightning 用）
 #[allow(dead_code)] // lib で使用、bin (game_window) では未使用（main.rs 空間ハッシュ化で使用予定）

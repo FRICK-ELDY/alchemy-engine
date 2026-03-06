@@ -43,7 +43,7 @@ defmodule Core.NifBridge.Behaviour do
               non_neg_integer(),
               float()
             ) :: :ok
-  @callback add_score_popup(reference(), float(), float(), non_neg_integer()) :: :ok
+  @callback add_score_popup(reference(), float(), float(), non_neg_integer(), float()) :: :ok
   @callback spawn_item(reference(), float(), float(), non_neg_integer(), non_neg_integer()) :: :ok
   # Phase R-3: 汎用エンティティ操作 NIF
   @callback set_entity_velocity(reference(), atom(), float(), float()) :: :ok
