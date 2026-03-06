@@ -35,7 +35,8 @@ pub fn set_weapon_slots(
 
 /// Elixir SSoT 移行: 特殊エンティティの衝突用スナップショットを注入する NIF。
 /// 毎フレーム on_nif_sync で呼ばれる。
-/// snapshot: :none | {:alive, x, y, radius, damage_per_sec, invincible}
+/// snapshot: :none | {:alive, x, y, radius, damage_this_frame, invincible}
+/// R-P2: damage_this_frame は contents が damage_per_sec * dt で事前計算して渡す。
 #[rustler::nif]
 pub fn set_special_entity_snapshot(
     world: ResourceArc<GameWorld>,
@@ -54,7 +55,7 @@ pub fn set_special_entity_snapshot(
                 x: tuple.1 as f32,
                 y: tuple.2 as f32,
                 radius: tuple.3 as f32,
-                damage_per_sec: tuple.4 as f32,
+                damage_this_frame: tuple.4 as f32,
                 invincible: tuple.5,
             });
         } else {

@@ -8,11 +8,13 @@
 ///
 /// Elixir が毎フレーム set_special_entity_snapshot NIF で注入する。
 /// 永続状態を持たず、1 tick 分のスナップショットのみ。
+/// R-P2: damage_this_frame は contents が damage_per_sec * dt で事前計算して注入。
 #[derive(Clone, Debug, Default)]
 pub struct SpecialEntitySnapshot {
     pub x: f32,
     pub y: f32,
     pub radius: f32,
-    pub damage_per_sec: f32,
+    /// このフレームの接触ダメージ（Elixir が damage_per_sec * dt で計算済み）
+    pub damage_this_frame: f32,
     pub invincible: bool,
 }

@@ -571,8 +571,12 @@ defmodule Contents.GameEvents do
     control_ref = state.control_ref
     content = current_content()
 
+    # R-P2: dt = 1 フレームあたりの秒数。contents が damage_this_frame 計算に利用。
+    dt = @tick_ms / 1000.0
+
     base = %{
       tick_ms: @tick_ms,
+      dt: dt,
       world_ref: state.world_ref,
       render_buf_ref: state.render_buf_ref,
       now: now,

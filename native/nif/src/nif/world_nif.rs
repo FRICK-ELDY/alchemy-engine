@@ -55,6 +55,7 @@ pub fn create_world() -> ResourceArc<GameWorld> {
         prev_tick_ms: 0,
         curr_tick_ms: 0,
         params: EntityParamTables::default(),
+        enemy_damage_this_frame: Vec::new(),
         map_width: MAP_WIDTH,
         map_height: MAP_HEIGHT,
         hud_level: 1,
@@ -189,6 +190,27 @@ pub fn set_entity_params(
         weapons,
         bosses,
     };
+    Ok(ok())
+}
+
+/// R-P2: 敵接触の damage_this_frame を注入する NIF。
+/// 毎フレーム on_nif_sync で呼ぶ。list: [{kind_id, damage}, ...] — contents が damage_per_sec * dt で事前計算。
+/// 使用範囲を毎回クリアしてから書き込む（リストから外れた kind_id の古い値を残さない）。
+#[rustler::nif]
+pub fn set_enemy_damage_this_frame(
+    world: ResourceArc<GameWorld>,
+    list: Vec<(u8, f64)>,
+) -> NifResult<Atom> {
+    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
+    let max_id = list.iter().map(|&(id, _)| id as usize).max().unwrap_or(0);
+    w.enemy_damage_this_frame.resize(max_id + 1, 0.0);
+    w.enemy_damage_this_frame.fill(0.0);
+    for (kind_id, damage) in list {
+        let i = kind_id as usize;
+        if i < w.enemy_damage_this_frame.len() {
+            w.enemy_damage_this_frame[i] = damage as f32;
+        }
+    }
     Ok(ok())
 }
 

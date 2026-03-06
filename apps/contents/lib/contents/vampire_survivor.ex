@@ -55,6 +55,18 @@ defmodule Content.VampireSurvivor do
   defdelegate assets_path, to: Content.VampireSurvivor.SpawnComponent
   defdelegate entity_registry, to: Content.VampireSurvivor.SpawnComponent
 
+  @doc """
+  R-P2: 敵接触の damage_this_frame リスト。[{kind_id, damage}, ...]。
+  LevelComponent が on_nif_sync で set_enemy_damage_this_frame NIF に渡す。
+  """
+  def enemy_damage_this_frame(context) do
+    # GameEvents.build_context で必ず :dt が渡される。フォールバックは将来の変更に対する保険。
+    dt = Map.get(context, :dt, 16 / 1000.0)
+
+    Content.VampireSurvivor.SpawnComponent.enemy_damage_per_sec_list()
+    |> Enum.map(fn {kind_id, damage_per_sec} -> {kind_id, damage_per_sec * dt} end)
+  end
+
   # ── コンテキストデフォルト ────────────────────────────────────────
 
   def context_defaults, do: %{}
