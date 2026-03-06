@@ -40,7 +40,8 @@ config :network, Network.UDP, port: 4001
 # Content.SimpleBox3D     — シンプルな3Dゲーム（Phase R-6 動作検証用）
 # Content.BulletHell3D    — 3D 弾幕避けゲーム
 # Content.VRTest          — VR 動作検証（Phase A: マウスで見回し）
-config :server, :current, Content.SimpleBox3D
+# Content.FormulaTest     — Formula エンジン検証（Elixir→Rust→Elixir）
+config :server, :current, Content.FormulaTest
 config :server, :map, :plain
 config :server, :game_events_module, Contents.GameEvents
 
