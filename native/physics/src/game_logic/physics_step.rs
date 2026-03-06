@@ -110,6 +110,7 @@ pub fn physics_step_inner(w: &mut GameWorldInner, delta_ms: f64) {
             // Elixir が PlayerDamaged を受信して player_hp 減算・invincible_until 設定し、
             // 次フレームで set_player_snapshot で注入する。
             if inv <= 0.0 && w.player_hp_injected > 0.0 {
+                // R-P1: damage_per_sec は Elixir 注入。x * dt は物理フレームに基づく演算で physics 層の責務。
                 let dmg = params.damage_per_sec * dt;
                 w.frame_events
                     .push(FrameEvent::PlayerDamaged { damage: dmg });

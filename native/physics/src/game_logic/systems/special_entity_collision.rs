@@ -26,6 +26,7 @@ pub(crate) fn collide_special_entity_snapshot(w: &mut GameWorldInner, dt: f32) {
         && w.player_invincible_timer_injected <= 0.0
         && w.player_hp_injected > 0.0
     {
+        // R-P1: damage_per_sec は Elixir 注入。x * dt は physics 層の責務。
         let dmg = snap.damage_per_sec * dt;
         w.frame_events
             .push(FrameEvent::PlayerDamaged { damage: dmg });
@@ -41,6 +42,7 @@ pub(crate) fn collide_special_entity_snapshot(w: &mut GameWorldInner, dt: f32) {
             if !w.bullets.alive[bi] {
                 continue;
             }
+            // R-P1: bullets.damage は R-W2 で Elixir の precomputed_damage から注入済み。
             let dmg = w.bullets.damage[bi];
             if dmg == 0 {
                 continue;

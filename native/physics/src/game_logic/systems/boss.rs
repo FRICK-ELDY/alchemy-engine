@@ -109,6 +109,7 @@ pub(crate) fn update_boss(w: &mut GameWorldInner, dt: f32) {
     }
 
     if eff.hurt_player && w.player.invincible_timer <= 0.0 && w.player.hp > 0.0 {
+        // R-P1: boss_damage は Elixir 注入。x * dt は physics 層の責務。
         let dmg = eff.boss_damage * dt;
         w.player.invincible_timer = INVINCIBLE_DURATION;
         w.frame_events
