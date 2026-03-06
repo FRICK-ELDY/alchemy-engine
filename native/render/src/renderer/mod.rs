@@ -3,16 +3,12 @@
 //! 1.8: nif から render へ分離移設。
 
 use crate::DrawCommand;
-use physics::constants::{BG_B, BG_G, BG_R, SPRITE_SIZE};
-use physics::item::{RENDER_KIND_GEM, RENDER_KIND_MAGNET, RENDER_KIND_POTION};
+use physics::constants::{BG_B, BG_G, BG_R};
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
 use winit::window::Window;
 pub(crate) mod pipeline_3d;
 mod ui;
-
-pub(crate) const ELITE_RENDER_KIND_OFFSET: u8 = 20;
-pub(crate) const ELITE_SIZE_MULTIPLIER: f32 = 1.2;
 
 // ─── 頂点・インデックス ────────────────────────────────────────
 
@@ -51,143 +47,14 @@ pub struct SpriteInstance {
     pub color_tint: [f32; 4], // RGBA 乗算カラー
 }
 
-// ─── アトラス UV 定数（1.2.9: 1600x64 px ボスエネミー対応アトラス）──
-// アニメーションキャラクター（各 64x64、複数フレーム）:
-//   [   0.. 255] プレイヤー歩行 4 フレーム
-//   [ 256.. 511] Slime バウンス 4 フレーム
-//   [ 512.. 639] Bat 羽ばたき 2 フレーム
-//   [ 640.. 767] Golem 歩行 2 フレーム
-// 静止スプライト（各 64x64）:
-//   [ 768.. 831] 弾丸
-//   [ 832.. 895] パーティクル
-//   [ 896.. 959] 経験値宝石
-//   [ 960..1023] 回復ポーション
-//   [1024..1087] 磁石
-//   [1088..1151] Fireball
-//   [1152..1215] Lightning
-//   [1216..1279] Whip
-// 1.2.9: ボスエネミー（各 64x64）:
-//   [1280..1343] Slime King
-//   [1344..1407] Bat Lord
-//   [1408..1471] Stone Golem
-//   [1472..1535] 岩弾
-//   [1536..1599] Skeleton（専用スロット）
-//   [1600..1663] Ghost（専用スロット）※ atlas.png を 1664px 幅に拡張すること
+// ─── アトラス UV（R-R1: ゲーム固有 UV は contents SpriteParams が SSoT。Particle/Obstacle のみ汎用 placeholder）──
 const ATLAS_W: f32 = 1664.0;
-const FRAME_W: f32 = 64.0; // 1 フレームの幅（px）
-
-// アトラス X オフセット（px）— レイアウト変更時はここだけ修正
-const PLAYER_ATLAS_OFFSET_X: f32 = 0.0;
-const SLIME_ATLAS_OFFSET_X: f32 = 256.0;
-const BAT_ATLAS_OFFSET_X: f32 = 512.0;
-const GOLEM_ATLAS_OFFSET_X: f32 = 640.0;
-const BULLET_ATLAS_OFFSET_X: f32 = 768.0;
+const FRAME_W: f32 = 64.0;
 const PARTICLE_ATLAS_OFFSET_X: f32 = 832.0;
-const GEM_ATLAS_OFFSET_X: f32 = 896.0;
-const POTION_ATLAS_OFFSET_X: f32 = 960.0;
-const MAGNET_ATLAS_OFFSET_X: f32 = 1024.0;
-const FIREBALL_ATLAS_OFFSET_X: f32 = 1088.0;
-const LIGHTNING_ATLAS_OFFSET_X: f32 = 1152.0;
-const WHIP_ATLAS_OFFSET_X: f32 = 1216.0;
-const SLIME_KING_ATLAS_OFFSET_X: f32 = 1280.0;
-const BAT_LORD_ATLAS_OFFSET_X: f32 = 1344.0;
-const STONE_GOLEM_ATLAS_OFFSET_X: f32 = 1408.0;
-const ROCK_BULLET_ATLAS_OFFSET_X: f32 = 1472.0;
-const SKELETON_ATLAS_OFFSET_X: f32 = 1536.0;
-const GHOST_ATLAS_OFFSET_X: f32 = 1600.0;
 
-/// プレイヤーのアニメーション UV（フレーム番号 0〜3）
-pub fn player_anim_uv(frame: u8) -> ([f32; 2], [f32; 2]) {
-    let x = PLAYER_ATLAS_OFFSET_X + (frame as f32) * FRAME_W;
-    ([x / ATLAS_W, 0.0], [FRAME_W / ATLAS_W, 1.0])
-}
-/// Slime のアニメーション UV（フレーム番号 0〜3）
-pub fn slime_anim_uv(frame: u8) -> ([f32; 2], [f32; 2]) {
-    let x = SLIME_ATLAS_OFFSET_X + (frame as f32) * FRAME_W;
-    ([x / ATLAS_W, 0.0], [FRAME_W / ATLAS_W, 1.0])
-}
-/// Bat のアニメーション UV（フレーム番号 0〜1）
-pub fn bat_anim_uv(frame: u8) -> ([f32; 2], [f32; 2]) {
-    let frame2 = (frame % 2) as f32;
-    let x = BAT_ATLAS_OFFSET_X + frame2 * FRAME_W;
-    ([x / ATLAS_W, 0.0], [FRAME_W / ATLAS_W, 1.0])
-}
-/// Golem のアニメーション UV（フレーム番号 0〜1）
-pub fn golem_anim_uv(frame: u8) -> ([f32; 2], [f32; 2]) {
-    let frame2 = (frame % 2) as f32;
-    let x = GOLEM_ATLAS_OFFSET_X + frame2 * FRAME_W;
-    ([x / ATLAS_W, 0.0], [FRAME_W / ATLAS_W, 1.0])
-}
-pub fn bullet_uv() -> ([f32; 2], [f32; 2]) {
-    (
-        [BULLET_ATLAS_OFFSET_X / ATLAS_W, 0.0],
-        [FRAME_W / ATLAS_W, 1.0],
-    )
-}
-pub fn particle_uv() -> ([f32; 2], [f32; 2]) {
+fn particle_uv() -> ([f32; 2], [f32; 2]) {
     (
         [PARTICLE_ATLAS_OFFSET_X / ATLAS_W, 0.0],
-        [FRAME_W / ATLAS_W, 1.0],
-    )
-}
-pub fn gem_uv() -> ([f32; 2], [f32; 2]) {
-    (
-        [GEM_ATLAS_OFFSET_X / ATLAS_W, 0.0],
-        [FRAME_W / ATLAS_W, 1.0],
-    )
-}
-pub fn potion_uv() -> ([f32; 2], [f32; 2]) {
-    (
-        [POTION_ATLAS_OFFSET_X / ATLAS_W, 0.0],
-        [FRAME_W / ATLAS_W, 1.0],
-    )
-}
-pub fn magnet_uv() -> ([f32; 2], [f32; 2]) {
-    (
-        [MAGNET_ATLAS_OFFSET_X / ATLAS_W, 0.0],
-        [FRAME_W / ATLAS_W, 1.0],
-    )
-}
-pub fn fireball_uv() -> ([f32; 2], [f32; 2]) {
-    (
-        [FIREBALL_ATLAS_OFFSET_X / ATLAS_W, 0.0],
-        [FRAME_W / ATLAS_W, 1.0],
-    )
-}
-pub fn lightning_bullet_uv() -> ([f32; 2], [f32; 2]) {
-    (
-        [LIGHTNING_ATLAS_OFFSET_X / ATLAS_W, 0.0],
-        [FRAME_W / ATLAS_W, 1.0],
-    )
-}
-pub fn whip_uv() -> ([f32; 2], [f32; 2]) {
-    (
-        [WHIP_ATLAS_OFFSET_X / ATLAS_W, 0.0],
-        [FRAME_W / ATLAS_W, 1.0],
-    )
-}
-/// 1.2.9: ボス UV
-pub fn slime_king_uv() -> ([f32; 2], [f32; 2]) {
-    (
-        [SLIME_KING_ATLAS_OFFSET_X / ATLAS_W, 0.0],
-        [FRAME_W / ATLAS_W, 1.0],
-    )
-}
-pub fn bat_lord_uv() -> ([f32; 2], [f32; 2]) {
-    (
-        [BAT_LORD_ATLAS_OFFSET_X / ATLAS_W, 0.0],
-        [FRAME_W / ATLAS_W, 1.0],
-    )
-}
-pub fn stone_golem_uv() -> ([f32; 2], [f32; 2]) {
-    (
-        [STONE_GOLEM_ATLAS_OFFSET_X / ATLAS_W, 0.0],
-        [FRAME_W / ATLAS_W, 1.0],
-    )
-}
-pub fn rock_bullet_uv() -> ([f32; 2], [f32; 2]) {
-    (
-        [ROCK_BULLET_ATLAS_OFFSET_X / ATLAS_W, 0.0],
         [FRAME_W / ATLAS_W, 1.0],
     )
 }
@@ -235,49 +102,6 @@ impl CameraUniform {
 //               エリート敵は通常敵スロットを共有するため Enemies 合計は変わらない。
 // Obstacles: MapLoader の最大マップ（:forest）で 8 体。
 pub(crate) const MAX_INSTANCES: usize = 14510;
-
-// 敵タイプ別のスプライトサイズ（px）
-// kind: 1=slime(40px), 2=bat(24px), 3=golem(64px), 4=ghost(32px), 5=skeleton(40px)
-// 1.2.9: boss kind: 11=SlimeKing(96px), 12=BatLord(96px), 13=StoneGolem(128px)
-pub(crate) fn enemy_sprite_size(kind: u8) -> f32 {
-    match kind {
-        2 => 24.0,   // Bat: 小さい
-        3 => 64.0,   // Golem: 大きい
-        4 => 32.0,   // Ghost
-        5 => 40.0,   // Skeleton
-        11 => 96.0,  // Slime King: 巨大
-        12 => 96.0,  // Bat Lord: 巨大
-        13 => 128.0, // Stone Golem: 最大
-        _ => 40.0,   // Slime: 基本
-    }
-}
-
-/// Skeleton 専用 UV（フレーム番号 0〜1）
-fn skeleton_anim_uv(frame: u8) -> ([f32; 2], [f32; 2]) {
-    let frame2 = (frame % 2) as f32;
-    let x = SKELETON_ATLAS_OFFSET_X + frame2 * FRAME_W;
-    ([x / ATLAS_W, 0.0], [FRAME_W / ATLAS_W, 1.0])
-}
-/// Ghost 専用 UV（フレーム番号 0〜1）
-fn ghost_anim_uv(frame: u8) -> ([f32; 2], [f32; 2]) {
-    let frame2 = (frame % 2) as f32;
-    let x = GHOST_ATLAS_OFFSET_X + frame2 * FRAME_W;
-    ([x / ATLAS_W, 0.0], [FRAME_W / ATLAS_W, 1.0])
-}
-
-/// 1.2.8/1.2.9: アニメーションフレームを考慮した敵 UV（ボスは静止スプライト）
-pub(crate) fn enemy_anim_uv(kind: u8, frame: u8) -> ([f32; 2], [f32; 2]) {
-    match kind {
-        2 => bat_anim_uv(frame),
-        3 => golem_anim_uv(frame),
-        4 => ghost_anim_uv(frame),
-        5 => skeleton_anim_uv(frame),
-        11 => slime_king_uv(),
-        12 => bat_lord_uv(),
-        13 => stone_golem_uv(),
-        _ => slime_anim_uv(frame),
-    }
-}
 
 /// ロードダイアログの種別
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -846,22 +670,10 @@ pub(crate) fn build_sprite_instances(commands: &[DrawCommand]) -> Vec<SpriteInst
 }
 
 /// `DrawCommand` 1件を `SpriteInstance` に変換する。
+/// R-R1: PlayerSprite / Item は contents が SpriteRaw で渡すため廃止。
+/// スプライト描画は SpriteRaw 経由のみ。Particle / Obstacle は汎用 placeholder UV 使用。
 fn sprite_instance_from_command(cmd: &DrawCommand) -> Option<SpriteInstance> {
     match *cmd {
-        DrawCommand::PlayerSprite {
-            x,
-            y,
-            frame: anim_frame,
-        } => {
-            let (uv_off, uv_sz) = player_anim_uv(anim_frame);
-            Some(SpriteInstance {
-                position: [x, y],
-                size: [SPRITE_SIZE, SPRITE_SIZE],
-                uv_offset: uv_off,
-                uv_size: uv_sz,
-                color_tint: [1.0, 1.0, 1.0, 1.0],
-            })
-        }
         DrawCommand::Particle {
             x,
             y,
@@ -896,22 +708,6 @@ fn sprite_instance_from_command(cmd: &DrawCommand) -> Option<SpriteInstance> {
                 color_tint: [r, g, b, 1.0],
             })
         }
-        DrawCommand::Item { x, y, kind } => {
-            let (uv, sz) = match kind {
-                RENDER_KIND_GEM => (gem_uv(), 20.0_f32),
-                RENDER_KIND_POTION => (potion_uv(), 24.0_f32),
-                RENDER_KIND_MAGNET => (magnet_uv(), 28.0_f32),
-                _ => return None,
-            };
-            let (uv_off, uv_sz) = uv;
-            Some(SpriteInstance {
-                position: [x - sz / 2.0, y - sz / 2.0],
-                size: [sz, sz],
-                uv_offset: uv_off,
-                uv_size: uv_sz,
-                color_tint: [1.0, 1.0, 1.0, 1.0],
-            })
-        }
         DrawCommand::SpriteRaw {
             x,
             y,
@@ -927,6 +723,8 @@ fn sprite_instance_from_command(cmd: &DrawCommand) -> Option<SpriteInstance> {
             uv_size,
             color_tint,
         }),
+        // R-R1: 非推奨。contents は SpriteRaw で渡すこと。
+        DrawCommand::PlayerSprite { .. } | DrawCommand::Item { .. } => None,
         // 3D コマンドはスプライトパイプラインでは描画しない
         DrawCommand::Box3D { .. } | DrawCommand::GridPlane { .. } | DrawCommand::Skybox { .. } => {
             None

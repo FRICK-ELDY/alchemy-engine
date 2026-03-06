@@ -67,10 +67,11 @@ defmodule Core.NifBridge do
 
   # Phase R-2: Elixir 側から DrawCommand リストを RenderFrameBuffer に push する
   # commands: DrawCommand タプルのリスト
-  #   {:player_sprite, x, y, frame}
   #   {:sprite_raw, x, y, width, height, {{uv_ox, uv_oy}, {uv_sx, uv_sy}, {r, g, b, a}}}
+  #     — VampireSurvivor はプレイヤー・敵・弾丸・アイテムをこれで渡す
+  #   {:player_sprite, x, y, frame} — レガシー。SpriteRaw で代用可能
+  #   {:item, x, y, kind} — レガシー。SpriteRaw で代用可能
   #   {:particle, x, y, r, g, b, {alpha, size}}
-  #   {:item, x, y, kind}
   #   {:obstacle, x, y, radius, kind}
   # camera: {:camera_2d, offset_x, offset_y} | {:camera_3d, ...}
   # ui: UiCanvas ツリー形式（render_frame_nif.rs の decode_ui_canvas を参照）

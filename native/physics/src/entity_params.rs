@@ -101,7 +101,7 @@ impl WeaponParams {
         self.whip_range_per_level
             .as_ref()
             .and_then(|t| t.get(idx).copied())
-            .unwrap_or_else(|| self.range + (level as f32 - 1.0) * 20.0)
+            .unwrap_or(self.range + (level as f32 - 1.0) * 20.0)
     }
 
     /// Aura の実効半径。R-F1: テーブル優先、未定義時は range + (level - 1) * 15
@@ -111,7 +111,7 @@ impl WeaponParams {
         self.aura_radius_per_level
             .as_ref()
             .and_then(|t| t.get(idx).copied())
-            .unwrap_or_else(|| self.range + (level as f32 - 1.0) * 15.0)
+            .unwrap_or(self.range + (level as f32 - 1.0) * 15.0)
     }
 
     /// Chain の実効連鎖数。R-F1: テーブル優先、未定義時は chain_count + level / 2
@@ -121,7 +121,7 @@ impl WeaponParams {
         self.chain_count_per_level
             .as_ref()
             .and_then(|t| t.get(idx).copied())
-            .unwrap_or_else(|| self.chain_count as usize + level as usize / 2)
+            .unwrap_or(self.chain_count as usize + level as usize / 2)
     }
 }
 

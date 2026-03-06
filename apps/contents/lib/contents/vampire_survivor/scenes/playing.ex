@@ -13,6 +13,7 @@ defmodule Content.VampireSurvivor.Scenes.Playing do
   alias Content.VampireSurvivor.Scenes.BossAlert
   alias Content.VampireSurvivor.Scenes.GameOver
   alias Content.VampireSurvivor.Scenes.LevelUp
+  alias Content.VampireSurvivor.SpawnComponent
   alias Content.VampireSurvivor.SpawnSystem
   alias Content.VampireSurvivor.WeaponFormulas
 
@@ -260,34 +261,36 @@ defmodule Content.VampireSurvivor.Scenes.Playing do
   """
   def weapon_slots_for_nif(weapon_levels, weapon_cooldowns \\ %{}) do
     registry = Core.Config.current().entity_registry().weapons
-    weapon_params = Content.VampireSurvivor.SpawnComponent.weapon_params()
+    weapon_params = SpawnComponent.weapon_params()
 
     weapon_levels
-    |> Enum.flat_map(fn {weapon_name, level} ->
-      case Map.get(registry, weapon_name) do
-        nil ->
-          []
-
-        kind_id ->
-          cooldown_timer = Map.get(weapon_cooldowns, weapon_name, 0.0)
-          wp = Enum.at(weapon_params, kind_id)
-
-          {precomputed_damage, cooldown_sec} =
-            if wp do
-              damage = WeaponFormulas.effective_damage(wp[:damage], max(1, level))
-              cd = WeaponFormulas.effective_cooldown(wp[:cooldown], max(1, level))
-              {damage, cd}
-            else
-              Logger.warning(
-                "weapon_slots_for_nif: kind_id=#{kind_id} not found in weapon_params"
-              )
-
-              {0, 1.0}
-            end
-
-          [{kind_id, level, cooldown_timer, cooldown_sec, precomputed_damage}]
-      end
+    |> Enum.flat_map(fn {name, lv} ->
+      weapon_slot_entry(name, lv, registry, weapon_params, weapon_cooldowns)
     end)
+  end
+
+  defp weapon_slot_entry(weapon_name, level, registry, weapon_params, weapon_cooldowns) do
+    case Map.get(registry, weapon_name) do
+      nil ->
+        []
+
+      kind_id ->
+        cooldown_timer = Map.get(weapon_cooldowns, weapon_name, 0.0)
+        wp = Enum.at(weapon_params, kind_id)
+        {precomputed_damage, cooldown_sec} = slot_damage_and_cooldown(wp, kind_id, level)
+        [{kind_id, level, cooldown_timer, cooldown_sec, precomputed_damage}]
+    end
+  end
+
+  defp slot_damage_and_cooldown(wp, _kind_id, level) when is_map(wp) do
+    damage = WeaponFormulas.effective_damage(wp[:damage], max(1, level))
+    cd = WeaponFormulas.effective_cooldown(wp[:cooldown], max(1, level))
+    {damage, cd}
+  end
+
+  defp slot_damage_and_cooldown(nil, kind_id, _level) do
+    Logger.warning("weapon_slots_for_nif: kind_id=#{kind_id} not found in weapon_params")
+    {0, 1.0}
   end
 
   # ── プライベート ──────────────────────────────────────────────

@@ -1,6 +1,10 @@
 defmodule Content.VampireSurvivor.RenderComponent do
   require Logger
 
+  alias Content.VampireSurvivor.SpawnComponent
+  alias Content.VampireSurvivor.SpriteParams
+  alias Content.VampireSurvivor.WeaponFormulas
+
   @moduledoc """
   毎フレーム DrawCommand リストを組み立てて push_render_frame NIF に送るコンポーネント。
 
@@ -99,15 +103,18 @@ defmodule Content.VampireSurvivor.RenderComponent do
   end
 
   defp push_player(acc, x, y, frame) do
-    # NIF は x, y を f64、frame を u32 で期待
-    [{:player_sprite, x * 1.0, y * 1.0, frame} | acc]
+    # R-R1: SpriteParams を SSoT として SpriteRaw で描画
+    {:ok, {pos_x, pos_y, w, h, uv_off, uv_sz, color}} =
+      SpriteParams.player_sprite_raw_params(x, y, frame)
+
+    [{:sprite_raw, pos_x, pos_y, w, h, {uv_off, uv_sz, color}} | acc]
   end
 
   defp push_boss(acc, {:alive, x, y, radius, render_kind}) do
     entity_x = x - radius
     entity_y = y - radius
 
-    case Content.VampireSurvivor.SpriteParams.sprite_raw_params(
+    case SpriteParams.sprite_raw_params(
            entity_x,
            entity_y,
            render_kind,
@@ -138,7 +145,7 @@ defmodule Content.VampireSurvivor.RenderComponent do
 
   defp push_enemies(acc, enemies, anim_frame) do
     Enum.reduce(enemies, acc, fn {x, y, kind_id}, a ->
-      case Content.VampireSurvivor.SpriteParams.sprite_raw_params(x, y, kind_id, anim_frame) do
+      case SpriteParams.sprite_raw_params(x, y, kind_id, anim_frame) do
         {:ok, {pos_x, pos_y, w, h, uv_off, uv_sz, color}} ->
           [{:sprite_raw, pos_x, pos_y, w, h, {uv_off, uv_sz, color}} | a]
 
@@ -151,7 +158,7 @@ defmodule Content.VampireSurvivor.RenderComponent do
 
   defp push_bullets(acc, bullets) do
     Enum.reduce(bullets, acc, fn {x, y, render_kind}, a ->
-      case Content.VampireSurvivor.SpriteParams.sprite_raw_params(x, y, render_kind, 0) do
+      case SpriteParams.sprite_raw_params(x, y, render_kind, 0) do
         {:ok, {pos_x, pos_y, w, h, uv_off, uv_sz, color}} ->
           [{:sprite_raw, pos_x, pos_y, w, h, {uv_off, uv_sz, color}} | a]
 
@@ -170,7 +177,18 @@ defmodule Content.VampireSurvivor.RenderComponent do
 
   defp push_items(acc, items) do
     Enum.reduce(items, acc, fn {x, y, render_kind}, a ->
-      [{:item, x, y, render_kind} | a]
+      case SpriteParams.item_sprite_raw_params(
+             x,
+             y,
+             render_kind
+           ) do
+        {:ok, {pos_x, pos_y, w, h, uv_off, uv_sz, color}} ->
+          [{:sprite_raw, pos_x, pos_y, w, h, {uv_off, uv_sz, color}} | a]
+
+        :error ->
+          Logger.debug("item_sprite_raw_params: unsupported render_kind=#{render_kind} for item")
+          a
+      end
     end)
   end
 
@@ -277,7 +295,7 @@ defmodule Content.VampireSurvivor.RenderComponent do
       end
 
     # スコアポップアップ（ワールド座標テキスト）
-    max_lifetime = Content.VampireSurvivor.SpawnComponent.score_popup_lifetime()
+    max_lifetime = SpawnComponent.score_popup_lifetime()
 
     nodes =
       Enum.reduce(score_popups, nodes, fn {wx, wy, value, lifetime}, acc ->
@@ -463,10 +481,10 @@ defmodule Content.VampireSurvivor.RenderComponent do
 
     weapon_upgrade_descs =
       if weapon_choices != [] do
-        weapon_params = Content.VampireSurvivor.SpawnComponent.weapon_params()
+        weapon_params = SpawnComponent.weapon_params()
         choices_atoms = Enum.map(weapon_choices, &String.to_existing_atom/1)
 
-        Content.VampireSurvivor.WeaponFormulas.weapon_upgrade_descs(
+        WeaponFormulas.weapon_upgrade_descs(
           choices_atoms,
           weapon_levels,
           weapon_params

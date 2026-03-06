@@ -228,86 +228,57 @@ defmodule Core.FormulaGraph do
   end
 
   defp emit_node(node, reg_map, incoming) do
-    op = node.op
-    params = node.params
-    nid = node.id
-    dst = reg_map[nid]
+    dispatch_emit(node.op, node, reg_map, incoming)
+  end
 
-    result =
-      case op do
-        :input ->
-          name = Map.fetch!(params, :name) |> to_string()
-          {:ok, [{:load_input, dst, name}]}
+  defp dispatch_emit(:input, node, reg_map, _incoming) do
+    name = Map.fetch!(node.params, :name) |> to_string()
+    {:ok, [{:load_input, reg_map[node.id], name}]}
+  end
 
-        :int ->
-          v = Map.fetch!(params, :value)
-          {:ok, [{:load_i32, dst, v}]}
+  defp dispatch_emit(:int, node, reg_map, _incoming) do
+    v = Map.fetch!(node.params, :value)
+    {:ok, [{:load_i32, reg_map[node.id], v}]}
+  end
 
-        :float ->
-          v = Map.fetch!(params, :value)
-          {:ok, [{:load_f32, dst, int_to_float(v)}]}
+  defp dispatch_emit(:float, node, reg_map, _incoming) do
+    v = Map.fetch!(node.params, :value)
+    {:ok, [{:load_f32, reg_map[node.id], int_to_float(v)}]}
+  end
 
-        :bool ->
-          v = Map.fetch!(params, :value)
-          {:ok, [{:load_bool, dst, v}]}
+  defp dispatch_emit(:bool, node, reg_map, _incoming) do
+    v = Map.fetch!(node.params, :value)
+    {:ok, [{:load_bool, reg_map[node.id], v}]}
+  end
 
-        :read_store ->
-          key = (params[:key] || params["key"]) |> to_string()
-          {:ok, [{:read_store, dst, key}]}
+  defp dispatch_emit(:read_store, node, reg_map, _incoming) do
+    key = (node.params[:key] || node.params["key"]) |> to_string()
+    {:ok, [{:read_store, reg_map[node.id], key}]}
+  end
 
-        :add ->
-          with {:ok, {ra, rb}} <- get_input_regs(nid, incoming, reg_map, [:a, :b]) do
-            {:ok, [{:add, dst, ra, rb}]}
-          end
+  defp dispatch_emit(op, node, reg_map, incoming)
+       when op in [:add, :sub, :mul, :div, :lt, :gt, :eq] do
+    with {:ok, {ra, rb}} <- get_input_regs(node.id, incoming, reg_map, [:a, :b]) do
+      {:ok, [{op, reg_map[node.id], ra, rb}]}
+    end
+  end
 
-        :sub ->
-          with {:ok, {ra, rb}} <- get_input_regs(nid, incoming, reg_map, [:a, :b]) do
-            {:ok, [{:sub, dst, ra, rb}]}
-          end
+  defp dispatch_emit(:output, node, reg_map, incoming) do
+    case get_data_input(node.id, incoming, reg_map) do
+      {:ok, src} -> {:ok, [{:store_output, src}]}
+      err -> err
+    end
+  end
 
-        :mul ->
-          with {:ok, {ra, rb}} <- get_input_regs(nid, incoming, reg_map, [:a, :b]) do
-            {:ok, [{:mul, dst, ra, rb}]}
-          end
+  defp dispatch_emit(:write_store, node, reg_map, incoming) do
+    case get_data_input(node.id, incoming, reg_map) do
+      {:ok, src} ->
+        key = (node.params[:key] || node.params["key"]) |> to_string()
+        {:ok, [{:write_store, src, key}]}
 
-        :div ->
-          with {:ok, {ra, rb}} <- get_input_regs(nid, incoming, reg_map, [:a, :b]) do
-            {:ok, [{:div, dst, ra, rb}]}
-          end
-
-        :lt ->
-          with {:ok, {ra, rb}} <- get_input_regs(nid, incoming, reg_map, [:a, :b]) do
-            {:ok, [{:lt, dst, ra, rb}]}
-          end
-
-        :gt ->
-          with {:ok, {ra, rb}} <- get_input_regs(nid, incoming, reg_map, [:a, :b]) do
-            {:ok, [{:gt, dst, ra, rb}]}
-          end
-
-        :eq ->
-          with {:ok, {ra, rb}} <- get_input_regs(nid, incoming, reg_map, [:a, :b]) do
-            {:ok, [{:eq, dst, ra, rb}]}
-          end
-
-        :output ->
-          case get_data_input(nid, incoming, reg_map) do
-            {:ok, src} -> {:ok, [{:store_output, src}]}
-            err -> err
-          end
-
-        :write_store ->
-          case get_data_input(nid, incoming, reg_map) do
-            {:ok, src} ->
-              key = (params[:key] || params["key"]) |> to_string()
-              {:ok, [{:write_store, src, key}]}
-
-            err ->
-              err
-          end
-      end
-
-    result
+      err ->
+        err
+    end
   end
 
   defp get_data_input(nid, incoming, reg_map) do

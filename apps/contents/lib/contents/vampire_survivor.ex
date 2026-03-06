@@ -1,4 +1,6 @@
 defmodule Content.VampireSurvivor do
+  alias Content.VampireSurvivor.SpawnComponent
+
   @moduledoc """
   ヴァンパイアサバイバーのコンテンツ定義。
 
@@ -63,7 +65,7 @@ defmodule Content.VampireSurvivor do
     # GameEvents.build_context で必ず :dt が渡される。フォールバックは将来の変更に対する保険。
     dt = Map.get(context, :dt, 16 / 1000.0)
 
-    Content.VampireSurvivor.SpawnComponent.enemy_damage_per_sec_list()
+    SpawnComponent.enemy_damage_per_sec_list()
     |> Enum.map(fn {kind_id, damage_per_sec} -> {kind_id, damage_per_sec * dt} end)
   end
 

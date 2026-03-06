@@ -1,4 +1,6 @@
 defmodule Content.VampireSurvivor.WeaponFormulas do
+  alias Content.VampireSurvivor.SpawnComponent
+
   @moduledoc """
   武器の数式計算ロジック。Rust の weapon.rs と同値の SSoT。
 
@@ -99,110 +101,106 @@ defmodule Content.VampireSurvivor.WeaponFormulas do
   @spec weapon_upgrade_descs([atom() | String.t()], map(), [map()]) :: [[String.t()]]
   def weapon_upgrade_descs(weapon_choices, weapon_levels, weapon_params)
       when is_list(weapon_choices) and is_map(weapon_levels) and is_list(weapon_params) do
-    registry = Content.VampireSurvivor.SpawnComponent.entity_registry().weapons
+    registry = SpawnComponent.entity_registry().weapons
 
     Enum.map(weapon_choices, fn choice ->
       case resolve_weapon_name(choice) do
-        {:ok, name} ->
-          kind_id = Map.get(registry, name)
-          current_lv = Map.get(weapon_levels, name, 0) |> max(0)
-          wp = kind_id != nil && Enum.at(weapon_params, kind_id)
-
-          if wp do
-            weapon_upgrade_desc(kind_id, current_lv, wp)
-          else
-            ["Upgrade weapon"]
-          end
-
-        :error ->
-          ["Upgrade weapon"]
+        {:ok, name} -> desc_for_weapon(registry, weapon_levels, weapon_params, name)
+        :error -> ["Upgrade weapon"]
       end
     end)
   end
 
+  defp desc_for_weapon(registry, weapon_levels, weapon_params, name) do
+    kind_id = Map.get(registry, name)
+    current_lv = Map.get(weapon_levels, name, 0) |> max(0)
+    wp = kind_id != nil && Enum.at(weapon_params, kind_id)
+
+    if wp, do: weapon_upgrade_desc(kind_id, current_lv, wp), else: ["Upgrade weapon"]
+  end
+
   defp resolve_weapon_name(choice) when is_atom(choice) do
-    if is_registered_weapon?(choice), do: {:ok, choice}, else: :error
+    if registered_weapon?(choice), do: {:ok, choice}, else: :error
   end
 
   defp resolve_weapon_name(choice) when is_binary(choice) do
-    try do
-      atom = String.to_existing_atom(choice)
-      if is_registered_weapon?(atom), do: {:ok, atom}, else: :error
-    rescue
-      ArgumentError -> :error
-    end
+    atom = String.to_existing_atom(choice)
+    if registered_weapon?(atom), do: {:ok, atom}, else: :error
+  rescue
+    ArgumentError -> :error
   end
 
   defp resolve_weapon_name(_), do: :error
 
-  defp is_registered_weapon?(atom) do
-    registry = Content.VampireSurvivor.SpawnComponent.entity_registry().weapons
+  defp registered_weapon?(atom) do
+    registry = SpawnComponent.entity_registry().weapons
     Map.has_key?(registry, atom)
   end
 
   defp weapon_upgrade_desc(_kind_id, current_lv, wp) do
-    # current_lv=0 は新規取得。表示は Lv.1 -> Lv.2 の比較になる
     lv_for_current = max(1, current_lv)
     next_lv = min(current_lv + 1, @max_weapon_level)
+    base = base_upgrade_lines(wp, lv_for_current, next_lv)
+    fire_pattern = wp.fire_pattern |> to_string() |> String.downcase()
+    fire_pattern_extra(wp, fire_pattern, current_lv, next_lv, lv_for_current, base)
+  end
 
+  defp base_upgrade_lines(wp, lv_for_current, next_lv) do
     dmg = fn lv -> effective_damage(wp.damage, max(1, lv)) end
     cd = fn lv -> effective_cooldown(wp.cooldown, max(1, lv)) end
 
-    base =
-      [
-        "DMG: #{dmg.(lv_for_current)} -> #{dmg.(next_lv)}",
-        "CD:  #{Float.round(cd.(lv_for_current), 1)}s -> #{Float.round(cd.(next_lv), 1)}s"
-      ]
-
-    fire_pattern = wp.fire_pattern |> to_string() |> String.downcase()
-
-    case fire_pattern do
-      "aimed" ->
-        bullets = fn lv -> bullet_count(wp.bullet_table, max(1, lv)) end
-        bullets_now = bullets.(lv_for_current)
-        bullets_next = bullets.(next_lv)
-
-        extra =
-          if bullets_next > bullets_now,
-            do: ["Shots: #{bullets_now} -> #{bullets_next} (+)"],
-            else: ["Shots: #{bullets_now}"]
-
-        base ++ extra
-
-      "fixed_up" ->
-        base ++ ["Throws upward"]
-
-      "radial" ->
-        dirs_now = if current_lv == 0 or current_lv <= 3, do: 4, else: 8
-        dirs_next = if next_lv <= 3, do: 4, else: 8
-
-        extra =
-          if dirs_next > dirs_now,
-            do: ["Dirs: #{dirs_now} -> #{dirs_next} (+)"],
-            else: ["#{dirs_now}-way fire"]
-
-        base ++ extra
-
-      "whip" ->
-        range_now = whip_range(wp.range, lv_for_current) |> trunc()
-        range_next = whip_range(wp.range, next_lv) |> trunc()
-        base ++ ["Range: #{range_now}px -> #{range_next}px", "Fan sweep (108°)"]
-
-      "piercing" ->
-        base ++ ["Piercing shot"]
-
-      "chain" ->
-        chain_now = chain_count_for_level(wp.chain_count, lv_for_current)
-        chain_next = chain_count_for_level(wp.chain_count, next_lv)
-        base ++ ["Chain: #{chain_now} -> #{chain_next} targets"]
-
-      "aura" ->
-        r_now = aura_radius(wp.range, lv_for_current) |> trunc()
-        r_next = aura_radius(wp.range, next_lv) |> trunc()
-        base ++ ["Radius: #{r_now}px -> #{r_next}px"]
-
-      _ ->
-        base
-    end
+    [
+      "DMG: #{dmg.(lv_for_current)} -> #{dmg.(next_lv)}",
+      "CD:  #{Float.round(cd.(lv_for_current), 1)}s -> #{Float.round(cd.(next_lv), 1)}s"
+    ]
   end
+
+  defp fire_pattern_extra(wp, "aimed", _current_lv, next_lv, lv_for_current, base) do
+    bullets = fn lv -> bullet_count(wp.bullet_table, max(1, lv)) end
+    bullets_now = bullets.(lv_for_current)
+    bullets_next = bullets.(next_lv)
+
+    extra =
+      if bullets_next > bullets_now,
+        do: ["Shots: #{bullets_now} -> #{bullets_next} (+)"],
+        else: ["Shots: #{bullets_now}"]
+
+    base ++ extra
+  end
+
+  defp fire_pattern_extra(_wp, "fixed_up", _, _, _, base), do: base ++ ["Throws upward"]
+
+  defp fire_pattern_extra(_wp, "radial", current_lv, next_lv, _lv_for_current, base) do
+    dirs_now = if current_lv == 0 or current_lv <= 3, do: 4, else: 8
+    dirs_next = if next_lv <= 3, do: 4, else: 8
+
+    extra =
+      if dirs_next > dirs_now,
+        do: ["Dirs: #{dirs_now} -> #{dirs_next} (+)"],
+        else: ["#{dirs_now}-way fire"]
+
+    base ++ extra
+  end
+
+  defp fire_pattern_extra(wp, "whip", _current_lv, next_lv, lv_for_current, base) do
+    range_now = whip_range(wp.range, lv_for_current) |> trunc()
+    range_next = whip_range(wp.range, next_lv) |> trunc()
+    base ++ ["Range: #{range_now}px -> #{range_next}px", "Fan sweep (108°)"]
+  end
+
+  defp fire_pattern_extra(_wp, "piercing", _, _, _, base), do: base ++ ["Piercing shot"]
+
+  defp fire_pattern_extra(wp, "chain", _current_lv, next_lv, lv_for_current, base) do
+    chain_now = chain_count_for_level(wp.chain_count, lv_for_current)
+    chain_next = chain_count_for_level(wp.chain_count, next_lv)
+    base ++ ["Chain: #{chain_now} -> #{chain_next} targets"]
+  end
+
+  defp fire_pattern_extra(wp, "aura", _current_lv, next_lv, lv_for_current, base) do
+    r_now = aura_radius(wp.range, lv_for_current) |> trunc()
+    r_next = aura_radius(wp.range, next_lv) |> trunc()
+    base ++ ["Radius: #{r_now}px -> #{r_next}px"]
+  end
+
+  defp fire_pattern_extra(_wp, _, _, _, _, base), do: base
 end

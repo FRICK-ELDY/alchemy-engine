@@ -1,4 +1,6 @@
+# credo:disable-for-this-file Credo.Check.Design.AliasUsage
 defmodule Content.VampireSurvivor.SpawnComponent do
+  # Content.VampireSurvivor.WeaponFormulas は alias 不可（WeaponFormulas ↔ SpawnComponent の循環参照）
   @moduledoc """
   ワールド初期化・エンティティ登録を担うコンポーネント。
 
@@ -79,10 +81,10 @@ defmodule Content.VampireSurvivor.SpawnComponent do
   # boss_params は Content.EntityParams.boss_params/0（SSoT）を参照。
 
   @doc """
-  武器パラメータリスト。WeaponFormulas 等で SSoT として参照する。
+  武器パラメータリスト。Content.VampireSurvivor.WeaponFormulas 等で SSoT として参照する。
 
   SpawnComponent 内部の on_ready では weapon_params_impl/0 を set_entity_params NIF に渡す。
-  WeaponFormulas.weapon_upgrade_descs/3 がレベルアップカード表示に使用する。
+  Content.VampireSurvivor.WeaponFormulas.weapon_upgrade_descs/3 がレベルアップカード表示に使用する。
   """
   def weapon_params, do: weapon_params_impl()
 
@@ -158,7 +160,7 @@ defmodule Content.VampireSurvivor.SpawnComponent do
       # range: Whip の基本半径 / Aura の基本半径
       # chain_count: Chain の基本連鎖数
       # R-F1: whip_range_per_level, aura_radius_per_level, chain_count_per_level は
-      #       WeaponFormulas で計算したテーブルを注入（SSoT）
+      #       Content.VampireSurvivor.WeaponFormulas で計算したテーブルを注入（SSoT）
       # 0: magic_wand
       %{
         cooldown: 1.0,

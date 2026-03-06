@@ -1,6 +1,7 @@
 defmodule Content.VampireSurvivor.WeaponFormulasTest do
   use ExUnit.Case, async: true
 
+  alias Content.VampireSurvivor.SpawnComponent
   alias Content.VampireSurvivor.WeaponFormulas
 
   describe "effective_damage/2" do
@@ -29,27 +30,28 @@ defmodule Content.VampireSurvivor.WeaponFormulasTest do
 
   describe "weapon_upgrade_descs/3" do
     test "magic_wand 新規取得で Aimed パターン説明を返す" do
-      weapon_params = Content.VampireSurvivor.SpawnComponent.weapon_params()
+      weapon_params = SpawnComponent.weapon_params()
       descs = WeaponFormulas.weapon_upgrade_descs([:magic_wand], %{}, weapon_params)
 
       assert length(descs) == 1
       [lines] = descs
-      assert "DMG:" in Enum.join(lines, " ")
-      assert "CD:" in Enum.join(lines, " ")
-      assert Enum.any?(lines, &String.contains?(&1, "Shots"))
+      joined = Enum.join(List.wrap(lines), " ")
+      assert String.contains?(joined, "DMG:")
+      assert String.contains?(joined, "CD:")
+      assert Enum.any?(List.wrap(lines), &String.contains?(&1, "Shots"))
     end
 
     test "whip で Range 説明を返す" do
-      weapon_params = Content.VampireSurvivor.SpawnComponent.weapon_params()
+      weapon_params = SpawnComponent.weapon_params()
       descs = WeaponFormulas.weapon_upgrade_descs([:whip], %{whip: 1}, weapon_params)
 
       assert length(descs) == 1
       [lines] = descs
-      assert Enum.any?(lines, &String.contains?(&1, "Range"))
+      assert Enum.any?(List.wrap(lines), &String.contains?(&1, "Range"))
     end
 
     test "未登録 weapon 名では Upgrade weapon にフォールバック" do
-      weapon_params = Content.VampireSurvivor.SpawnComponent.weapon_params()
+      weapon_params = SpawnComponent.weapon_params()
       # 存在しない atom は registry にないので :error
       descs = WeaponFormulas.weapon_upgrade_descs([:__unknown_weapon__], %{}, weapon_params)
 
@@ -57,7 +59,7 @@ defmodule Content.VampireSurvivor.WeaponFormulasTest do
     end
 
     test "不正な文字列では to_existing_atom 失敗時に Upgrade weapon にフォールバック" do
-      weapon_params = Content.VampireSurvivor.SpawnComponent.weapon_params()
+      weapon_params = SpawnComponent.weapon_params()
       # 未作成の atom 文字列は ArgumentError を起こす
       descs =
         WeaponFormulas.weapon_upgrade_descs(["nonexistent_weapon_xyz_123"], %{}, weapon_params)

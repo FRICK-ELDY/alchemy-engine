@@ -1,13 +1,17 @@
 defmodule Content.VampireSurvivor.SpriteParams do
   @moduledoc """
-  R-R1 案 B: スプライトの UV・サイズの SSoT。
+  R-R1: スプライトの UV・サイズの SSoT。
   DrawCommand SpriteRaw 用に (pos_x, pos_y, width, height, uv_offset, uv_size, color_tint) を返す。
-  Rust renderer の enemy_anim_uv, enemy_sprite_size 等と同値。
+  Rust renderer のハードコード UV を廃止し、contents が全スプライトパラメータを保持する。
   """
   @atlas_w 1664.0
   @frame_w 64.0
   @elite_offset 20
   @elite_size_mult 1.2
+  @player_size 64.0
+  @gem_half_size 10.0
+  @potion_half_size 12.0
+  @magnet_half_size 14.0
 
   # アトラス X オフセット（px）
   @offsets %{
@@ -15,6 +19,9 @@ defmodule Content.VampireSurvivor.SpriteParams do
     bat: 512,
     golem: 640,
     bullet: 768,
+    gem: 896,
+    potion: 960,
+    magnet: 1024,
     fireball: 1088,
     lightning: 1152,
     whip: 1216,
@@ -27,7 +34,64 @@ defmodule Content.VampireSurvivor.SpriteParams do
   }
 
   @doc """
-  render_kind と frame から sprite_raw 用パラメータを返す。
+  プレイヤー用 sprite_raw パラメータを返す。
+  戻り値: {:ok, {pos_x, pos_y, width, height, {uv_ox, uv_oy}, {uv_sx, uv_sy}, {r, g, b, a}}} | :error
+
+  entity_x, entity_y はプレイヤー座標（左上）。frame は 0..3 のアニメーションフレーム。
+  """
+  def player_sprite_raw_params(entity_x, entity_y, frame) do
+    {uv_off, uv_sz} = player_uv(frame)
+
+    {:ok,
+     {entity_x * 1.0, entity_y * 1.0, @player_size * 1.0, @player_size * 1.0, uv_off, uv_sz,
+      {1.0, 1.0, 1.0, 1.0}}}
+  end
+
+  @doc """
+  アイテム用 sprite_raw パラメータを返す。
+  kind: 5=gem, 6=potion, 7=magnet（item.rs RENDER_KIND_* と同値）
+
+  ※ kind 5 は敵の skeleton（sprite_raw_params）とアイテム gem で重複するが、
+  push_enemies と push_items で別経路のため衝突しない。
+  entity_x, entity_y はアイテム中心座標。返す pos は左上にオフセット済み。
+  """
+  def item_sprite_raw_params(entity_x, entity_y, kind) do
+    case item_params(kind) do
+      {:ok, {half_sz, uv_off, uv_sz}} ->
+        pos_x = entity_x - half_sz
+        pos_y = entity_y - half_sz
+        sz = half_sz * 2.0
+        {:ok, {pos_x * 1.0, pos_y * 1.0, sz * 1.0, sz * 1.0, uv_off, uv_sz, {1.0, 1.0, 1.0, 1.0}}}
+
+      :error ->
+        :error
+    end
+  end
+
+  defp player_uv(frame) do
+    x = 0 + rem(frame, 4) * @frame_w
+    uv_from_px(x)
+  end
+
+  defp item_params(5) do
+    {uv_off, uv_sz} = uv_from_offset(@offsets.gem)
+    {:ok, {@gem_half_size, uv_off, uv_sz}}
+  end
+
+  defp item_params(6) do
+    {uv_off, uv_sz} = uv_from_offset(@offsets.potion)
+    {:ok, {@potion_half_size, uv_off, uv_sz}}
+  end
+
+  defp item_params(7) do
+    {uv_off, uv_sz} = uv_from_offset(@offsets.magnet)
+    {:ok, {@magnet_half_size, uv_off, uv_sz}}
+  end
+
+  defp item_params(_), do: :error
+
+  @doc """
+  render_kind と frame から sprite_raw 用パラメータを返す（敵・弾丸・ボス用）。
   戻り値: {:ok, {pos_x, pos_y, width, height, {uv_ox, uv_oy}, {uv_sx, uv_sy}, {r, g, b, a}}}
   または :error
 
