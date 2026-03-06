@@ -1,188 +1,74 @@
-# AlchemyEngine — 改善提案書
+# AlchemyEngine — マイナス点に基づく改善提案書
 
-> 最終更新: 2026-03-06  
-> 前回評価スコア: +102点（2026-03-06 evaluation、前回 +80 → +22 改善）
-
----
-
-## スコアカード
-
-| カテゴリ | 2026-03-05 | 2026-03-06 |
-|:---|:---:|:---:|
-| Rust 物理演算・SoA 設計 | 9/10 | 9/10 |
-| Rust SIMD 最適化 | 9/10 | 9/10 |
-| Rust 並行性設計 | 8/10 | 8/10 |
-| Rust 安全性 | 7/10 | 8/10 ↑ |
-| Rust プラットフォーム対応 | — | 8/10 |
-| Elixir OTP 設計 | 8/10 | 8/10 |
-| Elixir 耐障害性 | 6/10 | 6/10 |
-| Elixir 並行性・分散 | 1/10 | 2/10 ↑ |
-| Elixir ビヘイビア活用 | 8/10 | 8/10 |
-| アーキテクチャ（ビジョン一致度） | 7/10 | 7/10 |
-| テスト | 5/10 | 6/10 ↑ |
-| セキュリティ | 3/10 | 3/10 |
-| 開発者体験（DX） | 5/10 | 6/10 ↑ |
-| **総合** | **6/10** | **7/10** ↑ |
-
-> **改善済み（2026-03-06）**:  
-> - Rust 安全性: `spawn_elite_enemy` の spawn 返却値使用・`PlayerDamaged` の clamp 実装  
-> - テスト: EventBus・SaveManager のテスト追加、chase_ai_bench クレート参照修正  
-> - 並行性・分散: Network.DistributedTest による移行シナリオ検証  
-> - DX: bin/ci.bat のローカルエラーゼロ通過を確認済み  
-> - Rust プラットフォーム: `update_chase_ai_simd` の pub use に `#[cfg(target_arch = "x86_64")]` 付与（非 x86_64 でリンクエラー回避）
-> **残課題**: SceneStack・GameEvents のテスト、pull_request トリガー
+> 評価日: 2026-03-07  
+> 出典: [evaluation-2026-03-07.md](../evaluation/evaluation-2026-03-07.md)  
+> 参照: [specific-weaknesses.md](../evaluation/specific-weaknesses.md)
 
 ---
 
-## 未解決課題
+## 優先度別 改善項目一覧
 
-### I-F: Contents.SceneStack・GameEvents のテスト整備（優先度: 高）
+### 🔴 最優先（設計上の明確な欠陥・-3点）
 
-**問題:** シーン遷移・フレームループの中核ロジック（`Contents.SceneStack`・`Contents.GameEvents`）に対するテストが存在しない。リファクタリングの安全網が不足している。
-
-**影響ファイル:**
-- `apps/contents/lib/contents/scene_stack.ex`
-- `apps/contents/lib/contents/game_events.ex`
-
-**作業ステップ:**
-1. `NifBridgeMock`（Mox）を使い NIF 依存なしに `SceneStack` のシーン遷移をテストする
-2. `GameEvents` のフレームループ・バックプレッシャー設計をユニットテストで検証する
-3. `async: true` が使える範囲で並列実行可能なテストに設計する
+| # | 項目 | 影響 | 改善方針 |
+|:---:|:---|:---|:---|
+| 1 | Contents.SceneStack・GameEvents のテストがゼロ | リファクタリングの安全網がない。シーン遷移・フレームループの回帰リスク | `ExUnit` で SceneStack の push/pop 遷移、GameEvents の frame_events 受信→dispatch をテスト。StubRoom 同様に NIF 依存を排除したテスト設計 |
+| 2 | EntityParams と SpawnComponent のパラメータ二重管理 | 3箇所（entity_params / spawn_component / Rust）に同期漏れリスク | entity_params.ex を唯一の SSoT とし、spawn_component は EntityParams を呼ぶだけに。Rust は set_entity_params NIF で受け取るのみ |
+| 3 | build_instances 関数の重複（render/headless） | スプライト種別追加時に両方修正が必要。同期漏れ | `pub(crate)` の共通関数（例: `sprite_uv_and_size`）を抽出し、renderer/mod.rs と headless.rs の両方から利用 |
+| 4 | 分散ノード間フェイルオーバーが未実装 | 「なぜ Elixir + Rust か」の分散面の証明が不足 | libcluster によるクラスタリング・ルームのノード間移動のシナリオを実装。`pending-issues.md` 課題10・11 と連携 |
+| 5 | プロパティベーステスト・ファジングがゼロ | 境界条件・不変条件の自動検証が未整備 | StreamData で LevelSystem / BossSystem / SpawnSystem の不変条件を検証。cargo-fuzz で decode 関数にファズターゲット追加 |
+| 6 | nif・render・audio の Rust テストがゼロ | デコードロジック・ヘッドレス描画の回帰リスク | decode_enemy_params 等の GPU 不要なデコードロジックをテスト。headless.rs を活用した描画パス検証 |
 
 ---
 
-### I-LB: FormulaStore.LocalBackend の起動順保証（優先度: 中）
+### 🟠 高優先（重要な機能・設計の欠如・-2点）
 
-**問題:** `Core.FormulaStore.LocalBackend` は `Server.Application` の children に含まれるが、起動順の依存関係が明文化されていない。`FormulaStore.read_local/2` は LocalBackend が未起動だとクラッシュする。core 単体テストでは setup で起動しているが、本番の起動順が変わった場合の保証がない。
-
-**影響ファイル:**
-- `apps/server/lib/server/application.ex`
-- `apps/core/lib/core/formula_store.ex`
-
-**作業ステップ:**
-1. LocalBackend を Registry・RoomSupervisor より前に起動する起動順の前提をドキュメント化する
-2. アーキテクチャドキュメント（例: `docs/architecture/elixir/`）に起動順の依存関係を追記する
-3. （任意）起動時に LocalBackend の存在を検証する assert や監視を検討する
-
----
-
-### I-FB: formula_store_broadcast 接続時の確認 UX とユーザーセキュリティ設定（優先度: 中）
-
-**問題:** `formula_store_broadcast` の MFA による自由度は利点だが、他ルームへの synced データ送信がユーザー知情・同意なく行われるリスクがある。接続時に何が送られるか明示し、ユーザーが許可・拒否を判断できる仕組みが必要である。
-
-**要件（接続時ダイアログ）:**
-- **どこに接続するか** — 対象ネットワーク／ルームを表示する
-- **何を送るか** — 同期される synced キー（例: score, wave）の内容を表示する
-- **許可／拒否** — ユーザーが選択できる
-- **毎回確認するか** — チェックボックス。「毎回確認しない」を選択した場合はユーザーのセキュリティ設定に登録し、以後はその設定に従って自動で許可／拒否する
-
-**影響想定:**
-- フロントエンド（接続ダイアログ UI）
-- ユーザー設定・セキュリティ保存（local または永続ストア）
-- `formula_store_broadcast` 呼び出し前に「許可済みか」を参照するフロー
-
-**作業ステップ:**
-1. 接続確認ダイアログの仕様（表示項目・文言・遷移）を設計する
-2. ユーザーセキュリティ設定の保存形式（例: room_id + 接続先 → allow/deny）を定義する
-3. broadcast 実行前に設定を参照するフックを検討する
-4. 「毎回確認しない」で登録した設定の編集・削除 UI を用意する
+| # | 項目 | 影響 | 改善方針 |
+|:---:|:---|:---|:---|
+| 7 | SaveManager の HMAC シークレットがデフォルト値でハードコード | 本番環境でセーブ改ざん検証が実質無効化 | `runtime.exs` で `System.fetch_env!("SAVE_HMAC_SECRET")` を使うか、未設定時に起動を拒否する強制機構を追加 |
+| 8 | LevelComponent のアイテムドロップロジックの重複 | 同一撃破で二重ドロップの可能性 | enemy_killed と entity_removed の対応関係を明確化。単一のドロップ判定パスに集約 |
+| 9 | AsteroidArena のテストがゼロ | SplitComponent・SpawnSystem の動作が未検証 | VampireSurvivor と同様に純粋関数・ロジック部分の ExUnit テストを追加 |
+| 10 | Skeleton/Ghost の UV がプレースホルダー | 視覚的に区別不可。ゲーム完成度を損なう | アトラスに専用スプライトを追加し、UV マッピングを更新 |
+| 11 | Vertex/VERTICES 等の重複定義 | 構造体・定数の二重管理 | `pub(crate)` で共通モジュールに集約 |
+| 12 | [:game, :session_end] が metrics/0 に未登録 | セッション終了統計が可観測性ツールに流れない | telemetry.ex の metrics/0 に `[:game, :session_end]` 用の summary/counter を追加 |
+| 13 | :telemetry.attach がゼロ | 外部監視ツール（Prometheus 等）への接続口なし | phoenix_live_dashboard や Prometheus 用の attach を追加（提案として specific-proposals に記載済み） |
+| 14 | CI の pull_request トリガーが未設定 | PR マージ前の品質保証が機能しない | `.github/workflows/ci.yml` に `pull_request: branches: ["**"]` を追加 |
+| 15 | E2E テストがゼロ | ゲームループ完結性（開始→終了→リトライ）が未検証 | headless.rs を活用した E2E テストを追加 |
+| 16 | 視覚的完成度（Skeleton/Ghost） | 同上 #10 | 同上 |
+| 17 | mix audit / cargo audit の CI 組み込みなし | 脆弱性検出が手動依存 | CI に mix_audit と cargo audit ジョブを追加 |
+| 18 | ビルド成果物の配布手順が未整備 | エンドユーザー向け配布形態が未定義 | Windows/macOS/Linux 向けのパッケージング手順を docs に記載 |
 
 ---
 
-### I-M: renderer/mod.rs のゲーム固有パラメータを contents へ移行（優先度: 中）
+### 🟡 中優先（改善余地あり・-1点）
 
-**問題:** `native/render/src/renderer/mod.rs` に、アトラスオフセット・敵種別サイズ・スプライト種別の UV 計算など、多数のゲーム固有パラメータがハードコードされている。アーキテクチャ原則「Elixir = SSoT」「Rust = 演算層」に照らすと、これらの値は contents 側で持ち、NIF 経由で注入するべきである。
-
-**影響ファイル:**
-- `native/render/src/renderer/mod.rs`（アトラス定数・`enemy_sprite_size`・`enemy_anim_uv`・`sprite_instance_from_command` 等）
-
-**作業ステップ:**
-1. contents にスプライトパラメータ（UV 座標・サイズ・kind_id マッピング等）の SSoT を定義する
-2. NIF で `DrawCommand` に加え、パラメータ（UV・サイズ）を Elixir から渡せるようにする
-3. renderer 側は汎用的な「kind_id → パラメータ」の lookup のみ行い、値をハードコードしない
-4. 既存の挙動を変えずに段階的に移行する
+| # | 項目 | 改善方針 |
+|:---:|:---|:---|
+| 19 | boss_dash_end の専用 handle_info 節 | 汎用ディスパッチ `{:engine_message, tag, payload}` に統一。新規メッセージ追加時に GameEvents の変更が不要に |
+| 20 | Enum.find_last/2 回避コメントが不正確 | Elixir 1.19 で使える旨にコメントを修正。または実際に Enum.find_last/2 を使用してコードを簡潔化 |
+| 21 | Stats GenServer の二重集計リスク | EventBus 経由か record_* API のどちらか一方に統一。または「record_* は内部用、EventBus が外部用」と役割を明記 |
+| 22 | lock_metrics 閾値が constants.rs に未集約 | lock_metrics.rs の定数を physics/constants.rs または nif 内の constants モジュールに移す |
+| 23 | bench-regression のローカル実行スクリプトなし | `bin/bench.bat` 等を追加し、ローカルで `cargo bench -p physics` を実行可能に |
+| 24 | README Contributing がプレースホルダー | コントリビューションの流れ（PR 作成→レビュー→マージ）を簡潔に記載 |
 
 ---
 
-### I-RG: Rust 側に残るゲームロジック計算（優先度: 中）
+## 推奨実施順序
 
-**問題:** 武器数式・弾丸 damage・スコアポップ減衰・描画パラメータ等のゲームロジックが Rust 側に残存している。Elixir = SSoT の原則に沿い、contents へ移行または NIF 注入で SSoT 化する必要がある。
+```mermaid
+graph TD
+    A["1. pull_request トリガー追加\n（CI 強化・即効性高）"]
+    B["2. SceneStack・GameEvents テスト\n（中核ロジックの安全網）"]
+    C["3. EntityParams SSoT 化\n（設計原則の徹底）"]
+    D["4. build_instances 共通化\n（render の DRY 解消）"]
+    E["5. HMAC シークレット強制\n（セキュリティ）"]
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+```
 
-**対応状況（2026-03）:**
-- 武器数式（weapon_upgrade_desc）: `Content.VampireSurvivor.WeaponFormulas` を contents に追加。レベルアップカード表示は Elixir で完結。
-- `SpawnComponent.weapon_params/0` を public 化し、WeaponFormulas から SSoT として参照。
-
-**残課題:** 詳細は [rust-game-logic-migration.md](../plan/rust-game-logic-migration.md) を参照。
-
-| 課題ID | 内容 | 優先度 |
-|:---|:---|:---:|
-| R-W1 | weapon.rs 武器数式（physics 側 damage 計算） | 中 |
-| R-W2 | 弾丸・当たり判定の damage 注入 | 中 |
-| R-R1 | renderer UV・スプライトパラメータ（I-M と同一） | 中 |
-| R-E1 | score_popup lifetime 減衰 | 低 |
-| R-P1 | PlayerDamaged / SpecialEntityDamaged の dt 乗算 | 低 |
-
----
-
-## 設計タスク（別ドキュメント）
-
-### D-A: シーン管理を contents へ移行 ✅ 完了
-
-**方針:** 「あらゆる概念を contents に寄せる」。SceneManager / SceneBehaviour を core から contents へ移行する。
-
-**参照:** 残課題・改善候補は [improvement-plan.md](../plan/improvement-plan.md) の「残課題（シーン管理 → contents 移行タスクより）」に統合済み。
-
-**状況:** Phase 1〜6 完了。`Core.SceneManager`・`Core.SceneBehaviour` を削除し、`Contents.SceneStack`・`Contents.SceneBehaviour` に移行済み。
-
-**関連:** I-F（テスト整備）は `Contents.SceneStack` に対するテストとして実施する。
-
-### D-B: GameEvents を contents へ移行（完了済み 2026-03）
-
-**方針:** オプション B（責務分離）を採用。contents に `Contents.GameEvents` / `Contents.GameEvents.Diagnostics` を移行。core の責務を「ループ制御・イベント受信・ContentBehaviour インターフェース」に限定。BatLord 固有ロジックは `on_engine_message/2` 汎用ディスパッチに置き換え済み。
-
-**未解決事項・確認ポイント:** [improvement-plan.md](../plan/improvement-plan.md) の「GameEvents → contents 移行タスクより」を参照。
-
-### D-C: ゲームロジックを contents に寄せる（Phase 1 完了 2026-03）
-
-**方針:** アーキテクチャ原則「Elixir = SSoT」に沿い、武器数式・スコア計算等のゲームロジックを contents 側に移行する。
-
-**Phase 1 完了（2026-03）:**
-- `Content.VampireSurvivor.WeaponFormulas` を新規作成（effective_damage, effective_cooldown, whip_range, aura_radius, chain_count_for_level, weapon_upgrade_descs）
-- `SpawnComponent.weapon_params/0` を public 化
-- `RenderComponent` のレベルアップモーダルで `get_weapon_upgrade_descs` NIF の代わりに `WeaponFormulas.weapon_upgrade_descs/3` を使用
-
-**残課題:** [rust-game-logic-migration.md](../plan/rust-game-logic-migration.md) の R-W1, R-W2, R-R1 等を参照。
-
----
-
-## Formula エンジン（Phase 1〜4 完了、Phase 5 以降は課題）
-
-### I-F5: Phase 5 — ビジュアルエディタ（優先度: 低・将来）
-
-**内容:** ProtoFlux のような 3D/2D ノードエディタを実装する。グラフを視覚的に編集し、バイトコード（または FormulaGraph 形式）を出力する。
-
-**参考:**
-- ProtoFlux - Resonite Wiki
-- ProtoFlux:Add、ProtoFlux:Store 等
-
-**作業ステップ:**
-1. エディタの技術選定（Web/ネイティブ/ゲーム内 UI）
-2. FormulaGraph の入出力形式との統合設計
-3. ノード接続・エッジの UI 設計
-4. バイトコード／グラフのエクスポート機能
-
----
-
-### I-FO: Formula エンジン — オープンな検討事項（優先度: 低）
-
-| 項目 | 内容 |
-|:---|:---|
-| バイトコード形式 | スタック vs レジスタ、OpCode の詳細 |
-| Store の永続化 | Elixir の ETS / Agent と Rust 側の境界 |
-| 型システム | f32, i32, bool, vec2 等のサポート範囲 |
-| physics_step との統合 | 毎フレームの計算をグラフで表現するか、既存 NIF のままか |
-| デバッグ | グラフのトレース、途中値の可視化 |
-
-**関連:** game-world-inner-flow.md、課題19（計算式・アルゴリズムの Rust 実行）
-
----
+1. **即時**: pull_request トリガー追加（1行変更で効果大）
+2. **短期**: SceneStack・GameEvents テスト、EntityParams SSoT 化
+3. **中期**: build_instances 共通化、HMAC 強制、AsteroidArena テスト
+4. **長期**: 分散フェイルオーバー、プロパティ/E2E テスト、mix/cargo audit

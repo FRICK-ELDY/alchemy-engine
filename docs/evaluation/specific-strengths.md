@@ -1,6 +1,6 @@
 # AlchemyEngine — プラス点 詳細一覧
 
-> 最終更新: 2026-03-06（evaluation-2026-03-06 に基づく）
+> 最終更新: 2026-03-07（evaluation-2026-03-07 に基づく）
 
 ## 採点基準
 
@@ -24,27 +24,23 @@
 
 - **バックプレッシャー設計（整合性維持とスキップの明確な分離）** `+5`
   > GCポーズ等で2秒以上遅延した場合（メッセージキュー深度 > 120）に、`on_frame_event`（スコア・HP・レベルアップ）とシーン遷移はスキップせず、入力・物理AI・`on_nif_sync`・ログはスキップする。「何を守り、何を捨てるか」の設計判断が明示的にコードに記述されており、Bevy の `FixedUpdate` スケジューラや Phoenix LiveView の差分更新と同等の思想を独自実装している。
-  > 対象ファイル: `apps/core/lib/core/game_events.ex`（L194-291）
+  > 対象ファイル: `apps/contents/lib/contents/game_events.ex`（L194-291）
 
 - **SSoT 整合性チェック（SSOT CHECK）** `+4`
   > 60フレームごとに `get_full_game_state` でRust側のスコア・キルカウントとElixir側の値を比較し、乖離があれば `[SSOT CHECK]` ログを出力する仕組みを `diagnostics.ex` に実装。Elixir = SSoT という設計原則を実行時に自動検証する機構は、プロダクションレベルのゲームエンジンでも珍しい。
-  > 対象ファイル: `apps/core/lib/core/game_events/diagnostics.ex`（L94-110）
-
-- **ダーティフラグによる差分NIF注入** `+3`
-  > `LevelComponent.on_nif_sync/1` 内の全 `sync_*` 関数でプロセス辞書を使ったダーティフラグを実装し、値が変化したときのみNIFを呼ぶ設計。毎フレームのNIFオーバーヘッドを最小化しながらSSoTを維持する。
-  > 対象ファイル: `apps/contents/lib/contents/vampire_survivor/level_component.ex`（L177-266）
-
-- **フレームループの処理順序設計** `+3`
-  > `handle_frame_events_main/3` の処理順序（on_frame_event → シーン update → 遷移 → 入力/物理AI → on_nif_sync → ログ）が意図的に設計されており、`on_physics_process`（ボスAI等）がNIF状態を書き換えた後に `on_nif_sync` を実行することで最新状態をRustに反映できる。コメントで明記されている。
-  > 対象ファイル: `apps/core/lib/core/game_events.ex`（L251-297）
+  > 対象ファイル: `apps/contents/lib/contents/game_events/diagnostics.ex`（L94-110）
 
 - **SaveManager の HMAC 付きセーブデータ** `+2`
   > セーブデータに HMAC-SHA256 署名を付与し、改ざん検出を実装。個人プロジェクトのゲームエンジンでセキュリティを考慮した設計は評価できる。
   > 対象ファイル: `apps/core/lib/core/save_manager.ex`
 
 - **DynamicSupervisor によるルーム動的管理** `+2`
-  > `GameEngine.RoomSupervisor` が `DynamicSupervisor` として実装されており、ルームの動的起動・停止が可能。`one_for_one` 戦略により `StressMonitor` がクラッシュしてもゲームが継続する設計がコメントで明示されている。
-  > 対象ファイル: `apps/server/lib/game_server/application.ex`
+  > `Core.RoomSupervisor` が `DynamicSupervisor` として実装されており、ルームの動的起動・停止が可能。`one_for_one` 戦略により `StressMonitor` がクラッシュしてもゲームが継続する設計がコメントで明示されている。
+  > 対象ファイル: `apps/server/lib/server/application.ex`
+
+- **EventBus・SaveManager のテスト整備** `+2`
+  > `event_bus_test.exs` で subscribe/broadcast/DOWN 時動作、`save_manager_test.exs` でスコア・HMAC・セッションを検証。core 層のリグレッション検出が可能になった。
+  > 対象ファイル: `apps/core/test/core/`
 
 ---
 
@@ -64,19 +60,41 @@
   > `SpawnComponent.on_ready/1` でワールド生成後に一度だけ `set_entity_params` を呼び、敵・武器・ボスのすべてのパラメータをRustに注入する。Rustコアにゲームバランス値がハードコードされていない。
   > 対象ファイル: `apps/contents/lib/contents/vampire_survivor/spawn_component.ex`（L40-53）
 
+- **コンテンツテストの充実（VampireSurvivor 向け）** `+3`
+  > boss・spawn・level・entity_params・weapon_formulas 等、VampireSurvivor 用の7テストファイルが存在し、純粋関数・ロジック部分を `async: true` で並列検証している。
+  > 対象ファイル: `apps/contents/test/content/`
+
 ---
 
 ## apps/network — ネットワーク層
 
 ### ✅ プラス点
 
-- **3トランスポートの実装（WebSocket・UDP・Local）** `+4`
+- **Phoenix.Token による WebSocket 認証** `+4`
+  > `Network.RoomToken` で `Phoenix.Token.sign` によりルームIDスコープ付きトークンを発行し、`channel.join/3` で `verify(token, room_id)` により必須検証を行っている。`{:error, :missing}` 等の種別で拒否理由を返し、不正参加を防止する設計が実装済み。
+  > 対象ファイル: `apps/network/lib/network/channel.ex`（L71-106）, `apps/network/lib/network/room_token.ex`
+
+- **3トランスポートの実装（Local・Channel・UDP）** `+4`
   > Phoenix Channel（WebSocket）・UDP・ローカルマルチルームの3トランスポートが揃っており、用途に応じて選択できる。UDPプロトコルはzlib圧縮・32bitシーケンス番号・9種類のパケット種別を備えた本格的な実装。
   > 対象ファイル: `apps/network/lib/network/channel.ex`, `udp/server.ex`, `udp/protocol.ex`, `local.ex`
 
 - **OTP プロセス隔離の実証（ルーム間クラッシュ分離）** `+4`
-  > `LocalTest` の OTP隔離テスト（L132-148）で `Process.exit(pid_a, :kill)` で一方のルームを強制終了し、他方が生存することをテストで検証している。「クラッシュ分離」という設計原則をテストで証明している点が秀逸。
+  > `LocalTest` の OTP隔離テストで `Process.exit(pid_a, :kill)` で一方のルームを強制終了し、他方が生存することをテストで検証している。「クラッシュ分離」という設計原則をテストで証明している点が秀逸。
   > 対象ファイル: `apps/network/test/network_local_test.exs`（L132-148）
+
+---
+
+## apps/server — アプリケーション起動
+
+### ✅ プラス点
+
+- **Application 起動シーケンスの堅牢性** `+2`
+  > `Registry`・`SceneStack`・`InputHandler`・`EventBus`・`RoomSupervisor` 等を依存順に起動し、`start_room(:main)` 失敗時は raise で起動を停止する設計。子プロセスの起動順が明確。
+  > 対象ファイル: `apps/server/lib/server/application.ex`
+
+- **環境別設定の分離（config.exs / runtime.exs）** `+1`
+  > `runtime.exs` で `NETWORK_PORT`・`SAVE_HMAC_SECRET`・`SECRET_KEY_BASE` 等を環境変数から読み込み可能。
+  > 対象ファイル: `config/runtime.exs`
 
 ---
 
@@ -85,58 +103,24 @@
 ### ✅ プラス点
 
 - **全エンティティで統一されたSoA構造** `+5`
-  > `EnemyWorld`・`BulletWorld`・`ParticleWorld`・`ItemWorld` の全エンティティ種別でSoA（Structure of Arrays）が統一されている。`alive: Vec<u8>` が `0xFF`/`0x00` の2値を取る設計はSSE2 SIMDマスクとして直接ロードできるよう意図されており、データ構造とSIMD命令が密結合した設計は個人プロジェクトでは見たことがないレベル。
-  > 対象ファイル: `native/physics/src/world/enemy.rs`（L7-27）
+  > `EnemyWorld`・`BulletWorld`・`ParticleWorld`・`ItemWorld` の全エンティティ種別でSoA（Structure of Arrays）が統一されている。`alive: Vec<u8>` が `0xFF`/`0x00` の2値を取る設計はSSE2 SIMDマスクとして直接ロードできるよう意図されている。
+  > 対象ファイル: `native/physics/src/world/`
 
-- **SIMD SSE2 + スカラーフォールバック + rayon 並列の3段階戦略** `+5`
-  > `chase_ai.rs` に `#[cfg(target_arch = "x86_64")]` でSSE2 SIMD版・`RAYON_THRESHOLD = 500` でrayon並列版・端数処理のスカラーフォールバックの3段階が実装されている。unsafeブロックに安全性根拠コメントが充実しており、SIMD/スカラー一致テスト（許容誤差 0.05）も完備。Bevy の `bevy_tasks` や Godot の WorkerThreadPool と比較しても遜色ない実装。
-  > 対象ファイル: `native/physics/src/game_logic/chase_ai.rs`（L135-419）
+- **SIMD SSE2 + rayon 並列 + スカラーフォールバックの3段階戦略** `+5`
+  > `chase_ai.rs` に `#[cfg(target_arch = "x86_64")]` でSSE2 SIMD版・`RAYON_THRESHOLD` でrayon並列版・端数処理のスカラーフォールバックが実装されている。unsafeブロックに安全性根拠コメントが充実しており、SIMD/スカラー一致テストも完備。
+  > 対象ファイル: `native/physics/src/game_logic/chase_ai.rs`
 
-- **free_list O(1) スポーン/キル（全エンティティ統一）** `+4`
-  > `kill` は `saturating_sub` でアンダーフロー防止・冪等性テスト完備。`spawn` は `free_list.pop()` でO(1)スロット再利用。全エンティティ種別で統一されており、ECSフレームワーク（Bevy の `EntityAllocator`）と同等の設計。
-  > 対象ファイル: `native/physics/src/world/enemy.rs`（L62-103）
+- **free_list O(1) スポーン/キル（spawn の Vec<usize> 返却）** `+4`
+  > `spawn` は `Vec<usize>` で使用スロットを返し、free_list 再利用スロットの誤特定リスクを排除。全エンティティ種別で統一された O(1) 設計。
+  > 対象ファイル: `native/physics/src/world/enemy.rs` 等
 
-- **空間ハッシュ衝突検出（FxHashMap + 2段階フィルタ）** `+4`
-  > `FxHashMap`（rustc-hash）による高速な空間ハッシュと、`query_nearby_into` でバッファ再利用によるゼロアロケーション設計。動的（敵・弾丸）と静的（障害物）の分離・2段階フィルタリングが実装されている。
+- **空間ハッシュ衝突検出（FxHashMap・ゼロアロケーション）** `+4`
+  > `FxHashMap`（rustc-hash）による高速な空間ハッシュと、`query_nearby_into` でバッファ再利用。動的・静的の分離・2段階フィルタリングが実装されている。
   > 対象ファイル: `native/physics/src/physics/spatial_hash.rs`
 
-- **決定論的 LCG 乱数（再現性テスト済み）** `+3`
-  > Knuth LCGの定番定数を使用し、`wrapping_mul/add` で安全なオーバーフロー処理。`PARTICLE_RNG_SEED` を `constants.rs` で定数化し、パーティクルの決定論的再現が可能。再現性テストも完備。
+- **決定論的 LCG 乱数** `+3`
+  > Knuth LCG の定番定数を使用し、`wrapping_mul/add` で安全なオーバーフロー処理。再現性テストも完備。
   > 対象ファイル: `native/physics/src/physics/rng.rs`
-
-- **EnemySeparation トレイトによるテスト可能性** `+3`
-  > `EnemySeparation` トレイトにより、テスト用モックを注入可能。分離パスがrayon並列化できない理由（書き込み衝突）をコメントで明記。設計判断の根拠がコードに残っている。
-  > 対象ファイル: `native/physics/src/physics/separation.rs`
-
-- **物理ステップのアーキテクチャ原則の明文化** `+2`
-  > `physics_step.rs` に「HPの権威はElixir側。ここではイベント発行のみ行い」というコメントがあり、SSoT原則がRust側のコードにも浸透している。
-  > 対象ファイル: `native/physics/src/game_logic/physics_step.rs`（L111-113）
-
----
-
-## native/nif — NIF設計・ブリッジ
-
-### ✅ プラス点
-
-- **NIF 関数カテゴリ分類（ロック競合の予測可能性）** `+4`
-  > `world_nif.rs`（パラメータ注入）・`action_nif.rs`（アクション）・`read_nif.rs`（読み取り専用）・`push_tick_nif.rs`（DirtyCpu）・`game_loop_nif.rs`（ループ制御）・`render_nif.rs`・`save_nif.rs` の7カテゴリに分類されており、ロック競合の予測可能性が高い。Rustler の公式ガイドラインを超えた設計。
-  > 対象ファイル: `native/nif/src/nif/`
-
-- **ResourceArc による GC 連動ライフタイム管理** `+4`
-  > `ResourceArc<GameWorld>` と `ResourceArc<GameLoopControl>` でElixir GCとRustのライフタイムを連動させている。`impl rustler::Resource` の登録まで完備しており、メモリリークのリスクがない。
-  > 対象ファイル: `native/nif/src/nif/world_nif.rs`（L23-65）
-
-- **lock_metrics による RwLock 待機時間の可観測性** `+4`
-  > `AtomicU64` でロックフリーな累積統計を管理し、read lock > 300μs / write lock > 500μs で警告、5秒ごとに平均待機時間をレポートする仕組みを実装。NIFのロック競合を本番環境で観測できる設計は、プロダクションレベルのゲームエンジンでも珍しい。
-  > 対象ファイル: `native/nif/src/lock_metrics.rs`
-
-- **push_tick の DirtyCpu スケジューラ指定** `+3`
-  > `#[rustler::nif(schedule = "DirtyCpu")]` でBEAMスケジューラをブロックしないDirty NIFとして実行。物理演算という重い処理をBEAMのスケジューラに影響させない設計が正しく実装されている。
-  > 対象ファイル: `native/nif/src/nif/push_tick_nif.rs`（L18-66）
-
-- **サブフレーム補間（lerp）のロック外計算** `+4`
-  > `render_snapshot.rs` で `prev_tick_ms`/`curr_tick_ms` の差分でフレーム間の経過割合 α を計算し、`clamp(0.0, 1.0)` でオーバーシュートを防止。60fps物理と高フレームレート描画を分離するサブフレーム補間が正しく実装されている。
-  > 対象ファイル: `native/nif/src/render_snapshot.rs`（L197-210）
 
 ---
 
@@ -145,16 +129,16 @@
 ### ✅ プラス点
 
 - **wgpu インスタンス描画（1 draw_indexed で全スプライト）** `+4`
-  > `#[repr(C)] + bytemuck::Pod` でGPUバッファへのゼロコピー転送。`MAX_INSTANCES = 14510` の全スプライトを1回の `draw_indexed` で描画するドローコール最小化設計。wgpu 0.19 時代の個人プロジェクトとしては非常に高品質。
-  > 対象ファイル: `native/render/src/renderer/mod.rs`（L51-58, L991）
+  > `#[repr(C)] + bytemuck::Pod` でGPUバッファへのゼロコピー転送。全スプライトを1回の `draw_indexed` で描画するドローコール最小化設計。
+  > 対象ファイル: `native/render/src/renderer/mod.rs`
 
 - **CI 用ヘッドレスレンダラー** `+4`
-  > `headless.rs` で `mpsc::channel + map_async + poll(WaitForSubmissionIndex)` によるGPU読み出し同期化と、行パディング除去まで実装したオフスクリーンレンダラーが存在する。CIでGPUレンダリングをテストできる設計は、個人プロジェクトでは極めて珍しい。
+  > `headless.rs` でオフスクリーンレンダラーを実装。CIでGPUレンダリングをテストできる設計は個人プロジェクトでは極めて珍しい。
   > 対象ファイル: `native/render/src/headless.rs`
 
-- **RenderBridge トレイトによる疎結合** `+3`
-  > `RenderBridge: Send + 'static` トレイトで描画スレッドとゲームロジックを疎結合。`on_move_input`/`on_ui_action` で `OwnedEnv::send_and_clear` を使ってElixirプロセスに非同期メッセージ送信する設計が正しく実装されている。
-  > 対象ファイル: `native/render/src/window.rs`（L29-33）
+- **サブフレーム補間（lerp）のロック外計算** `+3`
+  > `prev_tick_ms`/`curr_tick_ms` の差分でフレーム間の経過割合 α を計算し、`clamp(0.0, 1.0)` でオーバーシュートを防止。60fps物理と高フレームレート描画を分離。
+  > 対象ファイル: `native/nif/src/render_snapshot.rs`
 
 ---
 
@@ -163,12 +147,34 @@
 ### ✅ プラス点
 
 - **コマンドパターン + mpsc::channel 非同期設計** `+3`
-  > `AudioCommand` enumと `mpsc::channel` によるコマンド駆動設計。`start_audio_thread` 失敗時でもハンドルを返し、呼び出し側をクラッシュさせない設計。デバイス不在時の `log::warn!` のみのグレースフルフォールバックが正しく実装されている。
-  > 対象ファイル: `native/audio/src/audio.rs`（L64-128）
+  > `AudioCommand` enum と `mpsc::channel` によるコマンド駆動設計。デバイス不在時のグレースフルフォールバックが実装されている。
+  > 対象ファイル: `native/audio/src/audio.rs`
 
-- **マクロ駆動アセット定義（Single Source of Truth）** `+3`
-  > `define_assets!` マクロでID・パス・埋め込みデータを一箇所に定義。`include_bytes!` でコンパイル時バイナリ埋め込みと実行時ロードの2段階フォールバックが実装されている。
-  > 対象ファイル: `native/audio/src/asset/mod.rs`（L7-41）
+- **define_assets! マクロによる SSoT** `+2`
+  > ID・パス・埋め込みデータを一箇所に定義。`include_bytes!` でコンパイル時バイナリ埋め込みと実行時ロードの2段階フォールバック。
+  > 対象ファイル: `native/audio/src/asset/mod.rs`
+
+---
+
+## native/nif — NIF設計・ブリッジ
+
+### ✅ プラス点
+
+- **NIF 関数カテゴリ分類（ロック競合の予測可能性）** `+4`
+  > world_nif・action_nif・read_nif・push_tick_nif・game_loop_nif・render_nif・save_nif の7カテゴリに分類。Rustler の公式ガイドラインを超えた設計。
+  > 対象ファイル: `native/nif/src/nif/`
+
+- **ResourceArc による GC 連動ライフタイム管理** `+4`
+  > `ResourceArc<GameWorld>` と `ResourceArc<GameLoopControl>` でElixir GCとRustのライフタイムを連動させている。
+  > 対象ファイル: `native/nif/src/nif/world_nif.rs`
+
+- **lock_metrics による RwLock 可観測性** `+3`
+  > read lock > 300μs / write lock > 500μs で警告、5秒ごとに平均待機時間をレポート。NIFのロック競合を本番環境で観測できる設計。
+  > 対象ファイル: `native/nif/src/lock_metrics.rs`
+
+- **DirtyCpu スケジューラ指定** `+3`
+  > `#[rustler::nif(schedule = "DirtyCpu")]` で物理演算をBEAMスケジューラに影響させない設計。
+  > 対象ファイル: `native/nif/src/nif/push_tick_nif.rs`
 
 ---
 
@@ -177,44 +183,12 @@
 ### ✅ プラス点
 
 - **SIMD/スカラー一致テスト（許容誤差 0.05）** `+4`
-  > `chase_ai.rs` のテスト（L321-417）で8体（SIMD 2バッチ）を使い、死亡敵の速度フィールドが変化しないことまで検証。`_mm_rsqrt_ps` の近似精度誤差（最大 ~0.04%）を考慮した許容誤差設定が正確。
-  > 対象ファイル: `native/physics/src/game_logic/chase_ai.rs`（L321-417）
+  > chase_ai.rs のテストで8体（SIMD 2バッチ）を使い、死亡敵の速度フィールドが変化しないことまで検証。許容誤差設定が正確。
+  > 対象ファイル: `native/physics/src/game_logic/chase_ai.rs`
 
-- **StubRoom による NIF 依存の完全排除** `+4`
-  > `test/support/room_stubs.ex` の `StubRoom` が NIF を起動せずに `GameEngine.RoomRegistry` に登録できる軽量スタブ。`notify: pid` オプションで `assert_receive` による同期確認が可能。NIF依存を排除したテスト戦略が徹底されている。
+- **StubRoom による NIF 依存の完全排除** `+3`
+  > `room_stubs.ex` の `StubRoom` が NIF を起動せずにテストを実行可能。NIF依存を排除したテスト戦略が徹底されている。
   > 対象ファイル: `apps/network/test/support/room_stubs.ex`
-
-- **純粋関数テストの徹底** `+3`
-  > `contents` の7テストファイルがすべて純粋関数・ロジック部分のみをテストし、NIF・シーン管理（Contents.SceneStack）への依存を避けている。`async: true` で並列実行可能。
-  > 対象ファイル: `apps/contents/test/`
-
----
-
-## 可観測性・デバッグ容易性
-
-### ✅ プラス点
-
-- **Telemetry イベントの体系的な設計** `+3`
-  > `[:game, :tick]`・`[:game, :level_up]`・`[:game, :boss_spawn]`・`[:game, :frame_dropped]`・`[:game, :session_end]` の5種類のイベントが体系的に設計されており、`Telemetry.Metrics.ConsoleReporter` で可視化されている。
-  > 対象ファイル: `apps/core/lib/core/telemetry.ex`
-
-- **StressMonitor によるフレームバジェット監視** `+3`
-  > `StressMonitor` GenServerがフレームバジェット超過時に `Logger.warning` を出力し、`one_for_one` 戦略でクラッシュしてもゲームが継続する設計。
-  > 対象ファイル: `apps/core/lib/core/stress_monitor.ex`
-
----
-
-## 変更容易性・保守性
-
-### ✅ プラス点
-
-- **マジックナンバーの集約（constants.rs）** `+3`
-  > 物理定数（画面サイズ・マップサイズ・速度・半径・セルサイズ等）が `constants.rs` に集約されており、散在が極めて少ない。
-  > 対象ファイル: `native/physics/src/constants.rs`
-
-- **pending-issues.md による課題の一元管理** `+3`
-  > 未解決課題9件が番号・優先度・影響ファイル・作業ステップ付きで `pending-issues.md` に一元管理されており、コード内のTODOが2件のみ。技術的負債の把握と管理が行き届いている。
-  > 対象ファイル: `docs/plan/pending-issues.md`
 
 ---
 
@@ -222,16 +196,12 @@
 
 ### ✅ プラス点
 
-- **bin/ci.bat と GitHub Actions の完全同期** `+4`
-  > `ci.bat` が GitHub Actions の各ジョブ（A/B/C/D）と1:1対応しており、ローカルとCIの乖離がない。`FAILED` 変数に失敗ジョブを蓄積して最後にサマリー表示する設計も優秀。
+- **bin/ci.bat と GitHub Actions の設計思想の一致** `+3`
+  > ci.bat が GitHub Actions の各ジョブ（A/B/C/D）と1:1対応。`check` オプションでフォーマット+Lint のみの軽量実行も可能。
   > 対象ファイル: `bin/ci.bat`, `.github/workflows/ci.yml`
 
-- **ベンチマーク回帰テスト（bench-regression ジョブ）** `+4`
-  > `bench-regression` ジョブが `main` push 時に `cargo bench -p physics` を実行し、前回比+10%超でCIをブロック。ベンチマーク結果をGitHub Pagesに自動プッシュする設計は、プロダクションレベルのOSSでも珍しい個人プロジェクトの取り組み。
-  > 対象ファイル: `.github/workflows/ci.yml`
-
-- **CI キャッシュ戦略（NIF変更時の確実な再ビルド）** `+3`
-  > `elixir-test` ジョブのキャッシュキーに `native/**/*.toml` を含めることで、NIF変更時に確実にキャッシュが無効化される。Rustler NIFを含むElixirプロジェクトの典型的な落とし穴を回避している。
+- **ベンチマーク回帰テスト（main push 時）** `+3`
+  > bench-regression ジョブが main push 時に `cargo bench -p physics` を実行し、前回比+10%超でCIをブロック。
   > 対象ファイル: `.github/workflows/ci.yml`
 
 ---
@@ -241,13 +211,9 @@
 ### ✅ プラス点
 
 - **ドキュメントの品質・網羅性・コードとの一致度** `+5`
-  > `vision.md`・`docs/architecture/`（overview、elixir/server・core・contents・network・contents/vampire_survivor・asteroid_arena、rust/nif・physics・render・audio・input_openxr）が全て Mermaid ダイアグラム付きで充実しており、コードとの一致度が高い。個人プロジェクトのドキュメント品質としては突出している。
+  > `vision.md`・`docs/architecture/` が Mermaid ダイアグラム付きで充実しており、コードとの一致度が高い。個人プロジェクトのドキュメント品質としては突出している。
   > 対象ファイル: `docs/`
 
 - **vision.md による設計哲学の明文化** `+4`
-  > 「エンジンがこの概念を知る必要があるか？」という設計判断基準が `vision.md` に明文化されており、コードレビュー・設計議論の共通言語として機能している。Godot の「ノードとシーン」哲学と同等の明確さ。
+  > 「エンジンがこの概念を知る必要があるか？」という設計判断基準が vision.md に明文化されている。Godot の「ノードとシーン」哲学と同等の明確さ。
   > 対象ファイル: `docs/vision.md`
-
-- **improvement-plan.md による自己評価サイクル** `+3`
-  > スコアカード（各カテゴリ 1〜10点）と未解決課題の優先順位が `improvement-plan.md` に記録されており、自己改善サイクルが機能している。完了済みタスクの取り消し線による進捗管理も明確。
-  > 対象ファイル: `docs/plan/improvement-plan.md`
