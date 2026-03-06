@@ -17,7 +17,7 @@
 | `spawn_enemies/3` | 敵をスポーン（atom → ID 自動解決） |
 | `spawn_elite_enemy/4` | エリート敵をスポーン（HP 倍率付き） |
 | `get_enemy_count/1` | 生存敵数を取得 |
-| `is_player_dead?/1` | 死亡判定 |
+| `player_dead?/1` | 死亡判定 |
 | `get_frame_metadata/1` | フレームメタデータを取得 |
 | `save_session/1` | セッションをセーブ |
 | `load_session/1` | セッションをロード |
@@ -244,6 +244,24 @@ Rust から受信したフレームイベントを複数のサブスクライバ
 ## `stress_monitor.ex` — パフォーマンス監視 GenServer
 
 1 秒ごとに `FrameCache` をサンプリングし、フレームバジェット超過時に `Logger.warning` を出力します。
+
+---
+
+## `formula.ex` — Formula 式評価 API
+
+Elixir で定義した式グラフ（FormulaGraph）を Rust NIF VM で評価する API。`formula_nif` 経由で Elixir → Rust → Elixir の双方向計算フローを提供する。
+
+---
+
+## `formula_graph.ex` — 式グラフ（DAG）
+
+入力・定数・演算・比較・Store read/write などをノードとする DAG を構築。`Core.Formula.eval/2` 等で NIF に渡して評価する。
+
+---
+
+## `formula_store.ex` — Store バックエンド
+
+Formula 内の `read_store` / `write_store` ノードが参照するキー・値ストア。`config :core, :formula_store_broadcast` でネットワーク同期 MFA を指定可能。`Core.FormulaStore.LocalBackend` がローカル実装。
 
 ---
 

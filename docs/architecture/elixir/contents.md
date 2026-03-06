@@ -2,14 +2,15 @@
 
 ## 概要
 
-`contents` はゲームコンテンツ（VampireSurvivor / AsteroidArena / SimpleBox3D / BulletHell3D / RollingBall / VRTest / CanvasTest）の実装と、シーン管理・メインゲームループのディスパッチを担当します。エンジン本体（[core](./core.md)）はゲームロジックを知らず、ContentBehaviour で定義されたインターフェースに従ってコンポーネントへ委譲します。Phase R-2 以降、描画は Elixir 側の RenderComponent が DrawCommand・Camera・UiCanvas を組み立て、`push_render_frame` NIF で RenderFrameBuffer に書き込む。
+`contents` はゲームコンテンツ（VampireSurvivor / AsteroidArena / SimpleBox3D / BulletHell3D / RollingBall / VRTest / CanvasTest / FormulaTest）の実装と、シーン管理・メインゲームループのディスパッチを担当します。エンジン本体（[core](./core.md)）はゲームロジックを知らず、ContentBehaviour で定義されたインターフェースに従ってコンポーネントへ委譲します。Phase R-2 以降、描画は Elixir 側の RenderComponent が DrawCommand・Camera・UiCanvas を組み立て、`push_render_frame` NIF で RenderFrameBuffer に書き込む。
 
 使用するコンテンツは `config.exs` で指定します。
 
 ```elixir
 # Content.VampireSurvivor / Content.AsteroidArena / Content.SimpleBox3D /
-# Content.BulletHell3D / Content.RollingBall / Content.VRTest / Content.CanvasTest
-config :server, :current, Content.SimpleBox3D
+# Content.BulletHell3D / Content.RollingBall / Content.VRTest / Content.CanvasTest /
+# Content.FormulaTest（Formula エンジン検証、デフォルト）
+config :server, :current, Content.FormulaTest
 ```
 
 ---
@@ -133,6 +134,7 @@ stateDiagram-v2
 | `Content.RollingBall` | 玉転がしゲーム | - |
 | `Content.VRTest` | VR 動作検証（Phase A: マウスで見回し） | - |
 | `Content.CanvasTest` | 描画テスト用（DrawCommand・UiCanvas・CanvasUI 動作検証） | [docs/task/canvas-test-design.md](../../task/canvas-test-design.md) |
+| `Content.FormulaTest` | Formula エンジン検証（Elixir→Rust NIF VM→Elixir フロー、Input / Render コンポーネント） | - |
 
 ---
 

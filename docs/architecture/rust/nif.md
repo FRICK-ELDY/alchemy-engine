@@ -58,6 +58,8 @@ graph TD
     KEY[key_map.rs<br/>キーコードマッピング]
     XR[xr_nif.rs<br/>OpenXR VR ブリッジ<br/>feature=xr]
     RFB[render_frame_buffer.rs<br/>Elixir から push された RenderFrame を保持]
+    FORMULA[formula_nif.rs<br/>Formula VM 評価 NIF]
+    FORMULA_MOD[formula/<br/>VM・オペコード・Value]
 
     NIF --> LOAD
     NIF --> WORLD
@@ -74,6 +76,8 @@ graph TD
     NIF --> KEY
     NIF --> XR
     NIF --> RFB
+    NIF --> FORMULA
+    FORMULA --> FORMULA_MOD
 ```
 
 ### NIF 関数一覧
@@ -132,6 +136,14 @@ graph TD
 | `get_frame_metadata(world)` | フレームメタデータ |
 | `get_weapon_levels(world)` | 全武器レベル（`%{kind_id => level}`） |
 | `is_player_dead(world)` | 死亡判定 |
+
+**`formula_nif.rs`（Formula VM 評価）:**
+
+Elixir の FormulaGraph から生成したバイトコードを Rust 側 VM で実行。`formula/` モジュール（vm.rs, opcode, value, decode）が VM 実装を提供。`Core.Formula` / `Content.FormulaTest` が利用。
+
+**`load.rs`:**
+
+NIF ローダー。パニックフック（debug 時）・GameWorld / GameLoopControl / RenderFrameBuffer のリソース登録・アトム事前登録を行う。
 
 **`game_loop_nif.rs`:**
 

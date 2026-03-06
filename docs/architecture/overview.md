@@ -67,7 +67,12 @@ alchemy-engine/
 │   │       ├── save_manager.ex      # セーブ/ロード
 │   │       ├── stats.ex             # セッション統計 GenServer
 │   │       ├── telemetry.ex         # Telemetry Supervisor
-│   │       └── stress_monitor.ex    # パフォーマンス監視 GenServer
+│   │       ├── stress_monitor.ex    # パフォーマンス監視 GenServer
+│   │       ├── formula.ex           # Formula 式評価 API
+│   │       ├── formula_graph.ex     # 式グラフ（DAG）構築
+│   │       ├── formula_store.ex     # Store バックエンド（read/write）
+│   │       └── formula_store/
+│   │           └── local_backend.ex # ローカル Store 実装
 │   │
 │   ├── server/                      # 起動プロセス
 │   │   ├── mix.exs
@@ -97,6 +102,7 @@ alchemy-engine/
 │   │       │   ├── spawn_system.ex
 │   │       │   ├── boss_system.ex
 │   │       │   ├── level_system.ex
+│   │       │   ├── weapon_formulas.ex     # 武器パラメータ計算式
 │   │       │   └── scenes/ playing.ex, level_up.ex, boss_alert.ex, game_over.ex
 │   │       ├── asteroid_arena.ex          # Content.AsteroidArena
 │   │       ├── asteroid_arena/
@@ -123,7 +129,11 @@ alchemy-engine/
 │   │       │   ├── spawn_component.ex, input_component.ex, render_component.ex
 │   │       │   └── scenes/ playing.ex, game_over.ex
 │   │       ├── canvas_test.ex             # Content.CanvasTest（描画テスト）
-│   │       └── canvas_test/
+│   │       ├── canvas_test/
+│   │       │   ├── input_component.ex, render_component.ex
+│   │       │   └── scenes/ playing.ex
+│   │       ├── formula_test.ex            # Content.FormulaTest（Formula エンジン検証）
+│   │       └── formula_test/
 │   │           ├── input_component.ex, render_component.ex
 │   │           └── scenes/ playing.ex
 │   │
@@ -554,4 +564,4 @@ graph TB
 - [**ビジョンと設計思想**](../vision.md) ← エンジン・ワールド・ルール・ゲームの定義
 - **Elixir レイヤー**: [server](./elixir/server.md) / [core](./elixir/core.md) / [contents](./elixir/contents.md)（ゲームコンテンツ一覧・設計パターン含む）/ [network](./elixir/network.md)
 - **Rust レイヤー**: [nif](./rust/nif.md) / [physics](./rust/physics.md) / [render](./rust/render.md) / [audio](./rust/audio.md) / [input_openxr](./rust/input_openxr.md)
-- [改善計画](../task/improvement-plan.md) ← 既知の弱点と改善方針
+- [改善計画](../plan/improvement-plan.md) ← 既知の弱点と改善方針

@@ -28,6 +28,7 @@ graph LR
 graph TD
     APP[Server.Application]
     REG[Registry<br/>Core.RoomRegistry]
+    FS[Core.FormulaStore.LocalBackend]
     SS[Contents.SceneStack]
     IH[Core.InputHandler]
     EB[Core.EventBus]
@@ -38,6 +39,7 @@ graph TD
     TEL[Core.Telemetry]
 
     APP --> REG
+    APP --> FS
     APP --> SS
     APP --> IH
     APP --> EB
@@ -57,8 +59,9 @@ graph TD
 ```elixir
 # 使用するコンテンツモジュールを指定する
 # 例: Content.VampireSurvivor / Content.AsteroidArena / Content.SimpleBox3D /
-# Content.BulletHell3D / Content.RollingBall / Content.VRTest / Content.CanvasTest
-config :server, :current, Content.SimpleBox3D
+# Content.BulletHell3D / Content.RollingBall / Content.VRTest / Content.CanvasTest /
+# Content.FormulaTest（デフォルト）
+config :server, :current, Content.FormulaTest
 config :server, :map, :plain
 config :server, :game_events_module, Contents.GameEvents
 ```
