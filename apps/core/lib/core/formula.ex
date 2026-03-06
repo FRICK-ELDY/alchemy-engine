@@ -3,7 +3,7 @@ defmodule Core.Formula do
   コンテンツ数式エンジンの Elixir 側ヘルパー。
 
   Phase 1 ではバイトコードの生成と NIF 呼び出しを提供する。
-  Phase 3 で FormulaGraph からのコンパイルを追加予定。
+  Phase 3 で FormulaGraph を追加。`Core.FormulaGraph` でグラフを定義しコンパイル可能。
 
   ## OpCode バイト値
   - 0: LOAD_INPUT
