@@ -15,6 +15,9 @@ pub struct WeaponSlot {
     pub kind_id: u8,
     pub level: u32,
     pub cooldown_timer: f32,
+    /// R-W2: Elixir の WeaponFormulas.effective_damage で事前計算して注入する値。
+    /// damage 計算の SSoT を contents に移行。
+    pub precomputed_damage: i32,
 }
 
 impl WeaponSlot {
@@ -23,17 +26,13 @@ impl WeaponSlot {
             kind_id,
             level: 1,
             cooldown_timer: 0.0,
+            precomputed_damage: 0,
         }
     }
 
     pub fn effective_cooldown(&self, params: &WeaponParams) -> f32 {
         let base = params.cooldown;
         (base * (1.0 - (self.level as f32 - 1.0) * 0.07)).max(base * 0.5)
-    }
-
-    pub fn effective_damage(&self, params: &WeaponParams) -> i32 {
-        let base = params.damage;
-        base + (self.level as i32 - 1) * (base / 4).max(1)
     }
 
     pub fn bullet_count(&self, params: &WeaponParams) -> usize {
@@ -68,21 +67,11 @@ mod tests {
     #[test]
     fn weapon_slot_bullet_count() {
         let tables = make_test_tables();
-        let slot = WeaponSlot::new(0);
+        let mut slot = WeaponSlot::new(0);
+        slot.precomputed_damage = 12; // R-W2: Elixir から注入する想定
         assert_eq!(
             slot.bullet_count(tables.get_weapon(0).expect("weapon 0 should exist")),
             1
-        );
-    }
-
-    #[test]
-    fn weapon_slot_effective_damage() {
-        let tables = make_test_tables();
-        let mut slot = WeaponSlot::new(0);
-        slot.level = 2;
-        assert_eq!(
-            slot.effective_damage(tables.get_weapon(0).expect("weapon 0 should exist")),
-            12
         );
     }
 }

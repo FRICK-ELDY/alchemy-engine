@@ -12,20 +12,21 @@ use rustler::{Atom, NifResult, ResourceArc};
 use crate::{alive, ok};
 
 /// weapon_slots SSoT 移行: 武器スロットを Elixir 側から毎フレーム注入する NIF。
-/// slots: [{kind_id, level, cooldown_timer}] — cooldown も Elixir が SSoT。
+/// slots: [{kind_id, level, cooldown_timer, precomputed_damage}] — R-W2: damage も Elixir が SSoT。
 /// kind_id は u8 範囲（0..=255）であること。Elixir 側 entity_registry と一致させる。
 #[rustler::nif]
 pub fn set_weapon_slots(
     world: ResourceArc<GameWorld>,
-    slots: Vec<(u8, u32, f64)>,
+    slots: Vec<(u8, u32, f64, i32)>,
 ) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
     let new_slots: Vec<WeaponSlot> = slots
         .into_iter()
-        .map(|(kind_id, level, cooldown)| WeaponSlot {
+        .map(|(kind_id, level, cooldown, precomputed_damage)| WeaponSlot {
             kind_id,
             level,
             cooldown_timer: cooldown as f32,
+            precomputed_damage,
         })
         .collect();
     w.weapon_slots_input = new_slots;
