@@ -10,7 +10,7 @@ rayon = "1"
 log = "0.4"
 
 [dependencies.rustler]
-version = "0.34"
+version = "0.37"
 optional = true
 
 [dev-dependencies]

@@ -184,20 +184,28 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 
 #### 0.1 定義の SSoT 化
 
-- [ ] **entity_params 一元化**: Elixir `Content.EntityParams` を唯一の定義とし、Rust の `ENEMY_TABLE` / `boss.rs` 内のハードコードを `set_entity_params` 注入に完全移行
-- [ ] **定数ドキュメント化**: `physics/constants.rs` のうち「コンテンツ固有」と「エンジン固定」を分離。コンテンツ固有は Elixir 定義 or 起動時注入に
-- [ ] **DrawCommand 仕様書の確定**: [draw-command-spec.md](../architecture/draw-command-spec.md) をプロトコル仕様として確定。MessagePack 等バイナリ形式のスキーマを策定（P5-2 と連携）
+- [x] **entity_params 一元化**: Elixir `Content.EntityParams` を唯一の定義とし、Rust の `ENEMY_TABLE` / `boss.rs` 内のハードコードを `set_entity_params` 注入に完全移行（完了済み。`EntityParamTables` + `set_entity_params` で実現）
+- [x] **定数ドキュメント化**: `physics/constants.rs` のうち「コンテンツ固有」と「エンジン固定」を分離。コンテンツ固有は Elixir 定義 or 起動時注入に。分類は constants.rs のコメントおよび下記一覧を参照。
+- [x] **DrawCommand 仕様書の確定**: [draw-command-spec.md](../architecture/draw-command-spec.md) をプロトコル仕様として確定。MessagePack 形式は [messagepack-schema.md](../architecture/messagepack-schema.md) を参照（P5-2 と連携）
+
+##### constants 分類一覧
+
+| 分類 | 対象定数 | 備考 |
+|:---|:---|:---|
+| エンジン固定 | SCREEN_WIDTH/HEIGHT, FRAME_BUDGET_MS, CELL_SIZE, PARTICLE_RNG_SEED, INVINCIBLE_DURATION, PLAYER_RADIUS, BULLET_RADIUS, CAMERA_LERP_SPEED, SPRITE_SIZE | そのまま維持 |
+| コンテンツ可変 | MAP_*, PLAYER_SPEED, BULLET_*, WEAPON_*, ENEMY_DAMAGE_PER_SEC, WAVES | set_world_params / set_entity_params で注入 |
+| 未整理 | ENEMY_RADIUS, ENEMY_SEPARATION_* | 敵ごとに entity_params で上書き可能。現状はデフォルト値 |
 
 #### 0.2 既存プロトコル確認
 
-- [ ] **Network.Channel** の `"input"` / `"frame"` イベント形式を確認
-- [ ] **UDP プロトコル**（`Network.UDP`）のフォーマットを確認
-- [ ] 現状の `"frame"` ペイロードが DrawCommand を含むか、frame_events のみかを把握
+- [x] **Network.Channel** の `"input"` / `"frame"` イベント形式を確認 → [network-protocol-current.md](../architecture/network-protocol-current.md)
+- [x] **UDP プロトコル**（`Network.UDP`）のフォーマットを確認 → 同上
+- [x] 現状の `"frame"` ペイロードが DrawCommand を含むか、frame_events のみかを把握 → frame_events のみ
 
 #### 0.3 Zenohex 導入
 
-- [ ] `zenohex` を `mix.exs` に追加（`{:zenohex, "~> 0.7.2"}`）
-- [ ] Zenoh のバージョン互換性を確認（Zenohex 0.7.x は Zenoh 1.7.x に対応）
+- [x] `zenohex` を `apps/network/mix.exs` に追加（`{:zenohex, "~> 0.7.2"}`）。rustler 0.37.x への昇格を実施
+- [x] Zenoh のバージョン互換性を確認（Zenohex 0.7.x は Zenoh 1.7.x に対応）
 
 ---
 
@@ -215,13 +223,15 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 
 | 項目 | 形式 | 説明 |
 |:---|:---|:---|
-| draw_commands | MessagePack / JSON | Elixir の RenderComponent が生成する DrawCommand リスト |
-| camera_params | struct | Camera2D / Camera3D のパラメータ |
+| commands | MessagePack | Elixir の RenderComponent が生成する DrawCommand リスト。トップレベル構造は [messagepack-schema.md](../architecture/messagepack-schema.md) を参照 |
+| camera | MessagePack | Camera2D / Camera3D のパラメータ。同上 |
+| ui | MessagePack | UI キャンバス。同上 |
+| mesh_definitions | MessagePack | メッシュ定義リスト。同上 |
 | player_interp | optional | prev/curr tick_ms, prev/curr pos（クライアント側補間用） |
 | frame_id | u32 | フレーム識別 |
 
 - [ ] 既存 `push_render_frame` / `push_render_frame_binary` のペイロードをベースにプロトコル仕様を策定
-- [ ] MessagePack スキーマを [messagepack-schema.md](../architecture/messagepack-schema.md) に追記
+- [x] MessagePack スキーマは [messagepack-schema.md](../architecture/messagepack-schema.md) に定義済み
 
 #### 1.3 入力ペイロード
 

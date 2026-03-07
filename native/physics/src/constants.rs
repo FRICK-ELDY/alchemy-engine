@@ -1,6 +1,12 @@
 //! Path: native/physics/src/constants.rs
 //! Summary: 画面解像度・マップサイズ・物理定数などの定数定義
+//!
+//! ## 定数分類（SSoT 方針）
+//! - **エンジン固定**: エンジン挙動・技術パラメータに依存。そのまま維持。
+//! - **コンテンツ可変**: `set_world_params` / `set_entity_params` で注入可能。Elixir (contents) が SSoT。
+//! - **未整理**: 敵ごとに異なる場合は entity_params 経由を推奨。現状はデフォルト値として維持。
 
+// ─── 背景色（エンジン固定）───
 // Background clear color (dark purple)
 #[allow(dead_code)]
 pub const BG_R: f64 = 0.05;
@@ -9,10 +15,12 @@ pub const BG_G: f64 = 0.02;
 #[allow(dead_code)]
 pub const BG_B: f64 = 0.10;
 
+// ─── 解像度（エンジン固定）───
 // Window resolution
 pub const SCREEN_WIDTH: f32 = 1280.0;
 pub const SCREEN_HEIGHT: f32 = 720.0;
 
+// ─── マップサイズ（コンテンツ可変: set_world_size で注入）───
 // Map size (1.2.5: camera scroll)
 // Used by game_window binary; NIF lib uses fixed screen coordinates.
 #[allow(dead_code)]
@@ -20,54 +28,65 @@ pub const MAP_WIDTH: f32 = 4096.0;
 #[allow(dead_code)]
 pub const MAP_HEIGHT: f32 = 4096.0;
 
+// ─── カメラ（エンジン固定）───
 // Camera lerp speed (1.2.5)
 #[allow(dead_code)]
 pub const CAMERA_LERP_SPEED: f32 = 5.0;
 
+// ─── スプライト（エンジン固定）───
 // Sprite / player size
 pub const SPRITE_SIZE: f32 = 64.0;
 pub const PLAYER_SIZE: f32 = SPRITE_SIZE;
 
+// ─── 移動（コンテンツ可変: set_world_params で注入）───
 // Movement
 pub const PLAYER_SPEED: f32 = 200.0;
 
+// ─── フレーム（エンジン固定）───
 // Frame budget (used by lib.rs NIF; not all binaries reference it)
 #[allow(dead_code)]
 pub const FRAME_BUDGET_MS: f64 = 1000.0 / 60.0;
 
+// ─── 衝突半径（PLAYER_RADIUS/BULLET_RADIUS: エンジン固定。ENEMY_*: 未整理、敵ごとに entity_params で上書き可能）───
 // Collision radii
 pub const PLAYER_RADIUS: f32 = PLAYER_SIZE / 2.0;
 pub const ENEMY_RADIUS: f32 = 20.0;
 pub const BULLET_RADIUS: f32 = 6.0;
 
-// Enemy separation: 敵同士が重ならないための押し出し半径・強さ
+// Enemy separation: 敵同士が重ならないための押し出し半径・強さ（未整理）
 pub const ENEMY_SEPARATION_RADIUS: f32 = ENEMY_RADIUS * 2.0;
 pub const ENEMY_SEPARATION_FORCE: f32 = 120.0;
 
+// ─── 戦闘（コンテンツ可変: set_world_params / set_entity_params で注入。INVINCIBLE_DURATION はエンジン固定）───
 // Combat
 #[allow(dead_code)]
 pub const ENEMY_DAMAGE_PER_SEC: f32 = 20.0;
-pub const INVINCIBLE_DURATION: f32 = 0.5;
+pub const INVINCIBLE_DURATION: f32 = 0.5; // エンジン固定
 pub const WEAPON_COOLDOWN: f32 = 1.0;
 pub const BULLET_SPEED: f32 = 400.0;
 pub const BULLET_DAMAGE: i32 = 10;
 pub const BULLET_LIFETIME: f32 = 3.0;
 
+// ─── 空間ハッシュ（エンジン固定）───
 // Spatial hash cell size
 pub const CELL_SIZE: f32 = 80.0;
 
+// ─── パーティクル（エンジン固定）───
 /// パーティクル用 RNG シード（create_world / load_save_snapshot 等で使用）
 pub const PARTICLE_RNG_SEED: u64 = 67890;
 
+// ─── UI（POPUP_Y_OFFSET: エンジン固定。表示時間は Elixir から注入）───
 // Score popup display parameters (score_popups buffer)
 /// スコアポップアップの Y 軸オフセット（エンティティ中心より上に表示）
 pub const POPUP_Y_OFFSET: f32 = -20.0;
 // R-E1: 表示時間は add_score_popup の lifetime 引数で Elixir (contents) から注入
 
+// ─── 武器（コンテンツ可変: set_entity_params で注入）───
 /// 武器の最近接敵探索半径（MagicWand / Fireball / Lightning 用）
 #[allow(dead_code)] // lib で使用、bin (game_window) では未使用（main.rs 空間ハッシュ化で使用予定）
 pub const WEAPON_SEARCH_RADIUS: f32 = SCREEN_WIDTH / 2.0;
 
+// ─── 敵数・スポーン（コンテンツ可変: Elixir SpawnSystem が制御）───
 // Enemy cap (used by game_window binary; not referenced by the NIF lib)
 #[allow(dead_code)]
 pub const MAX_ENEMIES: usize = 300;
