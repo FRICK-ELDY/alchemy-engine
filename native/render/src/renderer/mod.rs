@@ -157,7 +157,10 @@ pub struct Renderer {
 impl Renderer {
     /// 1.7.2: atlas_bytes を引数で受け取る。1.7.3 で asset が game_native に移動したら
     /// 呼び出し元（render_thread 等）で AssetLoader から取得して渡す。
-    pub async fn new(window: Arc<Window>, atlas_bytes: &[u8]) -> Self {
+    /// P4: init.sprite_wgsl / init.mesh_wgsl が Some の場合はコンテンツ定義の WGSL を使用。
+    /// None の場合は include_str! フォールバック。
+    pub async fn new(window: Arc<Window>, init: &crate::window::RendererInit) -> Self {
+        let atlas_bytes = &init.atlas_png;
         let instance = wgpu::Instance::default();
         let surface = instance
             .create_surface(window.clone())
@@ -332,8 +335,11 @@ impl Renderer {
             }],
         });
 
-        // ─── シェーダー・パイプライン ────────────────────────────
-        let shader_source = include_str!("shaders/sprite.wgsl");
+        // ─── シェーダー・パイプライン（P4: コンテンツ定義 or include_str! フォールバック）───
+        let shader_source = init
+            .sprite_wgsl
+            .as_deref()
+            .unwrap_or_else(|| include_str!("shaders/sprite.wgsl"));
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Sprite Shader"),
             source: wgpu::ShaderSource::Wgsl(shader_source.into()),
@@ -430,13 +436,14 @@ impl Renderer {
             None,
         );
 
-        // ─── R-5: 3D パイプライン初期化 ──────────────────────────
+        // ─── R-5: 3D パイプライン初期化（P4: mesh_wgsl はコンテンツ定義 or include_str!）────
         let pipeline_3d = pipeline_3d::Pipeline3D::new(
             Arc::clone(&device),
             Arc::clone(&queue),
             config.format,
             size.width,
             size.height,
+            init.mesh_wgsl.as_deref(),
         );
 
         Self {

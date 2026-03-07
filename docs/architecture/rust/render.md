@@ -218,14 +218,13 @@ CI / テスト環境向け。`[features] headless = []` で有効化。winit ウ
 
 ---
 
-### P4 以降の参照
+### P4 実装状況（P4-2〜5 完了）
 
-- **P4-2**: Elixir からシェーダー WGSL ソースを渡すインターフェース設計
-- **P4-3**: コンテンツがアセットとして WGSL を保持する構成
-- **P4-4**: NIF または起動時ロードでシェーダーを Elixir 定義から取得
-- **P4-5**: `include_str!` をフォールバックとして残すか、完全移行するか
+- **起動時ロード**: `assets/{game_id}/shaders/sprite.wgsl`, `mesh.wgsl` をファイルから読み込む
+- **フォールバック**: ファイル未存在時は `include_str!` を使用
+- 詳細: [shader-elixir-interface.md](../shader-elixir-interface.md)
 
-本ドキュメントの uniform・バインド・頂点レイアウトは、Elixir 側がシェーダーを定義する際の **契約（Contract）** となる。コンテンツがカスタム WGSL を渡す場合でも、Rust が期待する bind group レイアウト・頂点属性に適合する必要がある。
+本ドキュメントの uniform・バインド・頂点レイアウトは、コンテンツがカスタム WGSL を定義する際の **契約（Contract）** となる。Rust が期待する bind group レイアウト・頂点属性に適合する必要がある。
 
 ---
 

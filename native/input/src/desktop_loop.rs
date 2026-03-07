@@ -97,7 +97,7 @@ impl<B: RenderBridge> ApplicationHandler for DesktopApp<B> {
 
         let renderer = pollster::block_on(Renderer::new(
             window.clone(),
-            &self.config.renderer_init.atlas_png,
+            &self.config.renderer_init,
         ));
         self.window = Some(window.clone());
         self.renderer = Some(renderer);

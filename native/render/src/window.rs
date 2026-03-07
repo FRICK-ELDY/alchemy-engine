@@ -9,6 +9,9 @@ pub use winit::keyboard::KeyCode;
 #[derive(Clone)]
 pub struct RendererInit {
     pub atlas_png: Vec<u8>,
+    /// P4: コンテンツ定義の WGSL。None の場合は include_str! フォールバック。
+    pub sprite_wgsl: Option<String>,
+    pub mesh_wgsl: Option<String>,
 }
 
 pub struct WindowConfig {
