@@ -174,6 +174,7 @@ impl<B: RenderBridge> ApplicationHandler for DesktopApp<B> {
                         &frame.ui,
                         &frame.camera,
                         &frame.commands,
+                        &frame.mesh_definitions,
                         &mut self.ui_state,
                     ) {
                         self.bridge.on_ui_action(action);

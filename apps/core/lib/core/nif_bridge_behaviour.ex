@@ -69,7 +69,15 @@ defmodule Core.NifBridge.Behaviour do
   @callback create_render_frame_buffer() :: reference()
   # atlas_path: アトラス PNG のファイルパス。Rust 側でロードし、存在しない場合は埋め込みフォールバックを使用する。
   @callback start_render_thread(reference(), reference(), pid(), String.t(), String.t()) :: :ok
-  @callback push_render_frame(reference(), [draw_command()], camera_params(), hud_data()) :: :ok
+  # P3: ui (UiCanvas), cursor_grab, mesh_definitions を追加。6 引数。
+  @callback push_render_frame(
+              reference(),
+              [draw_command()],
+              camera_params(),
+              term(),
+              :grab | :release | :no_change,
+              [term()]
+            ) :: :ok
   @callback pause_physics(reference()) :: :ok
   @callback resume_physics(reference()) :: :ok
 

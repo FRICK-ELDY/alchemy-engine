@@ -25,7 +25,8 @@
 | `:item` | アイテム | 2D |
 | `:obstacle` | 障害物 | 2D |
 | `:box_3d` | 3D ボックス | 3D |
-| `:grid_plane` | XZ 平面グリッド（地面等） | 3D |
+| `:grid_plane` | XZ 平面グリッド（地面等、パラメータで Rust が生成） | 3D |
+| `:grid_plane_verts` | XZ 平面グリッド（P3: Elixir が頂点を生成） | 3D |
 | `:skybox` | 空色グラデーション背景 | 3D |
 
 **注**: `:sprite` は decode には未対応。`:sprite_raw` を推奨。`:player_sprite` / `:item` はレガシーで SpriteRaw で代用可能。
@@ -131,6 +132,16 @@
 | size | float | 一辺のサイズ |
 | divisions | non_neg_integer | 分割数 |
 | r, g, b, a | float | グリッド線の色 |
+
+### 3.7.1 grid_plane_verts（P3）
+
+```elixir
+{:grid_plane_verts, [{{x, y, z}, {r, g, b, a}}, ...]}
+```
+
+| フィールド | 型 | 説明 |
+|:---|:---|:---|
+| vertices | list | Elixir 定義の頂点リスト。`Content.MeshDef.grid_plane/1` から取得可 |
 
 ---
 

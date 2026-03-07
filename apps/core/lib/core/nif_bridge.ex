@@ -94,7 +94,8 @@ defmodule Core.NifBridge do
   #     {:world_text, world_x, world_y, world_z, text, {r,g,b,a}, {lifetime, max_lifetime}}
   #     {:screen_flash, {r,g,b,a}}
   # cursor_grab: :grab | :release | :no_change
-  def push_render_frame(_render_buf, _commands, _camera, _ui, _cursor_grab),
+  # P3: mesh_definitions は 6 番目。2D は []、3D は Content.MeshDef.default_definitions() 等を渡す。
+  def push_render_frame(_render_buf, _commands, _camera, _ui, _cursor_grab, _mesh_definitions),
     do: :erlang.nif_error(:nif_not_loaded)
 
   def pause_physics(_control), do: :erlang.nif_error(:nif_not_loaded)

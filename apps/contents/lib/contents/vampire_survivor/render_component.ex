@@ -80,7 +80,8 @@ defmodule Content.VampireSurvivor.RenderComponent do
       commands,
       camera,
       ui,
-      :no_change
+      :no_change,
+      []
     )
 
     :ok

@@ -12,7 +12,7 @@ use render::DrawCommand;
 use rustler::types::list::ListIterator;
 use rustler::{Atom, Error as NifError, NifResult, Term};
 
-use super::{decode_color, tag_of, u32_to_u8};
+use super::{decode_color, decode_mesh_vertices, tag_of, u32_to_u8};
 
 pub fn decode_commands(term: Term) -> NifResult<Vec<DrawCommand>> {
     let iter: ListIterator = term.decode()?;
@@ -106,6 +106,16 @@ fn decode_command(term: Term) -> NifResult<DrawCommand> {
                 color: [r as f32, g as f32, b as f32, a as f32],
             })
         }
+        // {:grid_plane_verts, [{{x,y,z},{r,g,b,a}}, ...]}
+        "grid_plane_verts" => {
+            let (_, vertices_t): (Atom, Term) = term.decode().map_err(|_| {
+                NifError::Term(Box::new(
+                    "grid_plane_verts: expected {:grid_plane_verts, [vertices]}",
+                ))
+            })?;
+            let vertices = decode_mesh_vertices(vertices_t, "grid_plane_verts")?;
+            Ok(DrawCommand::GridPlaneVerts { vertices })
+        }
         // {:grid_plane, size, divisions, {r, g, b, a}}
         "grid_plane" => {
             let (_, size, divisions, color): (Atom, f64, u32, (f64, f64, f64, f64)) =
@@ -173,3 +183,4 @@ fn decode_command(term: Term) -> NifResult<DrawCommand> {
         )))),
     }
 }
+

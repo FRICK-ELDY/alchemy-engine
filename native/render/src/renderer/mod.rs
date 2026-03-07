@@ -513,12 +513,14 @@ impl Renderer {
     /// UI を描画し、ボタンが押された場合はアクション文字列を返す。
     /// ui_state でセーブ/ロードダイアログ・トーストを制御する。
     /// R-5: `CameraParams::Camera3D` の場合は 3D パイプラインを使用する。
+    /// P3: mesh_definitions が非空の場合、3D パイプラインにメッシュを登録する。
     pub fn render(
         &mut self,
         window: &Window,
         ui: &crate::UiCanvas,
         camera: &crate::CameraParams,
         commands: &[DrawCommand],
+        mesh_definitions: &[crate::MeshDef],
         ui_state: &mut GameUiState,
     ) -> Option<String> {
         // ─── FPS 計測 ────────────────────────────────────────────
@@ -586,8 +588,14 @@ impl Renderer {
 
         // ─── R-5: 3D パス ────────────────────────────────────────
         // Camera3D 以外が渡された場合は pipeline_3d.render() 内で早期リターンする。
-        self.pipeline_3d
-            .render(&mut encoder, &view, commands, camera);
+        // P3: mesh_definitions を渡し、パイプラインが登録して使用する。
+        self.pipeline_3d.render(
+            &mut encoder,
+            &view,
+            commands,
+            camera,
+            mesh_definitions,
+        );
 
         // ─── egui HUD パス ───────────────────────────────────────
         let raw_input = self.egui_winit.take_egui_input(window);
@@ -726,8 +734,9 @@ fn sprite_instance_from_command(cmd: &DrawCommand) -> Option<SpriteInstance> {
         // R-R1: 非推奨。contents は SpriteRaw で渡すこと。
         DrawCommand::PlayerSprite { .. } | DrawCommand::Item { .. } => None,
         // 3D コマンドはスプライトパイプラインでは描画しない
-        DrawCommand::Box3D { .. } | DrawCommand::GridPlane { .. } | DrawCommand::Skybox { .. } => {
-            None
-        }
+        DrawCommand::Box3D { .. }
+        | DrawCommand::GridPlane { .. }
+        | DrawCommand::GridPlaneVerts { .. }
+        | DrawCommand::Skybox { .. } => None,
     }
 }

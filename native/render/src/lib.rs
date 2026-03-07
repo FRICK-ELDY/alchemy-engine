@@ -122,6 +122,16 @@ impl Default for UiRect {
     }
 }
 
+// ── MeshVertex（DrawCommand::GridPlaneVerts / MeshDef で使用）───────────
+
+/// 3D メッシュ頂点（position + color）
+#[repr(C)]
+#[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct MeshVertex {
+    pub position: [f32; 3],
+    pub color: [f32; 4],
+}
+
 // ── DrawCommand ──────────────────────────────────────────────────────
 
 /// 1フレーム分の描画命令。
@@ -161,12 +171,14 @@ pub enum DrawCommand {
         half_d: f32,
         color: [f32; 4],
     },
-    /// グリッド地面描画（R-5）
+    /// グリッド地面描画（R-5）— パラメータから Rust が頂点を生成（後方互換）
     GridPlane {
         size: f32,
         divisions: u32,
         color: [f32; 4],
     },
+    /// グリッド地面描画（P3）— Elixir が頂点を生成して渡す
+    GridPlaneVerts { vertices: Vec<MeshVertex> },
     /// スカイボックス（単色グラデーション）描画（R-5）
     Skybox {
         top_color: [f32; 4],
@@ -230,6 +242,16 @@ impl CameraParams {
     }
 }
 
+// ── MeshDef（P3: Elixir 定義の受け手）──────────────────────────────────
+
+/// Elixir 側で定義されたメッシュ。NIF 経由で受け取り create_buffer で登録する。
+#[derive(Clone, Debug)]
+pub struct MeshDef {
+    pub name: String,
+    pub vertices: Vec<MeshVertex>,
+    pub indices: Vec<u32>,
+}
+
 // ── RenderFrame ──────────────────────────────────────────────────────
 
 #[derive(Clone, Default)]
@@ -239,6 +261,8 @@ pub struct RenderFrame {
     pub ui: UiCanvas,
     /// カーソルグラブ状態の要求。`Some(true)` でグラブ、`Some(false)` で解放、`None` で変更なし。
     pub cursor_grab: Option<bool>,
+    /// P3: メッシュ定義。非空の場合、パイプラインが登録して描画に使用する。
+    pub mesh_definitions: Vec<MeshDef>,
 }
 
 pub(crate) mod renderer;
