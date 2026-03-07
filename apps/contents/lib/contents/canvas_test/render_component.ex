@@ -50,7 +50,8 @@ defmodule Content.CanvasTest.RenderComponent do
       commands,
       camera,
       ui,
-      cursor_grab
+      cursor_grab,
+      []
     )
 
     # 送信した要求と現在値が一致する場合のみリセットする。

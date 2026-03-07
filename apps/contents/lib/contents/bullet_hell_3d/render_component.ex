@@ -68,7 +68,8 @@ defmodule Content.BulletHell3D.RenderComponent do
       commands,
       camera,
       ui,
-      :no_change
+      :no_change,
+      Content.BulletHell3D.MeshDef.definitions()
     )
 
     :ok

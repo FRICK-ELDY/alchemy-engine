@@ -31,7 +31,8 @@ defmodule Content.FormulaTest.RenderComponent do
       commands,
       camera,
       ui,
-      cursor_grab
+      cursor_grab,
+      []
     )
 
     if cursor_grab != :no_change and runner do

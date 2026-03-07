@@ -14,6 +14,8 @@
 //! シェーダーエントリポイントを使うため、`mvp_buf` の内容に依存しない。
 
 use crate::DrawCommand;
+use crate::{MeshDef, MeshVertex};
+use std::collections::HashMap;
 use wgpu::util::DeviceExt;
 
 // ─── 容量定数 ─────────────────────────────────────────────────────────────
@@ -30,15 +32,6 @@ const MAX_BOX_INDICES: usize = 36 * 256;
 
 /// スカイボックス頂点数（固定: 4 頂点 2 三角形）。
 const SKYBOX_VERT_COUNT: usize = 4;
-
-// ─── 頂点型 ───────────────────────────────────────────────────────────────
-
-#[repr(C)]
-#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-pub(crate) struct MeshVertex {
-    pub position: [f32; 3],
-    pub color: [f32; 4],
-}
 
 // ─── MVP Uniform ─────────────────────────────────────────────────────────
 
@@ -274,6 +267,8 @@ pub(crate) struct Pipeline3D {
     grid_verts_scratch: Vec<MeshVertex>,
     box_verts_scratch: Vec<MeshVertex>,
     box_indices_scratch: Vec<u32>,
+    /// P3: Elixir 定義のメッシュキャッシュ（unit_box, skybox_quad 等）
+    mesh_def_cache: HashMap<String, (Vec<MeshVertex>, Vec<u32>)>,
 }
 
 impl Pipeline3D {
@@ -487,6 +482,7 @@ impl Pipeline3D {
             grid_verts_scratch: Vec::with_capacity(MAX_GRID_VERTS),
             box_verts_scratch: Vec::with_capacity(MAX_BOX_VERTS),
             box_indices_scratch: Vec::with_capacity(MAX_BOX_INDICES),
+            mesh_def_cache: HashMap::new(),
         }
     }
 
@@ -503,12 +499,15 @@ impl Pipeline3D {
     ///
     /// `camera` が `Camera3D` 以外の場合は即座にリターンする。
     /// 描画順: スカイボックス（深度テストなし）→ グリッド + ボックス（深度テストあり）。
+    /// P3: mesh_definitions が非空の場合、キャッシュに登録し、unit_box / skybox_quad を
+    /// 使用する。未登録時は従来の box_mesh / skybox_verts にフォールバック。
     pub(crate) fn render(
         &mut self,
         encoder: &mut wgpu::CommandEncoder,
         color_view: &wgpu::TextureView,
         commands: &[DrawCommand],
         camera: &crate::CameraParams,
+        mesh_definitions: &[MeshDef],
     ) {
         let crate::CameraParams::Camera3D {
             eye,
@@ -521,6 +520,14 @@ impl Pipeline3D {
         else {
             return;
         };
+
+        // ─── P3: メッシュ定義をキャッシュに登録 ───────────────────
+        for def in mesh_definitions {
+            self.mesh_def_cache.insert(
+                def.name.clone(),
+                (def.vertices.clone(), def.indices.clone()),
+            );
+        }
 
         // ─── MVP Uniform を 3D カメラ行列で更新 ──────────────────
         let aspect = self.width as f32 / self.height as f32;
@@ -545,7 +552,24 @@ impl Pipeline3D {
         });
 
         if let Some((top, bottom)) = sky_cmd {
-            let verts = skybox_verts(top, bottom);
+            let verts: Vec<MeshVertex> = if let Some((template, _)) =
+                self.mesh_def_cache.get("skybox_quad")
+            {
+                // P3: Elixir 定義の skybox_quad を使用し、色を top/bottom で上書き
+                template
+                    .iter()
+                    .enumerate()
+                    .map(|(i, v)| {
+                        let color = if i < 2 { top } else { bottom };
+                        MeshVertex {
+                            position: v.position,
+                            color,
+                        }
+                    })
+                    .collect()
+            } else {
+                skybox_verts(top, bottom).to_vec()
+            };
             self.queue
                 .write_buffer(&self.sky_vbuf, 0, bytemuck::cast_slice(&verts));
 
@@ -579,6 +603,9 @@ impl Pipeline3D {
 
         for cmd in commands {
             match cmd {
+                DrawCommand::GridPlaneVerts { vertices } => {
+                    self.grid_verts_scratch.extend(vertices);
+                }
                 DrawCommand::GridPlane {
                     size,
                     divisions,
@@ -596,10 +623,36 @@ impl Pipeline3D {
                     color,
                 } => {
                     let base = self.box_verts_scratch.len() as u32;
-                    let (verts, idx) = box_mesh(*x, *y, *z, *half_w, *half_h, *half_d, *color);
-                    self.box_verts_scratch.extend_from_slice(&verts);
-                    self.box_indices_scratch
-                        .extend(idx.iter().map(|i| i + base));
+                    let (verts, idx) = if let Some((template, indices)) =
+                        self.mesh_def_cache.get("unit_box")
+                    {
+                        // P3: Elixir 定義の unit_box を使用。スケール・移動・色を適用
+                        let hw = *half_w * 2.0;
+                        let hh = *half_h * 2.0;
+                        let hd = *half_d * 2.0;
+                        let verts: Vec<MeshVertex> = template
+                            .iter()
+                            .map(|v| MeshVertex {
+                                position: [
+                                    v.position[0] * hw + x,
+                                    v.position[1] * hh + y,
+                                    v.position[2] * hd + z,
+                                ],
+                                color: *color,
+                            })
+                            .collect();
+                        let idx: Vec<u32> =
+                            indices.iter().map(|&i| i + base).collect();
+                        (verts, idx)
+                    } else {
+                        let (v, i) = box_mesh(*x, *y, *z, *half_w, *half_h, *half_d, *color);
+                        (
+                            v.to_vec(),
+                            i.iter().map(|&i| i + base).collect::<Vec<_>>(),
+                        )
+                    };
+                    self.box_verts_scratch.extend(verts);
+                    self.box_indices_scratch.extend(idx);
                 }
                 _ => {}
             }

@@ -9,7 +9,9 @@
 //! - decode/camera.rs     — CameraParams
 //! - decode/ui_canvas.rs  — UiCanvas / UiNode / UiComponent
 
-use super::decode::{decode_camera, decode_commands, decode_cursor_grab, decode_ui_canvas};
+use super::decode::{
+    decode_camera, decode_commands, decode_cursor_grab, decode_mesh_definitions, decode_ui_canvas,
+};
 use crate::render_frame_buffer::RenderFrameBuffer;
 use render::RenderFrame;
 use rustler::{Atom, NifResult, ResourceArc, Term};
@@ -43,6 +45,8 @@ pub fn create_render_frame_buffer() -> ResourceArc<RenderFrameBuffer> {
 ///
 /// ## cursor_grab
 /// - `:grab` | `:release` | `:no_change`
+/// P3: 6 番目の引数 `mesh_definitions` は省略可能。
+/// 非 nil の場合はメッシュ定義リストを decode し、Rust パイプラインが登録する。
 #[rustler::nif]
 pub fn push_render_frame(
     buf: ResourceArc<RenderFrameBuffer>,
@@ -50,17 +54,20 @@ pub fn push_render_frame(
     camera: Term,
     ui: Term,
     cursor_grab: Term,
+    mesh_definitions: Term,
 ) -> NifResult<Atom> {
     let commands = decode_commands(commands)?;
     let camera = decode_camera(camera)?;
     let ui = decode_ui_canvas(ui)?;
     let cursor_grab = decode_cursor_grab(cursor_grab)?;
+    let mesh_definitions = decode_mesh_definitions(mesh_definitions)?;
 
     buf.push(RenderFrame {
         commands,
         camera,
         ui,
         cursor_grab,
+        mesh_definitions,
     });
 
     Ok(ok())

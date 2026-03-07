@@ -55,7 +55,8 @@ defmodule Content.RollingBall.RenderComponent do
       commands,
       camera,
       ui,
-      :no_change
+      :no_change,
+      Content.RollingBall.MeshDef.definitions()
     )
 
     :ok

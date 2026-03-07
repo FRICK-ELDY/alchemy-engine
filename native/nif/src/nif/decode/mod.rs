@@ -6,12 +6,16 @@
 
 mod camera;
 mod draw_command;
+mod mesh_def;
 mod ui_canvas;
 
 pub use camera::decode_camera;
 pub use draw_command::decode_commands;
+pub use mesh_def::decode_mesh_definitions;
 pub use ui_canvas::decode_ui_canvas;
 
+use render::MeshVertex;
+use rustler::types::list::ListIterator;
 use rustler::types::tuple::get_tuple;
 use rustler::{Error as NifError, NifResult, Term};
 
@@ -45,6 +49,32 @@ pub(crate) fn decode_color(term: Term) -> NifResult<[f32; 4]> {
         .decode()
         .map_err(|_| NifError::Term(Box::new("color: expected {r, g, b, a}")))?;
     Ok([r as f32, g as f32, b as f32, a as f32])
+}
+
+/// `{{x,y,z}, {r,g,b,a}}` 形式の頂点をデコードする。
+/// grid_plane_verts / mesh_def で共通利用。
+pub(crate) fn decode_vertex(term: Term) -> NifResult<MeshVertex> {
+    let (pos_t, color_t): (Term, Term) = term.decode().map_err(|_| {
+        NifError::Term(Box::new("vertex: expected {{x,y,z}, {r,g,b,a}}"))
+    })?;
+    let (x, y, z): (f64, f64, f64) = pos_t.decode().map_err(|_| {
+        NifError::Term(Box::new("vertex position: expected {x, y, z}"))
+    })?;
+    let color = decode_color(color_t)?;
+    Ok(MeshVertex {
+        position: [x as f32, y as f32, z as f32],
+        color,
+    })
+}
+
+/// 頂点リスト `[{{x,y,z},{r,g,b,a}}, ...]` をデコードする。
+pub(crate) fn decode_mesh_vertices(term: Term, context: &str) -> NifResult<Vec<MeshVertex>> {
+    let iter: ListIterator = term.decode().map_err(|_| {
+        NifError::Term(Box::new(format!(
+            "{context}: expected list of {{{{pos}}, color}}"
+        )))
+    })?;
+    iter.map(decode_vertex).collect()
 }
 
 /// カーソルグラブ要求をデコードする。
