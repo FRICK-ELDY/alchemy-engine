@@ -35,7 +35,9 @@ defmodule Contents.MenuComponent do
   end
 
   def on_event({:ui_action, "__quit__"}, _context) do
-    Application.stop(:server)
+    # Rust 描画スレッド（winit）は Elixir とは別に動くため、
+    # Application.stop ではウィンドウが閉じない。プロセス全体を終了させる。
+    System.stop(0)
     :ok
   end
 
