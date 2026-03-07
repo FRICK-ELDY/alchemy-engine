@@ -14,9 +14,14 @@ use rustler::{Atom, Error as NifError, NifResult, Term};
 
 use super::{decode_color, decode_mesh_vertices, tag_of, u32_to_u8};
 
+/// P5-3: with_capacity で再アロケーションを抑制。典型的なフレームは 50〜500 コマンド。
 pub fn decode_commands(term: Term) -> NifResult<Vec<DrawCommand>> {
     let iter: ListIterator = term.decode()?;
-    iter.map(decode_command).collect()
+    let mut out = Vec::with_capacity(256);
+    for item in iter {
+        out.push(decode_command(item)?);
+    }
+    Ok(out)
 }
 
 fn decode_command(term: Term) -> NifResult<DrawCommand> {

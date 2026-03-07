@@ -13,6 +13,7 @@ use physics::game_logic::systems::spawn::get_spawn_positions_around_player;
 use physics::item::ItemWorld;
 use physics::physics::rng::SimpleRng;
 use physics::physics::spatial_hash::CollisionWorld;
+use physics::weapon::WeaponSlot;
 use physics::world::{GameWorld, GameWorldInner, PlayerState};
 use rustler::types::list::ListIterator;
 use rustler::{Atom, NifResult, ResourceArc, Term};
@@ -238,6 +239,88 @@ pub fn set_entity_params(
         bosses,
     };
     Ok(ok())
+}
+
+/// P5-1: 複数注入を 1 回の write lock でまとめて適用するバッチ NIF。
+/// injection_map: オプショナルキーを持つ Elixir map。存在するキーのみ適用。
+///   - :player_input => {dx, dy}
+///   - :player_snapshot => {hp, invincible_timer}
+///   - :elapsed_seconds => float
+///   - :weapon_slots => [{kind_id, level, cooldown, cooldown_sec, precomputed_damage}, ...]
+///   - :enemy_damage_this_frame => [{kind_id, damage}, ...]
+///   - :special_entity_snapshot => :none | {:alive, x, y, radius, damage, invincible}
+#[rustler::nif]
+pub fn set_frame_injection(
+    world: ResourceArc<GameWorld>,
+    injection_map: Term,
+) -> NifResult<Atom> {
+    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
+
+    if let Ok((dx, dy)) = map_get::<(f64, f64)>(injection_map, "player_input") {
+        w.player.input_dx = dx as f32;
+        w.player.input_dy = dy as f32;
+    }
+    if let Ok((hp, inv)) = map_get::<(f64, f64)>(injection_map, "player_snapshot") {
+        w.player_hp_injected = hp as f32;
+        w.player_invincible_timer_injected = inv as f32;
+    }
+    if let Ok(elapsed) = map_get::<f64>(injection_map, "elapsed_seconds") {
+        w.elapsed_seconds = elapsed as f32;
+    }
+    if let Ok(list) = map_get::<Vec<(u8, u32, f64, f64, i32)>>(injection_map, "weapon_slots") {
+        w.weapon_slots_input = list
+            .into_iter()
+            .map(|(kind_id, level, cooldown, cooldown_sec, precomputed_damage)| WeaponSlot {
+                kind_id,
+                level,
+                cooldown_timer: cooldown as f32,
+                cooldown_sec: cooldown_sec as f32,
+                precomputed_damage,
+            })
+            .collect();
+    }
+    if let Ok(list) = map_get::<Vec<(u8, f64)>>(injection_map, "enemy_damage_this_frame") {
+        let max_id = list.iter().map(|&(id, _)| id as usize).max().unwrap_or(0);
+        w.enemy_damage_this_frame.resize(max_id + 1, 0.0);
+        w.enemy_damage_this_frame.fill(0.0);
+        for (kind_id, damage) in list {
+            let i = kind_id as usize;
+            if i < w.enemy_damage_this_frame.len() {
+                w.enemy_damage_this_frame[i] = damage as f32;
+            }
+        }
+    }
+    if let Ok(snapshot_term) = map_get::<Term>(injection_map, "special_entity_snapshot") {
+        apply_special_entity_snapshot(&mut w, snapshot_term);
+    }
+
+    Ok(ok())
+}
+
+fn apply_special_entity_snapshot(w: &mut GameWorldInner, snapshot: Term) {
+    use physics::world::SpecialEntitySnapshot;
+
+    if snapshot.is_atom() {
+        w.special_entity_snapshot = None;
+        return;
+    }
+    if let Ok((tag, x, y, radius, damage, inv)) =
+        snapshot.decode::<(Atom, f64, f64, f64, f64, bool)>()
+    {
+        if tag == crate::alive() {
+            w.special_entity_snapshot = Some(SpecialEntitySnapshot {
+                x: x as f32,
+                y: y as f32,
+                radius: radius as f32,
+                damage_this_frame: damage as f32,
+                invincible: inv,
+            });
+        } else {
+            w.special_entity_snapshot = None;
+        }
+    } else {
+        w.special_entity_snapshot = None;
+    }
 }
 
 /// R-P2: 敵接触の damage_this_frame を注入する NIF。

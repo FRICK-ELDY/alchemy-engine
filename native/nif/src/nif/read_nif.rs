@@ -165,66 +165,73 @@ pub fn get_full_game_state(world: ResourceArc<GameWorld>) -> NifResult<(u32, f64
 /// - obstacles:   `[{x, y, radius, kind}]`
 /// - boss:        `{:none, 0, 0, 0, 0}` または `{:alive, x, y, radius, render_kind}`
 /// - score_popups:`[{x, y, value, lifetime}]`
+/// P5-4: with_capacity で再アロケーションを抑制。count をヒントに事前確保。
 #[rustler::nif]
 pub fn get_render_entities(world: ResourceArc<GameWorld>) -> NifResult<RenderEntities> {
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;
 
-    let enemies: Vec<(f64, f64, u32)> = (0..w.enemies.len())
-        .filter(|&i| w.enemies.alive[i] != 0)
-        .map(|i| {
-            let kind_id = w
-                .params
-                .enemies
-                .get(w.enemies.kind_ids[i] as usize)
-                .map(|ep| ep.render_kind as u32)
-                .unwrap_or(1);
-            (
-                w.enemies.positions_x[i] as f64,
-                w.enemies.positions_y[i] as f64,
-                kind_id,
-            )
-        })
-        .collect();
+    let mut enemies = Vec::with_capacity(w.enemies.count);
+    for i in 0..w.enemies.len() {
+        if w.enemies.alive[i] == 0 {
+            continue;
+        }
+        let kind_id = w
+            .params
+            .enemies
+            .get(w.enemies.kind_ids[i] as usize)
+            .map(|ep| ep.render_kind as u32)
+            .unwrap_or(1);
+        enemies.push((
+            w.enemies.positions_x[i] as f64,
+            w.enemies.positions_y[i] as f64,
+            kind_id,
+        ));
+    }
 
-    let bullets: Vec<(f64, f64, u32)> = (0..w.bullets.len())
-        .filter(|&i| w.bullets.alive[i])
-        .map(|i| {
-            (
-                w.bullets.positions_x[i] as f64,
-                w.bullets.positions_y[i] as f64,
-                w.bullets.render_kind[i] as u32,
-            )
-        })
-        .collect();
+    let mut bullets = Vec::with_capacity(w.bullets.count);
+    for i in 0..w.bullets.len() {
+        if !w.bullets.alive[i] {
+            continue;
+        }
+        bullets.push((
+            w.bullets.positions_x[i] as f64,
+            w.bullets.positions_y[i] as f64,
+            w.bullets.render_kind[i] as u32,
+        ));
+    }
 
-    let particles: Vec<(f64, f64, f64, f64, f64, f64, f64)> = (0..w.particles.len())
-        .filter(|&i| w.particles.alive[i])
-        .map(|i| {
-            let alpha =
-                (w.particles.lifetime[i] / w.particles.max_lifetime[i]).clamp(0.0, 1.0) as f64;
-            let c = w.particles.color[i];
-            (
-                w.particles.positions_x[i] as f64,
-                w.particles.positions_y[i] as f64,
-                c[0] as f64,
-                c[1] as f64,
-                c[2] as f64,
-                alpha,
-                w.particles.size[i] as f64,
-            )
-        })
-        .collect();
+    let particle_count = w.particles.count;
+    let mut particles = Vec::with_capacity(particle_count);
+    for i in 0..w.particles.len() {
+        if !w.particles.alive[i] {
+            continue;
+        }
+        let alpha =
+            (w.particles.lifetime[i] / w.particles.max_lifetime[i]).clamp(0.0, 1.0) as f64;
+        let c = w.particles.color[i];
+        particles.push((
+            w.particles.positions_x[i] as f64,
+            w.particles.positions_y[i] as f64,
+            c[0] as f64,
+            c[1] as f64,
+            c[2] as f64,
+            alpha,
+            w.particles.size[i] as f64,
+        ));
+    }
 
-    let items: Vec<(f64, f64, u32)> = (0..w.items.len())
-        .filter(|&i| w.items.alive[i])
-        .map(|i| {
-            (
-                w.items.positions_x[i] as f64,
-                w.items.positions_y[i] as f64,
-                w.items.kinds[i].render_kind() as u32,
-            )
-        })
-        .collect();
+    let item_count = w.items.count;
+    let mut items = Vec::with_capacity(item_count);
+    for i in 0..w.items.len() {
+        if !w.items.alive[i] {
+            continue;
+        }
+        items.push((
+            w.items.positions_x[i] as f64,
+            w.items.positions_y[i] as f64,
+            w.items.kinds[i].render_kind() as u32,
+        ));
+    }
 
     let obstacles: Vec<(f64, f64, f64, u32)> = w
         .collision
