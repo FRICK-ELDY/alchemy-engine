@@ -23,7 +23,7 @@ defmodule Contents.LocalUserComponent do
   @impl true
   def on_event({:raw_key, key, key_state}, context) when key_state in [:pressed, :released] do
     room_id = Map.get(context, :room_id, :main)
-    keys_held = get_keys_held(room_id)
+    keys_held = get_keys_held_private(room_id)
 
     {new_keys, new_sprint} =
       case key_state do
@@ -37,7 +37,7 @@ defmodule Contents.LocalUserComponent do
       end
 
     {dx, dy} = move_vector_from_keys(new_keys)
-    prev_sprint = get_sprint(room_id)
+    prev_sprint = get_sprint_private(room_id)
 
     :ets.insert(@table, {{room_id, :keys_held}, new_keys})
     :ets.insert(@table, {{room_id, :sprint}, new_sprint})
@@ -60,15 +60,26 @@ defmodule Contents.LocalUserComponent do
     :ok
   end
 
-  def on_event({:mouse_delta, _dx, _dy}, _context), do: :ok
+  def on_event({:mouse_delta, dx, dy}, context) when is_float(dx) and is_float(dy) do
+    room_id = Map.get(context, :room_id, :main)
+    :ets.insert(@table, {{room_id, :mouse_delta}, {dx, dy}})
+    :ok
+  end
+
+  def on_event({:cursor_position, x, y}, context) when is_number(x) and is_number(y) do
+    room_id = Map.get(context, :room_id, :main)
+    :ets.insert(@table, {{room_id, :mouse_pos}, {x * 1.0, y * 1.0}})
+    :ok
+  end
 
   def on_event(:focus_lost, context) do
     room_id = Map.get(context, :room_id, :main)
-    prev_sprint = get_sprint(room_id)
+    prev_sprint = get_sprint_private(room_id)
 
     :ets.insert(@table, {{room_id, :keys_held}, MapSet.new()})
     :ets.insert(@table, {{room_id, :sprint}, false})
     :ets.insert(@table, {{room_id, :move}, {0, 0}})
+    :ets.insert(@table, {{room_id, :mouse_delta}, {0.0, 0.0}})
 
     handler = get_event_handler(context, room_id)
     if handler, do: send(handler, {:move_input, 0.0, 0.0})
@@ -89,18 +100,54 @@ defmodule Contents.LocalUserComponent do
     end
   end
 
-  defp get_keys_held(room_id) do
+  @doc """
+  room_id に対応する押下中のキー一覧を返す。
+  """
+  def get_keys_held(room_id) do
     case :ets.lookup(@table, {room_id, :keys_held}) do
       [{{^room_id, :keys_held}, keys}] -> keys
       [] -> MapSet.new()
     end
   end
 
-  defp get_sprint(room_id) do
+  @doc """
+  room_id に対応するマウス状態を返す。%{x: float|nil, y: float|nil, delta_x: float, delta_y: float}
+  """
+  def get_mouse(room_id) do
+    pos =
+      case :ets.lookup(@table, {room_id, :mouse_pos}) do
+        [{{^room_id, :mouse_pos}, {px, py}}] -> {px, py}
+        _ -> {nil, nil}
+      end
+
+    delta =
+      case :ets.lookup(@table, {room_id, :mouse_delta}) do
+        [{{^room_id, :mouse_delta}, {dx, dy}}] -> {dx, dy}
+        _ -> {0.0, 0.0}
+      end
+
+    {px, py} = pos
+    {dx, dy} = delta
+
+    %{x: px, y: py, delta_x: dx, delta_y: dy}
+  end
+
+  defp get_keys_held_private(room_id) do
+    case :ets.lookup(@table, {room_id, :keys_held}) do
+      [{{^room_id, :keys_held}, keys}] -> keys
+      [] -> MapSet.new()
+    end
+  end
+
+  defp get_sprint_private(room_id) do
     case :ets.lookup(@table, {room_id, :sprint}) do
       [{{^room_id, :sprint}, v}] -> v
       [] -> false
     end
+  end
+
+  defp sprint_from_keys(keys_held) do
+    MapSet.member?(keys_held, :shift_left) or MapSet.member?(keys_held, :shift_right)
   end
 
   defp move_vector_from_keys(keys_held) do
@@ -117,10 +164,6 @@ defmodule Contents.LocalUserComponent do
           else: 0
 
     {dx, dy}
-  end
-
-  defp sprint_from_keys(keys_held) do
-    MapSet.member?(keys_held, :shift_left) or MapSet.member?(keys_held, :shift_right)
   end
 
   defp get_event_handler(context, room_id) do
