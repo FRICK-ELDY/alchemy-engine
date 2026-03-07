@@ -13,12 +13,12 @@
 
 ```mermaid
 flowchart TB
-    subgraph Server["サーバー（Elixir release）"]
+    subgraph Server["サーバー（Elixir）"]
         direction TB
         Contents[contents<br/>ゲームロジック・シーン管理]
         Core[core<br/>SSoT コア・RoomSupervisor]
         PhysicsNIF[physics NIF<br/>物理演算・GameWorld]
-        Network[network<br/>Phoenix / UDP]
+        Network[network<br/>Zenoh / Phoenix]
         
         Contents --> Core
         Core --> PhysicsNIF
@@ -35,8 +35,9 @@ flowchart TB
         Input --> Bridge
     end
     
-    Server <-->|"WebSocket / UDP<br/>フレーム配信"| Client
-    Client -->|"入力送信<br/>input / action"| Server
+    Server -->|"Zenoh: frame"| Client
+    Client -->|"Zenoh: movement<br/>Unreliable"| Server
+    Client -->|"Zenoh: action<br/>Reliable"| Server
 ```
 
 > クライアント・サーバー分離の詳細と実装手順は [client-server-separation-procedure.md](./docs/plan/client-server-separation-procedure.md) を参照。

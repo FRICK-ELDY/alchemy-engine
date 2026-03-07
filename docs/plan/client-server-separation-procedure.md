@@ -29,7 +29,7 @@ flowchart TB
         Contents[contents<br/>ゲームロジック・シーン管理]
         Core[core<br/>SSoT コア・RoomSupervisor]
         PhysicsNIF[physics NIF<br/>物理演算・GameWorld]
-        Network[network<br/>Phoenix / UDP]
+        Network[network<br/>Zenoh / Phoenix]
         
         Contents --> Core
         Core --> PhysicsNIF
@@ -46,8 +46,9 @@ flowchart TB
         Input --> Bridge
     end
     
-    Server <-->|"WebSocket / UDP<br/>フレーム配信"| Client
-    Client -->|"入力送信<br/>input / action"| Server
+    Server -->|"Zenoh: frame<br/>publish"| Client
+    Client -->|"Zenoh: movement<br/>Unreliable"| Server
+    Client -->|"Zenoh: action<br/>Reliable"| Server
 ```
 
 ### 1.2 サーバー内部構造
@@ -66,17 +67,18 @@ flowchart LR
     end
     
     subgraph Trans["トランスポート"]
-        WS[Phoenix WebSocket]
-        UDP[UDP Server]
+        Zenoh[Zenoh Zenohex]
+        Phoenix[Phoenix WebSocket]
     end
     
     GE --> SS
     SS --> RC
     RC -->|push_render_frame| RFB
     GE -->|physics_step 等| GW
-    RFB -->|シリアライズ| WS
-    RFB -->|シリアライズ| UDP
-    WS -->|接続中クライアント| Client
+    RFB -->|publish frame| Zenoh
+    Zenoh -->|movement/action<br/>受信| GE
+    Zenoh -->|frame/movement/action| Client
+    Phoenix -->|認証・補助| Client
 ```
 
 ### 1.3 クライアント内部構造
@@ -91,16 +93,56 @@ flowchart LR
         Win[ウィンドウ<br/>winit]
         Draw[描画<br/>wgpu]
         
-        Recv -->|フレーム受信| RB
+        Recv -->|frame| RB
         RB -->|next_frame| NRB
         NRB --> Loop
         Loop --> Win
         Loop --> Draw
     end
     
-    Server["サーバー"] -->|"frame イベント"| Recv
+    Server["サーバー Zenoh"] -->|"frame 受信"| Recv
     Win -->|on_raw_key 等| NRB
-    NRB -->|"input / action 送信"| Server
+    NRB -->|"publish movement<br/>Unreliable"| Server
+    NRB -->|"publish action<br/>Reliable"| Server
+```
+
+### 1.4 トランスポート方針（UDP 低レイテンシ）
+
+60Hz のフレーム配信・入力送信は **低レイテンシを優先** し、UDP ベースのプロトコルを用いる。
+
+#### 採用: Zenoh + Zenohex
+
+| 役割 | ライブラリ | 用途 |
+|:---|:---|:---|
+| **サーバー（Elixir）** | [Zenohex](https://github.com/biyooon-ex/zenohex) | フレーム publish、movement/action subscribe |
+| **クライアント（Rust）** | `zenoh` クレート | フレーム subscribe、movement/action publish |
+
+- Zenoh は UDP（QUIC）をサポートし、低オーバーヘッドの Pub/Sub を提供
+- Zenohex は Elixir から Zenoh を呼び出す NIF ラッパー
+- サーバー・クライアント双方が Zenoh を話すことでプロトコルが統一される
+
+#### 役割分担
+
+| トラフィック種別 | プロトコル | 例 |
+|:---|:---|:---|
+| **高頻度・低レイテンシ** | Zenoh（UDP/QUIC） | フレーム配信、input、action |
+| **低頻度・信頼性重視** | Phoenix WebSocket / TCP | ルーム参加、認証、チャット、エラー通知 |
+
+**input / action も Zenoh 経由**とする。フレーム配信と同様に UDP ベースで低レイテンシを確保する。
+
+#### 信頼性の使い分け（Zenoh）
+
+| データ | 頻度 | 欠損時の影響 | Zenoh 設定 |
+|:---|:---|:---|:---|
+| **input (dx, dy)** | 60Hz | 1 フレーム分ずれ、次で補正可 | Unreliable / Sequenced |
+| **action** | イベント駆動 | 届かないと致命的（攻撃が発火しない等） | Reliable |
+
+#### Zenoh キー設計（例）
+
+```
+game/room/{room_id}/frame           # サーバー → クライアント（フレーム配信）
+game/room/{room_id}/input/movement  # クライアント → サーバー（dx, dy・Unreliable）
+game/room/{room_id}/input/action    # クライアント → サーバー（select_weapon 等・Reliable）
 ```
 
 ---
@@ -152,13 +194,24 @@ flowchart LR
 - [ ] **UDP プロトコル**（`Network.UDP`）のフォーマットを確認
 - [ ] 現状の `"frame"` ペイロードが DrawCommand を含むか、frame_events のみかを把握
 
+#### 0.3 Zenohex 導入
+
+- [ ] `zenohex` を `mix.exs` に追加（`{:zenohex, "~> 0.7.2"}`）
+- [ ] Zenoh のバージョン互換性を確認（Zenohex 0.7.x は Zenoh 1.7.x に対応）
+
 ---
 
 ### フェーズ 1: プロトコル設計（1〜2 週間）
 
-#### 1.1 サーバー → クライアント（フレーム配信）
+#### 1.1 Zenoh キー設計
 
-送信するデータ:
+| キー | 方向 | 信頼性 | 説明 |
+|:---|:---|:---|:---|
+| `game/room/{room_id}/frame` | サーバー → クライアント | — | フレーム配信 |
+| `game/room/{room_id}/input/movement` | クライアント → サーバー | Unreliable | 移動入力（dx, dy） |
+| `game/room/{room_id}/input/action` | クライアント → サーバー | Reliable | UI アクション（select_weapon 等） |
+
+#### 1.2 フレームペイロード（`game/room/{room_id}/frame`）
 
 | 項目 | 形式 | 説明 |
 |:---|:---|:---|
@@ -170,19 +223,24 @@ flowchart LR
 - [ ] 既存 `push_render_frame` / `push_render_frame_binary` のペイロードをベースにプロトコル仕様を策定
 - [ ] MessagePack スキーマを [messagepack-schema.md](../architecture/messagepack-schema.md) に追記
 
-#### 1.2 クライアント → サーバー（入力送信）
+#### 1.3 入力ペイロード
 
-送信するデータ:
+**movement**（`game/room/{room_id}/input/movement`）:
 
 | 項目 | 形式 | 説明 |
 |:---|:---|:---|
-| input | `{dx, dy}` | 移動入力（既存 `"input"` と同等） |
-| action | `{name, ...}` | UI アクション（select_weapon 等） |
-| raw_key | `{key, state}` | 低レベルキー（将来用） |
-| cursor_grab | enum | grab / release / no_change |
+| dx | float | 移動 X |
+| dy | float | 移動 Y |
 
-- [ ] 既存 Phoenix Channel `"input"` / `"action"` との互換性を確保
-- [ ] UDP クライアント用のバイナリ形式を必要に応じて定義
+**action**（`game/room/{room_id}/input/action`）:
+
+| 項目 | 形式 | 説明 |
+|:---|:---|:---|
+| name | string | アクション名（select_weapon 等） |
+| payload | map | 追加パラメータ（任意） |
+
+- [ ] raw_key、cursor_grab は将来拡張として検討
+- [ ] Phoenix Channel `"input"` / `"action"` とのデータ形式の互換性を確保（GameEvents への渡し方）
 
 ---
 
@@ -191,7 +249,7 @@ flowchart LR
 #### 2.1 クライアント用 Rust バイナリの追加
 
 - [ ] `native/` に `client` または `game_client` クレートを追加（`[[bin]]`）
-- [ ] 依存: `render`, `input`, `physics`（RenderFrame 型のみ）、ネットワーク（`tokio` + `reqwest` / WebSocket、または UDP）
+- [ ] 依存: `render`, `input`, `physics`（RenderFrame 型のみ）、`zenoh` クレート（フレーム subscribe / 入力 publish）
 - [ ] `nif` に依存しない（Rustler を使わない）
 
 #### 2.2 RenderBridge のネットワーク版実装
@@ -207,8 +265,8 @@ flowchart LR
 - `on_*`: ネットワーク経由でサーバーに送信
 
 - [ ] `render::window::RenderBridge` トレイトの実装を `NetworkRenderBridge` として作成
-- [ ] 受信スレッド: WebSocket / UDP からフレームを受信し、ローカルバッファに格納
-- [ ] 送信: 入力イベントを WebSocket / UDP でサーバーへ送信
+- [ ] 受信スレッド: `zenoh` で `game/room/{room_id}/frame` を subscribe し、ローカルバッファに格納
+- [ ] 送信: movement を `game/room/{room_id}/input/movement` に publish（Unreliable）、action を `game/room/{room_id}/input/action` に publish（Reliable）
 
 #### 2.3 エントリポイント
 
@@ -228,13 +286,13 @@ flowchart LR
 - **ルーム :main かつ ローカル描画あり**: 従来どおり RenderFrameBuffer + start_render_thread
 - **リモートクライアント接続時**: `push_render_frame` の内容を WebSocket / UDP でブロードキャスト
 
-- [ ] `Contents.GameEvents` の `on_nif_sync` 後に、接続中のクライアントへフレームを配信する経路を追加
-- [ ] `Network.Channel` の `"frame"` イベントのペイロードを、DrawCommand + camera を含む形式に拡張（未実装なら実装）
+- [ ] `Contents.GameEvents` の `on_nif_sync` 後に、Zenohex で `game/room/{room_id}/frame` に publish
+- [ ] Zenohex の subscriber で `game/room/{room_id}/input/movement` と `game/room/{room_id}/input/action` を受信し、GameEvents に渡す
 - [ ] ローカル描画とリモート配信の両方をサポートするモード切り替え
 
 #### 3.2 入力の集約
 
-- [ ] リモートクライアントからの `"input"` / `"action"` を、既存 `Network.Channel` と同じく GameEvents に渡す
+- [ ] Zenohex subscriber で受信した movement / action を、既存 `Network.Channel` 経由と同様に GameEvents へ配送
 - [ ] ローカル入力（NIF 経由）とリモート入力の排他 or マージ方針を決定
 
 ---
@@ -249,7 +307,7 @@ flowchart LR
 #### 4.2 アセット・設定
 
 - [ ] クライアント exe と同梱するアセット（atlas.png, shaders）の配置方針
-- [ ] サーバー URL のデフォルト（例: `localhost:4000`）
+- [ ] Zenoh / サーバー接続先のデフォルト（例: `tcp/localhost:7447` 等、Zenoh の接続形式に準拠）
 
 ---
 
@@ -283,8 +341,20 @@ flowchart LR
 
 ---
 
-## 6. 関連ドキュメント
+## 6. ローカルホスト（listen server）運用
 
+1 台の PC がサーバーをホストし、他プレイヤーがそこに接続する運用が可能。
+
+- **ホスト**: サーバー（Elixir）＋クライアント exe を同一マシンで起動。クライアントは `localhost` に接続
+- **他プレイヤー**: クライアント exe のみ起動し、ホストの IP に接続
+- **必要な対応**: Phoenix / Zenoh を `0.0.0.0` にバインドして LAN 接続を許可
+- **発見**: 相手の IP を手動入力、または LAN ブロードキャスト検出（将来検討）
+
+---
+
+## 7. 関連ドキュメント
+
+- [Zenohex](https://github.com/biyooon-ex/zenohex) — Elixir API for Zenoh
 - [contents-defines-rust-executes.md](./contents-defines-rust-executes.md) — 定義 vs 実行の分離方針
 - [draw-command-spec.md](../architecture/draw-command-spec.md) — DrawCommand スキーマ
 - [messagepack-schema.md](../architecture/messagepack-schema.md) — バイナリ形式
