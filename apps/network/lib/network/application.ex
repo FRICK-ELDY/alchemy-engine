@@ -9,6 +9,7 @@ defmodule Network.Application do
   - `Network.Local` — ローカルマルチルーム管理 GenServer
   - `Network.Endpoint` — Phoenix Endpoint（WebSocket + HTTP）
   - `Network.UDP` — UDP トランスポートサーバー（デフォルトポート 4001）
+  - `Network.ZenohBridge` — Zenoh フレーム配信・入力受信（`config :network, :zenoh_enabled, true` のときのみ起動）
 
   ## 起動パターン
 
@@ -37,13 +38,21 @@ defmodule Network.Application do
   def start(_type, _args) do
     topologies = Application.get_env(:libcluster, :topologies, [])
 
-    children = [
-      {Cluster.Supervisor, [topologies, [name: Network.ClusterSupervisor]]},
-      {Phoenix.PubSub, name: Network.PubSub},
-      Network.Local,
-      Network.Endpoint,
-      Network.UDP
-    ]
+    zenoh_children =
+      if Application.get_env(:network, :zenoh_enabled, false) do
+        [Network.ZenohBridge]
+      else
+        []
+      end
+
+    children =
+      [
+        {Cluster.Supervisor, [topologies, [name: Network.ClusterSupervisor]]},
+        {Phoenix.PubSub, name: Network.PubSub},
+        Network.Local,
+        Network.Endpoint,
+        Network.UDP
+      ] ++ zenoh_children
 
     opts = [strategy: :one_for_one, name: Network.Supervisor]
 

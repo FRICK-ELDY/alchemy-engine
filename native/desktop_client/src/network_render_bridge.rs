@@ -55,7 +55,7 @@ impl NetworkRenderBridge {
         let mut config = Config::default();
         if !connect_config.is_empty() {
             config
-                .insert_json5("connect/endpoints", format!(r#"["{}"]"#, connect_config))
+                .insert_json5("connect/endpoints", format!(r#"["{}"]"#, connect_config).as_str())
                 .map_err(|e| format!("zenoh connect config failed: {e}"))?;
         }
         let session = zenoh::open(config)
@@ -174,6 +174,10 @@ fn run_receiver(
         .wait()
         .map_err(|e| format!("subscribe failed: {e}"))?;
 
+    log::info!("[frame receiver] subscribed to {key_expr}, waiting for frames...");
+
+    let mut frame_count: u64 = 0;
+    let mut last_wait_log = std::time::Instant::now();
     while !shutdown.load(Ordering::SeqCst) {
         let recv_fut = subscriber.recv_async();
         let timeout = Delay::new(Duration::from_millis(SHUTDOWN_POLL_MS));
@@ -181,14 +185,23 @@ fn run_receiver(
         match futures::executor::block_on(select(recv_fut, timeout)) {
             Either::Left((Ok(sample), _)) => {
                 let payload = sample.payload();
-                if let Ok(frame) =
-                    crate::msgpack_decode::decode_render_frame(payload.to_bytes().as_ref())
-                {
-                    if let Ok(mut guard) = frame_buffer.lock() {
-                        *guard = Some(frame);
+                let len = payload.to_bytes().len();
+                if frame_count == 0 {
+                    log::info!("[frame receiver] first raw sample received size={len} bytes");
+                }
+                match crate::msgpack_decode::decode_render_frame(payload.to_bytes().as_ref()) {
+                    Ok(frame) => {
+                        if let Ok(mut guard) = frame_buffer.lock() {
+                            *guard = Some(frame);
+                        }
+                        frame_count += 1;
+                        if frame_count == 1 {
+                            log::info!("[frame receiver] first frame received and decoded");
+                        }
                     }
-                } else {
-                    log::debug!("frame decode error");
+                    Err(e) => {
+                        log::warn!("[frame receiver] decode error: {e} (payload size={len})");
+                    }
                 }
             }
             Either::Left((Err(e), _)) => {
@@ -196,6 +209,10 @@ fn run_receiver(
             }
             Either::Right((_, _)) => {
                 // タイムアウト: shutdown を再確認してループ継続
+                if frame_count == 0 && last_wait_log.elapsed().as_secs() >= 5 {
+                    log::warn!("[frame receiver] still waiting for frames after 5s (key={key_expr})");
+                    last_wait_log = std::time::Instant::now();
+                }
             }
         }
     }

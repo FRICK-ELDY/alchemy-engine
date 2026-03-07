@@ -34,6 +34,16 @@ config :network, :json_library, Jason
 # 変更する場合は config/runtime.exs の NETWORK_UDP_PORT を設定する。
 config :network, Network.UDP, port: 4001
 
+# ── Network.ZenohBridge（Zenoh フレーム配信・入力受信）────────────────
+# true にすると game/room/{room_id}/frame へ publish、
+# game/room/*/input/movement, game/room/*/input/action を subscribe する。
+# desktop_client 等のリモートクライアント接続時に有効化。
+config :network, :zenoh_enabled, true
+
+# zenohd への接続先。未指定時は Zenohex.Config.default()（マルチキャスト scouting）を使用。
+# デフォルトは tcp/127.0.0.1:7447（IPv4 localhost）。リモート zenohd の場合は適宜変更。
+config :network, :zenoh_connect, "tcp/localhost:7447"
+
 # ── 使用するコンテンツを指定する。
 # Content.VampireSurvivor — ヴァンパイアサバイバークローン
 # Content.AsteroidArena   — 小惑星シューター（武器・ボスなし）

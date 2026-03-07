@@ -34,6 +34,7 @@ defmodule Content.Telemetry.RenderComponent do
     cursor_grab = if menu_visible, do: :release, else: :grab
 
     frame_binary = Content.MessagePackEncoder.encode_frame(commands, camera, ui, [])
+    Contents.FrameBroadcaster.put(context.room_id, frame_binary)
     Core.NifBridge.push_render_frame_binary(context.render_buf_ref, frame_binary, cursor_grab)
 
     :ok
