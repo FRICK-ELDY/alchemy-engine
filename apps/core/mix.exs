@@ -27,7 +27,7 @@ defmodule Core.MixProject do
 
   defp deps do
     [
-      {:rustler, "0.34.0"},
+      {:rustler, "0.37.1"},
       {:telemetry, "~> 1.3"},
       {:telemetry_metrics, "~> 1.0"},
       {:jason, "~> 1.4"},

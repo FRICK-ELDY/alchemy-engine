@@ -19,7 +19,7 @@ audio      = { path = "../audio" }
 input      = { path = "../input" }
 render     = { path = "../render" }
 input_openxr = { path = "../input_openxr", optional = true }
-rustler = "0.34"
+rustler = "0.37"
 rayon = "1"
 log = "0.4"
 env_logger = "0.11"
