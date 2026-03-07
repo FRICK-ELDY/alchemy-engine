@@ -21,6 +21,7 @@ pub fn physics_step(world: ResourceArc<GameWorld>, delta_ms: f64) -> NifResult<u
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
     record_write_wait("nif.physics_step", wait_start.elapsed());
     physics_step_inner(&mut w, delta_ms);
+    w.fill_render_snapshot_back_and_swap();
     Ok(w.frame_id)
 }
 
@@ -77,6 +78,7 @@ fn run_rust_game_loop(
                 Vec::new()
             } else {
                 physics_step_inner(&mut w, TICK_MS);
+                w.fill_render_snapshot_back_and_swap();
                 drain_frame_events_inner(&mut w)
             }
         };

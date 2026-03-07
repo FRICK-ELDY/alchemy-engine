@@ -21,7 +21,12 @@ pub fn decode_mesh_definitions(term: Term) -> NifResult<Vec<MeshDef>> {
             "mesh_definitions: expected list of mesh def maps",
         ))
     })?;
-    iter.map(decode_mesh_def).collect()
+    // P5-3: with_capacity で再アロケーションを抑制。3D シーンは通常 4〜16 メッシュ。
+    let mut out = Vec::with_capacity(8);
+    for item in iter {
+        out.push(decode_mesh_def(item)?);
+    }
+    Ok(out)
 }
 
 fn decode_mesh_def(term: Term) -> NifResult<MeshDef> {
@@ -76,7 +81,8 @@ fn decode_indices(term: Term) -> NifResult<Vec<u32>> {
     let iter: ListIterator = term.decode().map_err(|_| {
         NifError::Term(Box::new("mesh_def indices: expected list of non-negative integers"))
     })?;
-    let mut out = Vec::new();
+    // P5-3: with_capacity で再アロケーションを抑制。三角形は 3 頂点/面。
+    let mut out = Vec::with_capacity(36);
     for t in iter {
         let i: u32 = t.decode().map_err(|_| {
             NifError::Term(Box::new("index: expected non-negative integer"))

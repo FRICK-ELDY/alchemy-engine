@@ -165,104 +165,29 @@ pub fn get_full_game_state(world: ResourceArc<GameWorld>) -> NifResult<(u32, f64
 /// - obstacles:   `[{x, y, radius, kind}]`
 /// - boss:        `{:none, 0, 0, 0, 0}` または `{:alive, x, y, radius, render_kind}`
 /// - score_popups:`[{x, y, value, lifetime}]`
-/// P5-4: with_capacity で再アロケーションを抑制。count をヒントに事前確保。
+/// P5-4: ダブルバッファからクローンを返す。SoA からの構築は physics_step 直後に 1 回のみ行う。
 #[rustler::nif]
 pub fn get_render_entities(world: ResourceArc<GameWorld>) -> NifResult<RenderEntities> {
     let w = world.0.read().map_err(|_| lock_poisoned_err())?;
-
-    let mut enemies = Vec::with_capacity(w.enemies.count);
-    for i in 0..w.enemies.len() {
-        if w.enemies.alive[i] == 0 {
-            continue;
-        }
-        let kind_id = w
-            .params
-            .enemies
-            .get(w.enemies.kind_ids[i] as usize)
-            .map(|ep| ep.render_kind as u32)
-            .unwrap_or(1);
-        enemies.push((
-            w.enemies.positions_x[i] as f64,
-            w.enemies.positions_y[i] as f64,
-            kind_id,
-        ));
-    }
-
-    let mut bullets = Vec::with_capacity(w.bullets.count);
-    for i in 0..w.bullets.len() {
-        if !w.bullets.alive[i] {
-            continue;
-        }
-        bullets.push((
-            w.bullets.positions_x[i] as f64,
-            w.bullets.positions_y[i] as f64,
-            w.bullets.render_kind[i] as u32,
-        ));
-    }
-
-    let particle_count = w.particles.count;
-    let mut particles = Vec::with_capacity(particle_count);
-    for i in 0..w.particles.len() {
-        if !w.particles.alive[i] {
-            continue;
-        }
-        let alpha =
-            (w.particles.lifetime[i] / w.particles.max_lifetime[i]).clamp(0.0, 1.0) as f64;
-        let c = w.particles.color[i];
-        particles.push((
-            w.particles.positions_x[i] as f64,
-            w.particles.positions_y[i] as f64,
-            c[0] as f64,
-            c[1] as f64,
-            c[2] as f64,
-            alpha,
-            w.particles.size[i] as f64,
-        ));
-    }
-
-    let item_count = w.items.count;
-    let mut items = Vec::with_capacity(item_count);
-    for i in 0..w.items.len() {
-        if !w.items.alive[i] {
-            continue;
-        }
-        items.push((
-            w.items.positions_x[i] as f64,
-            w.items.positions_y[i] as f64,
-            w.items.kinds[i].render_kind() as u32,
-        ));
-    }
-
-    let obstacles: Vec<(f64, f64, f64, u32)> = w
-        .collision
-        .obstacles
-        .iter()
-        .map(|o| (o.x as f64, o.y as f64, o.radius as f64, o.kind as u32))
-        .collect();
+    let buf = &w.render_buffers[w.render_front];
 
     // boss は Elixir state から描画するため、常に :none
     let boss = (none(), 0.0, 0.0, 0.0, 0);
 
-    let score_popups: Vec<(f64, f64, u32, f64)> = w
-        .score_popups
-        .iter()
-        .map(|&(x, y, v, lt)| (x as f64, y as f64, v, lt as f64))
-        .collect();
-
     Ok((
+        buf.player,
+        buf.timers,
         (
-            w.player.x as f64,
-            w.player.y as f64,
-            w.frame_id,
-            w.enemies.count,
-            w.bullets.count,
+            buf.enemies.clone(),
+            buf.bullets.clone(),
+            buf.particles.clone(),
         ),
         (
-            w.magnet_timer as f64,
-            w.player_invincible_timer_injected as f64,
+            buf.items.clone(),
+            buf.obstacles.clone(),
+            boss,
+            buf.score_popups.clone(),
         ),
-        (enemies, bullets, particles),
-        (items, obstacles, boss, score_popups),
     ))
 }
 
