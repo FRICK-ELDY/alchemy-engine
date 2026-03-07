@@ -3,7 +3,7 @@
 > 作成日: 2026-03-07  
 > 出典: [p5-2-messagepack-execution-plan.md](../task/p5-2-messagepack-execution-plan.md), [draw-command-spec.md](draw-command-spec.md)
 >
-> **フレームネットワーク配信**: Zenoh ペイロードのスキーマは本ドキュメントのトップレベル構造（commands, camera, ui, mesh_definitions）を参照。詳細は [client-server-separation-procedure.md](../plan/client-server-separation-procedure.md) フェーズ 1 を参照。
+> **フレームネットワーク配信**: Zenoh ペイロードのスキーマは本ドキュメントのトップレベル構造（commands, camera, ui, mesh_definitions）を参照。拡張項目（frame_id, player_interp, cursor_grab）は [zenoh-protocol-spec.md](zenoh-protocol-spec.md) を参照。
 
 ---
 
