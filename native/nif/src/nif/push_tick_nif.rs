@@ -35,6 +35,7 @@ pub fn push_tick(
 
     let step_start = Instant::now();
     physics_step_inner(&mut w, delta_ms);
+    w.fill_render_snapshot_back_and_swap();
     let physics_ms = step_start.elapsed().as_secs_f64() * 1000.0;
 
     w.curr_tick_ms = std::time::SystemTime::now()

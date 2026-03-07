@@ -53,6 +53,14 @@
 
 ---
 
+## 関連タスク
+
+| タスク | 説明 | 計画書 |
+|:---|:---|:---|
+| P5-2 MessagePack バイナリ形式 | push_render_frame の MessagePack 化による転送効率化 | [p5-2-messagepack-execution-plan.md](p5-2-messagepack-execution-plan.md) |
+
+---
+
 ## 推奨実施順序
 
 ```mermaid

@@ -1,7 +1,10 @@
 //! Path: native/physics/src/world/game_world.rs
 //! Summary: ゲームワールド（GameWorldInner, GameWorld）
 
-use super::{BulletWorld, EnemyWorld, ParticleWorld, PlayerState, SpecialEntitySnapshot};
+use super::{
+    BulletWorld, EnemyWorld, ParticleWorld, PlayerState, RenderSnapshotBuffer,
+    SpecialEntitySnapshot,
+};
 use crate::entity_params::EntityParamTables;
 use crate::item::ItemWorld;
 use crate::physics::rng::SimpleRng;
@@ -105,9 +108,116 @@ pub struct GameWorldInner {
     pub hud_exp_to_next: u32,
     pub hud_level_up_pending: bool,
     pub hud_weapon_choices: Vec<String>,
+    /// P5-4: 描画用ダブルバッファ。物理ステップ後に fill し、get_render_entities で返す。
+    pub render_buffers: [RenderSnapshotBuffer; 2],
+    /// P5-4: どのバッファを「フロント」（get_render_entities で返す側）とするか。0 または 1。
+    pub render_front: usize,
 }
 
 impl GameWorldInner {
+    /// P5-4: 描画用ダブルバッファを更新。物理ステップ後に呼ぶ。
+    /// バックバッファに SoA からデータを構築し、フロントをスワップする。
+    pub fn fill_render_snapshot_back_and_swap(&mut self) {
+        let back = 1 - self.render_front;
+        let buf = &mut self.render_buffers[back];
+
+        buf.player = (
+            self.player.x as f64,
+            self.player.y as f64,
+            self.frame_id,
+            self.enemies.count,
+            self.bullets.count,
+        );
+        buf.timers = (
+            self.magnet_timer as f64,
+            self.player_invincible_timer_injected as f64,
+        );
+
+        buf.enemies.clear();
+        buf.enemies.reserve(self.enemies.count);
+        for i in 0..self.enemies.len() {
+            if self.enemies.alive[i] == 0 {
+                continue;
+            }
+            let kind_id = self
+                .params
+                .enemies
+                .get(self.enemies.kind_ids[i] as usize)
+                .map(|ep| ep.render_kind as u32)
+                .unwrap_or(1);
+            buf.enemies.push((
+                self.enemies.positions_x[i] as f64,
+                self.enemies.positions_y[i] as f64,
+                kind_id,
+            ));
+        }
+
+        buf.bullets.clear();
+        buf.bullets.reserve(self.bullets.count);
+        for i in 0..self.bullets.len() {
+            if !self.bullets.alive[i] {
+                continue;
+            }
+            buf.bullets.push((
+                self.bullets.positions_x[i] as f64,
+                self.bullets.positions_y[i] as f64,
+                self.bullets.render_kind[i] as u32,
+            ));
+        }
+
+        buf.particles.clear();
+        buf.particles.reserve(self.particles.count);
+        for i in 0..self.particles.len() {
+            if !self.particles.alive[i] {
+                continue;
+            }
+            let alpha = (self.particles.lifetime[i] / self.particles.max_lifetime[i])
+                .clamp(0.0, 1.0) as f64;
+            let c = self.particles.color[i];
+            buf.particles.push((
+                self.particles.positions_x[i] as f64,
+                self.particles.positions_y[i] as f64,
+                c[0] as f64,
+                c[1] as f64,
+                c[2] as f64,
+                alpha,
+                self.particles.size[i] as f64,
+            ));
+        }
+
+        buf.items.clear();
+        buf.items.reserve(self.items.count);
+        for i in 0..self.items.len() {
+            if !self.items.alive[i] {
+                continue;
+            }
+            buf.items.push((
+                self.items.positions_x[i] as f64,
+                self.items.positions_y[i] as f64,
+                self.items.kinds[i].render_kind() as u32,
+            ));
+        }
+
+        buf.obstacles.clear();
+        buf.obstacles.reserve(self.collision.obstacles.len());
+        for o in &self.collision.obstacles {
+            buf.obstacles.push((
+                o.x as f64,
+                o.y as f64,
+                o.radius as f64,
+                o.kind as u32,
+            ));
+        }
+
+        buf.score_popups.clear();
+        buf.score_popups.reserve(self.score_popups.len());
+        for &(x, y, v, lt) in &self.score_popups {
+            buf.score_popups.push((x as f64, y as f64, v, lt as f64));
+        }
+
+        self.render_front = back;
+    }
+
     /// 衝突判定用の Spatial Hash を再構築する（clone 不要）
     pub fn rebuild_collision(&mut self) {
         self.collision.dynamic.clear();

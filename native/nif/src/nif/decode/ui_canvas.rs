@@ -25,7 +25,11 @@ pub fn decode_ui_canvas(term: Term) -> NifResult<UiCanvas> {
         .decode()
         .map_err(|_| NifError::Term(Box::new("UiCanvas: nodes must be a list")))?;
 
-    let nodes: Vec<UiNode> = iter.map(decode_ui_node).collect::<NifResult<_>>()?;
+    // P5-3: with_capacity で再アロケーションを抑制。典型的な UI は 8〜32 ノード。
+    let mut nodes = Vec::with_capacity(32);
+    for item in iter {
+        nodes.push(decode_ui_node(item)?);
+    }
 
     Ok(UiCanvas { nodes })
 }
@@ -46,9 +50,11 @@ fn decode_ui_node(term: Term) -> NifResult<UiNode> {
     let children_iter: ListIterator = children_t
         .decode()
         .map_err(|_| NifError::Term(Box::new("UiNode: children must be a list")))?;
-    let children: Vec<UiNode> = children_iter
-        .map(decode_ui_node)
-        .collect::<NifResult<_>>()?;
+    // P5-3: with_capacity で再アロケーションを抑制。子ノードは通常 2〜8 程度。
+    let mut children = Vec::with_capacity(8);
+    for item in children_iter {
+        children.push(decode_ui_node(item)?);
+    }
 
     Ok(UiNode {
         rect,

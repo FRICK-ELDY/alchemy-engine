@@ -8,6 +8,7 @@ mod game_loop_control;
 mod game_world;
 mod particle;
 mod player;
+mod render_snapshot;
 mod special_entity;
 
 pub use bullet::{
@@ -18,6 +19,7 @@ pub use enemy::EnemyWorld;
 pub use frame_event::FrameEvent;
 pub use game_loop_control::GameLoopControl;
 pub use game_world::{GameWorld, GameWorldInner};
+pub use render_snapshot::RenderSnapshotBuffer;
 pub use particle::ParticleWorld;
 pub use player::PlayerState;
 pub use special_entity::SpecialEntitySnapshot;

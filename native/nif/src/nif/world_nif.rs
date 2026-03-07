@@ -74,6 +74,8 @@ pub fn create_world() -> ResourceArc<GameWorld> {
         hud_exp_to_next: 10,
         hud_level_up_pending: false,
         hud_weapon_choices: Vec::new(),
+        render_buffers: Default::default(),
+        render_front: 0,
     })))
 }
 
