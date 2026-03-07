@@ -89,7 +89,14 @@ defmodule Content.VRTest.RenderComponent do
       {:skybox, {sky_top_r, sky_top_g, sky_top_b, sky_top_a},
        {sky_bot_r, sky_bot_g, sky_bot_b, sky_bot_a}}
 
-    grid_cmd = {:grid_plane, @grid_size, @grid_divisions, {grid_r, grid_g, grid_b, grid_a}}
+    grid_vertices =
+      Content.MeshDef.grid_plane(
+        size: @grid_size,
+        divisions: @grid_divisions,
+        color: {grid_r, grid_g, grid_b, grid_a}
+      )[:vertices]
+
+    grid_cmd = {:grid_plane_verts, grid_vertices}
 
     {px, py, pz} = player
 

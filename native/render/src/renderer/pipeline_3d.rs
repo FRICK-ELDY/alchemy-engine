@@ -15,7 +15,7 @@
 
 use crate::DrawCommand;
 use crate::{MeshDef, MeshVertex};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use wgpu::util::DeviceExt;
 
 // ─── 容量定数 ─────────────────────────────────────────────────────────────
@@ -528,9 +528,25 @@ impl Pipeline3D {
             return;
         };
 
-        // ─── P3: メッシュ定義をキャッシュに登録（直前フレームと同じ場合はスキップ）────
+        // ─── P3: メッシュ定義をキャッシュに登録・削除（直前フレームと同じ場合はスキップ）────
+        // コンテンツ切替時は new_key が変わるため、旧コンテンツのメッシュを削除してから新規登録する。
+        // これにより、SimpleBox3D → VampireSurvivor 等の切替時に前コンテンツのメッシュが
+        // キャッシュに残り続けるメモリリークを防止する。
         let new_key: Vec<String> = mesh_definitions.iter().map(|d| d.name.clone()).collect();
-        if self.mesh_def_cache_key.as_ref() != Some(&new_key) {
+        let need_update = self
+            .mesh_def_cache_key
+            .as_ref()
+            .map_or(true, |prev| prev != &new_key);
+        if need_update {
+            if let Some(ref old_key) = self.mesh_def_cache_key {
+                let new_key_set: HashSet<&str> =
+                    new_key.iter().map(String::as_str).collect();
+                for name in old_key.iter() {
+                    if !new_key_set.contains(name.as_str()) {
+                        self.mesh_def_cache.remove(name);
+                    }
+                }
+            }
             for def in mesh_definitions {
                 self.mesh_def_cache.insert(
                     def.name.clone(),

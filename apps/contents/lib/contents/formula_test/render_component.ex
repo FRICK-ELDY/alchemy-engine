@@ -59,10 +59,17 @@ defmodule Content.FormulaTest.RenderComponent do
     {sky_bot_r, sky_bot_g, sky_bot_b, sky_bot_a} = {0.5, 0.7, 0.95, 1.0}
     {grid_r, grid_g, grid_b, grid_a} = {0.25, 0.25, 0.3, 1.0}
 
+    grid_vertices =
+      Content.MeshDef.grid_plane(
+        size: 20.0,
+        divisions: 20,
+        color: {grid_r, grid_g, grid_b, grid_a}
+      )[:vertices]
+
     [
       {:skybox, {sky_top_r, sky_top_g, sky_top_b, sky_top_a},
        {sky_bot_r, sky_bot_g, sky_bot_b, sky_bot_a}},
-      {:grid_plane, 20.0, 20, {grid_r, grid_g, grid_b, grid_a}}
+      {:grid_plane_verts, grid_vertices}
     ]
   end
 
