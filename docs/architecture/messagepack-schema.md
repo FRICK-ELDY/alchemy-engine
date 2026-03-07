@@ -82,9 +82,25 @@ Elixir 側（msgpax）と Rust 側（rmp-serde）で同一の構造を扱う。
 }
 ```
 
-## 7. スキーマ変更時の手順
+## 7. set_frame_injection（injection_map）の MessagePack スキーマ
+
+`set_frame_injection_binary` NIF が受け取るバイナリのスキーマ。
+トップレベルは map。存在するキーのみ pack する（オプショナルキー）。
+
+| キー | 型 | 説明 |
+|:---|:---|:---|
+| "player_input" | `[dx, dy]` | プレイヤー移動入力（float, float） |
+| "player_snapshot" | `[hp, invincible_timer]` | HP と無敵タイマー（float, float） |
+| "elapsed_seconds" | float | 経過秒数 |
+| "weapon_slots" | `[[kind_id, level, cooldown, cooldown_sec, precomputed_damage], ...]` | 武器スロット。kind_id: u8, level: u32, cooldown: float, cooldown_sec: float, precomputed_damage: i32 |
+| "enemy_damage_this_frame" | `[[kind_id, damage], ...]` | 敵接触ダメージ。kind_id: u8（Rust 側は MessagePack 整数のため u64 で受け入れ）、damage: float |
+| "special_entity_snapshot" | map | `%{"t" => "none"}` で :none。`%{"t" => "alive", "x" => x, "y" => y, "radius" => r, "damage" => d, "invincible" => inv}` で {:alive, ...} |
+
+数値は f64 として pack（Rust 側で f32 等に変換）。
+
+## 8. スキーマ変更時の手順
 
 1. 本ドキュメントの型マッピングを更新
 2. Elixir: `Content.MessagePackEncoder` を更新
-3. Rust: `nif/decode/msgpack.rs` の Deserialize 構造体を更新
+3. Rust: `nif/decode/msgpack.rs` および `msgpack_injection.rs` の Deserialize 構造体を更新
 4. 両方のテストを実行して整合性を確認

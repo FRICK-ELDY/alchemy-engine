@@ -522,16 +522,26 @@ defmodule Contents.GameEvents do
           # 最新のシーン state を Rust 側に反映できる
           dispatch_nif_sync_to_components(context)
 
-          # P5-1: 収集した注入データを 1 回の NIF で適用
+          # P5: 収集した注入データを MessagePack バイナリで 1 回の NIF 適用
           injection = Process.get(:frame_injection, %{})
 
           if map_size(injection) > 0 do
-            case Core.NifBridge.set_frame_injection(state.world_ref, injection) do
-              {:error, reason} ->
-                Logger.error("[NIF ERROR] set_frame_injection failed: #{inspect(reason)}")
+            case Content.MessagePackEncoder.encode_injection_map(injection) do
+              {:ok, frame_binary} ->
+                case Core.NifBridge.set_frame_injection_binary(state.world_ref, frame_binary) do
+                  {:error, reason} ->
+                    Logger.error(
+                      "[NIF ERROR] set_frame_injection_binary failed: #{inspect(reason)}"
+                    )
 
-              _ ->
-                :ok
+                  _ ->
+                    :ok
+                end
+
+              {:error, reason} ->
+                Logger.error(
+                  "[Msgpax] encode_injection_map failed (skipping frame injection): #{inspect(reason)}"
+                )
             end
           end
 
