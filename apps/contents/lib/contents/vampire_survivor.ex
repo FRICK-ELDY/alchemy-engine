@@ -12,12 +12,15 @@ defmodule Content.VampireSurvivor do
 
   def components do
     [
+      Content.VampireSurvivor.LocalUserComponent,
       Content.VampireSurvivor.SpawnComponent,
       Content.VampireSurvivor.LevelComponent,
       Content.VampireSurvivor.BossComponent,
       Content.VampireSurvivor.RenderComponent
     ]
   end
+
+  def local_user_input_module, do: Content.VampireSurvivor.LocalUserComponent
 
   # ── シーン定義（エンジンが参照するシーン構成）────────────────────
 

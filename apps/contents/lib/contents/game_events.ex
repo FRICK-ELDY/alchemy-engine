@@ -42,7 +42,7 @@ defmodule Contents.GameEvents do
 
     world_ref = Core.NifBridge.create_world()
 
-    Enum.each(Core.Config.components(), fn component ->
+    Enum.each(Contents.ComponentList.components(), fn component ->
       init_component(component, world_ref)
     end)
 
@@ -222,11 +222,13 @@ defmodule Contents.GameEvents do
     {:noreply, state}
   end
 
-  # ── インフォ: 生入力イベント（Rust → InputHandler → 意味論的イベント）──
+  # ── インフォ: 生入力イベント（Rust → LocalUserComponent）──
 
   def handle_info({:raw_key, key, key_state}, state)
       when is_atom(key) and key_state in [:pressed, :released] do
-    Core.InputHandler.raw_key(key, key_state)
+    now = now_ms()
+    context = build_context(state, now, now - state.start_ms, flow_runner(state))
+    dispatch_event_to_components({:raw_key, key, key_state}, context)
     {:noreply, state}
   end
 
@@ -238,7 +240,9 @@ defmodule Contents.GameEvents do
   end
 
   def handle_info(:focus_lost, state) do
-    Core.InputHandler.focus_lost()
+    now = now_ms()
+    context = build_context(state, now, now - state.start_ms, flow_runner(state))
+    dispatch_event_to_components(:focus_lost, context)
     {:noreply, state}
   end
 
@@ -328,7 +332,7 @@ defmodule Contents.GameEvents do
     {:noreply, state}
   end
 
-  # ── インフォ: キー押下（InputHandler が raw_key から生成）───────────────
+  # ── インフォ: キー押下（LocalUserComponent が raw_key から生成）───────────
 
   def handle_info({:key_pressed, key}, state) when is_atom(key) do
     now = now_ms()
@@ -559,19 +563,20 @@ defmodule Contents.GameEvents do
   defp dispatch_to_components(callback, args) do
     arity = length(args)
 
-    Enum.each(Core.Config.components(), fn component ->
+    Enum.each(Contents.ComponentList.components(), fn component ->
       if function_exported?(component, callback, arity) do
         apply(component, callback, args)
       end
     end)
   end
 
-  defp maybe_set_input_and_broadcast(_state, mod, physics_scenes, events, context) do
+  defp maybe_set_input_and_broadcast(state, mod, physics_scenes, events, context) do
     if mod in physics_scenes do
-      # 全ルームでフレームごとに ETS から読む。InputHandler が raw_key で ETS を更新するため、
-      # メッセージ順序（frame_events vs move_input）に依存せず入力が 1 フレーム遅れない。
-      # P5-1: set_player_input は廃止。frame_injection に player_input をマージする。
-      {dx, dy} = Core.InputHandler.get_move_vector()
+      local_mod =
+        Contents.ComponentList.local_user_input_module() || Contents.LocalUserComponent
+
+      {dx, dy} = local_mod.get_move_vector(state.room_id)
+
       inj = Process.get(:frame_injection, %{})
       Process.put(:frame_injection, Map.put(inj, :player_input, {dx * 1.0, dy * 1.0}))
 
@@ -593,6 +598,7 @@ defmodule Contents.GameEvents do
     dt = @tick_ms / 1000.0
 
     base = %{
+      room_id: state.room_id,
       tick_ms: @tick_ms,
       dt: dt,
       world_ref: state.world_ref,

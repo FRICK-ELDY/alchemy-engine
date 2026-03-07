@@ -19,7 +19,6 @@ defmodule Server.Application do
       {Registry, [keys: :unique, name: Core.RoomRegistry]},
       Core.FormulaStore.LocalBackend,
       {Contents.SceneStack, [content_module: content]},
-      Core.InputHandler,
       Core.EventBus,
       Core.RoomSupervisor,
       Core.StressMonitor,

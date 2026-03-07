@@ -10,17 +10,17 @@
 
 ## 背景・課題
 
-### 現状
+### 現状（実装済み）
 
-- **Core.InputHandler** がグローバルに生キー入力（raw_key）を受信し、意味論的イベント（move_input, sprint, key_pressed）に変換して GameEvents に送信している
-- **GameEvents** は `InputHandler.get_move_vector()` を直接呼び、`frame_injection` の `player_input` に渡している
-- 入力の意味マッピング（WASD → 移動など）は Core 層にハードコードされており、コンテンツごとのカスタマイズが難しい
-- 「ローカルユーザー」という概念が明示されておらず、複数ユーザー対応時に区別しづらい
+- **全コンテンツ**が LocalUserComponent 経由でキーボード・マウス入力を取得する
+- **GameEvents** は raw_key / focus_lost をコンポーネントに dispatch し、`Contents.ComponentList.local_user_input_module().get_move_vector(room_id)` で player_input を取得して frame_injection に投入
+- **Contents.ComponentList** がコンポーネントリストを解決し、local_user_input_module 未実装のコンテンツには `Contents.LocalUserComponent` を自動注入
+- **Core.InputHandler** は廃止済み（Application の子プロセスから削除）
 
 ### 方針
 
 - ローカルユーザーの入力を**コンテンツ内**で管理する
-- 各コンテンツが LocalUserComponent を持ち、そこからキーボード・マウス情報をコンテンツ内で利用する
+- 各コンテンツが LocalUserComponent を持ち（自前またはデフォルト）、そこからキーボード・マウス情報をコンテンツ内で利用する
 - 将来の複数ユーザー対応（ローカル vs リモート）を見据えた設計とする
 
 ---
@@ -43,11 +43,14 @@
 Rust (desktop_loop)
   ↓ raw_key / raw_mouse_motion / focus_lost
 GameEvents
-  ↓ dispatch on_event
-LocalUserComponent（コンテンツのコンポーネント）
+  ↓ dispatch on_event（Contents.ComponentList.components() の全コンポーネントへ）
+LocalUserComponent（コンテンツのコンポーネント、自前 or Contents.LocalUserComponent）
   ↓ キー→意味のマッピング（コンテンツ仕様）
-  ↓ 状態保持（move_vector, mouse_delta, sprint, keys_held）
-  ↓ on_nif_sync で frame_injection に player_input をマージ
+  ↓ 状態保持（move_vector, sprint, keys_held） room_id 単位で ETS
+  ↓ get_move_vector(room_id) で GameEvents に返す
+GameEvents（maybe_set_input_and_broadcast）
+  ↓ frame_injection ← player_input
+  ↓ dispatch on_nif_sync
 GameWorld (Rust)
 ```
 
@@ -65,9 +68,9 @@ GameWorld (Rust)
 |:-----|:-----|
 | 生入力の受信 | `on_event({:raw_key, key, state}, context)` 等で GameEvents から受け取る |
 | 意味マッピング | キー→move_vector, sprint, key_pressed 等への変換（コンテンツ仕様で実装） |
-| 状態保持 | room_id 単位で ETS 等に保持。フレーム処理時に参照される |
-| frame_injection 提供 | `on_nif_sync` で `player_input` を frame_injection にマージ |
-| 意味論的イベントの dispatch | move_input, sprint, key_pressed を必要に応じて GameEvents 経由で他コンポーネントに配信 |
+| 状態保持 | room_id 単位で ETS に保持。`on_ready` で `:local_user_input` テーブル作成 |
+| player_input 提供 | `get_move_vector(room_id)` で GameEvents に返す。GameEvents が frame_injection に投入 |
+| 意味論的イベントの dispatch | move_input, sprint, key_pressed を event_handler に send して他コンポーネントへ配信 |
 
 ---
 
@@ -77,8 +80,8 @@ GameWorld (Rust)
 sequenceDiagram
     participant Rust as Rust (desktop_loop)
     participant GE as GameEvents
+    participant CL as ComponentList
     participant LUC as LocalUserComponent
-    participant Phys as physics_step
 
     Rust->>GE: {:raw_key, key, state}
     GE->>LUC: on_event({:raw_key, ...})
@@ -86,17 +89,27 @@ sequenceDiagram
 
     Rust->>GE: {:raw_mouse_motion, dx, dy}
     GE->>LUC: on_event({:mouse_delta, dx, dy})
-    LUC->>LUC: 状態更新（必要に応じて）
 
-    Note over GE,Phys: 60Hz フレーム処理
-    GE->>GE: maybe_set_input_and_broadcast
+    Note over GE,CL: 60Hz フレーム処理
+    GE->>CL: local_user_input_module()
+    CL->>GE: LUC モジュール
     GE->>LUC: get_move_vector(room_id)
     LUC->>GE: {dx, dy}
     GE->>GE: frame_injection ← player_input
     GE->>LUC: on_nif_sync
-    LUC->>GE: frame_injection マージ（player_input 等）
     GE->>Rust: set_frame_injection
 ```
+
+---
+
+## Contents.ComponentList
+
+コンポーネントリストと LocalUserComponent モジュールの解決を担う。
+
+- **components()**: content.components() に LocalUserComponent が含まれていなければ先頭に注入
+- **local_user_input_module(content)**: content が `local_user_input_module/0` を未実装なら `Contents.LocalUserComponent`、実装ならその戻り値（nil のときもデフォルト使用）
+
+GameEvents は `Core.Config.components()` ではなく `Contents.ComponentList.components()` を参照する。
 
 ---
 
@@ -108,31 +121,23 @@ sequenceDiagram
 @doc """
 ローカルユーザー入力を提供するモジュールを返す。
 
-- `nil`: Core.InputHandler を従来通り使用（後方互換）
-- `module`: 指定モジュールの `get_move_vector/1` を呼んで player_input を取得
+- 未実装: Contents.ComponentList が Contents.LocalUserComponent を使用
+- 実装時: 返した module の get_move_vector/1 を呼んで player_input を取得。
+  nil を返した場合もデフォルト（Contents.LocalUserComponent）を使用
 """
 @callback local_user_input_module() :: module() | nil
 ```
 
-- デフォルト: `nil`（InputHandler 使用）
-- LocalUserComponent 導入時: コンテンツが `local_user_input_module/0` で `Content.VampireSurvivor.LocalUserComponent` を返す
+- **未実装**: `Contents.LocalUserComponent`（デフォルト）
+- **実装時**: 例として `Content.VampireSurvivor` は `Content.VampireSurvivor.LocalUserComponent` を返す
 
 ---
 
-## InputHandler の役割変更
+## InputHandler（廃止済み）
 
-### 移行フェーズ
-
-| フェーズ | InputHandler | LocalUserComponent |
-|:---------|:-------------|:-------------------|
-| 移行前 | raw_key 受信、意味マッピング、ETS 更新、move_input 送信 | なし |
-| 移行後（コンテンツが LocalUser 使用） | raw_key は GameEvents がコンポーネントに dispatch。InputHandler は呼ばない | 全責務を担う |
-| 移行後（従来コンテンツ） | 従来通り | なし |
-
-### 長期方針
-
-- LocalUserComponent を採用したコンテンツが主になれば、InputHandler は廃止または「生入力のログ・デバッグ用」に縮小する
-- 移行期間中は両立可能な形で実装する
+- **Core.InputHandler** は Application の子プロセスから削除済み
+- raw_key / focus_lost は常に GameEvents がコンポーネントに dispatch
+- 全コンテンツが LocalUserComponent 経由で入力を取得する
 
 ---
 
@@ -141,13 +146,14 @@ sequenceDiagram
 LocalUserComponent は room_id 単位で入力を保持する。
 
 ```
-テーブル名: :local_user_input  （LocalUserComponent が init で作成）
+テーブル名: :local_user_input  （LocalUserComponent が on_ready で作成）
 
 キー: {room_id, :move}     → 値: {dx, dy}
 キー: {room_id, :sprint}   → 値: boolean()
-キー: {room_id, :keys_held} → 値: MapSet.t()  （オプション。キーマッピングに必要なら）
+キー: {room_id, :keys_held} → 値: MapSet.t()
 ```
 
+- `on_ready` でテーブルが存在しなければ作成。複数ルーム時は同一テーブルを共有
 - 現状は 1 room あたり 1 ローカルユーザーの想定
 - 将来の split-screen 等では `{room_id, user_id}` に拡張可能
 
@@ -157,13 +163,13 @@ LocalUserComponent は room_id 単位で入力を保持する。
 
 LocalUserComponent はコンテンツごとにキーマッピングを持てる。
 
-### 例: VampireSurvivor
+### デフォルト: Contents.LocalUserComponent
 
-```elixir
-# WASD / 矢印 → move
-# Shift → sprint
-# Escape → key_pressed
-```
+local_user_input_module 未実装のコンテンツが使用。WASD / 矢印 / Shift / Escape の標準マッピング。
+
+### 例: Content.VampireSurvivor.LocalUserComponent
+
+VampireSurvivor 専用。現状はデフォルトと同じマッピング。将来的にコンテンツ固有のカスタマイズが可能。
 
 ### 例: 将来のコンテンツ
 
