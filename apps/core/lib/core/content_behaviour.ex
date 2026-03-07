@@ -85,6 +85,18 @@ defmodule Core.ContentBehaviour do
   """
   @callback scene_stack_spec(room_id :: term()) :: Supervisor.child_spec()
 
+  @doc """
+  ローカルユーザー入力を提供するモジュールを返す。
+
+  - オプショナル。content が未実装の場合、Contents.ComponentList が
+    Contents.LocalUserComponent をデフォルトとして使用する。
+  - 実装時: 返した `module` を使用。`nil` を返した場合もデフォルトを使用。
+  - 指定モジュールの `get_move_vector/1` を呼んで player_input を取得。
+    raw_key / raw_mouse_motion / focus_lost はコンポーネントに dispatch され、
+    当該モジュールが on_event で処理する。
+  """
+  @callback local_user_input_module() :: module() | nil
+
   @optional_callbacks [
     level_up_scene: 0,
     boss_alert_scene: 0,
@@ -93,6 +105,7 @@ defmodule Core.ContentBehaviour do
     apply_weapon_selected: 2,
     apply_level_up_skipped: 1,
     pause_on_push?: 1,
-    scene_stack_spec: 1
+    scene_stack_spec: 1,
+    local_user_input_module: 0
   ]
 end
