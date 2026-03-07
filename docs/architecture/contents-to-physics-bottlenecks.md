@@ -294,9 +294,22 @@ flowchart TB
 
 ---
 
-## 7. 関連ドキュメント
+## 7. 採用しない方針（案 B）
+
+**案 B: Rust 側で SoA から DrawCommand を生成** は **採用しない**。
+
+理由: Rust に描画判断（メッシュ選択・UV・スプライト配置等）を持たせることになり、
+「Elixir が定義、Rust が実行」の原則に反する。現行の設計（Elixir が DrawCommand を組み立て、
+Rust が decode して描画する）を維持する。
+
+参照: [contents-defines-rust-executes.md](../plan/contents-defines-rust-executes.md) セクション 5
+
+---
+
+## 8. 関連ドキュメント
 
 - [Rust: nif](rust/nif.md)
 - [Rust: physics](rust/physics.md)
 - [Elixir: core](elixir/core.md)
 - [Elixir: contents](elixir/contents.md)
+- [draw-command-spec.md](draw-command-spec.md) — DrawCommand タグ・フィールド仕様（SSoT）

@@ -67,6 +67,7 @@ defmodule Core.NifBridge do
 
   # Phase R-2: Elixir 側から DrawCommand リストを RenderFrameBuffer に push する
   # commands: DrawCommand タプルのリスト
+  # DrawCommand 仕様の SSoT: docs/architecture/draw-command-spec.md
   #   {:sprite_raw, x, y, width, height, {{uv_ox, uv_oy}, {uv_sx, uv_sy}, {r, g, b, a}}}
   #     — VampireSurvivor はプレイヤー・敵・弾丸・アイテムをこれで渡す
   #   {:player_sprite, x, y, frame} — レガシー。SpriteRaw で代用可能
