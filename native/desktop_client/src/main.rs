@@ -1,4 +1,5 @@
 //! desktop_client: Zenoh 経由でサーバーに接続するデスクトップゲームクライアント
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 //!
 //! 使用方法:
 //!   desktop_client [--connect CONNECT] [--room ROOM_ID] [--assets PATH]
