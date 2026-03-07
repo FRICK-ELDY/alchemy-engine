@@ -230,7 +230,7 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 | player_interp | optional | prev/curr tick_ms, prev/curr pos（クライアント側補間用） |
 | frame_id | u32 | フレーム識別 |
 
-- [ ] 既存 `push_render_frame` / `push_render_frame_binary` のペイロードをベースにプロトコル仕様を策定
+- [x] 既存 `push_render_frame` / `push_render_frame_binary` のペイロードをベースにプロトコル仕様を策定 → [zenoh-protocol-spec.md](../architecture/zenoh-protocol-spec.md)
 - [x] MessagePack スキーマは [messagepack-schema.md](../architecture/messagepack-schema.md) に定義済み
 
 #### 1.3 入力ペイロード
@@ -249,8 +249,8 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 | name | string | アクション名（select_weapon 等） |
 | payload | map | 追加パラメータ（任意） |
 
-- [ ] raw_key、cursor_grab は将来拡張として検討
-- [ ] Phoenix Channel `"input"` / `"action"` とのデータ形式の互換性を確保（GameEvents への渡し方）
+- [x] raw_key、cursor_grab は将来拡張として検討 → [zenoh-protocol-spec.md](../architecture/zenoh-protocol-spec.md) §5
+- [x] Phoenix Channel `"input"` / `"action"` とのデータ形式の互換性を確保（GameEvents への渡し方） → 同上 §4
 
 ---
 
@@ -364,6 +364,7 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 
 ## 7. 関連ドキュメント
 
+- [zenoh-protocol-spec.md](../architecture/zenoh-protocol-spec.md) — Zenoh プロトコル仕様（フェーズ 1）
 - [Zenohex](https://github.com/biyooon-ex/zenohex) — Elixir API for Zenoh
 - [contents-defines-rust-executes.md](./contents-defines-rust-executes.md) — 定義 vs 実行の分離方針
 - [draw-command-spec.md](../architecture/draw-command-spec.md) — DrawCommand スキーマ
