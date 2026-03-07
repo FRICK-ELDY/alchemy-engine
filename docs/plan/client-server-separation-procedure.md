@@ -1,0 +1,292 @@
+# クライアント・サーバー分離 手順書
+
+> 作成日: 2026-03-07  
+> 目的: render + input を別プロセス・別 exe として分離し、サーバー（Elixir）とネットワークで接続する構成を実現する。あわせて Elixir と Rust の状態・定義の切り分けを明確にする。
+
+---
+
+## 要約
+
+| フェーズ | 内容 | 工数目安 |
+|:---|:---|:---|
+| 0 | 定義の SSoT 化・既存プロトコル確認 | 1〜2 週間 |
+| 1 | プロトコル設計（フレーム・入力の仕様） | 1〜2 週間 |
+| 2 | クライアント exe 土台（NetworkRenderBridge） | 2〜3 週間 |
+| 3 | サーバー側フレーム配信経路 | 2〜3 週間 |
+| 4 | ビルド・配布 | 1 週間 |
+| 5 | ヘッドレスモード・オプション化 | 1〜2 週間（任意） |
+
+---
+
+## 1. 目標アーキテクチャ
+
+### 1.1 全体構成
+
+```mermaid
+flowchart TB
+    subgraph Server["サーバー（Elixir release）"]
+        direction TB
+        Contents[contents<br/>ゲームロジック・シーン管理]
+        Core[core<br/>SSoT コア・RoomSupervisor]
+        PhysicsNIF[physics NIF<br/>物理演算・GameWorld]
+        Network[network<br/>Phoenix / UDP]
+        
+        Contents --> Core
+        Core --> PhysicsNIF
+        Core --> Network
+    end
+    
+    subgraph Client["クライアント（Windows exe）"]
+        direction TB
+        Render[native/render<br/>wgpu 描画]
+        Input[native/input<br/>winit 入力]
+        Bridge[NetworkRenderBridge]
+        
+        Render --> Bridge
+        Input --> Bridge
+    end
+    
+    Server <-->|"WebSocket / UDP<br/>フレーム配信"| Client
+    Client -->|"入力送信<br/>input / action"| Server
+```
+
+### 1.2 サーバー内部構造
+
+```mermaid
+flowchart LR
+    subgraph Elixir["Elixir"]
+        GE[GameEvents]
+        SS[SceneStack]
+        RC[RenderComponent]
+    end
+    
+    subgraph NIF["NIF（同一プロセス内）"]
+        GW[(GameWorld)]
+        RFB[(RenderFrameBuffer)]
+    end
+    
+    subgraph Trans["トランスポート"]
+        WS[Phoenix WebSocket]
+        UDP[UDP Server]
+    end
+    
+    GE --> SS
+    SS --> RC
+    RC -->|push_render_frame| RFB
+    GE -->|physics_step 等| GW
+    RFB -->|シリアライズ| WS
+    RFB -->|シリアライズ| UDP
+    WS -->|接続中クライアント| Client
+```
+
+### 1.3 クライアント内部構造
+
+```mermaid
+flowchart LR
+    subgraph ClientExe["クライアント exe"]
+        Recv[受信スレッド]
+        RB[(受信バッファ)]
+        NRB[NetworkRenderBridge]
+        Loop[input::run_desktop_loop]
+        Win[ウィンドウ<br/>winit]
+        Draw[描画<br/>wgpu]
+        
+        Recv -->|フレーム受信| RB
+        RB -->|next_frame| NRB
+        NRB --> Loop
+        Loop --> Win
+        Loop --> Draw
+    end
+    
+    Server["サーバー"] -->|"frame イベント"| Recv
+    Win -->|on_raw_key 等| NRB
+    NRB -->|"input / action 送信"| Server
+```
+
+---
+
+## 2. 現状の結合点（クリアすべき課題）
+
+### 2.1 プロセス・スレッド
+
+| 観点 | 現状 | 分離後の目標 |
+|:---|:---|:---|
+| プロセス | libnif.dll が BEAM にロード、同一プロセス | サーバー＝BEAM、クライアント＝別 exe |
+| render/input | 専用スレッドで BEAM と独立 | 別プロセスとして完全分離 |
+| 通信 | `OwnedEnv::send_and_clear`（同一プロセス内） | WebSocket / UDP |
+
+### 2.2 状態の二重管理・混在
+
+| 対象 | 現状 | 課題 |
+|:---|:---|:---|
+| **GameWorld** | Rust に保持、Elixir が NIF で注入 | クライアント分離後はサーバー側のみが保持。クライアントは描画用スナップショットのみ受信 |
+| **RenderFrameBuffer** | NIF 内、Elixir が `push_render_frame` で書き込み | サーバーがシリアライズしてネットワーク送信、クライアントが受信して描画 |
+| **プレイヤー補間** | RenderBridge が GameWorld を read lock で参照 | クライアントはサーバーから補間用データ（prev/curr tick, pos）を受信してローカルで補間 |
+| **入力** | input → `env.send_and_clear(&elixir_pid, ...)` | クライアント → サーバーへネットワーク送信 |
+
+### 2.3 定義の重複
+
+| 定義 | Elixir | Rust | 課題 |
+|:---|:---|:---|:---|
+| 敵種別 ID・EXP | `Content.EntityParams` | `entity_params.rs` | 二重管理。Elixir を SSoT にし、Rust は注入パラメータのみ受け取る |
+| ボス ID・HP・EXP | `Content.EntityParams` | `boss.rs` | 同上 |
+| 画面解像度 | なし | `physics/constants.rs` | クライアント側で可変にする場合はプロトコルで渡す |
+| DrawCommand スキーマ | `Core.NifBridge` types | `decode/draw_command.rs` | すでに Elixir 定義・Rust 実行の形。プロトコル仕様として文書化 |
+| 武器パラメータ | `WeaponFormulas` 等 | `WeaponParams` 注入 | Elixir が計算→注入。維持可能 |
+
+---
+
+## 3. フェーズ別手順
+
+### フェーズ 0: 事前整理（1〜2 週間）
+
+#### 0.1 定義の SSoT 化
+
+- [ ] **entity_params 一元化**: Elixir `Content.EntityParams` を唯一の定義とし、Rust の `ENEMY_TABLE` / `boss.rs` 内のハードコードを `set_entity_params` 注入に完全移行
+- [ ] **定数ドキュメント化**: `physics/constants.rs` のうち「コンテンツ固有」と「エンジン固定」を分離。コンテンツ固有は Elixir 定義 or 起動時注入に
+- [ ] **DrawCommand 仕様書の確定**: [draw-command-spec.md](../architecture/draw-command-spec.md) をプロトコル仕様として確定。MessagePack 等バイナリ形式のスキーマを策定（P5-2 と連携）
+
+#### 0.2 既存プロトコル確認
+
+- [ ] **Network.Channel** の `"input"` / `"frame"` イベント形式を確認
+- [ ] **UDP プロトコル**（`Network.UDP`）のフォーマットを確認
+- [ ] 現状の `"frame"` ペイロードが DrawCommand を含むか、frame_events のみかを把握
+
+---
+
+### フェーズ 1: プロトコル設計（1〜2 週間）
+
+#### 1.1 サーバー → クライアント（フレーム配信）
+
+送信するデータ:
+
+| 項目 | 形式 | 説明 |
+|:---|:---|:---|
+| draw_commands | MessagePack / JSON | Elixir の RenderComponent が生成する DrawCommand リスト |
+| camera_params | struct | Camera2D / Camera3D のパラメータ |
+| player_interp | optional | prev/curr tick_ms, prev/curr pos（クライアント側補間用） |
+| frame_id | u32 | フレーム識別 |
+
+- [ ] 既存 `push_render_frame` / `push_render_frame_binary` のペイロードをベースにプロトコル仕様を策定
+- [ ] MessagePack スキーマを [messagepack-schema.md](../architecture/messagepack-schema.md) に追記
+
+#### 1.2 クライアント → サーバー（入力送信）
+
+送信するデータ:
+
+| 項目 | 形式 | 説明 |
+|:---|:---|:---|
+| input | `{dx, dy}` | 移動入力（既存 `"input"` と同等） |
+| action | `{name, ...}` | UI アクション（select_weapon 等） |
+| raw_key | `{key, state}` | 低レベルキー（将来用） |
+| cursor_grab | enum | grab / release / no_change |
+
+- [ ] 既存 Phoenix Channel `"input"` / `"action"` との互換性を確保
+- [ ] UDP クライアント用のバイナリ形式を必要に応じて定義
+
+---
+
+### フェーズ 2: クライアント exe の土台（2〜3 週間）
+
+#### 2.1 クライアント用 Rust バイナリの追加
+
+- [ ] `native/` に `client` または `game_client` クレートを追加（`[[bin]]`）
+- [ ] 依存: `render`, `input`, `physics`（RenderFrame 型のみ）、ネットワーク（`tokio` + `reqwest` / WebSocket、または UDP）
+- [ ] `nif` に依存しない（Rustler を使わない）
+
+#### 2.2 RenderBridge のネットワーク版実装
+
+現状の `NativeRenderBridge` は以下を持つ:
+
+- `next_frame()`: RenderFrameBuffer から取得（同一プロセス）
+- `on_ui_action`, `on_raw_key`, `on_raw_mouse_motion`, `on_focus_lost`: Elixir に送信
+
+クライアント用 `NetworkRenderBridge` の責務:
+
+- `next_frame()`: ネットワーク受信バッファから最新フレームを取得（デシリアライズ）
+- `on_*`: ネットワーク経由でサーバーに送信
+
+- [ ] `render::window::RenderBridge` トレイトの実装を `NetworkRenderBridge` として作成
+- [ ] 受信スレッド: WebSocket / UDP からフレームを受信し、ローカルバッファに格納
+- [ ] 送信: 入力イベントを WebSocket / UDP でサーバーへ送信
+
+#### 2.3 エントリポイント
+
+- [ ] `client/main.rs`: `input::run_desktop_loop(NetworkRenderBridge::new(server_url), config)` を起動
+- [ ] 接続先 URL を引数 or 環境変数で受け取る
+
+---
+
+### フェーズ 3: サーバー側の送信経路（2〜3 週間）
+
+#### 3.1 フレーム配信の二経路化
+
+現状: `push_render_frame` → RenderFrameBuffer → RenderBridge (同一プロセス)
+
+分離後:
+
+- **ルーム :main かつ ローカル描画あり**: 従来どおり RenderFrameBuffer + start_render_thread
+- **リモートクライアント接続時**: `push_render_frame` の内容を WebSocket / UDP でブロードキャスト
+
+- [ ] `Contents.GameEvents` の `on_nif_sync` 後に、接続中のクライアントへフレームを配信する経路を追加
+- [ ] `Network.Channel` の `"frame"` イベントのペイロードを、DrawCommand + camera を含む形式に拡張（未実装なら実装）
+- [ ] ローカル描画とリモート配信の両方をサポートするモード切り替え
+
+#### 3.2 入力の集約
+
+- [ ] リモートクライアントからの `"input"` / `"action"` を、既存 `Network.Channel` と同じく GameEvents に渡す
+- [ ] ローカル入力（NIF 経由）とリモート入力の排他 or マージ方針を決定
+
+---
+
+### フェーズ 4: ビルド・配布（1 週間）
+
+#### 4.1 クライアント exe ビルド
+
+- [ ] `cargo build --release -p client` で Windows exe を生成
+- [ ] CI にクライアントビルドを追加
+
+#### 4.2 アセット・設定
+
+- [ ] クライアント exe と同梱するアセット（atlas.png, shaders）の配置方針
+- [ ] サーバー URL のデフォルト（例: `localhost:4000`）
+
+---
+
+### フェーズ 5: ローカル描画のオプション化（任意・1〜2 週間）
+
+- [ ] サーバーをヘッドレスで起動するモード（`start_render_thread` を呼ばない）
+- [ ] クライアント exe のみでプレイする運用（サーバー + クライアントを別プロセスで起動）
+
+---
+
+## 4. 依存関係・並行作業
+
+| フェーズ | 依存 | 並行可能 |
+|:---|:---|:---|
+| 0 | なし | P5（転送効率化）の一部と並行可能 |
+| 1 | 0 | - |
+| 2 | 1 | 3 と並行可能 |
+| 3 | 1 | 2 と並行可能 |
+| 4 | 2, 3 | - |
+| 5 | 4 | - |
+
+---
+
+## 5. リスク・注意点
+
+| リスク | 対策 |
+|:---|:---|
+| ネットワーク遅延で描画がカクつく | クライアント側で補間・予測を強化。既存のプレイヤー補間ロジックをクライアントに移植 |
+| プロトコル変更の破壌 | バージョン番号をプロトコルに含め、互換性チェック |
+| アセット配布 | クライアント exe に同梱するか、サーバーから配信するか方針決定 |
+
+---
+
+## 6. 関連ドキュメント
+
+- [contents-defines-rust-executes.md](./contents-defines-rust-executes.md) — 定義 vs 実行の分離方針
+- [draw-command-spec.md](../architecture/draw-command-spec.md) — DrawCommand スキーマ
+- [messagepack-schema.md](../architecture/messagepack-schema.md) — バイナリ形式
+- [contents-to-physics-bottlenecks.md](../architecture/contents-to-physics-bottlenecks.md) — データフロー・ボトルネック
+- [implementation.mdc](../../.cursor/rules/implementation.mdc) — 層間インターフェース設計

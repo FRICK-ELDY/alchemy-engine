@@ -9,32 +9,37 @@
 
 ## 🏗️ Architecture
 
-プロジェクトは、ElixirのUmbrellaプロジェクトとRustのマルチクレート構成をシームレスに統合しています。
+### 全体構成
 
 ```mermaid
 flowchart TB
-    subgraph Elixir["Elixir (SSoT)"]
-        server[server<br/>サーバー起動・ヘッドレス]
-        core[core<br/>SSoTコア・空間分割・ECS同期]
-        contents[contents<br/>静的データ・アセット]
-        network[network<br/>クライアント/サーバー通信]
+    subgraph Server["サーバー（Elixir release）"]
+        direction TB
+        Contents[contents<br/>ゲームロジック・シーン管理]
+        Core[core<br/>SSoT コア・RoomSupervisor]
+        PhysicsNIF[physics NIF<br/>物理演算・GameWorld]
+        Network[network<br/>Phoenix / UDP]
+        
+        Contents --> Core
+        Core --> PhysicsNIF
+        Core --> Network
     end
-
-    subgraph NIF["nif (Rustler)"]
-        nif_bridge[NIF インターフェース]
+    
+    subgraph Client["Windows/Linux/MacOS"]
+        direction TB
+        Render[native/render<br/>wgpu 描画]
+        Input[native/input<br/>winit 入力]
+        Bridge[NetworkRenderBridge]
+        
+        Render --> Bridge
+        Input --> Bridge
     end
-
-    subgraph Rust["Rust (演算層)"]
-        physics[physics<br/>ECS・物理演算・Dead Reckoning]
-        audio[audio<br/>オーディオスレッド・DSP]
-        render[render<br/>WGPU描画・ウィンドウ管理]
-    end
-
-    Elixir --> nif_bridge
-    nif_bridge --> physics
-    nif_bridge --> audio
-    nif_bridge --> render
+    
+    Server <-->|"WebSocket / UDP<br/>フレーム配信"| Client
+    Client -->|"入力送信<br/>input / action"| Server
 ```
+
+> クライアント・サーバー分離の詳細と実装手順は [client-server-separation-procedure.md](./docs/plan/client-server-separation-procedure.md) を参照。
 
 ## ハイライト
 

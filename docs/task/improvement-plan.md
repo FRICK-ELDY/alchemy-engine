@@ -58,6 +58,7 @@
 | タスク | 説明 | 計画書 |
 |:---|:---|:---|
 | P5-2 MessagePack バイナリ形式 | push_render_frame の MessagePack 化による転送効率化 | [p5-2-messagepack-execution-plan.md](p5-2-messagepack-execution-plan.md) |
+| クライアント・サーバー分離 | render + input を別 exe 化、Elixir/Rust 状態・定義の切り分け | [client-server-separation-procedure.md](../plan/client-server-separation-procedure.md) |
 
 ---
 
