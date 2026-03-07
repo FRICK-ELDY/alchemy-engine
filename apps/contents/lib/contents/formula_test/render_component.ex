@@ -26,14 +26,8 @@ defmodule Content.FormulaTest.RenderComponent do
 
     cursor_grab = Map.get(playing_state, :cursor_grab_request, :no_change)
 
-    Core.NifBridge.push_render_frame(
-      context.render_buf_ref,
-      commands,
-      camera,
-      ui,
-      cursor_grab,
-      []
-    )
+    frame_binary = Content.MessagePackEncoder.encode_frame(commands, camera, ui, [])
+    Core.NifBridge.push_render_frame_binary(context.render_buf_ref, frame_binary, cursor_grab)
 
     if cursor_grab != :no_change and runner do
       Contents.SceneStack.update_by_module(
