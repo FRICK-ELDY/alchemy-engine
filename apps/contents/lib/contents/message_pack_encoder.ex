@@ -1,8 +1,10 @@
 defmodule Content.MessagePackEncoder do
   @moduledoc """
   P5-2: push_render_frame 用の MessagePack バイナリエンコーダ。
+  P5: set_frame_injection 用の injection_map エンコーダ。
 
   DrawCommand・CameraParams・UiCanvas・MeshDef を msgpax でバイナリ化する。
+  injection_map を MessagePack バイナリに変換する。
   スキーマ: docs/architecture/messagepack-schema.md
   """
 
@@ -239,6 +241,60 @@ defmodule Content.MessagePackEncoder do
   defp encode_ui_component({:screen_flash, {r, g, b, a}}) do
     %{"t" => "screen_flash", "color" => [r, g, b, a]}
   end
+
+  # ── set_frame_injection（injection_map）エンコーダ ───────────────────────
+
+  @doc """
+  injection_map を MessagePack バイナリにエンコードする。
+
+  P5: set_frame_injection_binary 用。map のキーは atom でも string でも可。
+  存在するキーのみ pack する。スキーマ: docs/architecture/messagepack-schema.md §7
+
+  対応しているのは数値・文字列・リスト・マップなど msgpax で pack 可能な型のみ。
+  未対応の型（PID・関数参照など）が渡ると pack に失敗し、{:error, reason} を返す。
+  """
+  @spec encode_injection_map(map()) :: {:ok, binary()} | {:error, term()}
+  def encode_injection_map(injection) when is_map(injection) and map_size(injection) == 0 do
+    Msgpax.pack(%{}, iodata: false)
+  end
+
+  def encode_injection_map(injection) when is_map(injection) do
+    frame =
+      injection
+      |> Enum.reduce(%{}, fn {key, value}, acc ->
+        key_str = to_string(key)
+        Map.put(acc, key_str, encode_injection_value(key_str, value))
+      end)
+
+    Msgpax.pack(frame, iodata: false)
+  end
+
+  defp encode_injection_value("player_input", {dx, dy}), do: [dx * 1.0, dy * 1.0]
+  defp encode_injection_value("player_snapshot", {hp, inv}), do: [hp * 1.0, inv * 1.0]
+  defp encode_injection_value("elapsed_seconds", v) when is_number(v), do: v * 1.0
+
+  defp encode_injection_value("weapon_slots", slots) when is_list(slots) do
+    Enum.map(slots, fn {k, l, c, cs, pd} -> [k, l, c * 1.0, cs * 1.0, pd] end)
+  end
+
+  defp encode_injection_value("enemy_damage_this_frame", list) when is_list(list) do
+    Enum.map(list, fn {k, d} -> [k, d * 1.0] end)
+  end
+
+  defp encode_injection_value("special_entity_snapshot", :none), do: %{"t" => "none"}
+
+  defp encode_injection_value("special_entity_snapshot", {:alive, x, y, radius, damage, inv}) do
+    %{
+      "t" => "alive",
+      "x" => x * 1.0,
+      "y" => y * 1.0,
+      "radius" => radius * 1.0,
+      "damage" => damage * 1.0,
+      "invincible" => inv
+    }
+  end
+
+  defp encode_injection_value(_key, value), do: value
 
   @doc "MeshDef リストを MessagePack 用の map リストに変換する。"
   def encode_mesh_definitions(list) when is_list(list) do

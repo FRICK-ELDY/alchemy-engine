@@ -8,12 +8,14 @@ mod camera;
 mod draw_command;
 mod mesh_def;
 mod msgpack;
+mod msgpack_injection;
 mod ui_canvas;
 
 pub use camera::decode_camera;
 pub use draw_command::decode_commands;
 pub use mesh_def::decode_mesh_definitions;
 pub use msgpack::decode_render_frame_from_msgpack;
+pub use msgpack_injection::apply_injection_from_msgpack;
 pub use ui_canvas::decode_ui_canvas;
 
 use render::MeshVertex;

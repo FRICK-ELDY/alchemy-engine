@@ -1,6 +1,7 @@
 //! Path: native/nif/src/nif/world_nif.rs
 //! Summary: ワールド作成・入力・スポーン・障害物設定 NIF
 
+use super::decode::apply_injection_from_msgpack;
 use super::util::{lock_poisoned_err, params_not_loaded_err};
 use physics::constants::{
     BULLET_LIFETIME, BULLET_SPEED, CELL_SIZE, MAP_HEIGHT, MAP_WIDTH, PARTICLE_RNG_SEED,
@@ -16,7 +17,7 @@ use physics::physics::spatial_hash::CollisionWorld;
 use physics::weapon::WeaponSlot;
 use physics::world::{GameWorld, GameWorldInner, PlayerState};
 use rustler::types::list::ListIterator;
-use rustler::{Atom, NifResult, ResourceArc, Term};
+use rustler::{Atom, Binary, NifResult, ResourceArc, Term};
 use std::sync::RwLock;
 
 use crate::{ok, BulletWorld, EnemyWorld, ParticleWorld};
@@ -296,6 +297,18 @@ pub fn set_frame_injection(
         apply_special_entity_snapshot(&mut w, snapshot_term);
     }
 
+    Ok(ok())
+}
+
+/// P5: MessagePack バイナリ形式の set_frame_injection。タプル decode のオーバーヘッドを削減。
+#[rustler::nif]
+pub fn set_frame_injection_binary(
+    world: ResourceArc<GameWorld>,
+    binary: Binary,
+) -> NifResult<Atom> {
+    let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
+    apply_injection_from_msgpack(&mut w, binary.as_slice())
+        .map_err(|e| rustler::Error::Term(Box::new(e.to_string())))?;
     Ok(ok())
 }
 
