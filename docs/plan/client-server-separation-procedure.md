@@ -256,11 +256,15 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 
 ### フェーズ 2: クライアント exe の土台（2〜3 週間）
 
+#### 2.0 構成方針（desktop_ プレフィックス）
+
+クライアント側クレートは `desktop_` プレフィックスで命名。フェーズ 2 では `desktop_client` のみを追加。将来的に `desktop_audio`, `desktop_input`, `desktop_render` 等へリネームする際の一貫性を確保。
+
 #### 2.1 クライアント用 Rust バイナリの追加
 
-- [ ] `native/` に `client` または `game_client` クレートを追加（`[[bin]]`）
-- [ ] 依存: `render`, `input`, `physics`（RenderFrame 型のみ）、`zenoh` クレート（フレーム subscribe / 入力 publish）
-- [ ] `nif` に依存しない（Rustler を使わない）
+- [x] `native/` に `desktop_client` クレートを追加（`[[bin]]`）
+- [x] 依存: `render`, `input`, `physics`, `audio`, `zenoh`（フレーム subscribe / 入力 publish）
+- [x] `nif` に依存しない（Rustler を使わない）
 
 #### 2.2 RenderBridge のネットワーク版実装
 
@@ -274,14 +278,14 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 - `next_frame()`: ネットワーク受信バッファから最新フレームを取得（デシリアライズ）
 - `on_*`: ネットワーク経由でサーバーに送信
 
-- [ ] `render::window::RenderBridge` トレイトの実装を `NetworkRenderBridge` として作成
-- [ ] 受信スレッド: `zenoh` で `game/room/{room_id}/frame` を subscribe し、ローカルバッファに格納
-- [ ] 送信: movement を `game/room/{room_id}/input/movement` に publish（Unreliable）、action を `game/room/{room_id}/input/action` に publish（Reliable）
+- [x] `render::window::RenderBridge` トレイトの実装を `NetworkRenderBridge` として作成
+- [x] 受信スレッド: `zenoh` で `game/room/{room_id}/frame` を subscribe し、ローカルバッファに格納
+- [x] 送信: movement を `game/room/{room_id}/input/movement` に publish（CongestionControl::Drop）、action を `game/room/{room_id}/input/action` に publish（Reliable）
 
 #### 2.3 エントリポイント
 
-- [ ] `client/main.rs`: `input::run_desktop_loop(NetworkRenderBridge::new(server_url), config)` を起動
-- [ ] 接続先 URL を引数 or 環境変数で受け取る
+- [x] `desktop_client/src/main.rs`: `input::run_desktop_loop(NetworkRenderBridge::new(...), config)` を起動
+- [x] 接続先・ルーム ID を `--connect`, `--room` 引数 or 環境変数 `ZENOH_CONNECT` で受け取る
 
 ---
 
@@ -311,7 +315,7 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 
 #### 4.1 クライアント exe ビルド
 
-- [ ] `cargo build --release -p client` で Windows exe を生成
+- [ ] `cargo build --release -p desktop_client` で Windows exe を生成
 - [ ] CI にクライアントビルドを追加
 
 #### 4.2 アセット・設定
