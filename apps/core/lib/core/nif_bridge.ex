@@ -22,6 +22,10 @@ defmodule Core.NifBridge do
   def physics_step(_world, _delta_ms), do: :erlang.nif_error(:nif_not_loaded)
   def drain_frame_events(_world), do: :erlang.nif_error(:nif_not_loaded)
   def set_player_input(_world, _dx, _dy), do: :erlang.nif_error(:nif_not_loaded)
+
+  # P5-1: 複数注入を 1 回の write lock で適用するバッチ NIF。
+  # injection_map: オプショナルキーを持つ map。存在するキーのみ適用。
+  def set_frame_injection(_world, _injection_map), do: :erlang.nif_error(:nif_not_loaded)
   def spawn_enemies(_world, _kind, _count), do: :erlang.nif_error(:nif_not_loaded)
   # Phase 3-B: 指定座標リストに敵をスポーンする NIF
   def spawn_enemies_at(_world, _kind, _positions), do: :erlang.nif_error(:nif_not_loaded)

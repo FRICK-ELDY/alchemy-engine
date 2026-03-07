@@ -505,15 +505,31 @@ defmodule Contents.GameEvents do
         # NIF 書き込み・物理コールバック・ブロードキャスト・ログは重い副作用のためスキップ
 
         unless throttled? do
+          # P5-1: フレーム注入マップを初期化（コンポーネントがマージする）
+          Process.put(:frame_injection, %{})
+
           # 入力・物理コールバック・ブロードキャスト
           # on_physics_process（ボス AI 等）が NIF の状態を書き換えるため、
           # on_nif_sync より先に実行する
           maybe_set_input_and_broadcast(state, mod, physics_scenes, events, context)
 
-          # NIF 注入をコンポーネントに委譲
+          # NIF 注入をコンポーネントに委譲（frame_injection にマージ）
           # on_physics_process の後に実行することで、物理 AI の結果を含めた
           # 最新のシーン state を Rust 側に反映できる
           dispatch_nif_sync_to_components(context)
+
+          # P5-1: 収集した注入データを 1 回の NIF で適用
+          injection = Process.get(:frame_injection, %{})
+
+          if map_size(injection) > 0 do
+            case Core.NifBridge.set_frame_injection(state.world_ref, injection) do
+              {:error, reason} ->
+                Logger.error("[NIF ERROR] set_frame_injection failed: #{inspect(reason)}")
+
+              _ ->
+                :ok
+            end
+          end
 
           # ログ・キャッシュ（60フレームごと）
           Diagnostics.maybe_log_and_cache(state, mod, elapsed, content, runner)
@@ -550,12 +566,14 @@ defmodule Contents.GameEvents do
     end)
   end
 
-  defp maybe_set_input_and_broadcast(state, mod, physics_scenes, events, context) do
+  defp maybe_set_input_and_broadcast(_state, mod, physics_scenes, events, context) do
     if mod in physics_scenes do
       # 全ルームでフレームごとに ETS から読む。InputHandler が raw_key で ETS を更新するため、
       # メッセージ順序（frame_events vs move_input）に依存せず入力が 1 フレーム遅れない。
+      # P5-1: set_player_input は廃止。frame_injection に player_input をマージする。
       {dx, dy} = Core.InputHandler.get_move_vector()
-      Core.NifBridge.set_player_input(state.world_ref, dx * 1.0, dy * 1.0)
+      inj = Process.get(:frame_injection, %{})
+      Process.put(:frame_injection, Map.put(inj, :player_input, {dx * 1.0, dy * 1.0}))
 
       run_component_physics_callbacks(context)
 

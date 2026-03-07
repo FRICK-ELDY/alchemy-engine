@@ -112,7 +112,7 @@ defmodule Content.VampireSurvivor.LevelComponent do
     |> Map.put(:invincible_until_ms, invincible_until_ms)
   end
 
-  # ── on_nif_sync: 毎フレーム NIF 注入 ─────────────────────────────
+  # ── on_nif_sync: 毎フレーム NIF 注入（P5-1: frame_injection にマージ）──
 
   @impl Core.Component
   def on_nif_sync(context) do
@@ -122,10 +122,12 @@ defmodule Content.VampireSurvivor.LevelComponent do
     playing_state =
       (runner && Contents.SceneStack.get_scene_state(runner, content.playing_scene())) || %{}
 
-    sync_player_snapshot(context.world_ref, playing_state, context)
-    sync_elapsed(context.world_ref, playing_state, context)
-    sync_weapon_slots(context.world_ref, content, playing_state)
-    sync_enemy_damage_this_frame(context.world_ref, content, context)
+    inj = Process.get(:frame_injection, %{})
+    inj = merge_player_snapshot(inj, playing_state, context)
+    inj = merge_elapsed(inj, playing_state, context)
+    inj = merge_weapon_slots(inj, content, playing_state)
+    inj = merge_enemy_damage_this_frame(inj, content, context)
+    Process.put(:frame_injection, inj)
 
     :ok
   end
@@ -239,9 +241,9 @@ defmodule Content.VampireSurvivor.LevelComponent do
 
   def on_event(_event, _context), do: :ok
 
-  # ── プライベート: NIF 同期 ────────────────────────────────────────
+  # ── プライベート: frame_injection マージ ───────────────────────────
 
-  defp sync_player_snapshot(world_ref, playing_state, context) do
+  defp merge_player_snapshot(inj, playing_state, context) do
     player_hp = Map.get(playing_state, :player_hp, 100.0)
     invincible_until_ms = Map.get(playing_state, :invincible_until_ms)
     now_ms = context.now
@@ -253,48 +255,29 @@ defmodule Content.VampireSurvivor.LevelComponent do
         _ -> 0.0
       end
 
-    prev = Process.get({__MODULE__, :last_player_snapshot})
-
-    if {player_hp, invincible_timer} != prev do
-      call_nif(:set_player_snapshot, fn ->
-        Core.NifBridge.set_player_snapshot(world_ref, player_hp, invincible_timer)
-      end)
-
-      Process.put({__MODULE__, :last_player_snapshot}, {player_hp, invincible_timer})
-    end
+    Map.put(inj, :player_snapshot, {player_hp, invincible_timer})
   end
 
-  defp sync_elapsed(world_ref, playing_state, context) do
+  defp merge_elapsed(inj, playing_state, context) do
     elapsed_ms =
       case Map.get(playing_state, :elapsed_ms) do
         nil -> context.elapsed
         val -> val
       end
 
-    prev = Process.get({__MODULE__, :last_elapsed_ms})
-
-    if elapsed_ms != prev do
-      call_nif(:set_elapsed_seconds, fn ->
-        Core.NifBridge.set_elapsed_seconds(world_ref, elapsed_ms / 1000.0)
-      end)
-
-      Process.put({__MODULE__, :last_elapsed_ms}, elapsed_ms)
-    end
+    Map.put(inj, :elapsed_seconds, elapsed_ms / 1000.0)
   end
 
-  defp sync_enemy_damage_this_frame(world_ref, content, context) do
+  defp merge_enemy_damage_this_frame(inj, content, context) do
     if function_exported?(content, :enemy_damage_this_frame, 1) do
       list = content.enemy_damage_this_frame(context)
-
-      call_nif(:set_enemy_damage_this_frame, fn ->
-        Core.NifBridge.set_enemy_damage_this_frame(world_ref, list)
-      end)
+      Map.put(inj, :enemy_damage_this_frame, list)
+    else
+      inj
     end
-
-    :ok
   end
 
-  defp sync_weapon_slots(world_ref, content, playing_state) do
+  defp merge_weapon_slots(inj, content, playing_state) do
     weapon_levels = Map.get(playing_state, :weapon_levels)
     weapon_cooldowns = Map.get(playing_state, :weapon_cooldowns, %{})
     playing_scene = content.playing_scene()
@@ -309,8 +292,6 @@ defmodule Content.VampireSurvivor.LevelComponent do
 
         function_exported?(playing_scene, :weapon_slots_for_nif, 1) ->
           # R-W1/R-W2: 5 要素 (kind_id, level, cooldown_timer, cooldown_sec, precomputed_damage) が必要。
-          # 1 引数版では cooldown_sec=1.0, precomputed_damage=0 でフォールバック。
-          # 新規 contents では weapon_slots_for_nif/2 を実装すること。
           playing_scene.weapon_slots_for_nif(weapon_levels)
           |> Enum.map(fn {k, l} -> {k, l, 0.0, 1.0, 0} end)
 
@@ -319,9 +300,9 @@ defmodule Content.VampireSurvivor.LevelComponent do
       end
 
     if slots do
-      call_nif(:set_weapon_slots, fn ->
-        Core.NifBridge.set_weapon_slots(world_ref, slots)
-      end)
+      Map.put(inj, :weapon_slots, slots)
+    else
+      inj
     end
   end
 

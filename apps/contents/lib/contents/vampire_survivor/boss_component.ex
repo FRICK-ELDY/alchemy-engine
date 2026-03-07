@@ -80,7 +80,7 @@ defmodule Content.VampireSurvivor.BossComponent do
     new_state
   end
 
-  # ── on_nif_sync: 毎フレームスナップショット注入 ───────────────────
+  # ── on_nif_sync: 毎フレームスナップショット注入（P5-1: frame_injection にマージ）──
 
   @impl Core.Component
   def on_nif_sync(context) do
@@ -91,7 +91,8 @@ defmodule Content.VampireSurvivor.BossComponent do
       (runner && Contents.SceneStack.get_scene_state(runner, content.playing_scene())) || %{}
 
     snapshot = build_snapshot(playing_state, context)
-    Core.NifBridge.set_special_entity_snapshot(context.world_ref, snapshot)
+    inj = Process.get(:frame_injection, %{})
+    Process.put(:frame_injection, Map.put(inj, :special_entity_snapshot, snapshot))
 
     :ok
   end

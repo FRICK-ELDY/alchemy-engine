@@ -9,35 +9,22 @@ defmodule Content.AsteroidArena.SplitComponent do
   """
   @behaviour Core.Component
 
-  require Logger
-
   alias Content.AsteroidArena.SpawnSystem
 
   @item_gem 0
 
+  # P5-1: frame_injection に enemy_damage_this_frame をマージ
   @impl Core.Component
   def on_nif_sync(context) do
     content = Core.Config.current()
 
     if function_exported?(content, :enemy_damage_this_frame, 1) do
       list = content.enemy_damage_this_frame(context)
-
-      call_nif(:set_enemy_damage_this_frame, fn ->
-        Core.NifBridge.set_enemy_damage_this_frame(context.world_ref, list)
-      end)
+      inj = Process.get(:frame_injection, %{})
+      Process.put(:frame_injection, Map.put(inj, :enemy_damage_this_frame, list))
     end
 
     :ok
-  end
-
-  defp call_nif(name, fun) do
-    case fun.() do
-      {:error, reason} ->
-        Logger.error("[NIF ERROR] #{name} failed: #{inspect(reason)}")
-
-      _ ->
-        :ok
-    end
   end
 
   @impl Core.Component

@@ -68,13 +68,18 @@ pub(crate) fn decode_vertex(term: Term) -> NifResult<MeshVertex> {
 }
 
 /// 頂点リスト `[{{x,y,z},{r,g,b,a}}, ...]` をデコードする。
+/// P5-3: with_capacity で再アロケーションを抑制。
 pub(crate) fn decode_mesh_vertices(term: Term, context: &str) -> NifResult<Vec<MeshVertex>> {
     let iter: ListIterator = term.decode().map_err(|_| {
         NifError::Term(Box::new(format!(
             "{context}: expected list of {{{{pos}}, color}}"
         )))
     })?;
-    iter.map(decode_vertex).collect()
+    let mut out = Vec::with_capacity(64);
+    for item in iter {
+        out.push(decode_vertex(item)?);
+    }
+    Ok(out)
 }
 
 /// カーソルグラブ要求をデコードする。

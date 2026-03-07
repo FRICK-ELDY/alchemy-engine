@@ -67,6 +67,20 @@
 
 ---
 
+---
+
+### P5-1 frame_injection バッチ API（完了）— 検討事項
+
+**実施日**: 2026-03-07。設計ドキュメント `docs/architecture/p5-transfer-optimization-design.md` に基づき実施。
+
+**検討事項**
+
+| 項目 | 内容 | 優先度 |
+|:---|:---|:---|
+| **非 physics シーンの player_input** | `mod not in physics_scenes` のときは `player_input` を注入せず、Rust 側の `input_dx/dy` は前フレームのままになる。メニューなどでは入力が残らないことを期待しているのか、意図通りか検討する。 | 低 |
+
+---
+
 ### 課題9: クラウドセーブ（独自サーバーによるセーブデータ同期）
 
 **優先度**: 低（`network` の実装が前提）
