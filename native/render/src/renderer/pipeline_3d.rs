@@ -269,17 +269,23 @@ pub(crate) struct Pipeline3D {
     box_indices_scratch: Vec<u32>,
     /// P3: Elixir 定義のメッシュキャッシュ（unit_box, skybox_quad 等）
     mesh_def_cache: HashMap<String, (Vec<MeshVertex>, Vec<u32>)>,
+    /// 直前フレームで登録した mesh_definitions の名前リスト。同じなら insert をスキップする。
+    mesh_def_cache_key: Option<Vec<String>>,
 }
 
 impl Pipeline3D {
+    /// P4: mesh_wgsl が Some の場合はコンテンツ定義の WGSL を使用。
+    /// None の場合は include_str! フォールバック。
     pub(crate) fn new(
         device: std::sync::Arc<wgpu::Device>,
         queue: std::sync::Arc<wgpu::Queue>,
         surface_format: wgpu::TextureFormat,
         width: u32,
         height: u32,
+        mesh_wgsl: Option<&str>,
     ) -> Self {
-        let shader_source = include_str!("shaders/mesh.wgsl");
+        let shader_source =
+            mesh_wgsl.unwrap_or_else(|| include_str!("shaders/mesh.wgsl"));
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Mesh Shader"),
             source: wgpu::ShaderSource::Wgsl(shader_source.into()),
@@ -483,6 +489,7 @@ impl Pipeline3D {
             box_verts_scratch: Vec::with_capacity(MAX_BOX_VERTS),
             box_indices_scratch: Vec::with_capacity(MAX_BOX_INDICES),
             mesh_def_cache: HashMap::new(),
+            mesh_def_cache_key: None,
         }
     }
 
@@ -521,12 +528,16 @@ impl Pipeline3D {
             return;
         };
 
-        // ─── P3: メッシュ定義をキャッシュに登録 ───────────────────
-        for def in mesh_definitions {
-            self.mesh_def_cache.insert(
-                def.name.clone(),
-                (def.vertices.clone(), def.indices.clone()),
-            );
+        // ─── P3: メッシュ定義をキャッシュに登録（直前フレームと同じ場合はスキップ）────
+        let new_key: Vec<String> = mesh_definitions.iter().map(|d| d.name.clone()).collect();
+        if self.mesh_def_cache_key.as_ref() != Some(&new_key) {
+            for def in mesh_definitions {
+                self.mesh_def_cache.insert(
+                    def.name.clone(),
+                    (def.vertices.clone(), def.indices.clone()),
+                );
+            }
+            self.mesh_def_cache_key = Some(new_key);
         }
 
         // ─── MVP Uniform を 3D カメラ行列で更新 ──────────────────

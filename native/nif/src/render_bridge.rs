@@ -36,12 +36,17 @@ pub fn run_render_thread(
     };
 
     let atlas_png = load_atlas_png(&atlas_path);
+    let (sprite_wgsl, mesh_wgsl) = load_shaders_from_atlas_path(&atlas_path);
 
     let config = WindowConfig {
         title,
         width: SCREEN_WIDTH as u32,
         height: SCREEN_HEIGHT as u32,
-        renderer_init: RendererInit { atlas_png },
+        renderer_init: RendererInit {
+            atlas_png,
+            sprite_wgsl,
+            mesh_wgsl,
+        },
     };
 
     if let Err(e) = run_desktop_loop(bridge, config) {
@@ -59,6 +64,51 @@ fn load_atlas_png(path: &str) -> Vec<u8> {
             AssetLoader::new().load_sprite_atlas()
         }
     }
+}
+
+/// P4: atlas_path からシェーダーディレクトリを導出し、sprite.wgsl / mesh.wgsl をロードする。
+/// ファイルが存在しない場合は None を返し、Rust 側で include_str! フォールバックを使用する。
+///
+/// パス構成（shader-elixir-interface.md 参照）:
+/// - atlas_path: assets/{game_id}/sprites/atlas.png
+/// - shader_dir: assets/{game_id}/shaders
+/// - shared_shader_dir: assets/shaders（共有フォールバック）
+fn load_shaders_from_atlas_path(atlas_path: &str) -> (Option<String>, Option<String>) {
+    let path = std::path::Path::new(atlas_path);
+    // assets/{game_id}/sprites/atlas.png → assets/{game_id}/shaders
+    let shader_dir = path
+        .parent()
+        .and_then(|p| p.parent())
+        .map(|p| p.join("shaders"));
+    // assets/{game_id}/sprites/atlas.png → assets/shaders（共有フォールバック）
+    let shared_shader_dir = path
+        .parent()
+        .and_then(|p| p.parent())
+        .and_then(|p| p.parent())
+        .map(|p| p.join("shaders"));
+
+    let try_load = |name: &str| -> Option<String> {
+        if let Some(ref d) = shader_dir {
+            match std::fs::read_to_string(d.join(name)) {
+                Ok(s) => return Some(s),
+                Err(e) => log::debug!("shader {name} not in content dir {:?}: {e}", d),
+            }
+        }
+        if let Some(ref d) = shared_shader_dir {
+            match std::fs::read_to_string(d.join(name)) {
+                Ok(s) => return Some(s),
+                Err(e) => log::debug!("shader {name} not in shared dir {:?}: {e}", d),
+            }
+        }
+        log::debug!(
+            "shader {name}: using include_str! fallback (no file in content or shared shader dir)"
+        );
+        None
+    };
+
+    let sprite_wgsl = try_load("sprite.wgsl");
+    let mesh_wgsl = try_load("mesh.wgsl");
+    (sprite_wgsl, mesh_wgsl)
 }
 
 struct NativeRenderBridge {
