@@ -1,5 +1,12 @@
 //! Path: native/nif/src/nif/decode/draw_command.rs
 //! Summary: DrawCommand の Elixir タプル → Rust 変換
+//!
+//! ## 「定義の受け手」としての責務
+//!
+//! 本モジュールは **定義の受け手** である。Elixir 側（contents）が DrawCommand を組み立て、
+//! 本 decode は受け取ったタプルを Rust の `DrawCommand` enum に変換するだけ。
+//! タグ・フィールドの仕様は Elixir 側の SSoT（`docs/architecture/draw-command-spec.md`）に従う。
+//! Rust は描画判断（メッシュ選択・UV 等）を持たず、定義に従って実行するのみ。
 
 use render::DrawCommand;
 use rustler::types::list::ListIterator;
