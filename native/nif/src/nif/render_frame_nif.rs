@@ -10,11 +10,12 @@
 //! - decode/ui_canvas.rs  — UiCanvas / UiNode / UiComponent
 
 use super::decode::{
-    decode_camera, decode_commands, decode_cursor_grab, decode_mesh_definitions, decode_ui_canvas,
+    decode_camera, decode_commands, decode_cursor_grab, decode_mesh_definitions,
+    decode_render_frame_from_msgpack, decode_ui_canvas,
 };
 use crate::render_frame_buffer::RenderFrameBuffer;
 use render::RenderFrame;
-use rustler::{Atom, NifResult, ResourceArc, Term};
+use rustler::{Atom, Binary, NifResult, ResourceArc, Term};
 
 use crate::ok;
 
@@ -70,5 +71,24 @@ pub fn push_render_frame(
         mesh_definitions,
     });
 
+    Ok(ok())
+}
+
+// ── P5-2: push_render_frame_binary ─────────────────────────────────────
+
+/// MessagePack バイナリでエンコードされたフレームを受け取り RenderFrameBuffer に書き込む。
+/// cursor_grab はタプル版と同様 :grab | :release | :no_change
+#[rustler::nif]
+pub fn push_render_frame_binary(
+    buf: ResourceArc<RenderFrameBuffer>,
+    frame_binary: Binary,
+    cursor_grab: Term,
+) -> NifResult<Atom> {
+    let cursor_grab = decode_cursor_grab(cursor_grab)?;
+    let render_frame =
+        decode_render_frame_from_msgpack(frame_binary.as_slice(), cursor_grab).map_err(|e| {
+            rustler::Error::Term(Box::new(format!("MessagePack decode error: {e}")))
+        })?;
+    buf.push(render_frame);
     Ok(ok())
 }

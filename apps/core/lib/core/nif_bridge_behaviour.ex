@@ -78,6 +78,12 @@ defmodule Core.NifBridge.Behaviour do
               :grab | :release | :no_change,
               [term()]
             ) :: :ok
+  # P5-2: MessagePack バイナリ形式。frame_binary は Msgpax.pack! の出力。
+  @callback push_render_frame_binary(
+              reference(),
+              binary(),
+              :grab | :release | :no_change
+            ) :: :ok
   @callback pause_physics(reference()) :: :ok
   @callback resume_physics(reference()) :: :ok
 

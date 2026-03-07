@@ -1,0 +1,258 @@
+defmodule Content.MessagePackEncoder do
+  @moduledoc """
+  P5-2: push_render_frame 用の MessagePack バイナリエンコーダ。
+
+  DrawCommand・CameraParams・UiCanvas・MeshDef を msgpax でバイナリ化する。
+  スキーマ: docs/architecture/messagepack-schema.md
+  """
+
+  @doc """
+  1フレーム分を MessagePack バイナリにエンコードする。
+
+  cursor_grab はバイナリに含めず、NIF の別引数で渡す。
+  """
+  @spec encode_frame(
+          commands :: list(),
+          camera :: tuple(),
+          ui :: tuple(),
+          mesh_definitions :: list()
+        ) ::
+          binary()
+  def encode_frame(commands, camera, ui, mesh_definitions) do
+    frame = %{
+      "commands" => encode_commands(commands),
+      "camera" => encode_camera(camera),
+      "ui" => encode_ui(ui),
+      "mesh_definitions" => encode_mesh_definitions(mesh_definitions)
+    }
+
+    # Msgpax.pack! は NaN/Inf やサポート外の型で Msgpax.PackError を投げる
+    Msgpax.pack!(frame, iodata: false)
+  end
+
+  @doc "DrawCommand リストを MessagePack 用の map リストに変換する。"
+  def encode_commands(commands) do
+    Enum.map(commands, &encode_command/1)
+  end
+
+  defp encode_command({:player_sprite, x, y, frame}) do
+    %{"t" => "player_sprite", "x" => x, "y" => y, "frame" => frame}
+  end
+
+  defp encode_command(
+         {:sprite_raw, x, y, width, height, {{uv_ox, uv_oy}, {uv_sx, uv_sy}, {r, g, b, a}}}
+       ) do
+    %{
+      "t" => "sprite_raw",
+      "x" => x,
+      "y" => y,
+      "width" => width,
+      "height" => height,
+      "uv_offset" => [uv_ox, uv_oy],
+      "uv_size" => [uv_sx, uv_sy],
+      "color_tint" => [r, g, b, a]
+    }
+  end
+
+  defp encode_command({:particle, x, y, r, g, b, {alpha, size}}) do
+    %{
+      "t" => "particle",
+      "x" => x,
+      "y" => y,
+      "r" => r,
+      "g" => g,
+      "b" => b,
+      "alpha" => alpha,
+      "size" => size
+    }
+  end
+
+  defp encode_command({:item, x, y, kind}) do
+    %{"t" => "item", "x" => x, "y" => y, "kind" => kind}
+  end
+
+  defp encode_command({:obstacle, x, y, radius, kind}) do
+    %{"t" => "obstacle", "x" => x, "y" => y, "radius" => radius, "kind" => kind}
+  end
+
+  defp encode_command({:box_3d, x, y, z, half_w, half_h, {half_d, r, g, b, a}}) do
+    %{
+      "t" => "box_3d",
+      "x" => x,
+      "y" => y,
+      "z" => z,
+      "half_w" => half_w,
+      "half_h" => half_h,
+      "half_d" => half_d,
+      "color" => [r, g, b, a]
+    }
+  end
+
+  defp encode_command({:grid_plane, size, divisions, {r, g, b, a}}) do
+    %{"t" => "grid_plane", "size" => size, "divisions" => divisions, "color" => [r, g, b, a]}
+  end
+
+  defp encode_command({:grid_plane_verts, vertices}) do
+    encoded =
+      Enum.map(vertices, fn {{px, py, pz}, {cr, cg, cb, ca}} ->
+        [[px, py, pz], [cr, cg, cb, ca]]
+      end)
+
+    %{"t" => "grid_plane_verts", "vertices" => encoded}
+  end
+
+  defp encode_command({:skybox, {tr, tg, tb, ta}, {br, bg, bb, ba}}) do
+    %{
+      "t" => "skybox",
+      "top_color" => [tr, tg, tb, ta],
+      "bottom_color" => [br, bg, bb, ba]
+    }
+  end
+
+  defp encode_command(command) do
+    raise ArgumentError,
+          "unknown DrawCommand #{inspect(command)}. Add a clause or update docs/architecture/messagepack-schema.md"
+  end
+
+  @doc "CameraParams を MessagePack 用の map に変換する。"
+  def encode_camera({:camera_2d, offset_x, offset_y}) do
+    %{"t" => "camera_2d", "offset_x" => offset_x, "offset_y" => offset_y}
+  end
+
+  def encode_camera({:camera_3d, {ex, ey, ez}, {tx, ty, tz}, {ux, uy, uz}, {fov_deg, near, far}}) do
+    %{
+      "t" => "camera_3d",
+      "eye" => [ex, ey, ez],
+      "target" => [tx, ty, tz],
+      "up" => [ux, uy, uz],
+      "fov_deg" => fov_deg,
+      "near" => near,
+      "far" => far
+    }
+  end
+
+  @doc "UiCanvas を MessagePack 用の map に変換する。"
+  def encode_ui({:canvas, nodes}) do
+    %{"nodes" => Enum.map(nodes, &encode_ui_node/1)}
+  end
+
+  defp encode_ui_node({:node, rect, component, children}) do
+    %{
+      "rect" => encode_ui_rect(rect),
+      "component" => encode_ui_component(component),
+      "children" => Enum.map(children, &encode_ui_node/1)
+    }
+  end
+
+  defp encode_ui_rect({anchor, {ox, oy}, size}) do
+    anchor_str = Atom.to_string(anchor)
+
+    size_val =
+      case size do
+        :wrap -> "wrap"
+        {:fixed, w, h} -> [w, h]
+      end
+
+    %{"anchor" => anchor_str, "offset" => [ox, oy], "size" => size_val}
+  end
+
+  defp encode_ui_component(:separator) do
+    %{"t" => "separator"}
+  end
+
+  defp encode_ui_component({:vertical_layout, spacing, {pl, pt, pr, pb}}) do
+    %{"t" => "vertical_layout", "spacing" => spacing, "padding" => [pl, pt, pr, pb]}
+  end
+
+  defp encode_ui_component({:horizontal_layout, spacing, {pl, pt, pr, pb}}) do
+    %{"t" => "horizontal_layout", "spacing" => spacing, "padding" => [pl, pt, pr, pb]}
+  end
+
+  defp encode_ui_component({:rect, {r, g, b, a}, corner_radius, border}) do
+    border_val =
+      case border do
+        :none -> nil
+        {{br, bg, bb, ba}, w} -> [[br, bg, bb, ba], w]
+      end
+
+    %{
+      "t" => "rect",
+      "color" => [r, g, b, a],
+      "corner_radius" => corner_radius,
+      "border" => border_val
+    }
+  end
+
+  defp encode_ui_component({:text, text, {r, g, b, a}, size, bold}) do
+    %{"t" => "text", "text" => text, "color" => [r, g, b, a], "size" => size, "bold" => bold}
+  end
+
+  defp encode_ui_component({:button, label, action, {r, g, b, a}, min_width, min_height}) do
+    %{
+      "t" => "button",
+      "label" => label,
+      "action" => action,
+      "color" => [r, g, b, a],
+      "min_width" => min_width,
+      "min_height" => min_height
+    }
+  end
+
+  defp encode_ui_component(
+         {:progress_bar, value, max, width, height,
+          {{fhr, fhg, fhb, fha}, {fmr, fmg, fmb, fma}, {flr, flg, flb, fla}, {bgr, bgg, bgb, bga},
+           corner_radius}}
+       ) do
+    %{
+      "t" => "progress_bar",
+      "value" => value,
+      "max" => max,
+      "width" => width,
+      "height" => height,
+      "fg_color_high" => [fhr, fhg, fhb, fha],
+      "fg_color_mid" => [fmr, fmg, fmb, fma],
+      "fg_color_low" => [flr, flg, flb, fla],
+      "bg_color" => [bgr, bgg, bgb, bga],
+      "corner_radius" => corner_radius
+    }
+  end
+
+  defp encode_ui_component({:spacing, amount}) do
+    %{"t" => "spacing", "amount" => amount}
+  end
+
+  defp encode_ui_component(
+         {:world_text, world_x, world_y, world_z, text, {r, g, b, a}, {lifetime, max_lifetime}}
+       ) do
+    %{
+      "t" => "world_text",
+      "world_x" => world_x,
+      "world_y" => world_y,
+      "world_z" => world_z,
+      "text" => text,
+      "color" => [r, g, b, a],
+      "lifetime" => lifetime,
+      "max_lifetime" => max_lifetime
+    }
+  end
+
+  defp encode_ui_component({:screen_flash, {r, g, b, a}}) do
+    %{"t" => "screen_flash", "color" => [r, g, b, a]}
+  end
+
+  @doc "MeshDef リストを MessagePack 用の map リストに変換する。"
+  def encode_mesh_definitions(list) when is_list(list) do
+    Enum.map(list, &encode_mesh_def/1)
+  end
+
+  defp encode_mesh_def(%{name: name, vertices: vertices, indices: indices}) do
+    name_str = name |> to_string()
+
+    verts =
+      Enum.map(vertices, fn {{px, py, pz}, {cr, cg, cb, ca}} ->
+        [[px, py, pz], [cr, cg, cb, ca]]
+      end)
+
+    %{"name" => name_str, "vertices" => verts, "indices" => indices}
+  end
+end

@@ -102,6 +102,10 @@ defmodule Core.NifBridge do
   def push_render_frame(_render_buf, _commands, _camera, _ui, _cursor_grab, _mesh_definitions),
     do: :erlang.nif_error(:nif_not_loaded)
 
+  # P5-2: MessagePack バイナリ形式の push_render_frame
+  def push_render_frame_binary(_render_buf, _frame_binary, _cursor_grab),
+    do: :erlang.nif_error(:nif_not_loaded)
+
   def pause_physics(_control), do: :erlang.nif_error(:nif_not_loaded)
   def resume_physics(_control), do: :erlang.nif_error(:nif_not_loaded)
 

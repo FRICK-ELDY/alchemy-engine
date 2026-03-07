@@ -75,14 +75,8 @@ defmodule Content.VampireSurvivor.RenderComponent do
 
     ui = build_ui(ui_ctx)
 
-    Core.NifBridge.push_render_frame(
-      context.render_buf_ref,
-      commands,
-      camera,
-      ui,
-      :no_change,
-      []
-    )
+    frame_binary = Content.MessagePackEncoder.encode_frame(commands, camera, ui, [])
+    Core.NifBridge.push_render_frame_binary(context.render_buf_ref, frame_binary, :no_change)
 
     :ok
   end
