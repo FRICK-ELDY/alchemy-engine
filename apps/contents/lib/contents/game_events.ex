@@ -366,6 +366,13 @@ defmodule Contents.GameEvents do
   @backpressure_threshold 120
 
   def handle_info({:frame_events, events}, state) do
+    # 初回数フレームでログ（フレーム受信の確認用）
+    if state.frame_count < 3 do
+      Logger.info(
+        "[GameEvents] frame_events received frame_count=#{state.frame_count} room=#{state.room_id}"
+      )
+    end
+
     throttled? =
       case Process.info(self(), :message_queue_len) do
         {:message_queue_len, depth} when depth > @backpressure_threshold ->
@@ -483,11 +490,13 @@ defmodule Contents.GameEvents do
     # runner が有効な pid でもプロセス終了済みの場合は GenServer.call が exit する。
     case runner && GenServer.call(runner, :current) do
       nil ->
-        # flow_runner 未使用（起動前等）。frame_count は受信フレーム数として更新する。
+        if state.frame_count < 5,
+          do: Logger.warning("[GameEvents] runner=nil (flow_runner unavailable)")
+
         {:noreply, %{state | last_tick: now, frame_count: state.frame_count + 1}}
 
       :empty ->
-        # スタック空。同上。
+        if state.frame_count < 5, do: Logger.warning("[GameEvents] scene stack empty")
         {:noreply, %{state | last_tick: now, frame_count: state.frame_count + 1}}
 
       {:ok, %{module: mod, state: scene_state}} ->
@@ -521,6 +530,9 @@ defmodule Contents.GameEvents do
           # on_physics_process の後に実行することで、物理 AI の結果を含めた
           # 最新のシーン state を Rust 側に反映できる
           dispatch_nif_sync_to_components(context)
+
+          # P3: Zenoh フレーム配信（RenderComponent が Process.put(:zenoh_frame) に書き込んだ場合）
+          maybe_publish_zenoh_frame(state)
 
           # P5: 収集した注入データを MessagePack バイナリで 1 回の NIF 適用
           injection = Process.get(:frame_injection, %{})
@@ -599,6 +611,44 @@ defmodule Contents.GameEvents do
   end
 
   defp flow_runner(state), do: current_content().flow_runner(state.room_id)
+
+  # P3: Zenoh 経由でフレームをリモートクライアントへ配信。
+  # Contents.FrameBroadcaster が zenoh_enabled 時のみ Process.put(:zenoh_frame) を設定する。
+  # contents は network に依存するが、テスト等で network がロードされない構成では
+  # Code.ensure_loaded?/1 が false、または Process.whereis/1 が nil となり publish はスキップされ実害は小さい。
+  defp maybe_publish_zenoh_frame(state) do
+    # 初回 5 フレームは常にログ（通信確認用）
+    debug_first_frames = state.frame_count < 5
+
+    case Process.get(:zenoh_frame) do
+      {room_id, frame_binary} when is_binary(frame_binary) ->
+        Process.delete(:zenoh_frame)
+
+        if Code.ensure_loaded?(Network.ZenohBridge) and Process.whereis(Network.ZenohBridge) do
+          if debug_first_frames or rem(state.frame_count, 60) == 0 do
+            Logger.info(
+              "[Zenoh] publishing frame room=#{room_id} size=#{byte_size(frame_binary)} frame_count=#{state.frame_count}"
+            )
+          end
+
+          Network.ZenohBridge.publish_frame(room_id, frame_binary)
+        else
+          if debug_first_frames or rem(state.frame_count, 120) == 0 do
+            Logger.warning("[Zenoh] ZenohBridge not available, skipping publish (debug)")
+          end
+        end
+
+      _ ->
+        # zenoh_frame が未設定＝RenderComponent が FrameBroadcaster.put を呼んでいない
+        if debug_first_frames or rem(state.frame_count, 120) == 0 do
+          Logger.warning(
+            "[Zenoh] no zenoh_frame in process frame_count=#{state.frame_count} (debug)"
+          )
+        end
+
+        :ok
+    end
+  end
 
   defp build_context(state, now, elapsed, runner) do
     control_ref = state.control_ref

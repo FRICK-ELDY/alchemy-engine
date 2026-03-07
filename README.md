@@ -71,17 +71,51 @@ flowchart TB
    git clone git@github.com:FRICK-ELDY/alchemy-engine.git
    cd alchemy-engine
   ```
-2. Elixirの依存関係を取得し、Rustのネイティブコードをコンパイルします。
+2. Elixir の依存関係を取得し、Rust のネイティブコードをコンパイルします。
   ```bash
    mix deps.get
    mix compile
   ```
-3. エンジンを起動します。
-  ```bash
-   mix phx.server
-   # coreから動かしたい場合
-   # iex -S mix
-  ```
+3. 起動方法を選択します（下記参照）。
+
+### 起動方法
+
+#### ローカル起動（組み込み描画ウィンドウ）
+
+サーバー内蔵の描画ウィンドウでゲームを表示します。
+
+```bash
+mix run --no-halt
+```
+
+#### リモートクライアント起動（desktop_client）
+
+Zenoh 経由でサーバーとクライアントを分離して起動します。別マシンからの接続や、ウィンドウを分けたい場合に使用します。
+
+**前提**: [zenohd](https://github.com/eclipse-zenoh/zenohd) をインストール済み（`cargo install eclipse-zenoh`）
+
+1. ターミナル 1: zenohd を起動
+   ```bash
+   zenohd
+   ```
+
+2. ターミナル 2: サーバーを起動
+   ```bash
+   mix run --no-halt
+   ```
+
+3. ターミナル 3: デスクトップクライアントを起動
+   ```bash
+   # Windows
+   bin\windows_client.bat
+
+   # Linux / macOS
+   cargo run -p desktop_client -- --connect tcp/127.0.0.1:7447 --room main
+   ```
+
+接続先やルームを変更する場合:
+- `bin\windows_client.bat tcp/127.0.0.1:7447 main`
+- `config/config.exs` の `zenoh_connect` でサーバー側の接続先を指定
 
 ### 分散クラスタ起動（複数ノード）
 

@@ -300,14 +300,14 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 - **ルーム :main かつ ローカル描画あり**: 従来どおり RenderFrameBuffer + start_render_thread
 - **リモートクライアント接続時**: `push_render_frame` の内容を WebSocket / UDP でブロードキャスト
 
-- [ ] `Contents.GameEvents` の `on_nif_sync` 後に、Zenohex で `game/room/{room_id}/frame` に publish
-- [ ] Zenohex の subscriber で `game/room/{room_id}/input/movement` と `game/room/{room_id}/input/action` を受信し、GameEvents に渡す
-- [ ] ローカル描画とリモート配信の両方をサポートするモード切り替え
+- [x] `Contents.GameEvents` の `on_nif_sync` 後に、Zenohex で `game/room/{room_id}/frame` に publish
+- [x] Zenohex の subscriber で `game/room/*/input/movement` と `game/room/*/input/action` を受信し、GameEvents に渡す
+- [x] ローカル描画とリモート配信の両方をサポート（`config :network, :zenoh_enabled, true` で有効化）
 
 #### 3.2 入力の集約
 
-- [ ] Zenohex subscriber で受信した movement / action を、既存 `Network.Channel` 経由と同様に GameEvents へ配送
-- [ ] ローカル入力（NIF 経由）とリモート入力の排他 or マージ方針を決定
+- [x] Zenohex subscriber で受信した movement / action を、既存 `Network.Channel` 経由と同様に GameEvents へ配送
+- [x] ローカル入力（NIF 経由）とリモート入力のマージ: 同一 GameEvents が `{:move_input, dx, dy}` / `{:ui_action, name}` を処理（Phoenix / Zenoh 経路を区別しない）
 
 ---
 

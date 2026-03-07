@@ -46,6 +46,7 @@ defmodule Content.CanvasTest.RenderComponent do
     cursor_grab = Map.get(playing_state, :cursor_grab_request, :no_change)
 
     frame_binary = Content.MessagePackEncoder.encode_frame(commands, camera, ui, [])
+    Contents.FrameBroadcaster.put(context.room_id, frame_binary)
     Core.NifBridge.push_render_frame_binary(context.render_buf_ref, frame_binary, cursor_grab)
 
     # 送信した要求と現在値が一致する場合のみリセットする。
