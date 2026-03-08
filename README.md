@@ -63,6 +63,10 @@ flowchart TB
 
 - [Elixir](https://elixir-lang.org/install.html) **1.19 / OTP 28**
 - [Rust](https://www.rust-lang.org/tools/install) (stable)
+- [zenohd](https://github.com/eclipse-zenoh/zenohd) :
+  ```bash
+  cargo install eclipse-zenoh
+  ```
 
 ### Setup & Run
 
@@ -88,11 +92,27 @@ flowchart TB
 mix run --no-halt
 ```
 
-#### リモートクライアント起動（desktop_client）
+#### クライアント exe のみでプレイ（一括起動）
 
-Zenoh 経由でサーバーとクライアントを分離して起動します。別マシンからの接続や、ウィンドウを分けたい場合に使用します。
+zenohd、サーバー、クライアントを一括で起動します。1 コマンドでプレイを開始できます。
+
+```bash
+# Windows
+bin\play.bat
+
+# Linux / macOS
+chmod +x bin/play.sh
+./bin/play.sh
+```
+
+- **Windows**: zenohd と mix run が別ウィンドウで起動し、その後 desktop_client が起動します。
+- **Linux / macOS**: クライアント終了時に zenohd とサーバーも自動終了します。
 
 **前提**: [zenohd](https://github.com/eclipse-zenoh/zenohd) をインストール済み（`cargo install eclipse-zenoh`）
+
+#### リモートクライアント起動（手動・3 ターミナル）
+
+Zenoh 経由でサーバーとクライアントを分離して起動します。別マシンからの接続や、ウィンドウを分けたい場合に使用します。
 
 1. ターミナル 1: zenohd を起動
    ```bash

@@ -328,7 +328,8 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 ### フェーズ 5: ローカル描画のオプション化（任意・1〜2 週間）
 
 - [ ] サーバーをヘッドレスで起動するモード（`start_render_thread` を呼ばない）
-- [ ] クライアント exe のみでプレイする運用（サーバー + クライアントを別プロセスで起動）
+- [x] クライアント exe のみでプレイする運用（サーバー + クライアントを別プロセスで起動）
+  - `bin/play.bat`（Windows）、`bin/play.sh`（Linux/macOS）で zenohd + mix run + desktop_client を一括起動
 
 ---
 
@@ -366,7 +367,17 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 
 ---
 
-## 7. 関連ドキュメント
+## 7. 将来課題
+
+### zenohd トレイインジケーター
+
+**課題**: desktop_client 終了後も zenohd は残り続ける。ユーザーが気づかず PC リソースを消費する。
+
+**対応**: → [launcher-design.md](./launcher-design.md) に統合。Discord 風トレイランチャーで zenohd / HL-Server / Client を一括管理。
+
+---
+
+## 8. 関連ドキュメント
 
 - [zenoh-protocol-spec.md](../architecture/zenoh-protocol-spec.md) — Zenoh プロトコル仕様（フェーズ 1）
 - [Zenohex](https://github.com/biyooon-ex/zenohex) — Elixir API for Zenoh
