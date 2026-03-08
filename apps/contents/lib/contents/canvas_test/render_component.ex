@@ -47,7 +47,6 @@ defmodule Content.CanvasTest.RenderComponent do
 
     frame_binary = Content.MessagePackEncoder.encode_frame(commands, camera, ui, [])
     Contents.FrameBroadcaster.put(context.room_id, frame_binary)
-    Core.NifBridge.push_render_frame_binary(context.render_buf_ref, frame_binary, cursor_grab)
 
     # 送信した要求と現在値が一致する場合のみリセットする。
     # on_nif_sync と on_event は別プロセスから並行して呼ばれる可能性があるため、

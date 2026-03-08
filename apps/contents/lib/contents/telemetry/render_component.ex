@@ -30,12 +30,11 @@ defmodule Content.Telemetry.RenderComponent do
 
     ui = {:canvas, menu_nodes}
 
-    # メニュー表示中は毎フレーム :release を送り、クリックでグラブされるのを防ぐ
-    cursor_grab = if menu_visible, do: :release, else: :grab
+    # メニュー表示中は cursor_grab を release にする（Zenoh 経由時はクライアント側で対応予定）
+    _cursor_grab = if menu_visible, do: :release, else: :grab
 
     frame_binary = Content.MessagePackEncoder.encode_frame(commands, camera, ui, [])
     Contents.FrameBroadcaster.put(context.room_id, frame_binary)
-    Core.NifBridge.push_render_frame_binary(context.render_buf_ref, frame_binary, cursor_grab)
 
     :ok
   end

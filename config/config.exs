@@ -67,6 +67,11 @@ config :core, :save_hmac_secret, "alchemy-engine-save-secret-v1"
 # core 単体利用（network 未ロード）の場合は config/test.exs のように nil を設定すること。
 config :core, :formula_store_broadcast, {Network.Distributed, :broadcast, []}
 
+# ローカルレンダースレッド（start_render_thread）を起動するか。
+# false（デフォルト）: Zenoh 経由で desktop_client が描画。zenohd + mix run + desktop_client の 3 プロセス構成。
+# true: 従来どおり mix run 単体でウィンドウを開く（開発用。将来削除予定）。
+config :core, :local_render, false
+
 # VR 対応 NIF をビルドする場合: features: ["xr"]
 # mix compile 時に nif に --features xr が渡される。
 config :core, Core.NifBridge, features: []
