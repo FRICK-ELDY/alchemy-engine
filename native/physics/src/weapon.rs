@@ -45,7 +45,7 @@ impl WeaponSlot {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::entity_params::{EntityParamTables, FirePattern, WeaponParams};
+    use crate::entity_params::{EntityParamDefaults, EntityParamTables, FirePattern, WeaponParams};
 
     fn make_test_tables() -> EntityParamTables {
         EntityParamTables {
@@ -65,8 +65,10 @@ mod tests {
                 whip_half_angle_rad: 0.0,
                 effect_lifetime_sec: 0.0,
                 hit_particle_color: None,
+                radial_dir_count_per_level: None,
             }],
             bosses: vec![],
+            defaults: EntityParamDefaults::default(),
         }
     }
 

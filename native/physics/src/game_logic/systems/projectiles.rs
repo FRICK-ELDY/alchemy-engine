@@ -1,4 +1,3 @@
-use crate::entity_params::{DEFAULT_ENEMY_RADIUS, DEFAULT_PARTICLE_COLOR};
 use crate::world::{FrameEvent, GameWorldInner};
 
 pub(crate) fn update_projectiles_and_enemy_hits(w: &mut GameWorldInner, dt: f32) {
@@ -61,7 +60,12 @@ pub(crate) fn update_projectiles_and_enemy_hits(w: &mut GameWorldInner, dt: f32)
                 .params
                 .get_enemy(kind_id)
                 .map(|e| (e.radius, e.particle_color))
-                .unwrap_or((DEFAULT_ENEMY_RADIUS, DEFAULT_PARTICLE_COLOR));
+                .unwrap_or_else(|| {
+                    (
+                        w.params.effective_default_enemy_radius(),
+                        w.params.effective_default_particle_color(),
+                    )
+                });
             let hit_r = crate::constants::BULLET_RADIUS + enemy_r;
             let ex = w.enemies.positions_x[ei] + enemy_r;
             let ey = w.enemies.positions_y[ei] + enemy_r;

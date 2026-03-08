@@ -8,7 +8,7 @@ use physics::constants::{
     PLAYER_SIZE, PLAYER_SPEED, SCREEN_HEIGHT, SCREEN_WIDTH,
 };
 use physics::entity_params::{
-    BossParams, EnemyParams, EntityParamTables, FirePattern, WeaponParams,
+    BossParams, EnemyParams, EntityParamDefaults, EntityParamTables, FirePattern, WeaponParams,
 };
 use physics::game_logic::systems::spawn::get_spawn_positions_around_player;
 use physics::item::ItemWorld;
@@ -18,6 +18,7 @@ use physics::weapon::WeaponSlot;
 use physics::world::{GameWorld, GameWorldInner, PlayerState};
 use rustler::types::list::ListIterator;
 use rustler::{Atom, Binary, NifResult, ResourceArc, Term};
+use rustler::TermType;
 use std::sync::RwLock;
 
 use crate::{ok, BulletWorld, EnemyWorld, ParticleWorld};
@@ -241,23 +242,66 @@ pub fn set_world_params(world: ResourceArc<GameWorld>, params: Term) -> NifResul
 /// - `weapons`: `[%{cooldown, damage, as_u8, bullet_table, fire_pattern, range, chain_count}]`
 ///   ※ `bullet_table` は `nil` または整数リスト、`fire_pattern` は文字列
 /// - `bosses`:  `[%{max_hp, speed, radius, damage_per_sec, render_kind, special_interval}]`
+/// - `opts`: P4-1: オプション。nil の場合は Rust 定数を使用。Map のとき atom キーで
+///   `%{default_enemy_radius: 16.0, default_particle_color: [1.0, 0.5, 0.1, 1.0],
+///   default_whip_range: 200.0, default_aura_radius: 150.0, default_chain_count: 1}` を渡す。
+///   default_particle_color は 0.0〜1.0 の float リスト [r,g,b,a] を指定すること。
 #[rustler::nif]
 pub fn set_entity_params(
     world: ResourceArc<GameWorld>,
     enemies_term: Term,
     weapons_term: Term,
     bosses_term: Term,
+    opts_term: Term,
 ) -> NifResult<Atom> {
     let enemies = decode_enemy_params(enemies_term)?;
     let weapons = decode_weapon_params(weapons_term)?;
     let bosses = decode_boss_params(bosses_term)?;
+    let defaults = decode_entity_param_defaults(opts_term);
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
     w.params = EntityParamTables {
         enemies,
         weapons,
         bosses,
+        defaults,
     };
     Ok(ok())
+}
+
+/// P4-1: opts map から EntityParamDefaults をデコード。nil/空/キー欠損の場合はデフォルト。
+/// Elixir の nil は TermType::Atom で、明示的に判定する。
+fn decode_entity_param_defaults(opts: Term) -> EntityParamDefaults {
+    let t = opts.get_type();
+    if t == TermType::Atom {
+        return EntityParamDefaults::default();
+    }
+    if t != TermType::Map {
+        return EntityParamDefaults::default();
+    }
+    let mut d = EntityParamDefaults::default();
+    if let Ok(v) = map_get::<f64>(opts, "default_enemy_radius") {
+        d.default_enemy_radius = Some(v as f32);
+    }
+    // default_particle_color: [r,g,b,a] は 0.0〜1.0 の float を期待。Elixir で整数 [255,...] を
+    // 渡すと f64 デコードは成功するが 0-1 スケールではないため、contents は float で渡すこと。
+    if let Ok(v) = map_get::<Vec<f64>>(opts, "default_particle_color") {
+        if v.len() == 4 {
+            d.default_particle_color =
+                Some([v[0] as f32, v[1] as f32, v[2] as f32, v[3] as f32]);
+        }
+    }
+    if let Ok(v) = map_get::<f64>(opts, "default_whip_range") {
+        d.default_whip_range = Some(v as f32);
+    }
+    if let Ok(v) = map_get::<f64>(opts, "default_aura_radius") {
+        d.default_aura_radius = Some(v as f32);
+    }
+    if let Ok(v) = map_get::<i64>(opts, "default_chain_count") {
+        if v >= 0 {
+            d.default_chain_count = Some(v as usize);
+        }
+    }
+    d
 }
 
 /// P5-1: 複数注入を 1 回の write lock でまとめて適用するバッチ NIF。
@@ -502,6 +546,7 @@ fn decode_weapon_params(term: Term) -> NifResult<Vec<WeaponParams>> {
         let whip_half_angle_rad = decode_opt_f32_or_warn(item, "whip_half_angle_rad");
         let effect_lifetime_sec = decode_opt_f32_or_warn(item, "effect_lifetime_sec");
         let hit_particle_color = decode_optional_hit_particle_color(item);
+        let radial_table = decode_optional_usize_vec(item, "radial_dir_count_per_level");
         Ok(WeaponParams {
             cooldown: map_get::<f64>(item, "cooldown")? as f32,
             damage: map_get::<i64>(item, "damage")? as i32,
@@ -519,6 +564,7 @@ fn decode_weapon_params(term: Term) -> NifResult<Vec<WeaponParams>> {
             whip_half_angle_rad,
             effect_lifetime_sec,
             hit_particle_color,
+            radial_dir_count_per_level: radial_table,
         })
     })
     .collect()

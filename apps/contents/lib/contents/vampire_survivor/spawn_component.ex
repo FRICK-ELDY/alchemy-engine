@@ -68,6 +68,7 @@ defmodule Content.VampireSurvivor.SpawnComponent do
 
     Core.NifBridge.set_world_params(world_ref, world_params())
 
+    # P4-1: opts は省略可（nil）。default_enemy_radius 等を上書きする場合は第5引数に map を渡す。
     Core.NifBridge.set_entity_params(
       world_ref,
       enemy_params(),
@@ -194,7 +195,7 @@ defmodule Content.VampireSurvivor.SpawnComponent do
         effect_lifetime_sec: 0.0,
         hit_particle_color: [1.0, 0.8, 0.2, 1.0]
       },
-      # 2: cross
+      # 2: cross (P3-1: radial_dir_count_per_level — WeaponFormulas.fire_pattern_extra と一致)
       %{
         cooldown: 2.0,
         damage: 15,
@@ -206,7 +207,8 @@ defmodule Content.VampireSurvivor.SpawnComponent do
         aimed_spread_rad: 0.0,
         whip_half_angle_rad: 0.0,
         effect_lifetime_sec: 0.0,
-        hit_particle_color: [1.0, 0.9, 0.3, 1.0]
+        hit_particle_color: [1.0, 0.9, 0.3, 1.0],
+        radial_dir_count_per_level: [4, 4, 4, 8, 8, 8, 8, 8]
       },
       # 3: whip (Phase 1: whip_half_angle_rad, effect_lifetime_sec を contents で定義)
       # whip_range_per_level: 1..8 → 8要素。Rust は level 1..8 で index 0..7 を参照。level 9 以上は index 7 を使用。

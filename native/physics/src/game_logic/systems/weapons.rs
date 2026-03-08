@@ -1,8 +1,5 @@
 use crate::constants::{MAX_ENEMIES, WEAPON_SEARCH_RADIUS};
-use crate::entity_params::{
-    FirePattern, DEFAULT_AURA_RADIUS, DEFAULT_CHAIN_COUNT, DEFAULT_ENEMY_RADIUS,
-    DEFAULT_PARTICLE_COLOR, DEFAULT_WHIP_RANGE,
-};
+use crate::entity_params::FirePattern;
 use crate::game_logic::{find_nearest_enemy_spatial, find_nearest_enemy_spatial_excluding};
 use crate::world::{
     FrameEvent, GameWorldInner, BULLET_KIND_LIGHTNING, BULLET_KIND_WHIP, DEFAULT_BULLET_HIT_COLOR,
@@ -53,7 +50,7 @@ pub(crate) fn update_weapon_attacks(w: &mut GameWorldInner, dt: f32, px: f32, py
                 fire_aimed(w, si, px, py, dmg, bcount, cd, wp.aimed_spread_rad, hit_color)
             }
             FirePattern::FixedUp => fire_fixed_up(w, si, px, py, dmg, cd, hit_color),
-            FirePattern::Radial => fire_radial(w, si, px, py, dmg, bcount, cd, hit_color),
+            FirePattern::Radial => fire_radial(w, si, px, py, dmg, level, kind_id, cd, hit_color),
             FirePattern::Whip => fire_whip(w, si, px, py, dmg, level, kind_id, cd, facing_angle),
             FirePattern::Piercing => fire_piercing(w, si, px, py, dmg, cd, piercing_hit_color),
             FirePattern::Chain => fire_chain(w, si, px, py, dmg, level, kind_id, cd),
@@ -92,7 +89,7 @@ fn fire_aimed(
             .params
             .get_enemy(w.enemies.kind_ids[ti])
             .map(|e| e.radius)
-            .unwrap_or(DEFAULT_ENEMY_RADIUS);
+            .unwrap_or_else(|| w.params.effective_default_enemy_radius());
         let tx = w.enemies.positions_x[ti] + target_r;
         let ty = w.enemies.positions_y[ti] + target_r;
         let base_angle = (ty - py).atan2(tx - px);
@@ -147,10 +144,16 @@ fn fire_radial(
     px: f32,
     py: f32,
     dmg: i32,
-    bcount: usize,
+    level: u32,
+    kind_id: u8,
     cd: f32,
     hit_color: [f32; 4],
 ) {
+    let dir_count = w
+        .params
+        .get_weapon(kind_id)
+        .map(|wp| wp.radial_dir_count(level))
+        .unwrap_or(4);
     let dirs_4: [(f32, f32); 4] = [(0.0, -1.0), (0.0, 1.0), (-1.0, 0.0), (1.0, 0.0)];
     let diag = std::f32::consts::FRAC_1_SQRT_2;
     let dirs_8: [(f32, f32); 8] = [
@@ -163,7 +166,7 @@ fn fire_radial(
         (diag, diag),
         (-diag, diag),
     ];
-    let dirs: &[(f32, f32)] = if bcount >= 8 { &dirs_8 } else { &dirs_4 };
+    let dirs: &[(f32, f32)] = if dir_count >= 8 { &dirs_8 } else { &dirs_4 };
     for &(dx_dir, dy_dir) in dirs {
         w.bullets.spawn_with_hit_color(
             px,
@@ -197,7 +200,9 @@ fn fire_whip(
         .and_then(|p| p.hit_particle_color)
         .unwrap_or([1.0, 0.6, 0.1, 1.0]);
     // wp が None の場合は params 未ロードなどの異常系。フォールバックで最低限動作させる。
-    let range = wp.map(|p| p.whip_range(level)).unwrap_or(DEFAULT_WHIP_RANGE);
+    let range = wp
+        .map(|p| p.whip_range(level))
+        .unwrap_or_else(|| w.params.effective_default_whip_range());
     let whip_half_angle = wp.map(|p| p.whip_half_angle_rad).unwrap_or(0.0);
     let effect_lifetime = wp.map(|p| p.effect_lifetime_sec).unwrap_or(0.0);
     if range <= 0.0 {
@@ -239,7 +244,7 @@ fn fire_whip(
                 .params
                 .get_enemy(w.enemies.kind_ids[ei])
                 .map(|e| e.radius)
-                .unwrap_or(DEFAULT_ENEMY_RADIUS);
+                .unwrap_or_else(|| w.params.effective_default_enemy_radius());
             let hit_x = ex + enemy_r;
             let hit_y = ey + enemy_r;
             w.enemies.hp[ei] -= dmg as f32;
@@ -249,7 +254,7 @@ fn fire_whip(
                     .params
                     .get_enemy(kind_e)
                     .map(|e| e.particle_color)
-                    .unwrap_or(DEFAULT_PARTICLE_COLOR);
+                    .unwrap_or_else(|| w.params.effective_default_particle_color());
                 w.enemies.kill(ei);
                 w.frame_events.push(FrameEvent::EnemyKilled {
                     enemy_kind: kind_e,
@@ -317,7 +322,7 @@ fn fire_piercing(
             .params
             .get_enemy(w.enemies.kind_ids[ti])
             .map(|e| e.radius)
-            .unwrap_or(DEFAULT_ENEMY_RADIUS);
+            .unwrap_or_else(|| w.params.effective_default_enemy_radius());
         let tx = w.enemies.positions_x[ti] + target_r;
         let ty = w.enemies.positions_y[ti] + target_r;
         let base_angle = (ty - py).atan2(tx - px);
@@ -352,7 +357,7 @@ fn fire_chain(
     let wp_chain = w.params.get_weapon(kind_id);
     let chain_count = wp_chain
         .map(|wp| wp.chain_count_for_level(level))
-        .unwrap_or(DEFAULT_CHAIN_COUNT);
+        .unwrap_or_else(|| w.params.effective_default_chain_count());
     let chain_effect_lifetime = wp_chain
         .map(|p| p.effect_lifetime_sec)
         .unwrap_or(0.0);
@@ -385,7 +390,7 @@ fn fire_chain(
                 .params
                 .get_enemy(w.enemies.kind_ids[ei])
                 .map(|e| e.radius)
-                .unwrap_or(DEFAULT_ENEMY_RADIUS);
+                .unwrap_or_else(|| w.params.effective_default_enemy_radius());
             let hit_x = w.enemies.positions_x[ei] + enemy_r;
             let hit_y = w.enemies.positions_y[ei] + enemy_r;
             w.enemies.hp[ei] -= dmg as f32;
@@ -470,7 +475,7 @@ fn fire_aura(
     let wp_aura = w.params.get_weapon(kind_id);
     let radius = wp_aura
         .map(|wp| wp.aura_radius(level))
-        .unwrap_or(DEFAULT_AURA_RADIUS);
+        .unwrap_or_else(|| w.params.effective_default_aura_radius());
     let aura_hit_color = wp_aura
         .and_then(|p| p.hit_particle_color)
         .unwrap_or([0.9, 0.9, 0.3, 0.6]);
@@ -501,7 +506,12 @@ fn fire_aura(
             .params
             .get_enemy(kind_e)
             .map(|e| (e.radius, e.particle_color))
-            .unwrap_or((DEFAULT_ENEMY_RADIUS, DEFAULT_PARTICLE_COLOR));
+            .unwrap_or_else(|| {
+                (
+                    w.params.effective_default_enemy_radius(),
+                    w.params.effective_default_particle_color(),
+                )
+            });
         let hit_x = ex + enemy_r;
         let hit_y = ey + enemy_r;
         if w.enemies.hp[ei] <= 0.0 {

@@ -142,7 +142,8 @@ defmodule Core.NifBridge do
   # enemies: [{max_hp, speed, radius, exp_reward, damage_per_sec, render_kind, passes_obstacles}]
   # weapons: [{cooldown, damage, as_u8, name, bullet_table_or_nil}]
   # bosses:  [{max_hp, speed, radius, exp_reward, damage_per_sec, render_kind, special_interval}]
-  def set_entity_params(_world, _enemies, _weapons, _bosses),
+  # opts: P4-1: オプション。%{default_enemy_radius, default_particle_color, ...} でデフォルト値を上書き可能。nil の場合は Rust 定数を使用。
+  def set_entity_params(_world, _enemies, _weapons, _bosses, _opts \\ nil),
     do: :erlang.nif_error(:nif_not_loaded)
 
   # R-P2: 敵接触の damage_this_frame。list: [{kind_id, damage}, ...] — 毎フレーム on_nif_sync で呼ぶ
