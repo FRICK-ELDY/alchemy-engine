@@ -35,12 +35,16 @@
   > 対象ファイル: `apps/core/lib/core/save_manager.ex`
 
 - **DynamicSupervisor によるルーム動的管理** `+2`
-  > `Core.RoomSupervisor` が `DynamicSupervisor` として実装されており、ルームの動的起動・停止が可能。`one_for_one` 戦略により `StressMonitor` がクラッシュしてもゲームが継続する設計がコメントで明示されている。
-  > 対象ファイル: `apps/server/lib/server/application.ex`
+  > `Core.RoomSupervisor` が `DynamicSupervisor` として実装されており、ルームの動的起動・停止が可能。`one_for_one` 戦略により `StressMonitor` がクラッシュしてもゲームが継続する設計がコメントで明示されている。`start_room`/`stop_room`/`list_rooms` API が整備済み。
+  > 対象ファイル: `apps/server/lib/server/application.ex`, `apps/core/lib/core/room_supervisor.ex`
 
 - **EventBus・SaveManager のテスト整備** `+2`
   > `event_bus_test.exs` で subscribe/broadcast/DOWN 時動作、`save_manager_test.exs` でスコア・HMAC・セッションを検証。core 層のリグレッション検出が可能になった。
   > 対象ファイル: `apps/core/test/core/`
+
+- **NifBridgeBehaviour + Mox によるテスト用モック** `+2`
+  > NIF をビヘイビアで抽象化し、テスト時には Mox でモック差し替え可能。Elixir 側のロジックを NIF に依存せず検証できる設計。
+  > 対象ファイル: `apps/core/lib/core/nif_bridge_behaviour.ex`
 
 ---
 
@@ -52,13 +56,17 @@
   > `BossSystem.check_spawn/2`・`SpawnSystem.maybe_spawn/3`・`LevelSystem.generate_weapon_choices/1` がすべて純粋関数として実装されており、副作用がない。シーン state を戻り値として返す設計により、テストが容易でリプレイ再現性が高い。Bevy の `System` 関数と同等の設計思想をElixirで実現している。
   > 対象ファイル: `apps/contents/lib/contents/vampire_survivor/boss_system.ex`, `spawn_system.ex`, `level_system.ex`
 
+- **GameEvents による SSoT とイベント駆動の一貫性** `+4`
+  > Rust 60Hz ループ → `{:frame_events, events}` 受信 → コンポーネントの `on_frame_event/2` に委譲。エンジンはディスパッチのみ行いゲームロジックを知らない設計。NIF 注入は `on_nif_sync/1` でコンポーネントが担当。
+  > 対象ファイル: `apps/contents/lib/contents/game_events.ex`
+
 - **AsteroidArena による ContentBehaviour の実証** `+4`
   > VampireSurvivorとは異なる「武器・ボス・レベルアップのないシューター」として実装することで、エンジンコアがコンテンツ固有の概念を持たなくても動作することを実証している。`SplitComponent` が小惑星分裂ロジックを担い、`on_event({:entity_removed, ...})` で処理する設計は、コンポーネントシステムの柔軟性を示している。
   > 対象ファイル: `apps/contents/lib/contents/asteroid_arena/`
 
 - **エンティティパラメータの外部化** `+3`
-  > `SpawnComponent.on_ready/1` でワールド生成後に一度だけ `set_entity_params` を呼び、敵・武器・ボスのすべてのパラメータをRustに注入する。Rustコアにゲームバランス値がハードコードされていない。
-  > 対象ファイル: `apps/contents/lib/contents/vampire_survivor/spawn_component.ex`（L40-53）
+  > `SpawnComponent.on_ready/1` でワールド生成後に一度だけ `set_entity_params` を呼び、敵・武器・ボスのすべてのパラメータをRustに注入する。Rustコアにゲームバランス値がハードコードされていない。`EntityParamTables` による一括注入が可能。
+  > 対象ファイル: `apps/contents/lib/contents/vampire_survivor/spawn_component.ex`（L40-53）, `apps/contents/lib/contents/entity_params.ex`, `native/nif/src/nif/world_nif.rs`
 
 - **コンテンツテストの充実（VampireSurvivor 向け）** `+3`
   > boss・spawn・level・entity_params・weapon_formulas 等、VampireSurvivor 用の7テストファイルが存在し、純粋関数・ロジック部分を `async: true` で並列検証している。
@@ -176,6 +184,10 @@
   > `#[rustler::nif(schedule = "DirtyCpu")]` で物理演算をBEAMスケジューラに影響させない設計。
   > 対象ファイル: `native/nif/src/nif/push_tick_nif.rs`
 
+- **NifResult によるエラーハンドリングの統一** `+2`
+  > `create_world` を除く NIF は `NifResult<T>` で戻り値を統一。Elixir 側で `{:ok, _}` / `{:error, _}` のパターンマッチが可能。`lock_poisoned_err` 等で RwLock の poison を NifResult に変換。
+  > 対象ファイル: `native/nif/src/nif/*.rs`
+
 ---
 
 ## テスト戦略
@@ -197,12 +209,26 @@
 ### ✅ プラス点
 
 - **bin/ci.bat と GitHub Actions の設計思想の一致** `+3`
-  > ci.bat が GitHub Actions の各ジョブ（A/B/C/D）と1:1対応。`check` オプションでフォーマット+Lint のみの軽量実行も可能。
+  > ci.bat が GitHub Actions の各ジョブ（A/B/C/D）と1:1対応。`check` オプションでフォーマット+Lint のみの軽量実行も可能。`cargo fmt` / `cargo clippy -D warnings` / `mix compile --warnings-as-errors` を一括実行。
   > 対象ファイル: `bin/ci.bat`, `.github/workflows/ci.yml`
 
 - **ベンチマーク回帰テスト（main push 時）** `+3`
   > bench-regression ジョブが main push 時に `cargo bench -p physics` を実行し、前回比+10%超でCIをブロック。
   > 対象ファイル: `.github/workflows/ci.yml`
+
+- **README と development.md による起動手順の明確化** `+2`
+  > Prerequisites（Elixir 1.19 / OTP 28, Rust stable, zenohd）が明記。`mix run` / ランチャー / 一括起動の違いが説明されている。
+  > 対象ファイル: `README.md`, `development.md`
+
+---
+
+## 可観測性
+
+### ✅ プラス点
+
+- **Telemetry イベントの発行** `+2`
+  > `[:game, :frame_dropped]`・`[:game, :session_end]`・`[:game, :boss_spawn]`・`[:game, :level_up]` など、主要なゲームイベントで telemetry を実行。
+  > 対象ファイル: `apps/contents/lib/contents/game_events.ex`, `apps/contents/lib/contents/game_events/diagnostics.ex`
 
 ---
 
@@ -215,5 +241,5 @@
   > 対象ファイル: `docs/`
 
 - **vision.md による設計哲学の明文化** `+4`
-  > 「エンジンがこの概念を知る必要があるか？」という設計判断基準が vision.md に明文化されている。Godot の「ノードとシーン」哲学と同等の明確さ。
+  > 「エンジンがこの概念を知る必要があるか？」という設計判断基準が vision.md に明文化されている。Godot の「ノードとシーン」哲学と同等の明確さ。「無限の空間」「ユーザーの存在」が保証範囲であることが明確。Engine と Content の責務分離、Elixir = SSoT / Rust = 実行層の思想が一貫して記述されている。
   > 対象ファイル: `docs/vision.md`

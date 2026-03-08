@@ -3,7 +3,8 @@
 > このドキュメントは現在の弱点を整理し、各課題に対する具体的な改善方針を定義する。
 > 優先度・影響範囲・作業ステップを明記することで、改善作業を体系的に進めることを目的とする。
 >
-> 最新の評価: [evaluation-2026-03-07.md](../evaluation/evaluation-2026-03-07.md)
+> 最新の評価: [evaluation-2026-03-08.md](../evaluation/evaluation-2026-03-08.md)  
+> プラス点: [specific-strengths.md](../evaluation/specific-strengths.md) / マイナス点: [specific-weaknesses.md](../evaluation/specific-weaknesses.md) / 提案: [specific-proposals.md](../evaluation/specific-proposals.md)
 
 ---
 

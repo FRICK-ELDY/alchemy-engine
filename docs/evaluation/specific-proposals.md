@@ -16,6 +16,10 @@
 
 ### 💡 提案
 
+- **コンポーネントの on_save / on_load コールバック** `0`
+  > セーブ対象データをコンポーネントが自己申告する方式。`SaveManager` が各コンポーネントから `on_save/1` を収集し、ロード時に `on_load/2` で復元。バージョン管理・戻り値型の定義が必要。
+  > 参考: improvement-plan.md I-K
+
 - **GameEvents への汎用メッセージディスパッチ機構** `0`
   > `handle_info({:boss_dash_end, world_ref}, state)` のようなコンテンツ固有メッセージを、`GameEvents` が直接処理するのではなく、アクティブなコンポーネントに転送する汎用ディスパッチ機構を完全に実装する。例: タグ付きタプル `{:engine_message, tag, payload}` を受け取り、全コンポーネントの `on_engine_message/2` に転送する。新規メッセージ種別追加時に GameEvents の変更が不要になる。
 
@@ -30,6 +34,10 @@
 ## apps/contents — コンテンツ実装・ゲームロジック
 
 ### 💡 提案
+
+- **ContentBehaviour の diagnostics/0 コールバック** `0`
+  > 「敵数・弾数」をコンテンツが報告する API を追加。`Diagnostics` が `playing_state` の `:enemies` / `:bullets` を直接参照する代わりに、コンテンツ経由で取得する。
+  > 参考: improvement-plan.md I-M
 
 - **EntityParams の Single Source of Truth 化** `0`
   > `entity_params.ex`・`spawn_component.ex` の `boss_params/0`・Rust側の値の3箇所に散在しているパラメータを、`entity_params.ex` のみに集約する。`spawn_component.ex` は `EntityParams.boss_params/0` を呼び出すだけにし、Rust側は `set_entity_params` NIF で受け取るだけにする。これにより「Elixir = SSoT」の原則が完全に実現される。
@@ -46,6 +54,10 @@
 
 ### 💡 提案
 
+- **分散フェイルオーバーと GameEvents → Network ブロードキャスト** `0`
+  > 分散ノード間でフェイルオーバーし、`GameEvents` からのイベントを Network 層にブロードキャストする統合。多数プレイヤー保証の実証に寄与する。
+  > 参考: improvement-plan.md I-E
+
 - **分散ノード間ルーム移動の実装** `0`
   > Elixir の `Node.connect/1` と `Phoenix.PubSub` の分散モードを使い、複数のBeamノード間でルームを移動できる機能を実装する。これが実現すれば「なぜElixir + Rustか」という問いに対してコードで答えられる。参考: `libcluster`・`Horde.DynamicSupervisor`。
 
@@ -57,6 +69,10 @@
 ## native/physics — ECS・SoA・SIMD
 
 ### 💡 提案
+
+- **render_interpolation のクライアント側移行** `0`
+  > 3D 補間ロジックをサーバー（physics/nif）からクライアント側に移行。フレームに `player_interp` を追加し、desktop_render が補間後の座標で描画する。
+  > 参考: improvement-plan.md I-P
 
 - **ARM NEON SIMD 対応** `0`
   > `chase_ai.rs` に `#[cfg(target_arch = "aarch64")]` で ARM NEON 版を追加する。Apple Silicon・Android・Raspberry Pi での性能向上。
@@ -76,6 +92,10 @@
 
 ### 💡 提案
 
+- **HudData のオーバーレイテキスト・ボタン汎用化** `0`
+  > `GamePhase` を廃止し、`:overlay` / `:playing` / `:game_over` のような汎用識別子にする。オーバーレイテキスト・ボタン定義を Elixir 側が渡し、render 層はコンテンツ固有の概念を持たない。
+  > 参考: improvement-plan.md I-N
+
 - **build_instances の共通化** `0`
   > `renderer/mod.rs` と `headless.rs` のスプライト種別ごとのUV・サイズ計算ロジックを `pub(crate)` の共通関数に抽出する。`headless.rs` のコメントに「共有の `pub(crate)` 関数を使用」と書いてあるが未実装。これを実装すればDRY違反が解消される。
 
@@ -86,7 +106,15 @@
 
 ## 横断
 
-### 💡 提案
+### テスト戦略
+
+- **SceneStack の ExUnit テスト** `0`
+  > push / pop / replace / update_current の遷移ロジックを単体テストでカバー。`async: true` で並列実行可能に。
+
+- **E2E テスト（ゲームループの完結性検証）** `0`
+  > 開始→プレイ→終了→リトライの経路を自動化テストで検証。ヘッドレスモードを活用。
+
+### CI・セキュリティ
 
 - **pull_request トリガーの追加** `0`
   > `.github/workflows/ci.yml` に `pull_request:` を追加し、PR作成・更新時にCIが自動実行されるようにする。PRマージ前の品質保証が有効化される。

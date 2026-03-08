@@ -30,6 +30,10 @@
   > シーン遷移・フレームループの中核ロジックが未検証。リファクタリングの安全網が不足している。
   > 対象ファイル: `apps/core/test/`, `apps/contents/test/`
 
+- **セーブ対象データの収集責務が未定義** `-2`
+  > `SaveManager.save_session/1` は Rust スナップショットのみ保存。`score`, `kill_count`, `level`, `weapon_levels`, `boss_state` など Elixir 側 Playing state がセーブに含まれない。
+  > 対象ファイル: `apps/core/lib/core/save_manager.ex`, `apps/contents/lib/contents/game_events.ex`
+
 ---
 
 ## apps/contents — コンテンツ実装・ゲームロジック
@@ -40,6 +44,10 @@
   > `entity_params.ex` と `spawn_component.ex` の `boss_params/0` に同一の値が独立して定義されており、Rust側にも同じ値が存在する。3箇所に同じ値が散在しており、同期漏れリスクが高い。`entity_params.ex` のモジュールドキュメントにも「定期的に検証すること」と書かれているが未解消。
   > 対象ファイル: `apps/contents/lib/contents/entity_params.ex`, `apps/contents/lib/contents/vampire_survivor/spawn_component.ex`
 
+- **Diagnostics がコンテンツ固有の知識を持っている** `-2`
+  > `Contents.GameEvents.Diagnostics.do_log_and_cache/3` が `playing_state` の `:enemies` / `:bullets` キーを直接参照。Rust ECS を使わないコンテンツ向けの補完だが、エンジン層がコンテンツ固有の構造を知っている。
+  > 対象ファイル: `apps/contents/lib/contents/game_events/diagnostics.ex`（L58-66）
+
 - **LevelComponent のアイテムドロップロジックの重複** `-2`
   > `on_frame_event({:enemy_killed, ...})` と `on_event({:entity_removed, ...})` の両方でアイテムドロップ処理が実装されており、同一の敵撃破に対して両方が呼ばれる可能性がある。`@drop_magnet_threshold`・`@drop_potion_threshold` が両箇所で使われているが、イベントの対応関係がコードから読み取りにくい。
   > 対象ファイル: `apps/contents/lib/contents/vampire_survivor/level_component.ex`（L30-96）
@@ -47,6 +55,10 @@
 - **AsteroidArena のテストがゼロ** `-2`
   > contents の9テストファイルは全て VampireSurvivor 向け。`AsteroidArena`・`SplitComponent`・`AsteroidArena.SpawnSystem` 等の動作が未検証。
   > 対象ファイル: `apps/contents/test/`
+
+- **BossComponent が Playing シーンを直接参照** `-1`
+  > `BossComponent.on_physics_process/1` が `Content.VampireSurvivor.Scenes.Playing` をハードコード。他コンポーネントは `content.playing_scene()` を使用。コンポーネントの再利用・core 層への移動の障壁。
+  > 対象ファイル: `apps/contents/lib/contents/vampire_survivor/boss_component.ex`
 
 - **Enum.find_last/2 回避コメントが不正確** `-1`
   > spawn_system.ex のコメントに「Elixir 1.12 以降で追加されているが undefined エラーが発生する」とあるが、Elixir 1.19 では使えるはず。将来の開発者を混乱させる不正確なコメントが残っている。
@@ -61,6 +73,16 @@
 - **分散ノード間フェイルオーバーが未実装** `-3`
   > Local・Channel・UDP の3トランスポートは実装済みで、OTP隔離テストも存在する。しかし複数 BEAM ノード間のルーム移動・`libcluster` によるクラスタリング・フェイルオーバーシナリオが未実装。「なぜ Elixir + Rust か」の分散面の証明が不十分。
   > 対象ファイル: `apps/network/lib/network.ex`, `apps/network/lib/network/local.ex`
+
+---
+
+## native/nif — NIF設計・ブリッジ
+
+### ❌ マイナス点
+
+- **create_world が NifResult でラップされていない** `-1`
+  > `create_world()` のみ `ResourceArc<GameWorld>` を直接返している。他 NIF は `NifResult<T>` で統一。将来失敗しうる処理が追加された場合、パニックが BEAM VM クラッシュに直結する。
+  > 対象ファイル: `native/nif/src/nif/world_nif.rs`（L27-28）
 
 ---
 
@@ -112,6 +134,10 @@
   > `ConsoleReporter` のみで外部監視ツール（Prometheus・Grafana等）への接続口がない。本番環境でのパフォーマンス監視が `ConsoleReporter` の出力を目視確認するしかない。
   > 対象ファイル: `apps/core/lib/core/telemetry.ex`
 
+- **NIF パニック時のゲームループ再起動ロジックが未実装** `-2`
+  > NIF がパニックすると BEAM VM ごと落ちる。`NifResult` で捕捉可能なエラーはあるが、完全な回復フロー（ルーム再起動・状態復元）は未整備。
+  > 対象ファイル: `apps/core/`, `apps/contents/lib/contents/game_events.ex`
+
 ---
 
 ## 変更容易性・保守性
@@ -143,6 +169,10 @@
 - **README の Contributing セクションがプレースホルダー** `-1`
   > `README.md` の Contributing セクションが「（※チーム開発時のガイドラインや...）」というプレースホルダーのまま。
   > 対象ファイル: `README.md`
+
+- **bin/ci.bat と GitHub CI の clippy スコープの差** `-1`
+  > CI yml は `--exclude launcher` で clippy を実行するが、`bin/ci.bat` は launcher を含む workspace 全体で clippy を実行。ローカルで launcher に警告があると ci.bat が失敗し、CI では通る不整合がありうる。
+  > 対象ファイル: `bin/ci.bat`（L46）, `.github/workflows/ci.yml`（L37）
 
 ---
 
