@@ -52,7 +52,7 @@ config :network, :zenoh_connect, "tcp/localhost:7447"
 # Content.BulletHell3D    — 3D 弾幕避けゲーム
 # Content.VRTest          — VR 動作検証（Phase A: マウスで見回し）
 # Content.FormulaTest     — Formula エンジン検証（Elixir→Rust→Elixir）
-config :server, :current, Content.Telemetry
+config :server, :current, Content.VampireSurvivor
 config :server, :map, :plain
 config :server, :game_events_module, Contents.GameEvents
 
@@ -67,11 +67,6 @@ config :core, :save_hmac_secret, "alchemy-engine-save-secret-v1"
 # 未設定・nil のときはブロードキャストしない。
 # core 単体利用（network 未ロード）の場合は config/test.exs のように nil を設定すること。
 config :core, :formula_store_broadcast, {Network.Distributed, :broadcast, []}
-
-# ローカルレンダースレッド（start_render_thread）を起動するか。
-# Phase 2 で start_render_thread が削除されたため未使用。フェーズ 4 で削除予定。
-# 残置理由: 計画書との対応を明示するため。削除するまでは false 固定。
-config :core, :local_render, false
 
 # VR 対応 NIF をビルドする場合: features: ["xr"]
 # mix compile 時に nif に --features xr が渡される。

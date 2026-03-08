@@ -48,8 +48,6 @@ graph TB
     LAUNCHER -.->|起動| Client
 ```
 
-※ ローカルモードではサーバー内の nif が desktop_input + desktop_render をレンダースレッドとして起動し、クライアント相当の描画・入力を行う。
-
 ---
 
 ## ディレクトリ構造（ソース単位）
@@ -174,7 +172,7 @@ alchemy-engine/
 │   ├── Cargo.lock
 │   │
 │   ├── physics/                     # 物理演算・ECS（rustc-hash / rayon / log）
-│   ├── nif/                         # NIF ブリッジ・ゲームループ・RenderFrameBuffer（umbrella 時 Elixir と連携）
+│   ├── nif/                         # NIF ブリッジ・ゲームループ（umbrella 時 Elixir と連携）
 │   ├── audio/                       # rodio オーディオ管理
 │   ├── desktop_render/              # wgpu 描画パイプライン・egui HUD
 │   ├── desktop_input/               # デスクトップ入力・winit イベントループ（desktop_render に依存）
@@ -196,7 +194,7 @@ alchemy-engine/
 | `core` | ゲームループ制御・イベント受信・セーブ・ContentBehaviour / Component インターフェース定義 | Elixir GenServer / ETS |
 | `contents` | GameEvents・シーンスタック・SceneBehaviour・ContentBehaviour 実装・Component 群・エンティティパラメータ | Elixir |
 | `network` | Phoenix Channels（WebSocket）・UDP トランスポート・ローカルマルチルーム管理 | Elixir / Phoenix |
-| `nif` | Elixir-Rust 間 NIF ブリッジ・ゲームループ・RenderFrameBuffer・push_render_frame デコード | Rust / Rustler |
+| `nif` | Elixir-Rust 間 NIF ブリッジ・ゲームループ | Rust / Rustler |
 | `physics` | 物理演算・空間ハッシュ・ECS・外部注入パラメータテーブル | Rust |
 | `desktop_render` | GPU 描画パイプライン・HUD・ヘッドレスモード（ウィンドウは desktop_input が生成） | Rust / wgpu / egui |
 | `desktop_input` | winit イベントループ・ウィンドウ生成・キーボード・マウス入力 | Rust / winit |
@@ -256,9 +254,9 @@ sequenceDiagram
     end
 ```
 
-### 4. Phase R-2: Elixir 側による描画命令 push
+### 4. 描画命令の Zenoh 配信
 
-Elixir 側（contents）が DrawCommand リスト・CameraParams・UiCanvas を組み立て、`push_render_frame` NIF 経由で `RenderFrameBuffer` に書き込む。Rust の `RenderBridge::next_frame()` はこのバッファから RenderFrame を取得し、2D の場合は GameWorld から補間データを読み取ってプレイヤー座標を補間する。
+Elixir 側（contents）の RenderComponent が DrawCommand リスト・CameraParams・UiCanvas を組み立て、`FrameBroadcaster.put` で Zenoh へ publish する。`desktop_client` が subscribe して描画する。
 
 ### 5. ContentBehaviour + Component による拡張設計
 
@@ -307,10 +305,7 @@ sequenceDiagram
     Note over COMP: set_world_size / set_entity_params NIF を呼び出す
     GEV->>NIF: set_map_obstacles(world_ref, obstacles)
     GEV->>NIF: create_game_loop_control()
-    GEV->>NIF: create_render_frame_buffer()
-    NIF-->>GEV: RenderFrameBuffer リソース
     GEV->>NIF: start_rust_game_loop(world_ref, control_ref, self())
-    GEV->>NIF: start_render_thread(world_ref, render_buf_ref, self(), title, atlas_path)
     Note over NIF: Rust 60Hz ループ開始
 ```
 
@@ -375,48 +370,19 @@ flowchart TD
 1. `on_frame_event/2` — 全コンポーネントにフレームイベントを配信（スコア・HP・ボス HP 更新）
 2. `Scene.update/2` — シーン遷移判断
 3. `on_physics_process/1` — ボス AI 等の物理コールバック（NIF 書き込みを含む）
-4. `on_nif_sync/1` — Elixir state を Rust 側に注入。RenderComponent は `push_render_frame` で DrawCommand・Camera・UiCanvas を RenderFrameBuffer に書き込む
+4. `on_nif_sync/1` — Elixir state を Rust 側に注入。RenderComponent は `FrameBroadcaster.put` で DrawCommand・Camera・UiCanvas を Zenoh へ配信する
 
 ---
 
-## クライアント動作モード（2 種類）
+## クライアント動作モード
 
-| モード | 起動方法 | ブリッジ | フレーム供給元 | 用途 |
-|:---|:---|:---|:---|:---|
-| **ローカル** | `mix run` | `NativeRenderBridge` | Elixir → `push_render_frame` → RenderFrameBuffer | 開発・単一プロセス |
-| **リモート** | `desktop_client` exe | `NetworkRenderBridge` | Phoenix Server → Zenoh → クライアント | サーバー・クライアント分離 |
-
-ローカルモードでは Elixir プロセス内に NIF と GameWorld があり、`start_render_thread` で `run_desktop_loop(NativeRenderBridge)` を起動。リモートモードでは `desktop_client` が Zenoh で `game/room/{room_id}/frame` を subscribe し、`game/room/{room_id}/input/movement` 等へ入力を publish する。
+常に Zenoh 経由で `desktop_client` がフレームを受信する。`mix run` 単体ではウィンドウは開かず、サーバーのみ起動する。ゲームをプレイするには `zenohd` + `mix run` + `desktop_client` の 3 プロセスが必要。
 
 ---
 
-## レンダリングスレッド（非同期）
+## レンダリングフロー
 
-Phase R-2: `RenderBridge` トレイトで抽象化。`NativeRenderBridge` は `RenderFrameBuffer` から RenderFrame を取得し、2D 時は GameWorld の補間データで PlayerSprite 座標を補間。`NetworkRenderBridge` は Zenoh 受信バッファから取得する。
-
-```mermaid
-sequenceDiagram
-    participant E as Elixir RenderComponent
-    participant RB as RenderBridge
-    participant RFB as RenderFrameBuffer
-    participant GW as GameWorld
-    participant R as Renderer
-
-    loop 毎フレーム（Elixir on_nif_sync）
-        E->>RFB: push_render_frame(commands, camera, ui, cursor_grab)
-    end
-
-    loop RedrawRequested（VSync）
-        RB->>RFB: get()
-        RFB-->>RB: RenderFrame
-        RB->>GW: read lock（補間データ取得・2D 時のみ PlayerSprite 補間）
-        RB-->>R: RenderFrame
-        R->>R: update_instances(frame)
-        R->>R: render()
-        RB->>RB: on_ui_action(pending_action)
-        Note over RB: Elixir に UI アクション送信
-    end
-```
+Elixir の RenderComponent が `FrameBroadcaster.put` で Zenoh へ frame を publish。`desktop_client` の `NetworkRenderBridge` が subscribe して描画する。
 
 ---
 
@@ -488,9 +454,8 @@ graph TD
 
 | カテゴリ | 代表関数 | ロック | 呼び出し頻度 |
 |:---|:---|:---|:---|
-| control | `create_world`, `create_render_frame_buffer`, `spawn_enemies`, `set_entity_params` | write | 低（起動時・イベント時） |
+| control | `create_world`, `spawn_enemies`, `set_entity_params` | write | 低（起動時・イベント時） |
 | inject | `set_hud_state`, `set_hud_level_state`, `set_boss_velocity`, `set_weapon_slots` | write | 高（毎フレーム） |
-| render_push | `push_render_frame` | RenderFrameBuffer（別 RwLock） | 高（毎フレーム・on_nif_sync） |
 | query_light | `get_player_hp`, `get_enemy_count`, `get_boss_state` | read | 高（毎フレーム可） |
 | snapshot_heavy | `get_save_snapshot`, `load_save_snapshot` | write | 低（明示操作時） |
 | game_loop | `physics_step`, `drain_frame_events` | write | 高（60Hz） |
@@ -578,16 +543,16 @@ graph TB
 
     BEAM <-->|NIF Rustler| GW
 
-    subgraph RUST["Rust スレッド群（nif / physics / render / audio）"]
+    subgraph RUST["Rust スレッド群（nif / physics / audio）"]
         GL[ゲームループスレッド\n60Hz physics\nnif]
-        RT[レンダースレッド\nwinit EventLoop\nrender]
         AT[オーディオスレッド\nrodio / コマンド\naudio]
         GW["GameWorld\n(RwLock&lt;GameWorldInner&gt;)\nphysics"]
 
         GL <-->|write lock| GW
-        RT <-->|read lock| GW
     end
 ```
+
+描画は `desktop_client` プロセス内で行われる（Zenoh 経由で frame を受信）。
 
 ---
 
