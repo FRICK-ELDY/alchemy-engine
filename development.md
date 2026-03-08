@@ -11,6 +11,15 @@
   cargo install eclipse-zenoh
   ```
 
+### 環境変数 PATH（ランチャー利用時）
+
+ランチャーから Phoenix Server を起動するには、**Elixir の bin を PATH に含める**必要があります。
+
+- **Windows**: システムの環境変数 PATH に Elixir の bin を追加
+  - 例: `C:\Program Files\Elixir\bin` または `C:\Program Files (x86)\Elixir\bin`
+  - 設定後はランチャーを再起動
+- **Linux / macOS**: 通常はインストール時に PATH に追加済み
+
 ## セットアップ
 
 1. リポジトリをクローンします。
@@ -37,17 +46,21 @@ mix run --no-halt
 
 ### ランチャー（システムトレイ）
 
-zenohd / HL-Server / Client をトレイメニューから管理します。Phase 2 では Zenoh Router の Run / Quit とポート確認に対応。
+zenohd / HL-Server / Client をトレイメニューから管理します。Phase 3 では Zenoh Router と Phoenix Server の Run / Quit に対応。
 
 ```bash
 cargo run -p launcher
 ```
 
 - トレイにアイコンが表示されます
-- 右クリック → 「Zenoh Router」→「Run」で zenohd を起動（ポート 7447 の応答を確認）
-- 「Zenoh Router」→「Quit」で zenohd を終了
+- **Zenoh Router** →「Run」で zenohd を起動（ポート 7447 の応答を確認）
+- **Zenoh Router** →「Quit」で zenohd を終了
+- **Phoenix Server** →「Run」で mix run を起動（ポート 4000 の応答を確認）
+- **Phoenix Server** →「Quit」で mix run を終了
 - 起動失敗時はダイアログで通知
 - 「Quit」でランチャーを終了
+
+**前提**: ランチャーは `current_dir` または exe の親階層から mix.exs を検索する。そのためプロジェクトルート直下でなく、サブディレクトリから起動しても見つかる場合がある。また、Elixir の bin を PATH に含める（上記「環境変数 PATH」参照）。
 
 zenohd の稼働確認（PowerShell）:
 
