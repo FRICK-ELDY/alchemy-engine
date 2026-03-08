@@ -40,8 +40,8 @@ assets/{game_assets_id}/shaders/
 
 | ファイル | 用途 | 契約 |
 |:---|:---|:---|
-| sprite.wgsl | 2D スプライトパス | [render.md](rust/render.md) の sprite.wgsl 仕様に準拠 |
-| mesh.wgsl | 3D メッシュ・グリッド・スカイボックス | [render.md](rust/render.md) の mesh.wgsl 仕様に準拠 |
+| sprite.wgsl | 2D スプライトパス | [desktop/render.md](rust/desktop/render.md) の sprite.wgsl 仕様に準拠 |
+| mesh.wgsl | 3D メッシュ・グリッド・スカイボックス | [desktop/render.md](rust/desktop/render.md) の mesh.wgsl 仕様に準拠 |
 
 ### 2.3 フォールバック順序
 
@@ -122,5 +122,5 @@ assets/
 ## 6. 関連ドキュメント
 
 - [contents-defines-rust-executes.md](../plan/contents-defines-rust-executes.md) — P4 計画
-- [render.md](rust/render.md) — シェーダー契約（uniform・バインド・頂点レイアウト）
+- [desktop/render.md](rust/desktop/render.md) — シェーダー契約（uniform・バインド・頂点レイアウト）
 - [asset-storage-classification.md](../plan/asset-storage-classification.md) — アセット配置の分類

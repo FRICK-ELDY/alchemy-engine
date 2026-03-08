@@ -97,7 +97,7 @@ contents-to-physics-bottlenecks の改善案と連携。P5-1（`set_frame_inject
 - [shader-path-traversal-design.md](../architecture/shader-path-traversal-design.md) — P4-S Path Traversal 対策設計
 - [contents-to-physics-bottlenecks.md](../architecture/contents-to-physics-bottlenecks.md) — ボトルネック・改善案
 - [improvement-plan.md](./improvement-plan.md) — 全体改善計画
-- [Rust: render](../architecture/rust/render.md) — 描画パイプライン現状
+- [Rust: desktop_render](../architecture/rust/desktop/render.md) — 描画パイプライン現状
 - [Rust: nif](../architecture/rust/nif.md) — NIF インターフェース
 - [formula-hardcode-inventory.md](../architecture/formula-hardcode-inventory.md) — P1-1 ハードコード一覧
 - [formula-migration-evaluation.md](../architecture/formula-migration-evaluation.md) — P1-2 武器式 Formula 移行評価

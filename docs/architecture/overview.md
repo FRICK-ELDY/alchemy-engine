@@ -13,28 +13,42 @@ AlchemyEngine は **Elixir を Single Source of Truth（SSoT）** として、Ru
 
 ```mermaid
 graph TB
-    subgraph Elixir["Elixir Umbrella"]
-        GS[server<br/>起動制御]
-        GE[core<br/>SSoT コア]
-        GC[contents<br/>VampireSurvivor / AsteroidArena]
-        GN[network<br/>Phoenix Channels / UDP]
-        GS -->|依存| GE
-        GC -->|依存| GE
+    subgraph Server["サーバー"]
+        subgraph Elixir["Elixir"]
+            GS[server<br/>起動制御]
+            GE[core<br/>SSoT コア]
+            GC[contents<br/>VampireSurvivor / AsteroidArena]
+            GN[network<br/>Phoenix Channels / Zenoh]
+        end
+        subgraph RustServer["Rust（サーバー内）"]
+            GNIF[nif<br/>NIF インターフェース / ゲームループ]
+            GSIM[physics<br/>物理 / ECS]
+            GAUDIO[audio<br/>rodio オーディオ]
+        end
+        GS --> GE
+        GC --> GE
+        GE <-->|Rustler NIF| GNIF
+        GNIF --> GSIM
+        GNIF --> GAUDIO
     end
 
-    GE <-->|Rustler NIF| GNIF
-
-    subgraph Rust["Rust Workspace"]
-        GNIF[nif<br/>NIF インターフェース / ゲームループ / レンダーブリッジ]
-        GSIM[physics<br/>物理 / ECS]
-        GRENDER[render<br/>wgpu 描画 / winit ウィンドウ]
-        GAUDIO[audio<br/>rodio オーディオ]
-        GNIF -->|依存| GSIM
-        GNIF -->|依存| GRENDER
-        GNIF -->|依存| GAUDIO
-        GRENDER -->|依存| GSIM
+    subgraph Client["クライアント"]
+        DCLIENT[desktop_client<br/>Zenoh 経由で frame 受信]
+        DINPUT[desktop_input<br/>winit イベントループ]
+        DRENDER[desktop_render<br/>wgpu 描画]
+        DCLIENT --> DINPUT
+        DINPUT --> DRENDER
     end
+
+    LAUNCHER[launcher<br/>zenohd / Phoenix / Client 起動]
+
+    GN -->|Zenoh<br/>frame publish| DCLIENT
+    DCLIENT -->|Zenoh<br/>input publish| GN
+    LAUNCHER -.->|起動| Server
+    LAUNCHER -.->|起動| Client
 ```
+
+※ ローカルモードではサーバー内の nif が desktop_input + desktop_render をレンダースレッドとして起動し、クライアント相当の描画・入力を行う。
 
 ---
 
@@ -159,12 +173,14 @@ alchemy-engine/
 │   ├── Cargo.toml                   # Rust ワークスペース定義
 │   ├── Cargo.lock
 │   │
-│   ├── physics/                  # 物理演算・ECS（依存: rustc-hash / rayon / log）
-│   ├── nif/                         # NIF ブリッジ・ゲームループ・RenderFrameBuffer
+│   ├── physics/                     # 物理演算・ECS（rustc-hash / rayon / log）
+│   ├── nif/                         # NIF ブリッジ・ゲームループ・RenderFrameBuffer（umbrella 時 Elixir と連携）
 │   ├── audio/                       # rodio オーディオ管理
-│   ├── render/                      # wgpu 描画パイプライン
-│   ├── input/                       # デスクトップ入力・winit イベントループ（render に依存）
-│   └── input_openxr/                # OpenXR 入力ブリッジ（VR）
+│   ├── desktop_render/              # wgpu 描画パイプライン・egui HUD
+│   ├── desktop_input/               # デスクトップ入力・winit イベントループ（desktop_render に依存）
+│   ├── desktop_input_openxr/        # OpenXR 入力ブリッジ（VR）
+│   ├── desktop_client/              # Zenoh 経由でサーバーに接続するスタンドアロンクライアント
+│   └── launcher/                    # トレイアイコン・zenohd / Phoenix / Client Run
 │
 ├── assets/                          # スプライト・音声アセット
 └── saves/                           # セーブデータ
@@ -182,7 +198,10 @@ alchemy-engine/
 | `network` | Phoenix Channels（WebSocket）・UDP トランスポート・ローカルマルチルーム管理 | Elixir / Phoenix |
 | `nif` | Elixir-Rust 間 NIF ブリッジ・ゲームループ・RenderFrameBuffer・push_render_frame デコード | Rust / Rustler |
 | `physics` | 物理演算・空間ハッシュ・ECS・外部注入パラメータテーブル | Rust |
-| `render` | GPU 描画パイプライン・HUD・winit ウィンドウ管理・ヘッドレスモード | Rust / wgpu / egui / winit |
+| `desktop_render` | GPU 描画パイプライン・HUD・ヘッドレスモード（ウィンドウは desktop_input が生成） | Rust / wgpu / egui |
+| `desktop_input` | winit イベントループ・ウィンドウ生成・キーボード・マウス入力 | Rust / winit |
+| `desktop_client` | Zenoh 経由で RenderFrame 受信・入力送信（サーバーと分離されたクライアント exe） | Rust / Zenoh |
+| `launcher` | トレイアイコン・zenohd / Phoenix Server / desktop_client の起動・終了 | Rust / tao / tray-icon |
 | `audio` | オーディオ管理・アセット読み込み | Rust / rodio |
 
 ---
@@ -360,9 +379,20 @@ flowchart TD
 
 ---
 
+## クライアント動作モード（2 種類）
+
+| モード | 起動方法 | ブリッジ | フレーム供給元 | 用途 |
+|:---|:---|:---|:---|:---|
+| **ローカル** | `mix run` | `NativeRenderBridge` | Elixir → `push_render_frame` → RenderFrameBuffer | 開発・単一プロセス |
+| **リモート** | `desktop_client` exe | `NetworkRenderBridge` | Phoenix Server → Zenoh → クライアント | サーバー・クライアント分離 |
+
+ローカルモードでは Elixir プロセス内に NIF と GameWorld があり、`start_render_thread` で `run_desktop_loop(NativeRenderBridge)` を起動。リモートモードでは `desktop_client` が Zenoh で `game/room/{room_id}/frame` を subscribe し、`game/room/{room_id}/input/movement` 等へ入力を publish する。
+
+---
+
 ## レンダリングスレッド（非同期）
 
-Phase R-2: RenderBridge は `RenderFrameBuffer` から RenderFrame を取得する。Elixir の RenderComponent が `push_render_frame` で毎フレーム書き込む。2D の場合は GameWorld から補間データを読み取り PlayerSprite の座標を補間する。
+Phase R-2: `RenderBridge` トレイトで抽象化。`NativeRenderBridge` は `RenderFrameBuffer` から RenderFrame を取得し、2D 時は GameWorld の補間データで PlayerSprite 座標を補間。`NetworkRenderBridge` は Zenoh 受信バッファから取得する。
 
 ```mermaid
 sequenceDiagram
@@ -565,5 +595,5 @@ graph TB
 
 - [**ビジョンと設計思想**](../vision.md) ← エンジン・ワールド・ルール・ゲームの定義
 - **Elixir レイヤー**: [server](./elixir/server.md) / [core](./elixir/core.md) / [contents](./elixir/contents.md)（ゲームコンテンツ一覧・設計パターン含む）/ [network](./elixir/network.md)
-- **Rust レイヤー**: [nif](./rust/nif.md) / [physics](./rust/physics.md) / [render](./rust/render.md) / [audio](./rust/audio.md) / [input_openxr](./rust/input_openxr.md)
+- **Rust レイヤー**: [nif](./rust/nif.md) / [desktop_client](./rust/desktop_client.md) / [desktop 詳細](./rust/desktop/)（[input](./rust/desktop/input.md) / [input_openxr](./rust/desktop/input_openxr.md) / [render](./rust/desktop/render.md)）/ [nif/physics](./rust/nif/physics.md) / [audio](./rust/nif/audio.md) / [launcher](./rust/launcher.md)
 - [改善計画](../plan/improvement-plan.md) ← 既知の弱点と改善方針

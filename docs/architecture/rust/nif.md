@@ -2,7 +2,7 @@
 
 ## 概要
 
-`nif` クレートは Elixir と Rust のブリッジです。Rustler NIF のエントリポイント・ゲームループ制御・レンダーブリッジ・セーブ/ロードを担当します。依存: [physics](./physics.md), [render](./render.md), [audio](./audio.md)。
+`nif` クレートは Elixir と Rust のブリッジです。Rustler NIF のエントリポイント・ゲームループ制御・レンダーブリッジ・セーブ/ロードを担当します。依存: [physics](./nif/physics.md), [desktop/render](./desktop/render.md), [desktop/input](./desktop/input.md), [audio](./nif/audio.md)。
 
 ---
 
@@ -12,12 +12,15 @@
 graph LR
     GN[nif]
     GS[physics]
-    GR[render]
+    GR[desktop_render]
+    GI[desktop_input]
     GA[audio]
 
     GN -->|依存| GS
     GN -->|依存| GR
+    GN -->|依存| GI
     GN -->|依存| GA
+    GI -->|依存| GR
 ```
 
 ---
@@ -153,7 +156,7 @@ NIF ローダー。パニックフック（debug 時）・GameWorld / GameLoopCo
 
 ## `render_bridge.rs` — RenderBridge 実装
 
-Phase R-2: `next_frame()` は **RenderFrameBuffer** から RenderFrame を取得する。2D の場合は GameWorld の read lock で補間データを読み取り、PlayerSprite の座標を補間する。3D の場合は Elixir 側が毎フレームカメラを push するため補間不要。
+Phase R-2: `NativeRenderBridge` の `next_frame()` は **RenderFrameBuffer** から RenderFrame を取得する。2D の場合は GameWorld の read lock で補間データを読み取り、PlayerSprite の座標を補間する。3D の場合は Elixir 側が毎フレームカメラを push するため補間不要。`run_render_thread` は `run_desktop_loop(NativeRenderBridge, config)` を呼び出し、[desktop_input](./desktop/input.md) のイベントループで描画する。
 
 - **title** / **atlas_path**: Elixir の `content.title()` / `content.assets_path()` から解決したパスを引数で受け取る。アトラスのロードは render_bridge 内で行い、ファイルが存在しない場合は AssetLoader の埋め込みフォールバックを使用。
 
@@ -172,5 +175,5 @@ Phase R-2: `next_frame()` は **RenderFrameBuffer** から RenderFrame を取得
 ## 関連ドキュメント
 
 - [アーキテクチャ概要](../overview.md)
-- [physics](./physics.md) / [render](./render.md) / [audio](./audio.md)
+- [nif/physics](./nif/physics.md) / [desktop/render](./desktop/render.md) / [desktop/input](./desktop/input.md) / [audio](./nif/audio.md)
 - [Elixir: core](../elixir/core.md)
