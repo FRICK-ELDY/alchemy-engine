@@ -46,7 +46,7 @@ mix run --no-halt
 
 ### ランチャー（システムトレイ）
 
-zenohd / HL-Server / Client をトレイメニューから管理します（Phase 0–5 対応）。
+zenohd / HL-Server / Client をトレイメニューから管理します（Phase 0–6 対応）。
 
 ```bash
 cargo run -p launcher
@@ -58,6 +58,8 @@ cargo run -p launcher
 - **Phoenix Server** →「Run」で mix run を起動（ポート 4000 の応答を確認）
 - **Phoenix Server** →「Quit」で mix run を終了
 - **Client Run** → zenohd と Phoenix Server の起動を確認してから desktop_client を起動
+- **Check for Update...** → GitHub releases で最新版を確認
+- **acknowledgements** → 謝辞・ライセンス一覧を表示
 - 起動中は Run 無効・Quit 有効。両方起動時はアイコン緑、それ以外は灰色
 - 起動失敗時はダイアログで通知
 - 「Quit」でランチャーを終了
