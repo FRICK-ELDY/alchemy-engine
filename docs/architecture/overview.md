@@ -102,12 +102,19 @@ alchemy-engine/
 │   │       ├── scene_behaviour.ex         # シーンコールバック定義（contents 層）
 │   │       ├── scene_stack.ex             # シーンスタック管理 GenServer（contents 層）
 │   │       ├── entity_params.ex           # EXP・スコア・ボスパラメータ（Elixir SSoT）
+│   │       ├── frame_broadcaster.ex       # Zenoh フレーム配信（Process.put → ZenohBridge）
+│   │       ├── component_list.ex          # コンポーネント解決（LocalUserComponent / TelemetryComponent 注入）
+│   │       ├── message_pack_encoder.ex    # RenderFrame の MessagePack エンコード
+│   │       ├── local_user_component.ex    # ローカル入力共通コンポーネント
+│   │       ├── telemetry_component.ex     # 入力状態参照用（全コンテンツに注入）
+│   │       ├── menu_component.ex          # メニュー UI 共通コンポーネント
 │   │       ├── content_loader.ex          # 将来用: descriptor ベースコンテンツ（stub）
 │   │       ├── content_runner.ex          # 将来用: descriptor ベースコンテンツ（stub）
 │   │       ├── component_registry.ex      # 将来用: descriptor ベースコンテンツ（stub）
 │   │       ├── vampire_survivor.ex        # Content.VampireSurvivor
 │   │       ├── vampire_survivor/
 │   │       │   ├── spawn_component.ex
+│   │       │   ├── local_user_component.ex
 │   │       │   ├── level_component.ex
 │   │       │   ├── boss_component.ex
 │   │       │   ├── render_component.ex
@@ -146,7 +153,11 @@ alchemy-engine/
 │   │       │   ├── input_component.ex, render_component.ex
 │   │       │   └── scenes/ playing.ex
 │   │       ├── formula_test.ex            # Content.FormulaTest（Formula エンジン検証）
-│   │       └── formula_test/
+│   │       ├── formula_test/
+│   │       │   ├── input_component.ex, render_component.ex
+│   │       │   └── scenes/ playing.ex
+│   │       ├── telemetry.ex               # Content.Telemetry（入力状態表示・デバッグ用）
+│   │       └── telemetry/
 │   │           ├── input_component.ex, render_component.ex
 │   │           └── scenes/ playing.ex
 │   │
@@ -158,6 +169,7 @@ alchemy-engine/
 │               ├── application.ex
 │               ├── local.ex             # ローカルマルチルーム管理 GenServer
 │               ├── distributed.ex       # 複数ノード間ルーム管理（libcluster クラスタ時）
+│               ├── zenoh_bridge.ex      # Zenoh フレーム publish・入力 subscribe（zenoh_enabled 時）
 │               ├── room_token.ex        # Phoenix.Token によるルーム参加認証
 │               ├── channel.ex           # Phoenix Channels / WebSocket
 │               ├── endpoint.ex           # Phoenix Endpoint（ポート 4000）
@@ -193,7 +205,7 @@ alchemy-engine/
 | `server` | OTP Application 起動・Supervisor ツリー構築 | Elixir / OTP |
 | `core` | ゲームループ制御・イベント受信・セーブ・ContentBehaviour / Component インターフェース定義 | Elixir GenServer / ETS |
 | `contents` | GameEvents・シーンスタック・SceneBehaviour・ContentBehaviour 実装・Component 群・エンティティパラメータ | Elixir |
-| `network` | Phoenix Channels（WebSocket）・UDP トランスポート・ローカルマルチルーム管理 | Elixir / Phoenix |
+| `network` | Phoenix Channels・UDP・Zenoh（フレーム publish・入力 subscribe）・ローカルマルチルーム管理 | Elixir / Phoenix / Zenohex |
 | `nif` | Elixir-Rust 間 NIF ブリッジ・ゲームループ | Rust / Rustler |
 | `physics` | 物理演算・空間ハッシュ・ECS・外部注入パラメータテーブル | Rust |
 | `desktop_render` | GPU 描画パイプライン・HUD・ヘッドレスモード（ウィンドウは desktop_input が生成） | Rust / wgpu / egui |
@@ -256,7 +268,7 @@ sequenceDiagram
 
 ### 4. 描画命令の Zenoh 配信
 
-Elixir 側（contents）の RenderComponent が DrawCommand リスト・CameraParams・UiCanvas を組み立て、`FrameBroadcaster.put` で Zenoh へ publish する。`desktop_client` が subscribe して描画する。
+Elixir 側（contents）の RenderComponent が DrawCommand リスト・CameraParams・UiCanvas を組み立て、`Contents.MessagePackEncoder` で MessagePack にエンコードし、`FrameBroadcaster.put(room_id, frame_binary)` で Zenoh へ publish する。`Network.ZenohBridge` が受信し、`desktop_client` が subscribe して描画する。ローカル描画は廃止済み（Zenoh 専用）。
 
 ### 5. ContentBehaviour + Component による拡張設計
 
@@ -287,14 +299,14 @@ graph LR
 ```mermaid
 sequenceDiagram
     participant MX as mix run
-    participant APP as GameServer.Application
+    participant APP as Server.Application
     participant RS as RoomSupervisor
     participant GEV as GameEvents
     participant NIF as NifBridge (nif)
     participant COMP as Component 群（on_ready）
 
     MX->>APP: start/2
-    APP->>APP: Registry / Contents.SceneStack / InputHandler / EventBus 起動
+    APP->>APP: Registry / SceneStack / EventBus / RoomSupervisor / StressMonitor / Stats / Telemetry 起動
     APP->>RS: RoomSupervisor 起動
     APP->>APP: StressMonitor / Stats / Telemetry 起動
     APP->>RS: start_room(:main)

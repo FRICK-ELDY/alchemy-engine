@@ -2,7 +2,7 @@
 
 ## 概要
 
-`contents` はゲームコンテンツ（VampireSurvivor / AsteroidArena / SimpleBox3D / BulletHell3D / RollingBall / VRTest / CanvasTest / FormulaTest）の実装と、シーン管理・メインゲームループのディスパッチを担当します。エンジン本体（[core](./core.md)）はゲームロジックを知らず、ContentBehaviour で定義されたインターフェースに従ってコンポーネントへ委譲します。Phase R-2 以降、描画は Elixir 側の RenderComponent が DrawCommand・Camera・UiCanvas を組み立て、`push_render_frame` NIF で RenderFrameBuffer に書き込む。
+`contents` はゲームコンテンツ（VampireSurvivor / AsteroidArena / SimpleBox3D / BulletHell3D / RollingBall / VRTest / CanvasTest / FormulaTest / Telemetry）の実装と、シーン管理・メインゲームループのディスパッチを担当します。エンジン本体（[core](./core.md)）はゲームロジックを知らず、ContentBehaviour で定義されたインターフェースに従ってコンポーネントへ委譲します。描画は Zenoh 専用。RenderComponent が DrawCommand・Camera・UiCanvas を組み立て、`Contents.MessagePackEncoder` で MessagePack にエンコードし、`FrameBroadcaster.put(room_id, frame_binary)` で Zenoh へ publish する。
 
 使用するコンテンツは `config/config.exs` の `config :server, :current, ...` で指定します（既定値は `Content.VampireSurvivor`）。
 
@@ -18,7 +18,7 @@ graph LR
     SC["SpawnComponent\non_ready: ワールド初期化"]
     LC["LevelComponent\non_frame_event: EXP・HP\non_nif_sync: NIF 注入"]
     BC["BossComponent\non_physics_process: ボス AI\non_nif_sync: ボス HP 注入"]
-    RC["RenderComponent\non_nif_sync: push_render_frame"]
+    RC["RenderComponent\non_nif_sync: FrameBroadcaster.put"]
 
     CB -->|components/0 で列挙| SC
     CB -->|components/0 で列挙| LC
@@ -77,11 +77,9 @@ Rust の 60Hz ゲームループから `{:frame_events, events}` を受信し、
   room_id: atom(),
   world_ref: reference(),
   control_ref: reference(),
-  render_buf_ref: reference(),   # RenderFrameBuffer（push_render_frame 用）
   last_tick: integer(),
   frame_count: integer(),
-  start_ms: integer(),
-  render_started: boolean()
+  start_ms: integer()
 }
 ```
 
@@ -130,6 +128,15 @@ stateDiagram-v2
 | `Content.VRTest` | VR 動作検証（Phase A: マウスで見回し） | - |
 | `Content.CanvasTest` | 描画テスト用（DrawCommand・UiCanvas・CanvasUI 動作検証） | [docs/task/canvas-test-design.md](../../task/canvas-test-design.md) |
 | `Content.FormulaTest` | Formula エンジン検証（Elixir→Rust NIF VM→Elixir フロー、Input / Render コンポーネント） | - |
+| `Content.Telemetry` | 入力状態のリアルタイム表示（キーボード・マウス、デバッグ用） | - |
+
+**補助モジュール**
+
+| モジュール | 説明 |
+|:---|:---|
+| `Contents.ComponentList` | コンポーネント解決。LocalUserComponent・TelemetryComponent を自動注入 |
+| `Contents.FrameBroadcaster` | Zenoh フレーム配信。`put(room_id, frame_binary)` で Process.put → GameEvents が ZenohBridge に配送 |
+| `Contents.MessagePackEncoder` | RenderFrame の MessagePack エンコード |
 
 ---
 

@@ -33,14 +33,13 @@
 | `set_map_obstacles/2` | 障害物リストを設定 |
 | `create_game_loop_control/0` | GameLoopControl リソースを生成 |
 | `start_rust_game_loop/3` | Rust 60Hz ゲームループを開始 |
-| `start_render_thread/5` | レンダースレッドを起動（world, render_buf, pid, title, atlas_path） |
 | `pause_physics/1` | 物理演算を一時停止 |
 | `resume_physics/1` | 物理演算を再開 |
 | `physics_step/2` | 1 フレーム物理ステップ |
 | `set_player_input/3` | 移動ベクトルを設定 |
 | `drain_frame_events/1` | フレームイベントを取り出す |
 
-`create_render_frame_buffer/0` は GameEvents が `Core.NifBridge` を直接呼び出して使用する（Core 公開 API には含まない）。
+描画は Zenoh 専用。Elixir の RenderComponent が `FrameBroadcaster.put` で Zenoh へ publish する。ローカル描画（NIF 内 RenderFrameBuffer）は廃止済み。
 
 ---
 
@@ -109,7 +108,7 @@ NIF 関数は 3 カテゴリに分類されます：
 @callback on_physics_process(context())  :: :ok  # 物理フレーム（60Hz）
 @callback on_event(event(), context())   :: :ok  # UI アクション・内部イベント
 @callback on_frame_event(event(), context()) :: :ok  # Rust フレームイベント
-@callback on_nif_sync(context())         :: :ok  # 毎フレームの NIF 注入・push_render_frame
+@callback on_nif_sync(context())         :: :ok  # 毎フレームの NIF 注入・FrameBroadcaster.put（RenderComponent）
 @callback on_engine_message(msg(), context()) :: :ok  # 遅延コールバック等のディスパッチ
 ```
 
@@ -118,7 +117,7 @@ NIF 関数は 3 カテゴリに分類されます：
 | フィールド | 説明 |
 |:---|:---|
 | `context.world_ref` | Rust ワールドへの参照 |
-| `context.render_buf_ref` | RenderFrameBuffer への参照（push_render_frame NIF に渡す） |
+| `context.room_id` | ルーム ID（FrameBroadcaster.put の room_id に渡す） |
 | `context.now` | 現在時刻（monotonic ms） |
 | `context.elapsed` | ゲーム開始からの経過 ms |
 | `context.frame_count` | フレームカウンタ |

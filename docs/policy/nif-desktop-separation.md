@@ -30,5 +30,5 @@
 
 ## 4. 関連
 
-- [nif-desktop-zenoh-only-plan.md](../plan/nif-desktop-zenoh-only-plan.md)
+- [improvement-plan.md](../plan/improvement-plan.md)（I-P render_interpolation, I-Q VR xr フィーチャー）
 - [zenoh-frame-serialization](./zenoh-frame-serialization.md)

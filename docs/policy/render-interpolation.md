@@ -30,4 +30,4 @@
 
 ## 4. 関連
 
-- [nif-desktop-zenoh-only-plan.md](../plan/nif-desktop-zenoh-only-plan.md) — セクション 5
+- [improvement-plan.md](../plan/improvement-plan.md)（I-P render_interpolation）
