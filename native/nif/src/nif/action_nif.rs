@@ -6,7 +6,7 @@ use physics::constants::POPUP_Y_OFFSET;
 use physics::game_logic::systems::spawn::get_spawn_positions_around_player;
 use physics::item::ItemKind;
 use physics::weapon::WeaponSlot;
-use physics::world::{GameWorld, SpecialEntitySnapshot};
+use physics::world::{GameWorld, SpecialEntitySnapshot, DEFAULT_BULLET_HIT_COLOR};
 use rustler::{Atom, NifResult, ResourceArc};
 
 use crate::{alive, ok};
@@ -127,6 +127,7 @@ pub fn spawn_projectile(
         lifetime as f32,
         false, // is_player: プレイヤー弾は weapon システム経由で管理するため常に false
         kind,
+        DEFAULT_BULLET_HIT_COLOR,
     );
     Ok(ok())
 }

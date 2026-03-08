@@ -23,9 +23,6 @@ pub const DEFAULT_AURA_RADIUS: f32 = 150.0;
 /// params テーブルに該当 ID が存在しない場合のデフォルト chain 数
 pub const DEFAULT_CHAIN_COUNT: usize = 1;
 
-/// Chain 武器がボスに連鎖する最大距離
-pub const CHAIN_BOSS_RANGE: f32 = 600.0;
-
 // ─── EnemyParams ────────────────────────────────────────────────
 
 /// 敵のパラメータ（kind_id: u8 で参照）
@@ -89,6 +86,8 @@ pub struct WeaponParams {
     pub whip_half_angle_rad: f32,
     /// 武器エフェクト表示時間（秒）。Whip/Lightning 等。contents から注入。
     pub effect_lifetime_sec: f32,
+    /// P2-1: ヒット時パーティクル色 [r, g, b, a]。contents から注入。None の場合は DEFAULT_PARTICLE_COLOR。
+    pub hit_particle_color: Option<[f32; 4]>,
 }
 
 impl WeaponParams {
@@ -226,6 +225,7 @@ mod tests {
                 aimed_spread_rad: 0.0,
                 whip_half_angle_rad: 0.0,
                 effect_lifetime_sec: 0.0,
+                hit_particle_color: None,
             }],
             bosses: vec![BossParams {
                 max_hp: 1000.0,

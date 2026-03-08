@@ -101,6 +101,14 @@ pub struct GameWorldInner {
     /// R-S1: 敵スポーン距離（set_world_params で注入可能）。プレイヤー周囲 min〜max px の円周上
     pub spawn_min_dist: f32,
     pub spawn_max_dist: f32,
+    /// P2-2: パーティクル重力（set_world_params で注入可能）。未注入時 200.0
+    pub particle_gravity: f32,
+    /// P2-3: 弾丸衝突クエリ半径（set_world_params で注入可能）。BULLET_RADIUS + 敵最大半径
+    pub bullet_query_radius: f32,
+    /// P2-3: マップ外判定マージン（set_world_params で注入可能）
+    pub map_margin: f32,
+    /// P2-3: Chain 武器がボスに連鎖する最大距離（set_world_params で注入可能）
+    pub chain_boss_range: f32,
     /// Phase R-3 以降デッドフィールド: push_render_frame の HudData に移行済み。
     /// ゲームロジック・レンダリングパイプラインのいずれも参照しない。
     pub hud_level: u32,

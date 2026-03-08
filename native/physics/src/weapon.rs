@@ -64,6 +64,7 @@ mod tests {
                 aimed_spread_rad: 0.0,
                 whip_half_angle_rad: 0.0,
                 effect_lifetime_sec: 0.0,
+                hit_particle_color: None,
             }],
             bosses: vec![],
         }

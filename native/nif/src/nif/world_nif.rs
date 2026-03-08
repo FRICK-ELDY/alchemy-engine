@@ -70,6 +70,10 @@ pub fn create_world() -> ResourceArc<GameWorld> {
         magnet_speed: 300.0,
         spawn_min_dist: 800.0,
         spawn_max_dist: 1200.0,
+        particle_gravity: 200.0,
+        bullet_query_radius: 38.0,
+        map_margin: 100.0,
+        chain_boss_range: 600.0,
         hud_level: 1,
         hud_exp: 0,
         hud_exp_to_next: 10,
@@ -214,6 +218,18 @@ pub fn set_world_params(world: ResourceArc<GameWorld>, params: Term) -> NifResul
     }
     if let Ok(v) = map_get::<f64>(params, "spawn_max_dist") {
         w.spawn_max_dist = v as f32;
+    }
+    if let Ok(v) = map_get::<f64>(params, "particle_gravity") {
+        w.particle_gravity = v as f32;
+    }
+    if let Ok(v) = map_get::<f64>(params, "bullet_query_radius") {
+        w.bullet_query_radius = v as f32;
+    }
+    if let Ok(v) = map_get::<f64>(params, "map_margin") {
+        w.map_margin = v as f32;
+    }
+    if let Ok(v) = map_get::<f64>(params, "chain_boss_range") {
+        w.chain_boss_range = v as f32;
     }
     Ok(ok())
 }
@@ -432,6 +448,16 @@ fn decode_particle_color(item: Term) -> [f32; 4] {
     DEFAULT_PARTICLE_COLOR
 }
 
+/// P2-1: weapon_params の hit_particle_color をデコード。キー欠損時は None。
+fn decode_optional_hit_particle_color(item: Term) -> Option<[f32; 4]> {
+    if let Ok(v) = map_get::<Vec<f64>>(item, "hit_particle_color") {
+        if v.len() == 4 {
+            return Some([v[0] as f32, v[1] as f32, v[2] as f32, v[3] as f32]);
+        }
+    }
+    None
+}
+
 fn decode_fire_pattern(s: &str) -> FirePattern {
     match s {
         "aimed" => FirePattern::Aimed,
@@ -475,6 +501,7 @@ fn decode_weapon_params(term: Term) -> NifResult<Vec<WeaponParams>> {
         let aimed_spread_rad = decode_opt_f32_or_warn(item, "aimed_spread_rad");
         let whip_half_angle_rad = decode_opt_f32_or_warn(item, "whip_half_angle_rad");
         let effect_lifetime_sec = decode_opt_f32_or_warn(item, "effect_lifetime_sec");
+        let hit_particle_color = decode_optional_hit_particle_color(item);
         Ok(WeaponParams {
             cooldown: map_get::<f64>(item, "cooldown")? as f32,
             damage: map_get::<i64>(item, "damage")? as i32,
@@ -491,6 +518,7 @@ fn decode_weapon_params(term: Term) -> NifResult<Vec<WeaponParams>> {
             aimed_spread_rad,
             whip_half_angle_rad,
             effect_lifetime_sec,
+            hit_particle_color,
         })
     })
     .collect()

@@ -1,10 +1,13 @@
 use crate::constants::{MAX_ENEMIES, WEAPON_SEARCH_RADIUS};
 use crate::entity_params::{
-    FirePattern, CHAIN_BOSS_RANGE, DEFAULT_AURA_RADIUS, DEFAULT_CHAIN_COUNT, DEFAULT_ENEMY_RADIUS,
+    FirePattern, DEFAULT_AURA_RADIUS, DEFAULT_CHAIN_COUNT, DEFAULT_ENEMY_RADIUS,
     DEFAULT_PARTICLE_COLOR, DEFAULT_WHIP_RANGE,
 };
 use crate::game_logic::{find_nearest_enemy_spatial, find_nearest_enemy_spatial_excluding};
-use crate::world::{FrameEvent, GameWorldInner, BULLET_KIND_LIGHTNING, BULLET_KIND_WHIP};
+use crate::world::{
+    FrameEvent, GameWorldInner, BULLET_KIND_LIGHTNING, BULLET_KIND_WHIP, DEFAULT_BULLET_HIT_COLOR,
+    DEFAULT_PIERCING_HIT_COLOR,
+};
 
 pub(crate) fn update_weapon_attacks(w: &mut GameWorldInner, dt: f32, px: f32, py: f32) {
     if w.params.weapons.is_empty() {
@@ -39,12 +42,20 @@ pub(crate) fn update_weapon_attacks(w: &mut GameWorldInner, dt: f32, px: f32, py
         let bcount = w.weapon_slots_input[si].bullet_count(wp);
         let pattern = wp.fire_pattern;
 
+        let hit_color = wp
+            .hit_particle_color
+            .unwrap_or(DEFAULT_BULLET_HIT_COLOR);
+        let piercing_hit_color = wp
+            .hit_particle_color
+            .unwrap_or(DEFAULT_PIERCING_HIT_COLOR);
         match pattern {
-            FirePattern::Aimed => fire_aimed(w, si, px, py, dmg, bcount, cd, wp.aimed_spread_rad),
-            FirePattern::FixedUp => fire_fixed_up(w, si, px, py, dmg, cd),
-            FirePattern::Radial => fire_radial(w, si, px, py, dmg, bcount, cd),
+            FirePattern::Aimed => {
+                fire_aimed(w, si, px, py, dmg, bcount, cd, wp.aimed_spread_rad, hit_color)
+            }
+            FirePattern::FixedUp => fire_fixed_up(w, si, px, py, dmg, cd, hit_color),
+            FirePattern::Radial => fire_radial(w, si, px, py, dmg, bcount, cd, hit_color),
             FirePattern::Whip => fire_whip(w, si, px, py, dmg, level, kind_id, cd, facing_angle),
-            FirePattern::Piercing => fire_piercing(w, si, px, py, dmg, cd),
+            FirePattern::Piercing => fire_piercing(w, si, px, py, dmg, cd, piercing_hit_color),
             FirePattern::Chain => fire_chain(w, si, px, py, dmg, level, kind_id, cd),
             FirePattern::Aura => fire_aura(w, si, px, py, dmg, level, kind_id, cd),
         }
@@ -67,6 +78,7 @@ fn fire_aimed(
     bcount: usize,
     cd: f32,
     spread_rad: f32,
+    hit_color: [f32; 4],
 ) {
     if let Some(ti) = find_nearest_enemy_spatial(
         &w.collision,
@@ -90,15 +102,42 @@ fn fire_aimed(
             let angle = base_angle + (bi as f32 - half) * spread;
             let vx = angle.cos() * w.bullet_speed;
             let vy = angle.sin() * w.bullet_speed;
-            w.bullets.spawn(px, py, vx, vy, dmg, w.bullet_lifetime);
+            w.bullets.spawn_with_hit_color(
+                px,
+                py,
+                vx,
+                vy,
+                dmg,
+                w.bullet_lifetime,
+                false,
+                crate::world::BULLET_KIND_NORMAL,
+                hit_color,
+            );
         }
         w.weapon_slots_input[si].cooldown_timer = cd;
     }
 }
 
-fn fire_fixed_up(w: &mut GameWorldInner, si: usize, px: f32, py: f32, dmg: i32, cd: f32) {
-    w.bullets
-        .spawn(px, py, 0.0, -w.bullet_speed, dmg, w.bullet_lifetime);
+fn fire_fixed_up(
+    w: &mut GameWorldInner,
+    si: usize,
+    px: f32,
+    py: f32,
+    dmg: i32,
+    cd: f32,
+    hit_color: [f32; 4],
+) {
+    w.bullets.spawn_with_hit_color(
+        px,
+        py,
+        0.0,
+        -w.bullet_speed,
+        dmg,
+        w.bullet_lifetime,
+        false,
+        crate::world::BULLET_KIND_NORMAL,
+        hit_color,
+    );
     w.weapon_slots_input[si].cooldown_timer = cd;
 }
 
@@ -110,6 +149,7 @@ fn fire_radial(
     dmg: i32,
     bcount: usize,
     cd: f32,
+    hit_color: [f32; 4],
 ) {
     let dirs_4: [(f32, f32); 4] = [(0.0, -1.0), (0.0, 1.0), (-1.0, 0.0), (1.0, 0.0)];
     let diag = std::f32::consts::FRAC_1_SQRT_2;
@@ -125,13 +165,16 @@ fn fire_radial(
     ];
     let dirs: &[(f32, f32)] = if bcount >= 8 { &dirs_8 } else { &dirs_4 };
     for &(dx_dir, dy_dir) in dirs {
-        w.bullets.spawn(
+        w.bullets.spawn_with_hit_color(
             px,
             py,
             dx_dir * w.bullet_speed,
             dy_dir * w.bullet_speed,
             dmg,
             w.bullet_lifetime,
+            false,
+            crate::world::BULLET_KIND_NORMAL,
+            hit_color,
         );
     }
     w.weapon_slots_input[si].cooldown_timer = cd;
@@ -150,6 +193,9 @@ fn fire_whip(
     facing_angle: f32,
 ) {
     let wp = w.params.get_weapon(kind_id);
+    let whip_hit_color = wp
+        .and_then(|p| p.hit_particle_color)
+        .unwrap_or([1.0, 0.6, 0.1, 1.0]);
     // wp が None の場合は params 未ロードなどの異常系。フォールバックで最低限動作させる。
     let range = wp.map(|p| p.whip_range(level)).unwrap_or(DEFAULT_WHIP_RANGE);
     let whip_half_angle = wp.map(|p| p.whip_half_angle_rad).unwrap_or(0.0);
@@ -212,7 +258,7 @@ fn fire_whip(
                 });
                 w.particles.emit(hit_x, hit_y, 8, particle_color);
             } else {
-                w.particles.emit(hit_x, hit_y, 3, [1.0, 0.6, 0.1, 1.0]);
+                w.particles.emit(hit_x, hit_y, 3, whip_hit_color);
             }
         }
     }
@@ -244,13 +290,21 @@ fn fire_whip(
         if let Some((bx, by)) = special_hit {
             w.frame_events
                 .push(FrameEvent::SpecialEntityDamaged { damage: dmg as f32 });
-            w.particles.emit(bx, by, 4, [1.0, 0.8, 0.2, 1.0]);
+            w.particles.emit(bx, by, 4, whip_hit_color);
         }
     }
     w.weapon_slots_input[si].cooldown_timer = cd;
 }
 
-fn fire_piercing(w: &mut GameWorldInner, si: usize, px: f32, py: f32, dmg: i32, cd: f32) {
+fn fire_piercing(
+    w: &mut GameWorldInner,
+    si: usize,
+    px: f32,
+    py: f32,
+    dmg: i32,
+    cd: f32,
+    hit_color: [f32; 4],
+) {
     if let Some(ti) = find_nearest_enemy_spatial(
         &w.collision,
         &w.enemies,
@@ -269,8 +323,17 @@ fn fire_piercing(w: &mut GameWorldInner, si: usize, px: f32, py: f32, dmg: i32, 
         let base_angle = (ty - py).atan2(tx - px);
         let vx = base_angle.cos() * w.bullet_speed;
         let vy = base_angle.sin() * w.bullet_speed;
-        w.bullets
-            .spawn_piercing(px, py, vx, vy, dmg, w.bullet_lifetime);
+        w.bullets.spawn_with_hit_color(
+            px,
+            py,
+            vx,
+            vy,
+            dmg,
+            w.bullet_lifetime,
+            true,
+            crate::world::BULLET_KIND_FIREBALL,
+            hit_color,
+        );
         w.weapon_slots_input[si].cooldown_timer = cd;
     }
 }
@@ -293,6 +356,9 @@ fn fire_chain(
     let chain_effect_lifetime = wp_chain
         .map(|p| p.effect_lifetime_sec)
         .unwrap_or(0.0);
+    let chain_hit_color = wp_chain
+        .and_then(|p| p.hit_particle_color)
+        .unwrap_or([0.3, 0.8, 1.0, 1.0]);
     if chain_count == 0 {
         log::warn!(
             "Chain weapon kind_id={} has no chain_count_per_level or empty table — chain will not fire",
@@ -329,7 +395,7 @@ fn fire_chain(
                 chain_effect_lifetime,
                 BULLET_KIND_LIGHTNING,
             );
-            w.particles.emit(hit_x, hit_y, 5, [0.3, 0.8, 1.0, 1.0]);
+            w.particles.emit(hit_x, hit_y, 5, chain_hit_color);
             if w.enemies.hp[ei] <= 0.0 {
                 let kind_e = w.enemies.kind_ids[ei];
                 w.enemies.kill(ei);
@@ -363,7 +429,8 @@ fn fire_chain(
             if !snap.invincible {
                 let ddx = snap.x - px;
                 let ddy = snap.y - py;
-                if ddx * ddx + ddy * ddy < CHAIN_BOSS_RANGE * CHAIN_BOSS_RANGE {
+                let r = w.chain_boss_range;
+                if ddx * ddx + ddy * ddy < r * r {
                     Some((snap.x, snap.y))
                 } else {
                     None
@@ -383,7 +450,7 @@ fn fire_chain(
                 chain_effect_lifetime,
                 BULLET_KIND_LIGHTNING,
             );
-            w.particles.emit(bx, by, 5, [0.3, 0.8, 1.0, 1.0]);
+            w.particles.emit(bx, by, 5, chain_hit_color);
         }
     }
     w.weapon_slots_input[si].cooldown_timer = cd;
@@ -400,11 +467,13 @@ fn fire_aura(
     kind_id: u8,
     cd: f32,
 ) {
-    let radius = w
-        .params
-        .get_weapon(kind_id)
+    let wp_aura = w.params.get_weapon(kind_id);
+    let radius = wp_aura
         .map(|wp| wp.aura_radius(level))
         .unwrap_or(DEFAULT_AURA_RADIUS);
+    let aura_hit_color = wp_aura
+        .and_then(|p| p.hit_particle_color)
+        .unwrap_or([0.9, 0.9, 0.3, 0.6]);
     if radius <= 0.0 {
         log::warn!(
             "Aura weapon kind_id={} has no aura_radius_per_level or empty table — weapon will not hit",
@@ -444,7 +513,7 @@ fn fire_aura(
             });
             w.particles.emit(hit_x, hit_y, 8, particle_color);
         } else {
-            w.particles.emit(hit_x, hit_y, 2, [0.9, 0.9, 0.3, 0.6]);
+            w.particles.emit(hit_x, hit_y, 2, aura_hit_color);
         }
     }
     w.weapon_slots_input[si].cooldown_timer = cd;

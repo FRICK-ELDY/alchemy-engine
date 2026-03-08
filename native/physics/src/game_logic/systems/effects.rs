@@ -15,7 +15,7 @@ pub(crate) fn update_particles(w: &mut GameWorldInner, dt: f32) {
         }
         w.particles.positions_x[i] += w.particles.velocities_x[i] * dt;
         w.particles.positions_y[i] += w.particles.velocities_y[i] * dt;
-        w.particles.velocities_y[i] += 200.0 * dt;
+        w.particles.velocities_y[i] += w.particle_gravity * dt;
         w.particles.lifetime[i] -= dt;
         if w.particles.lifetime[i] <= 0.0 {
             w.particles.kill(i);
