@@ -4,7 +4,7 @@
 
 `desktop_render` は **wgpu** による GPU 描画パイプライン・**egui** HUD・ヘッドレスモードを担当します。ウィンドウとイベントループは [desktop_input](./input.md) が担当します。
 
-Phase R-2 以降、**RenderFrame**（DrawCommand リスト・CameraParams・UiCanvas）は Elixir 側の RenderComponent が `push_render_frame` NIF で RenderFrameBuffer に書き込み、RenderBridge の `next_frame()` がそれを取得して描画する。desktop_client の場合は Zenoh 経由で RenderFrame を受信する。
+**RenderFrame**（DrawCommand リスト・CameraParams・UiCanvas）は Elixir 側の RenderComponent が MessagePack にエンコードし、`FrameBroadcaster.put` → `Network.ZenohBridge.publish_frame` で Zenoh へ publish する。`desktop_client` は Zenoh 経由で `game/room/{room_id}/frame` を subscribe し、RenderFrame を受信して描画する。ローカル描画（NIF 内 RenderFrameBuffer）は廃止済み（Zenoh 専用）。
 
 - **パス**: `native/desktop_render/`
 - **依存**: `physics`, `wgpu`, `winit`, `egui`, `bytemuck`, `image`, `pollster`, `log`

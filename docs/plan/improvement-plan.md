@@ -228,6 +228,61 @@ LocalUserComponent への移行は完了済み（Contents.LocalUserComponent、C
 
 ---
 
+### I-P: render_interpolation（3D 補間のクライアント移行）
+
+**優先度**: 🟢 中
+
+**出典**: `nif-desktop-zenoh-only-plan.md`（統合により削除済み）
+
+**背景**
+
+NIF と desktop の Zenoh 専用化は完了。残課題として、3D 位置・姿勢の補間ロジックをサーバー（nif/physics）からクライアント側に移行する。
+
+**方針**
+
+- **2D 補間**: 廃止（分散型 VRSNS は基本 3D のため不要）
+- **3D 補間**: クライアント側で `render_interpolation` クレートを新規作成。nif/physics にある補間ロジックを移す
+- **プロトコル拡張**: フレームに `player_interp`（prev/curr pose, prev_tick_ms, curr_tick_ms）を追加。サーバーが生成して Zenoh で publish
+- **desktop_render / NetworkRenderBridge** が `render_interpolation` を呼び出し、補間後の座標で描画
+
+**実装ステップ**
+
+| ステップ | 内容 | 工数目安 |
+|:---|:---|:---|
+| 5a | `render_interpolation` クレート新規作成。3D 位置・姿勢の線形補間 API | 2〜3 日 |
+| 5b | フレームペイロードに `player_interp` を追加。Elixir 側でサーバーフレームに含める | 1 週間 |
+| 5c | `NetworkRenderBridge` または `desktop_render` で `render_interpolation` を呼び出し | 1 週間 |
+| 5d | physics / nif から補間用フィールド（prev_player_x/y 等）と render_bridge の補間ロジックを削除 | 数日 |
+
+**補間ロジックの現状所在**
+
+- `physics/world/game_world.rs`: prev_player_x, prev_player_y, prev_tick_ms, curr_tick_ms
+- `nif/push_tick_nif.rs`: physics_step 前に prev_player_x/y を更新
+- （render_bridge は削除済み。補間ロジックは別途移行先を特定）
+
+**関連**
+
+- [zenoh-protocol-spec.md](../architecture/zenoh-protocol-spec.md)
+- [client-server-separation-procedure.md](./client-server-separation-procedure.md)
+
+---
+
+### I-Q: VR（desktop_input_openxr）の nif xr フィーチャー扱い
+
+**優先度**: 🟢 低
+
+**出典**: `nif-desktop-zenoh-only-plan.md`（統合により削除済み）
+
+**問題**
+
+nif の `xr` フィーチャーは `desktop_input_openxr` に依存。NIF から desktop 依存を削除した結果、VR 入力の扱いが未決定。
+
+**方針**
+
+VR 入力は将来的にクライアント側で扱うか、別設計とする。現時点では別途検討。
+
+---
+
 
 ## 改善の優先順位と推奨実施順序
 
@@ -256,10 +311,17 @@ graph TD
 7. **I-L**: `create_world` の `NifResult` ラップ
 8. **I-M**: Diagnostics のコンテンツ固有知識除去
 9. **I-N**: render のコンテンツ固有概念除去
+10. **I-P**: render_interpolation（3D 補間のクライアント移行）
 
 ---
 
 ## 残課題
+
+### NIF・desktop Zenoh 専用化 より
+
+| 項目 | 内容 |
+|:---|:---|
+| **zenohd + mix run + desktop_client の動作確認** | 手動で 3 プロセス起動し、ゲームがプレイ可能であることを確認する（ランチャーの Client Run で実施可能） |
 
 ### 完了済み移行の懸念点（優先度低）
 
