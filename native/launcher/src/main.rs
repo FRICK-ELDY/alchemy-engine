@@ -1,7 +1,7 @@
-//! Phase 4: zenohd + HL-Server (Phoenix Server) + Client Run
+//! Phase 5: zenohd + HL-Server (Phoenix Server) + Client Run + メニュー状態・アイコン表示
 //!
 //! トレイアイコン表示、メニューから zenohd と mix run を起動・終了。
-//! zenohd と HL-Server の起動確認後に desktop_client を起動可能。
+//! 起動中は Run 無効・Quit 有効。両方起動時はアイコン緑、それ以外は灰色。
 //!
 //! TODO: zenohd と Phoenix Server のメニューイベント処理が同パターンで重複している。
 //! 将来的に ServiceManager のような共通 abstraction でまとめると保守しやすい。
@@ -18,7 +18,7 @@ use tao::event_loop::{ControlFlow, EventLoopBuilder};
 use kill_tree::blocking::kill_tree;
 use tray_icon::{
     menu::{Menu, MenuEvent, MenuId, MenuItem, PredefinedMenuItem, Submenu},
-    Icon, TrayIconBuilder, TrayIconEvent,
+    Icon, TrayIcon, TrayIconBuilder, TrayIconEvent,
 };
 
 /// zenohd の待ち受けポート
@@ -32,14 +32,21 @@ const PORT_WAIT_TIMEOUT: Duration = Duration::from_secs(60);
 /// ポーリング間隔
 const PORT_POLL_INTERVAL: Duration = Duration::from_secs(1);
 
-// アイコン用の色定数（紫系）
-const ICON_COLOR_R: u8 = 0x4B;
-const ICON_COLOR_G: u8 = 0x27;
-const ICON_COLOR_B: u8 = 0x5F;
+// アイコン用の定数
 const ICON_SIZE: u32 = 16;
 const ICON_MARGIN: u32 = 2;
 const ICON_ALPHA_EDGE: u8 = 0x80;
 const ICON_ALPHA_CENTER: u8 = 0xFF;
+
+/// 灰色アイコン用（zenohd / Phoenix Server のいずれかが未起動）
+const ICON_GRAY_R: u8 = 0x80;
+const ICON_GRAY_G: u8 = 0x80;
+const ICON_GRAY_B: u8 = 0x80;
+
+/// 緑色アイコン用（両方起動済み）
+const ICON_GREEN_R: u8 = 0x22;
+const ICON_GREEN_G: u8 = 0x8B;
+const ICON_GREEN_B: u8 = 0x22;
 
 /// zenohd は tcp/[::]:7447 で待ち受けるため、IPv4 と IPv6 の両方を試す。
 const PORT_CHECK_ADDRESSES: &[&str] = &["127.0.0.1", "[::1]"];
@@ -201,8 +208,8 @@ fn spawn_mix_run(project_root: &Path) -> std::io::Result<Child> {
     cmd.spawn()
 }
 
-/// 16x16 のプレースホルダーアイコン（紫系）
-fn create_icon() -> Icon {
+/// 16x16 のプレースホルダーアイコン。r,g,b で色を指定。
+fn create_icon_with_color(r: u8, g: u8, b: u8) -> Icon {
     let mut rgba = Vec::with_capacity((ICON_SIZE * ICON_SIZE * 4) as usize);
     for y in 0..ICON_SIZE {
         for x in 0..ICON_SIZE {
@@ -213,7 +220,7 @@ fn create_icon() -> Icon {
             } else {
                 ICON_ALPHA_EDGE
             };
-            rgba.extend_from_slice(&[ICON_COLOR_R, ICON_COLOR_G, ICON_COLOR_B, a]);
+            rgba.extend_from_slice(&[r, g, b, a]);
         }
     }
     Icon::from_rgba(rgba, ICON_SIZE, ICON_SIZE).expect("Failed to create icon")
@@ -433,155 +440,241 @@ fn main() {
     menu.append(&PredefinedMenuItem::separator()).expect("Failed to append separator");
     menu.append(&quit_item).expect("Failed to append menu item");
 
-    let _tray_icon = TrayIconBuilder::new()
-        .with_menu(Box::new(menu))
-        .with_tooltip("AlchemyEngine")
-        .with_icon(create_icon())
-        .build()
-        .expect("Failed to create tray icon");
+    let tray_icon: Rc<TrayIcon> = Rc::new(
+        TrayIconBuilder::new()
+            .with_menu(Box::new(menu))
+            .with_tooltip("AlchemyEngine")
+            .with_icon(create_icon_with_color(ICON_GRAY_R, ICON_GRAY_G, ICON_GRAY_B))
+            .build()
+            .expect("Failed to create tray icon"),
+    );
 
     let zenohd_child: Rc<RefCell<Option<Child>>> = Rc::new(RefCell::new(None));
     let zenohd_submenu = Rc::clone(&zenohd_submenu);
     let zenohd_starting_cancelled = Rc::new(RefCell::new(false));
+    let zenohd_ready = Rc::new(RefCell::new(false));
 
     let phoenix_child: Rc<RefCell<Option<Child>>> = Rc::new(RefCell::new(None));
     let phoenix_submenu = Rc::clone(&phoenix_submenu);
     let phoenix_starting_cancelled = Rc::new(RefCell::new(false));
+    let phoenix_ready = Rc::new(RefCell::new(false));
+
+    let update_menu_and_icon = {
+        let zenohd_child = Rc::clone(&zenohd_child);
+        let phoenix_child = Rc::clone(&phoenix_child);
+        let zenohd_run_item = zenohd_run_item.clone();
+        let zenohd_quit_item = zenohd_quit_item.clone();
+        let phoenix_run_item = phoenix_run_item.clone();
+        let phoenix_quit_item = phoenix_quit_item.clone();
+        let zenohd_ready = Rc::clone(&zenohd_ready);
+        let phoenix_ready = Rc::clone(&phoenix_ready);
+        let tray_icon = Rc::clone(&tray_icon);
+        move || {
+            let zh = zenohd_child.borrow().is_some();
+            let ph = phoenix_child.borrow().is_some();
+            zenohd_run_item.set_enabled(!zh);
+            zenohd_quit_item.set_enabled(zh);
+            phoenix_run_item.set_enabled(!ph);
+            phoenix_quit_item.set_enabled(ph);
+            let both_ready = *zenohd_ready.borrow() && *phoenix_ready.borrow();
+            let icon = if both_ready {
+                create_icon_with_color(ICON_GREEN_R, ICON_GREEN_G, ICON_GREEN_B)
+            } else {
+                create_icon_with_color(ICON_GRAY_R, ICON_GRAY_G, ICON_GRAY_B)
+            };
+            let _ = tray_icon.set_icon(Some(icon));
+        }
+    };
+
+    update_menu_and_icon();
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
 
         // zenohd がクラッシュ・外部終了した場合の検知
-        {
+        let zenohd_crash = {
             let mut child_opt = zenohd_child.borrow_mut();
             if let Some(ref mut child) = *child_opt {
                 if child.try_wait().ok().flatten().is_some() {
                     *child_opt = None;
+                    *zenohd_ready.borrow_mut() = false;
                     zenohd_submenu.set_text("Zenoh Router : OFF");
+                    true
+                } else {
+                    false
                 }
+            } else {
+                false
             }
+        };
+        if zenohd_crash {
+            update_menu_and_icon();
         }
 
         // Phoenix Server がクラッシュ・外部終了した場合の検知
-        {
+        let phoenix_crash = {
             let mut child_opt = phoenix_child.borrow_mut();
             if let Some(ref mut child) = *child_opt {
                 if child.try_wait().ok().flatten().is_some() {
                     *child_opt = None;
+                    *phoenix_ready.borrow_mut() = false;
                     phoenix_submenu.set_text("Phoenix Server : OFF");
+                    true
+                } else {
+                    false
                 }
+            } else {
+                false
             }
+        };
+        if phoenix_crash {
+            update_menu_and_icon();
         }
 
         if let tao::event::Event::UserEvent(user_event) = event {
             match user_event {
                 UserEvent::Menu(menu_event) => {
                     if menu_event.id == zenohd_run_id {
-                        let mut child_opt = zenohd_child.borrow_mut();
-                        if child_opt.is_none() {
-                            match Command::new("zenohd").spawn() {
-                                Ok(child) => {
-                                    *child_opt = Some(child);
-                                    *zenohd_starting_cancelled.borrow_mut() = false;
-                                    zenohd_submenu.set_text("Zenoh Router : Starting...");
-                                    let proxy = proxy.clone();
-                                    thread::spawn(move || {
-                                        if wait_for_port(ZENOHD_PORT, PORT_WAIT_TIMEOUT, false) {
-                                            let _ = proxy.send_event(UserEvent::ZenohdReady);
-                                        } else {
-                                            let _ = proxy.send_event(UserEvent::ZenohdStartFailed(
-                                                format!(
-                                                    "Zenoh Router failed to start.\n\nPort {} did not respond within {} seconds.\n\nPlease ensure zenohd is installed correctly.",
-                                                    ZENOHD_PORT,
-                                                    PORT_WAIT_TIMEOUT.as_secs()
-                                                ),
-                                            ));
-                                        }
-                                    });
-                                }
-                                Err(e) => {
-                                    let msg = format!("Failed to start zenohd: {}", e);
-                                    rfd::MessageDialog::new()
-                                        .set_title("Zenoh Router Start Failed")
-                                        .set_description(&msg)
-                                        .set_level(rfd::MessageLevel::Error)
-                                        .show();
-                                }
-                            }
-                        }
-                    } else if menu_event.id == zenohd_quit_id {
-                        let mut child_opt = zenohd_child.borrow_mut();
-                        if let Some(mut child) = child_opt.take() {
-                            *zenohd_starting_cancelled.borrow_mut() = true;
-                            let pid = child.id();
-                            let proxy = proxy.clone();
-                            thread::spawn(move || {
-                                if let Err(e) = kill_tree(pid) {
-                                    eprintln!("zenohd の終了に失敗しました: {}", e);
-                                }
-                                let _ = child.wait();
-                                let _ = proxy.send_event(UserEvent::ZenohdQuitComplete);
-                            });
-                            zenohd_submenu.set_text("Zenoh Router : OFF");
-                        }
-                    } else if menu_event.id == phoenix_run_id {
-                        let mut child_opt = phoenix_child.borrow_mut();
-                        if child_opt.is_none() {
-                            if let Some(project_root) = find_project_root() {
-                                match spawn_mix_run(&project_root) {
+                        let zenohd_started = {
+                            let mut child_opt = zenohd_child.borrow_mut();
+                            if child_opt.is_none() {
+                                match Command::new("zenohd").spawn() {
                                     Ok(child) => {
                                         *child_opt = Some(child);
-                                        *phoenix_starting_cancelled.borrow_mut() = false;
-                                        phoenix_submenu.set_text("Phoenix Server : Starting...");
+                                        *zenohd_starting_cancelled.borrow_mut() = false;
+                                        zenohd_submenu.set_text("Zenoh Router : Starting...");
                                         let proxy = proxy.clone();
                                         thread::spawn(move || {
-                                            if wait_for_port(PHOENIX_SERVER_PORT, PORT_WAIT_TIMEOUT, false) {
-                                                let _ = proxy.send_event(UserEvent::PhoenixServerReady);
+                                            if wait_for_port(ZENOHD_PORT, PORT_WAIT_TIMEOUT, false) {
+                                                let _ = proxy.send_event(UserEvent::ZenohdReady);
                                             } else {
-                                                let _ = proxy.send_event(
-                                                    UserEvent::PhoenixServerStartFailed(format!(
-                                                        "Phoenix Server failed to start.\n\nPort {} did not respond within {} seconds.",
-                                                        PHOENIX_SERVER_PORT,
+                                                let _ = proxy.send_event(UserEvent::ZenohdStartFailed(
+                                                    format!(
+                                                        "Zenoh Router failed to start.\n\nPort {} did not respond within {} seconds.\n\nPlease ensure zenohd is installed correctly.",
+                                                        ZENOHD_PORT,
                                                         PORT_WAIT_TIMEOUT.as_secs()
-                                                    )),
-                                                );
+                                                    ),
+                                                ));
                                             }
                                         });
+                                        true
                                     }
                                     Err(e) => {
-                                        let msg = format!(
-                                            "Failed to start Phoenix Server: {}\n\nEnsure Elixir and mix are installed.",
-                                            e
-                                        );
+                                        let msg = format!("Failed to start zenohd: {}", e);
                                         rfd::MessageDialog::new()
-                                            .set_title("Phoenix Server Start Failed")
+                                            .set_title("Zenoh Router Start Failed")
                                             .set_description(&msg)
                                             .set_level(rfd::MessageLevel::Error)
                                             .show();
+                                        false
                                     }
                                 }
                             } else {
-                                rfd::MessageDialog::new()
-                                    .set_title("Phoenix Server Start Failed")
-                                    .set_description("mix.exs not found. Run the launcher from the project directory.")
-                                    .set_level(rfd::MessageLevel::Error)
-                                    .show();
+                                false
                             }
+                        };
+                        if zenohd_started {
+                            update_menu_and_icon();
+                        }
+                    } else if menu_event.id == zenohd_quit_id {
+                        let zenohd_quitting = {
+                            let mut child_opt = zenohd_child.borrow_mut();
+                            if let Some(mut child) = child_opt.take() {
+                                *zenohd_starting_cancelled.borrow_mut() = true;
+                                let pid = child.id();
+                                let proxy = proxy.clone();
+                                thread::spawn(move || {
+                                    if let Err(e) = kill_tree(pid) {
+                                        eprintln!("zenohd の終了に失敗しました: {}", e);
+                                    }
+                                    let _ = child.wait();
+                                    let _ = proxy.send_event(UserEvent::ZenohdQuitComplete);
+                                });
+                                zenohd_submenu.set_text("Zenoh Router : OFF");
+                                true
+                            } else {
+                                false
+                            }
+                        };
+                        if zenohd_quitting {
+                            update_menu_and_icon();
+                        }
+                    } else if menu_event.id == phoenix_run_id {
+                        let phoenix_started = {
+                            let mut child_opt = phoenix_child.borrow_mut();
+                            if child_opt.is_none() {
+                                if let Some(project_root) = find_project_root() {
+                                    match spawn_mix_run(&project_root) {
+                                        Ok(child) => {
+                                            *child_opt = Some(child);
+                                            *phoenix_starting_cancelled.borrow_mut() = false;
+                                            phoenix_submenu.set_text("Phoenix Server : Starting...");
+                                            let proxy = proxy.clone();
+                                            thread::spawn(move || {
+                                                if wait_for_port(PHOENIX_SERVER_PORT, PORT_WAIT_TIMEOUT, false) {
+                                                    let _ = proxy.send_event(UserEvent::PhoenixServerReady);
+                                                } else {
+                                                    let _ = proxy.send_event(
+                                                        UserEvent::PhoenixServerStartFailed(format!(
+                                                            "Phoenix Server failed to start.\n\nPort {} did not respond within {} seconds.",
+                                                            PHOENIX_SERVER_PORT,
+                                                            PORT_WAIT_TIMEOUT.as_secs()
+                                                        )),
+                                                    );
+                                                }
+                                            });
+                                            true
+                                        }
+                                        Err(e) => {
+                                            let msg = format!(
+                                                "Failed to start Phoenix Server: {}\n\nEnsure Elixir and mix are installed.",
+                                                e
+                                            );
+                                            rfd::MessageDialog::new()
+                                                .set_title("Phoenix Server Start Failed")
+                                                .set_description(&msg)
+                                                .set_level(rfd::MessageLevel::Error)
+                                                .show();
+                                            false
+                                        }
+                                    }
+                                } else {
+                                    rfd::MessageDialog::new()
+                                        .set_title("Phoenix Server Start Failed")
+                                        .set_description("mix.exs not found. Run the launcher from the project directory.")
+                                        .set_level(rfd::MessageLevel::Error)
+                                        .show();
+                                    false
+                                }
+                            } else {
+                                false
+                            }
+                        };
+                        if phoenix_started {
+                            update_menu_and_icon();
                         }
                     } else if menu_event.id == phoenix_quit_id {
-                        let mut child_opt = phoenix_child.borrow_mut();
-                        if let Some(mut child) = child_opt.take() {
-                            *phoenix_starting_cancelled.borrow_mut() = true;
-                            let pid = child.id();
-                            let proxy = proxy.clone();
-                            thread::spawn(move || {
-                                if let Err(e) = kill_tree(pid) {
-                                    eprintln!("Phoenix Server の終了に失敗しました: {}", e);
-                                }
-                                let _ = child.wait();
-                                let _ = proxy.send_event(UserEvent::PhoenixServerQuitComplete);
-                            });
-                            phoenix_submenu.set_text("Phoenix Server : OFF");
+                        let phoenix_quitting = {
+                            let mut child_opt = phoenix_child.borrow_mut();
+                            if let Some(mut child) = child_opt.take() {
+                                *phoenix_starting_cancelled.borrow_mut() = true;
+                                let pid = child.id();
+                                let proxy = proxy.clone();
+                                thread::spawn(move || {
+                                    if let Err(e) = kill_tree(pid) {
+                                        eprintln!("Phoenix Server の終了に失敗しました: {}", e);
+                                    }
+                                    let _ = child.wait();
+                                    let _ = proxy.send_event(UserEvent::PhoenixServerQuitComplete);
+                                });
+                                phoenix_submenu.set_text("Phoenix Server : OFF");
+                                true
+                            } else {
+                                false
+                            }
+                        };
+                        if phoenix_quitting {
+                            update_menu_and_icon();
                         }
                     } else if menu_event.id == client_run_id {
                         let proxy = proxy.clone();
@@ -621,7 +714,9 @@ fn main() {
                 // イベントでも再度設定する。try_wait 検知やイベント順序の競合で OFF 表示が
                 // 抜ける場合の整合性を保つため。
                 UserEvent::ZenohdQuitComplete => {
+                    *zenohd_ready.borrow_mut() = false;
                     zenohd_submenu.set_text("Zenoh Router : OFF");
+                    update_menu_and_icon();
                 }
                 // Quit 完了後の遅延 Ready 受信は無視する。cancelled を false に戻すのは
                 // 次回 Run に備えてのリセットのみ。他に副作用なし。
@@ -629,13 +724,16 @@ fn main() {
                     if *zenohd_starting_cancelled.borrow() {
                         *zenohd_starting_cancelled.borrow_mut() = false;
                     } else {
+                        *zenohd_ready.borrow_mut() = true;
                         zenohd_submenu.set_text("Zenoh Router : ON");
+                        update_menu_and_icon();
                     }
                 }
                 UserEvent::ZenohdStartFailed(msg) => {
                     if *zenohd_starting_cancelled.borrow() {
                         *zenohd_starting_cancelled.borrow_mut() = false;
                     } else {
+                        *zenohd_ready.borrow_mut() = false;
                         let mut child_opt = zenohd_child.borrow_mut();
                         if let Some(mut child) = child_opt.take() {
                             let pid = child.id();
@@ -649,6 +747,7 @@ fn main() {
                             });
                         }
                         zenohd_submenu.set_text("Zenoh Router : OFF");
+                        update_menu_and_icon();
                         rfd::MessageDialog::new()
                             .set_title("Zenoh Router Start Failed")
                             .set_description(&msg)
@@ -658,20 +757,25 @@ fn main() {
                 }
                 // QuitComplete: 同上（zenohd と同様の整合性保証）
                 UserEvent::PhoenixServerQuitComplete => {
+                    *phoenix_ready.borrow_mut() = false;
                     phoenix_submenu.set_text("Phoenix Server : OFF");
+                    update_menu_and_icon();
                 }
                 // Ready: zenohd と同様（Quit 完了後の遅延 Ready を無視し、cancelled をリセット）
                 UserEvent::PhoenixServerReady => {
                     if *phoenix_starting_cancelled.borrow() {
                         *phoenix_starting_cancelled.borrow_mut() = false;
                     } else {
+                        *phoenix_ready.borrow_mut() = true;
                         phoenix_submenu.set_text("Phoenix Server : ON");
+                        update_menu_and_icon();
                     }
                 }
                 UserEvent::PhoenixServerStartFailed(msg) => {
                     if *phoenix_starting_cancelled.borrow() {
                         *phoenix_starting_cancelled.borrow_mut() = false;
                     } else {
+                        *phoenix_ready.borrow_mut() = false;
                         let mut child_opt = phoenix_child.borrow_mut();
                         if let Some(mut child) = child_opt.take() {
                             let pid = child.id();
@@ -685,6 +789,7 @@ fn main() {
                             });
                         }
                         phoenix_submenu.set_text("Phoenix Server : OFF");
+                        update_menu_and_icon();
                         rfd::MessageDialog::new()
                             .set_title("Phoenix Server Start Failed")
                             .set_description(&msg)
