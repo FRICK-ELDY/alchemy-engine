@@ -13,7 +13,7 @@ mod special_entity;
 
 pub use bullet::{
     BulletWorld, BULLET_KIND_FIREBALL, BULLET_KIND_LIGHTNING, BULLET_KIND_NORMAL, BULLET_KIND_ROCK,
-    BULLET_KIND_WHIP,
+    BULLET_KIND_WHIP, DEFAULT_BULLET_HIT_COLOR, DEFAULT_PIERCING_HIT_COLOR,
 };
 pub use enemy::EnemyWorld;
 pub use frame_event::FrameEvent;

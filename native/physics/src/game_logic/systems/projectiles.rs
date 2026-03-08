@@ -1,4 +1,3 @@
-use crate::constants::BULLET_RADIUS;
 use crate::entity_params::{DEFAULT_ENEMY_RADIUS, DEFAULT_PARTICLE_COLOR};
 use crate::world::{FrameEvent, GameWorldInner};
 
@@ -19,20 +18,24 @@ pub(crate) fn update_projectiles_and_enemy_hits(w: &mut GameWorldInner, dt: f32)
         // 障害物に当たったら弾を消す
         let bx = w.bullets.positions_x[i];
         let by = w.bullets.positions_y[i];
-        w.collision
-            .query_static_nearby_into(bx, by, BULLET_RADIUS, &mut w.obstacle_query_buf);
+        w.collision.query_static_nearby_into(
+            bx,
+            by,
+            crate::constants::BULLET_RADIUS,
+            &mut w.obstacle_query_buf,
+        );
         if !w.obstacle_query_buf.is_empty() {
             w.bullets.kill(i);
             continue;
         }
-        // マップ外に出た弾丸も消す（map_width / map_height は GameWorldInner から参照）
-        if bx < -100.0 || bx > w.map_width + 100.0 || by < -100.0 || by > w.map_height + 100.0 {
+        // マップ外に出た弾丸も消す（P2-3: map_margin は contents から注入）
+        let m = w.map_margin;
+        if bx < -m || bx > w.map_width + m || by < -m || by > w.map_height + m {
             w.bullets.kill(i);
         }
     }
 
-    // ── 弾丸 vs 敵 衝突判定 ──────────────────────────────────────
-    let bullet_query_r = BULLET_RADIUS + 32.0_f32;
+    // ── 弾丸 vs 敵 衝突判定（P2-3: bullet_query_radius は contents から注入）──
     for bi in 0..bullet_len {
         if !w.bullets.alive[bi] {
             continue;
@@ -48,7 +51,7 @@ pub(crate) fn update_projectiles_and_enemy_hits(w: &mut GameWorldInner, dt: f32)
 
         w.collision
             .dynamic
-            .query_nearby_into(bx, by, bullet_query_r, &mut w.spatial_query_buf);
+            .query_nearby_into(bx, by, w.bullet_query_radius, &mut w.spatial_query_buf);
         for ei in w.spatial_query_buf.iter().copied() {
             if w.enemies.alive[ei] == 0 {
                 continue;
@@ -59,7 +62,7 @@ pub(crate) fn update_projectiles_and_enemy_hits(w: &mut GameWorldInner, dt: f32)
                 .get_enemy(kind_id)
                 .map(|e| (e.radius, e.particle_color))
                 .unwrap_or((DEFAULT_ENEMY_RADIUS, DEFAULT_PARTICLE_COLOR));
-            let hit_r = BULLET_RADIUS + enemy_r;
+            let hit_r = crate::constants::BULLET_RADIUS + enemy_r;
             let ex = w.enemies.positions_x[ei] + enemy_r;
             let ey = w.enemies.positions_y[ei] + enemy_r;
             let ddx = bx - ex;
@@ -75,11 +78,7 @@ pub(crate) fn update_projectiles_and_enemy_hits(w: &mut GameWorldInner, dt: f32)
                     });
                     w.particles.emit(ex, ey, 8, particle_color);
                 } else {
-                    let hit_color = if piercing {
-                        [1.0, 0.4, 0.0, 1.0]
-                    } else {
-                        [1.0, 0.9, 0.3, 1.0]
-                    };
+                    let hit_color = w.bullets.hit_particle_color[bi];
                     w.particles.emit(ex, ey, 3, hit_color);
                 }
                 // 貫通弾は消えない、通常弾は消す

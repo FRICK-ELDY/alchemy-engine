@@ -22,7 +22,12 @@ defmodule Content.VampireSurvivor.SpawnComponent do
       magnet_duration: 10.0,
       magnet_speed: 300.0,
       spawn_min_dist: 800.0,
-      spawn_max_dist: 1200.0
+      spawn_max_dist: 1200.0,
+      # P2-2, P2-3: contents で定義（SSoT）
+      particle_gravity: 200.0,
+      bullet_query_radius: 38.0,
+      map_margin: 100.0,
+      chain_boss_range: 600.0
     }
   end
 
@@ -161,7 +166,7 @@ defmodule Content.VampireSurvivor.SpawnComponent do
       # chain_count: Chain の基本連鎖数
       # R-F1: whip_range_per_level, aura_radius_per_level, chain_count_per_level は
       #       Content.VampireSurvivor.WeaponFormulas で計算したテーブルを注入（SSoT）
-      # 0: magic_wand (Phase 1: aimed_spread_rad, effect_lifetime_sec を contents で定義)
+      # 0: magic_wand (Phase 1: aimed_spread_rad, effect_lifetime_sec. P2-1: hit_particle_color)
       %{
         cooldown: 1.0,
         damage: 10,
@@ -172,7 +177,8 @@ defmodule Content.VampireSurvivor.SpawnComponent do
         chain_count: 0,
         aimed_spread_rad: :math.pi() * 0.08,
         whip_half_angle_rad: 0.0,
-        effect_lifetime_sec: 0.0
+        effect_lifetime_sec: 0.0,
+        hit_particle_color: [1.0, 0.9, 0.3, 1.0]
       },
       # 1: axe
       %{
@@ -185,7 +191,8 @@ defmodule Content.VampireSurvivor.SpawnComponent do
         chain_count: 0,
         aimed_spread_rad: 0.0,
         whip_half_angle_rad: 0.0,
-        effect_lifetime_sec: 0.0
+        effect_lifetime_sec: 0.0,
+        hit_particle_color: [1.0, 0.8, 0.2, 1.0]
       },
       # 2: cross
       %{
@@ -198,7 +205,8 @@ defmodule Content.VampireSurvivor.SpawnComponent do
         chain_count: 0,
         aimed_spread_rad: 0.0,
         whip_half_angle_rad: 0.0,
-        effect_lifetime_sec: 0.0
+        effect_lifetime_sec: 0.0,
+        hit_particle_color: [1.0, 0.9, 0.3, 1.0]
       },
       # 3: whip (Phase 1: whip_half_angle_rad, effect_lifetime_sec を contents で定義)
       # whip_range_per_level: 1..8 → 8要素。Rust は level 1..8 で index 0..7 を参照。level 9 以上は index 7 を使用。
@@ -214,9 +222,10 @@ defmodule Content.VampireSurvivor.SpawnComponent do
           1..8 |> Enum.map(&Content.VampireSurvivor.WeaponFormulas.whip_range(120.0, &1)),
         aimed_spread_rad: 0.0,
         whip_half_angle_rad: :math.pi() * 0.3,
-        effect_lifetime_sec: 0.12
+        effect_lifetime_sec: 0.12,
+        hit_particle_color: [1.0, 0.6, 0.1, 1.0]
       },
-      # 4: fireball
+      # 4: fireball (貫通弾)
       %{
         cooldown: 1.0,
         damage: 20,
@@ -227,7 +236,8 @@ defmodule Content.VampireSurvivor.SpawnComponent do
         chain_count: 0,
         aimed_spread_rad: 0.0,
         whip_half_angle_rad: 0.0,
-        effect_lifetime_sec: 0.0
+        effect_lifetime_sec: 0.0,
+        hit_particle_color: [1.0, 0.4, 0.0, 1.0]
       },
       # 5: lightning (Phase 1: effect_lifetime_sec を contents で定義)
       # chain_count_per_level: 1..8 → 8要素。Rust は level 1..8 で index 0..7 を参照。
@@ -244,7 +254,8 @@ defmodule Content.VampireSurvivor.SpawnComponent do
           |> Enum.map(&Content.VampireSurvivor.WeaponFormulas.chain_count_for_level(2, &1)),
         aimed_spread_rad: 0.0,
         whip_half_angle_rad: 0.0,
-        effect_lifetime_sec: 0.10
+        effect_lifetime_sec: 0.10,
+        hit_particle_color: [0.3, 0.8, 1.0, 1.0]
       },
       # 6: garlic
       # aura_radius_per_level: 1..8 → 8要素。Rust は level 1..8 で index 0..7 を参照。
@@ -260,7 +271,8 @@ defmodule Content.VampireSurvivor.SpawnComponent do
           1..8 |> Enum.map(&Content.VampireSurvivor.WeaponFormulas.aura_radius(80.0, &1)),
         aimed_spread_rad: 0.0,
         whip_half_angle_rad: 0.0,
-        effect_lifetime_sec: 0.0
+        effect_lifetime_sec: 0.0,
+        hit_particle_color: [0.9, 0.9, 0.3, 0.6]
       }
     ]
   end
