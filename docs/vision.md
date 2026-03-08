@@ -275,7 +275,7 @@ Hub     ← コンテンツの一覧・選択・参加
    - `GameContent.VampireSurvivor` をコンポーネント群として再構成
    - `config :server, :current` キー一本に変更
 
-5. **残存課題**（[plan/pending-issues.md](./plan/pending-issues.md) 参照）
+5. **残存課題**（[plan/improvement-plan.md](./plan/improvement-plan.md) 参照）
    - `GameWorldInner` の `weapon_slots`, `boss` フィールドの除去
 
 ---

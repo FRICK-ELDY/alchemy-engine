@@ -130,7 +130,7 @@ alwaysApply: false
   - ドキュメントの品質・網羅性・コードとの一致度
   - CI/CD パイプラインの設計（ジョブ構成・ベンチマーク回帰）
   - ビジョン（`docs/vision.md`）とコードの一致度
-  - 自己改善サイクル（improvement-plan / pending-issues の運用）
+  - 自己改善サイクル（improvement-plan の運用）
 
 ---
 

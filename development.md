@@ -146,5 +146,5 @@ CI の詳細は [docs/warranty/ci.md](./docs/warranty/ci.md) を参照。
 
 - [ビジョンと設計思想](./docs/vision.md)
 - [クライアント・サーバー分離手順](./docs/plan/client-server-separation-procedure.md)
-- [ランチャー設計](./docs/plan/launcher-design.md)
+- [ランチャー課題・設計](./docs/plan/improvement-plan.md#i-g-ランチャーlauncherの課題)（[launcher-design_do.md](./docs/plan/launcher-design_do.md) 実施計画）
 - [クライアント exe のビルド・クロスコンパイル](./docs/cross-compile.md)
