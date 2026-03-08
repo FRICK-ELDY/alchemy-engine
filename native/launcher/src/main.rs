@@ -17,8 +17,8 @@ use std::time::{Duration, Instant};
 
 /// GitHub API で取得するリポジトリ
 const GITHUB_REPO: &str = "FRICK-ELDY/alchemy-engine";
-use tao::event_loop::{ControlFlow, EventLoopBuilder};
 use kill_tree::blocking::kill_tree;
+use tao::event_loop::{ControlFlow, EventLoopBuilder};
 use tray_icon::{
     menu::{Menu, MenuEvent, MenuId, MenuItem, PredefinedMenuItem, Submenu},
     Icon, TrayIcon, TrayIconBuilder, TrayIconEvent,
@@ -90,7 +90,12 @@ fn search_mix_exs_upward(mut dir: PathBuf) -> Option<PathBuf> {
 fn elixir_search_dirs() -> Vec<PathBuf> {
     let mut dirs = Vec::new();
     if let Some(local) = env::var_os("LOCALAPPDATA") {
-        dirs.push(Path::new(&local).join("Programs").join("Elixir").join("bin"));
+        dirs.push(
+            Path::new(&local)
+                .join("Programs")
+                .join("Elixir")
+                .join("bin"),
+        );
     }
     if let Some(pf) = env::var_os("ProgramFiles") {
         dirs.push(Path::new(&pf).join("Elixir").join("bin"));
@@ -100,7 +105,9 @@ fn elixir_search_dirs() -> Vec<PathBuf> {
     }
     dirs.push(PathBuf::from(r"C:\Program Files\Elixir\bin"));
     dirs.push(PathBuf::from(r"C:\Program Files (x86)\Elixir\bin"));
-    dirs.push(PathBuf::from(r"C:\ProgramData\chocolatey\lib\elixir\tools\bin"));
+    dirs.push(PathBuf::from(
+        r"C:\ProgramData\chocolatey\lib\elixir\tools\bin",
+    ));
     dirs.push(PathBuf::from(r"C:\ProgramData\chocolatey\bin"));
     dirs
 }
@@ -113,7 +120,10 @@ fn elixir_search_dirs() -> Vec<PathBuf> {
 #[cfg(windows)]
 fn mix_path_with_elixir_dirs() -> Option<std::ffi::OsString> {
     let base_path = env::var_os("PATH")?;
-    let prepend: Vec<PathBuf> = elixir_search_dirs().into_iter().filter(|p| p.exists()).collect();
+    let prepend: Vec<PathBuf> = elixir_search_dirs()
+        .into_iter()
+        .filter(|p| p.exists())
+        .collect();
     if prepend.is_empty() {
         return Some(base_path);
     }
@@ -284,11 +294,17 @@ fn terminate_phoenix_server_sync(mut child: Child, submenu: &Submenu) {
 /// desktop_client の exe パスを検索。release を優先、なければ debug。
 fn find_desktop_client_exe(project_root: &Path) -> Option<PathBuf> {
     let native_dir = project_root.join("native");
-    let release = native_dir.join("target").join("release").join(exe_name("desktop_client"));
+    let release = native_dir
+        .join("target")
+        .join("release")
+        .join(exe_name("desktop_client"));
     if release.is_file() {
         return Some(release);
     }
-    let debug = native_dir.join("target").join("debug").join(exe_name("desktop_client"));
+    let debug = native_dir
+        .join("target")
+        .join("debug")
+        .join(exe_name("desktop_client"));
     if debug.is_file() {
         return Some(debug);
     }
@@ -387,13 +403,19 @@ fn spawn_desktop_client(project_root: &Path) -> Result<Child, String> {
 /// 現状は UI スレッドとは別スレッドで呼ばれるためブロックは許容されるが、
 /// 将来的にタイムアウト延長や複数 API 呼び出しを行う場合は非同期化の検討余地あり。
 fn check_for_update() -> Result<String, String> {
-    let url = format!("https://api.github.com/repos/{}/releases/latest", GITHUB_REPO);
+    let url = format!(
+        "https://api.github.com/repos/{}/releases/latest",
+        GITHUB_REPO
+    );
     let client = reqwest::blocking::Client::builder()
         .user_agent("AlchemyEngine-Launcher")
         .timeout(Duration::from_secs(10))
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
-    let resp = client.get(&url).send().map_err(|e| format!("Network error: {}", e))?;
+    let resp = client
+        .get(&url)
+        .send()
+        .map_err(|e| format!("Network error: {}", e))?;
     if !resp.status().is_success() {
         let status = resp.status();
         let hint = if status.as_u16() == 403 {
@@ -413,7 +435,10 @@ fn check_for_update() -> Result<String, String> {
         .ok_or_else(|| "No tag_name in response".to_string())?;
     let latest = tag.trim_start_matches('v');
     let current = env!("CARGO_PKG_VERSION");
-    match (semver::Version::parse(current), semver::Version::parse(latest)) {
+    match (
+        semver::Version::parse(current),
+        semver::Version::parse(latest),
+    ) {
         (Ok(cur), Ok(lat)) => {
             if lat > cur {
                 Ok(format!(
@@ -470,8 +495,14 @@ fn main() {
     let client_run_id = MenuId::new("client_run");
     let quit_id = MenuId::new("quit");
 
-    let check_for_update_item = MenuItem::with_id(check_for_update_id.clone(), "Check for Update...", true, None);
-    let acknowledgements_item = MenuItem::with_id(acknowledgements_id.clone(), "acknowledgements", true, None);
+    let check_for_update_item = MenuItem::with_id(
+        check_for_update_id.clone(),
+        "Check for Update...",
+        true,
+        None,
+    );
+    let acknowledgements_item =
+        MenuItem::with_id(acknowledgements_id.clone(), "acknowledgements", true, None);
     let zenohd_about_item = MenuItem::with_id(zenohd_about_id.clone(), "About", true, None);
     let zenohd_run_item = MenuItem::with_id(zenohd_run_id.clone(), "Run", true, None);
     let zenohd_quit_item = MenuItem::with_id(zenohd_quit_id.clone(), "Quit", true, None);
@@ -480,34 +511,58 @@ fn main() {
     let phoenix_quit_item = MenuItem::with_id(phoenix_quit_id.clone(), "Quit", true, None);
 
     let zenohd_submenu = Rc::new(Submenu::new("Zenoh Router : OFF", true));
-    zenohd_submenu.append(&zenohd_about_item).expect("Failed to append about");
-    zenohd_submenu.append(&zenohd_run_item).expect("Failed to append run");
-    zenohd_submenu.append(&zenohd_quit_item).expect("Failed to append quit");
+    zenohd_submenu
+        .append(&zenohd_about_item)
+        .expect("Failed to append about");
+    zenohd_submenu
+        .append(&zenohd_run_item)
+        .expect("Failed to append run");
+    zenohd_submenu
+        .append(&zenohd_quit_item)
+        .expect("Failed to append quit");
 
     let phoenix_submenu = Rc::new(Submenu::new("Phoenix Server : OFF", true));
-    phoenix_submenu.append(&phoenix_about_item).expect("Failed to append about");
-    phoenix_submenu.append(&phoenix_run_item).expect("Failed to append run");
-    phoenix_submenu.append(&phoenix_quit_item).expect("Failed to append quit");
+    phoenix_submenu
+        .append(&phoenix_about_item)
+        .expect("Failed to append about");
+    phoenix_submenu
+        .append(&phoenix_run_item)
+        .expect("Failed to append run");
+    phoenix_submenu
+        .append(&phoenix_quit_item)
+        .expect("Failed to append quit");
 
     let client_run_item = MenuItem::with_id(client_run_id.clone(), "Client Run", true, None);
     let quit_item = MenuItem::with_id(quit_id.clone(), "Quit", true, None);
 
     let menu = Menu::new();
-    menu.append(&check_for_update_item).expect("Failed to append check for update");
-    menu.append(&acknowledgements_item).expect("Failed to append acknowledgements");
-    menu.append(&PredefinedMenuItem::separator()).expect("Failed to append separator");
-    menu.append(zenohd_submenu.as_ref()).expect("Failed to append submenu");
-    menu.append(phoenix_submenu.as_ref()).expect("Failed to append submenu");
-    menu.append(&PredefinedMenuItem::separator()).expect("Failed to append separator");
-    menu.append(&client_run_item).expect("Failed to append client run");
-    menu.append(&PredefinedMenuItem::separator()).expect("Failed to append separator");
+    menu.append(&check_for_update_item)
+        .expect("Failed to append check for update");
+    menu.append(&acknowledgements_item)
+        .expect("Failed to append acknowledgements");
+    menu.append(&PredefinedMenuItem::separator())
+        .expect("Failed to append separator");
+    menu.append(zenohd_submenu.as_ref())
+        .expect("Failed to append submenu");
+    menu.append(phoenix_submenu.as_ref())
+        .expect("Failed to append submenu");
+    menu.append(&PredefinedMenuItem::separator())
+        .expect("Failed to append separator");
+    menu.append(&client_run_item)
+        .expect("Failed to append client run");
+    menu.append(&PredefinedMenuItem::separator())
+        .expect("Failed to append separator");
     menu.append(&quit_item).expect("Failed to append menu item");
 
     let tray_icon: Rc<TrayIcon> = Rc::new(
         TrayIconBuilder::new()
             .with_menu(Box::new(menu))
             .with_tooltip("AlchemyEngine")
-            .with_icon(create_icon_with_color(ICON_GRAY_R, ICON_GRAY_G, ICON_GRAY_B))
+            .with_icon(create_icon_with_color(
+                ICON_GRAY_R,
+                ICON_GRAY_G,
+                ICON_GRAY_B,
+            ))
             .build()
             .expect("Failed to create tray icon"),
     );

@@ -5,6 +5,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 // 閾値（ADR の guardrail）
+#[allow(dead_code)]
 pub const READ_WAIT_WARN_US: u64 = 300;
 pub const WRITE_WAIT_WARN_US: u64 = 500;
 pub const REPORT_INTERVAL_MS: u64 = 5_000;
@@ -28,6 +29,7 @@ fn as_nanos_u64(dur: Duration) -> u64 {
     dur.as_nanos().min(u64::MAX as u128) as u64
 }
 
+#[allow(dead_code)]
 pub fn record_read_wait(context: &str, wait: Duration) {
     let wait_us = wait.as_micros().min(u64::MAX as u128) as u64;
     READ_WAIT_TOTAL_NS.fetch_add(as_nanos_u64(wait), Ordering::Relaxed);

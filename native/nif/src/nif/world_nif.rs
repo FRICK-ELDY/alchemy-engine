@@ -17,8 +17,8 @@ use physics::physics::spatial_hash::CollisionWorld;
 use physics::weapon::WeaponSlot;
 use physics::world::{GameWorld, GameWorldInner, PlayerState};
 use rustler::types::list::ListIterator;
-use rustler::{Atom, Binary, NifResult, ResourceArc, Term};
 use rustler::TermType;
+use rustler::{Atom, Binary, NifResult, ResourceArc, Term};
 use std::sync::RwLock;
 
 use crate::{ok, BulletWorld, EnemyWorld, ParticleWorld};
@@ -286,8 +286,7 @@ fn decode_entity_param_defaults(opts: Term) -> EntityParamDefaults {
     // 渡すと f64 デコードは成功するが 0-1 スケールではないため、contents は float で渡すこと。
     if let Ok(v) = map_get::<Vec<f64>>(opts, "default_particle_color") {
         if v.len() == 4 {
-            d.default_particle_color =
-                Some([v[0] as f32, v[1] as f32, v[2] as f32, v[3] as f32]);
+            d.default_particle_color = Some([v[0] as f32, v[1] as f32, v[2] as f32, v[3] as f32]);
         }
     }
     if let Ok(v) = map_get::<f64>(opts, "default_whip_range") {
@@ -313,10 +312,7 @@ fn decode_entity_param_defaults(opts: Term) -> EntityParamDefaults {
 ///   - :enemy_damage_this_frame => [{kind_id, damage}, ...]
 ///   - :special_entity_snapshot => :none | {:alive, x, y, radius, damage, invincible}
 #[rustler::nif]
-pub fn set_frame_injection(
-    world: ResourceArc<GameWorld>,
-    injection_map: Term,
-) -> NifResult<Atom> {
+pub fn set_frame_injection(world: ResourceArc<GameWorld>, injection_map: Term) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
 
     if let Ok((dx, dy)) = map_get::<(f64, f64)>(injection_map, "player_input") {
@@ -333,13 +329,15 @@ pub fn set_frame_injection(
     if let Ok(list) = map_get::<Vec<(u8, u32, f64, f64, i32)>>(injection_map, "weapon_slots") {
         w.weapon_slots_input = list
             .into_iter()
-            .map(|(kind_id, level, cooldown, cooldown_sec, precomputed_damage)| WeaponSlot {
-                kind_id,
-                level,
-                cooldown_timer: cooldown as f32,
-                cooldown_sec: cooldown_sec as f32,
-                precomputed_damage,
-            })
+            .map(
+                |(kind_id, level, cooldown, cooldown_sec, precomputed_damage)| WeaponSlot {
+                    kind_id,
+                    level,
+                    cooldown_timer: cooldown as f32,
+                    cooldown_sec: cooldown_sec as f32,
+                    precomputed_damage,
+                },
+            )
             .collect();
     }
     if let Ok(list) = map_get::<Vec<(u8, f64)>>(injection_map, "enemy_damage_this_frame") {

@@ -209,12 +209,8 @@ impl GameWorldInner {
         buf.obstacles.clear();
         buf.obstacles.reserve(self.collision.obstacles.len());
         for o in &self.collision.obstacles {
-            buf.obstacles.push((
-                o.x as f64,
-                o.y as f64,
-                o.radius as f64,
-                o.kind as u32,
-            ));
+            buf.obstacles
+                .push((o.x as f64, o.y as f64, o.radius as f64, o.kind as u32));
         }
 
         buf.score_popups.clear();

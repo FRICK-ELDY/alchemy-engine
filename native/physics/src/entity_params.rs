@@ -202,24 +202,13 @@ pub struct BossParams {
 /// - **Aimed パターン**: `aimed_spread_rad` を注入（0 だと弾が一直線になる）。
 /// - **Whip**: `whip_half_angle_rad`, `effect_lifetime_sec` も必要。
 /// - **Chain**: `effect_lifetime_sec` も必要。
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct EntityParamTables {
     pub enemies: Vec<EnemyParams>,
     pub weapons: Vec<WeaponParams>,
     pub bosses: Vec<BossParams>,
     /// P4-1: set_entity_params の opts から注入。未指定時は DEFAULT_* 定数を使用。
     pub defaults: EntityParamDefaults,
-}
-
-impl Default for EntityParamTables {
-    fn default() -> Self {
-        Self {
-            enemies: Vec::new(),
-            weapons: Vec::new(),
-            bosses: Vec::new(),
-            defaults: EntityParamDefaults::default(),
-        }
-    }
 }
 
 impl EntityParamTables {

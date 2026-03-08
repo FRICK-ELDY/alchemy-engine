@@ -39,16 +39,20 @@ pub(crate) fn update_weapon_attacks(w: &mut GameWorldInner, dt: f32, px: f32, py
         let bcount = w.weapon_slots_input[si].bullet_count(wp);
         let pattern = wp.fire_pattern;
 
-        let hit_color = wp
-            .hit_particle_color
-            .unwrap_or(DEFAULT_BULLET_HIT_COLOR);
-        let piercing_hit_color = wp
-            .hit_particle_color
-            .unwrap_or(DEFAULT_PIERCING_HIT_COLOR);
+        let hit_color = wp.hit_particle_color.unwrap_or(DEFAULT_BULLET_HIT_COLOR);
+        let piercing_hit_color = wp.hit_particle_color.unwrap_or(DEFAULT_PIERCING_HIT_COLOR);
         match pattern {
-            FirePattern::Aimed => {
-                fire_aimed(w, si, px, py, dmg, bcount, cd, wp.aimed_spread_rad, hit_color)
-            }
+            FirePattern::Aimed => fire_aimed(
+                w,
+                si,
+                px,
+                py,
+                dmg,
+                bcount,
+                cd,
+                wp.aimed_spread_rad,
+                hit_color,
+            ),
             FirePattern::FixedUp => fire_fixed_up(w, si, px, py, dmg, cd, hit_color),
             FirePattern::Radial => fire_radial(w, si, px, py, dmg, level, kind_id, cd, hit_color),
             FirePattern::Whip => fire_whip(w, si, px, py, dmg, level, kind_id, cd, facing_angle),
@@ -66,6 +70,7 @@ pub(crate) fn update_weapon_attacks(w: &mut GameWorldInner, dt: f32, px: f32, py
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn fire_aimed(
     w: &mut GameWorldInner,
     si: usize,
@@ -138,6 +143,7 @@ fn fire_fixed_up(
     w.weapon_slots_input[si].cooldown_timer = cd;
 }
 
+#[allow(clippy::too_many_arguments)]
 fn fire_radial(
     w: &mut GameWorldInner,
     si: usize,
@@ -358,9 +364,7 @@ fn fire_chain(
     let chain_count = wp_chain
         .map(|wp| wp.chain_count_for_level(level))
         .unwrap_or_else(|| w.params.effective_default_chain_count());
-    let chain_effect_lifetime = wp_chain
-        .map(|p| p.effect_lifetime_sec)
-        .unwrap_or(0.0);
+    let chain_effect_lifetime = wp_chain.map(|p| p.effect_lifetime_sec).unwrap_or(0.0);
     let chain_hit_color = wp_chain
         .and_then(|p| p.hit_particle_color)
         .unwrap_or([0.3, 0.8, 1.0, 1.0]);
@@ -394,12 +398,8 @@ fn fire_chain(
             let hit_x = w.enemies.positions_x[ei] + enemy_r;
             let hit_y = w.enemies.positions_y[ei] + enemy_r;
             w.enemies.hp[ei] -= dmg as f32;
-            w.bullets.spawn_effect(
-                hit_x,
-                hit_y,
-                chain_effect_lifetime,
-                BULLET_KIND_LIGHTNING,
-            );
+            w.bullets
+                .spawn_effect(hit_x, hit_y, chain_effect_lifetime, BULLET_KIND_LIGHTNING);
             w.particles.emit(hit_x, hit_y, 5, chain_hit_color);
             if w.enemies.hp[ei] <= 0.0 {
                 let kind_e = w.enemies.kind_ids[ei];
@@ -449,12 +449,8 @@ fn fire_chain(
         if let Some((bx, by)) = special_hit {
             w.frame_events
                 .push(FrameEvent::SpecialEntityDamaged { damage: dmg as f32 });
-            w.bullets.spawn_effect(
-                bx,
-                by,
-                chain_effect_lifetime,
-                BULLET_KIND_LIGHTNING,
-            );
+            w.bullets
+                .spawn_effect(bx, by, chain_effect_lifetime, BULLET_KIND_LIGHTNING);
             w.particles.emit(bx, by, 5, chain_hit_color);
         }
     }

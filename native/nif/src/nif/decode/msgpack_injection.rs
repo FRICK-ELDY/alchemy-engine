@@ -29,11 +29,11 @@ struct InjectionMsg {
 /// weapon_slots: [[kind_id, level, cooldown, cooldown_sec, precomputed_damage], ...]
 #[derive(Deserialize)]
 struct WeaponSlotMsg(
-    u8,   // kind_id
-    u32,  // level
-    f64,  // cooldown
-    f64,  // cooldown_sec
-    i32,  // precomputed_damage
+    u8,  // kind_id
+    u32, // level
+    f64, // cooldown
+    f64, // cooldown_sec
+    i32, // precomputed_damage
 );
 
 /// special_entity_snapshot: nil | %{"t" => "alive", "x" => x, ...}
