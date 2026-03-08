@@ -46,7 +46,7 @@ mix run --no-halt
 
 ### ランチャー（システムトレイ）
 
-zenohd / HL-Server / Client をトレイメニューから管理します。Phase 3 では Zenoh Router と Phoenix Server の Run / Quit に対応。
+zenohd / HL-Server / Client をトレイメニューから管理します（Phase 0–4 対応）。
 
 ```bash
 cargo run -p launcher
@@ -57,6 +57,7 @@ cargo run -p launcher
 - **Zenoh Router** →「Quit」で zenohd を終了
 - **Phoenix Server** →「Run」で mix run を起動（ポート 4000 の応答を確認）
 - **Phoenix Server** →「Quit」で mix run を終了
+- **Client Run** → zenohd と Phoenix Server の起動を確認してから desktop_client を起動
 - 起動失敗時はダイアログで通知
 - 「Quit」でランチャーを終了
 

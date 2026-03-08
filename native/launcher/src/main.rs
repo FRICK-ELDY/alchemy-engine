@@ -1,7 +1,7 @@
-//! Phase 3: zenohd + HL-Server (Phoenix Server) Run / Quit
+//! Phase 4: zenohd + HL-Server (Phoenix Server) + Client Run
 //!
 //! トレイアイコン表示、メニューから zenohd と mix run を起動・終了。
-//! ポート確認で成功/失敗を判定。
+//! zenohd と HL-Server の起動確認後に desktop_client を起動可能。
 //!
 //! TODO: zenohd と Phoenix Server のメニューイベント処理が同パターンで重複している。
 //! 将来的に ServiceManager のような共通 abstraction でまとめると保守しやすい。
@@ -122,6 +122,22 @@ fn mix_path_with_elixir_dirs() -> Option<std::ffi::OsString> {
     env::var_os("PATH")
 }
 
+/// Windows: PATH の先頭に %USERPROFILE%\.cargo\bin を追加。
+/// GUI アプリ経由起動では PATH が限られることがあるため、bin\windows_client.bat と同様の対応。
+#[cfg(windows)]
+fn path_with_cargo_bin() -> std::ffi::OsString {
+    let base = env::var_os("PATH").unwrap_or_default();
+    if let Some(home) = env::var_os("USERPROFILE") {
+        let cargo_bin = Path::new(&home).join(".cargo").join("bin");
+        if cargo_bin.exists() {
+            let prepend = cargo_bin.to_string_lossy();
+            let rest = base.to_string_lossy();
+            return format!("{};{}", prepend, rest).into();
+        }
+    }
+    base
+}
+
 /// mix.bat / mix.exe のフルパスを検索する。見つかれば Some を返す。
 #[cfg(windows)]
 fn find_mix_exe() -> Option<PathBuf> {
@@ -208,7 +224,8 @@ fn create_icon() -> Icon {
 /// - 成功: `true` を返す（いずれかのアドレスに接続できた場合）
 /// - タイムアウト: `false` を返す
 /// - 接続試行中の I/O エラーは無視してリトライを続ける
-fn wait_for_port(port: u16, timeout: Duration) -> bool {
+/// - `skip_initial_delay`: true なら初回待機を省略（連続呼び出し時の累積遅延短縮用）
+fn wait_for_port(port: u16, timeout: Duration, skip_initial_delay: bool) -> bool {
     // PORT_CHECK_ADDRESSES は固定リテラルなので parse は通常成功する。アドレス編集時に
     // 不正が混入した場合のみ None となり、その場合は静かにスキップする。
     let addrs: Vec<SocketAddr> = PORT_CHECK_ADDRESSES
@@ -219,7 +236,9 @@ fn wait_for_port(port: u16, timeout: Duration) -> bool {
         eprintln!("[launcher] No valid port check addresses");
         return false;
     }
-    thread::sleep(PORT_INITIAL_DELAY);
+    if !skip_initial_delay {
+        thread::sleep(PORT_INITIAL_DELAY);
+    }
     let start = Instant::now();
     while start.elapsed() < timeout {
         for addr in &addrs {
@@ -252,6 +271,107 @@ fn terminate_phoenix_server_sync(mut child: Child, submenu: &Submenu) {
     submenu.set_text("Phoenix Server : OFF");
 }
 
+/// desktop_client の exe パスを検索。release を優先、なければ debug。
+fn find_desktop_client_exe(project_root: &Path) -> Option<PathBuf> {
+    let native_dir = project_root.join("native");
+    let release = native_dir.join("target").join("release").join(exe_name("desktop_client"));
+    if release.is_file() {
+        return Some(release);
+    }
+    let debug = native_dir.join("target").join("debug").join(exe_name("desktop_client"));
+    if debug.is_file() {
+        return Some(debug);
+    }
+    None
+}
+
+#[cfg(windows)]
+fn exe_name(base: &str) -> String {
+    format!("{}.exe", base)
+}
+#[cfg(not(windows))]
+fn exe_name(base: &str) -> String {
+    base.to_string()
+}
+
+/// desktop_client を起動。zenohd と Phoenix Server のポート確認後に spawn。
+/// 成功時は Ok(Child)、失敗時は Err(msg)。
+fn spawn_desktop_client(project_root: &Path) -> Result<Child, String> {
+    if !wait_for_port(ZENOHD_PORT, PORT_WAIT_TIMEOUT, false) {
+        return Err(format!(
+            "Zenoh Router (port {}) did not respond within {} seconds.\n\nStart Zenoh Router first.",
+            ZENOHD_PORT,
+            PORT_WAIT_TIMEOUT.as_secs()
+        ));
+    }
+    if !wait_for_port(PHOENIX_SERVER_PORT, PORT_WAIT_TIMEOUT, true) {
+        return Err(format!(
+            "Phoenix Server (port {}) did not respond within {} seconds.\n\nStart Phoenix Server first.",
+            PHOENIX_SERVER_PORT,
+            PORT_WAIT_TIMEOUT.as_secs()
+        ));
+    }
+    // TODO: 環境変数や config で接続先を切り替え可能にする
+    let connect = "tcp/127.0.0.1:7447";
+    let room = "main";
+
+    let manifest = project_root.join("native").join("Cargo.toml");
+    if !manifest.is_file() {
+        return Err("native/Cargo.toml not found. Project structure may be invalid. Run the launcher from the project root.".to_string());
+    }
+
+    if let Some(exe) = find_desktop_client_exe(project_root) {
+        Command::new(exe)
+            .args(["--connect", connect, "--room", room])
+            .current_dir(project_root)
+            .spawn()
+            .map_err(|e| format!("Failed to start desktop_client: {}", e))
+    } else {
+        let manifest_str = manifest.to_string_lossy();
+        #[cfg(windows)]
+        {
+            Command::new("cmd")
+                .args([
+                    "/c",
+                    "cargo",
+                    "run",
+                    "--manifest-path",
+                    &manifest_str,
+                    "-p",
+                    "desktop_client",
+                    "--",
+                    "--connect",
+                    connect,
+                    "--room",
+                    room,
+                ])
+                .current_dir(project_root)
+                .env("PATH", path_with_cargo_bin())
+                .spawn()
+                .map_err(|e| format!("Failed to run desktop_client (cargo run): {}", e))
+        }
+        #[cfg(not(windows))]
+        {
+            Command::new("cargo")
+                .args([
+                    "run",
+                    "--manifest-path",
+                    &manifest_str,
+                    "-p",
+                    "desktop_client",
+                    "--",
+                    "--connect",
+                    connect,
+                    "--room",
+                    room,
+                ])
+                .current_dir(project_root)
+                .spawn()
+                .map_err(|e| format!("Failed to run desktop_client (cargo run): {}", e))
+        }
+    }
+}
+
 fn main() {
     let event_loop = EventLoopBuilder::with_user_event().build();
     let proxy = event_loop.create_proxy();
@@ -265,6 +385,7 @@ fn main() {
         PhoenixServerQuitComplete,
         PhoenixServerReady,
         PhoenixServerStartFailed(String),
+        ClientRunFailed(String),
     }
 
     TrayIconEvent::set_event_handler(Some({
@@ -285,6 +406,7 @@ fn main() {
     let zenohd_quit_id = MenuId::new("zenohd_quit");
     let phoenix_run_id = MenuId::new("phoenix_run");
     let phoenix_quit_id = MenuId::new("phoenix_quit");
+    let client_run_id = MenuId::new("client_run");
     let quit_id = MenuId::new("quit");
 
     let zenohd_run_item = MenuItem::with_id(zenohd_run_id.clone(), "Run", true, None);
@@ -300,11 +422,14 @@ fn main() {
     phoenix_submenu.append(&phoenix_run_item).expect("Failed to append run");
     phoenix_submenu.append(&phoenix_quit_item).expect("Failed to append quit");
 
+    let client_run_item = MenuItem::with_id(client_run_id.clone(), "Client Run", true, None);
     let quit_item = MenuItem::with_id(quit_id.clone(), "Quit", true, None);
 
     let menu = Menu::new();
     menu.append(zenohd_submenu.as_ref()).expect("Failed to append submenu");
     menu.append(phoenix_submenu.as_ref()).expect("Failed to append submenu");
+    menu.append(&PredefinedMenuItem::separator()).expect("Failed to append separator");
+    menu.append(&client_run_item).expect("Failed to append client run");
     menu.append(&PredefinedMenuItem::separator()).expect("Failed to append separator");
     menu.append(&quit_item).expect("Failed to append menu item");
 
@@ -361,7 +486,7 @@ fn main() {
                                     zenohd_submenu.set_text("Zenoh Router : Starting...");
                                     let proxy = proxy.clone();
                                     thread::spawn(move || {
-                                        if wait_for_port(ZENOHD_PORT, PORT_WAIT_TIMEOUT) {
+                                        if wait_for_port(ZENOHD_PORT, PORT_WAIT_TIMEOUT, false) {
                                             let _ = proxy.send_event(UserEvent::ZenohdReady);
                                         } else {
                                             let _ = proxy.send_event(UserEvent::ZenohdStartFailed(
@@ -410,7 +535,7 @@ fn main() {
                                         phoenix_submenu.set_text("Phoenix Server : Starting...");
                                         let proxy = proxy.clone();
                                         thread::spawn(move || {
-                                            if wait_for_port(PHOENIX_SERVER_PORT, PORT_WAIT_TIMEOUT) {
+                                            if wait_for_port(PHOENIX_SERVER_PORT, PORT_WAIT_TIMEOUT, false) {
                                                 let _ = proxy.send_event(UserEvent::PhoenixServerReady);
                                             } else {
                                                 let _ = proxy.send_event(
@@ -458,6 +583,28 @@ fn main() {
                             });
                             phoenix_submenu.set_text("Phoenix Server : OFF");
                         }
+                    } else if menu_event.id == client_run_id {
+                        let proxy = proxy.clone();
+                        thread::spawn(move || {
+                            let project_root = match find_project_root() {
+                                Some(r) => r,
+                                None => {
+                                    let _ = proxy.send_event(UserEvent::ClientRunFailed(
+                                        "mix.exs not found. Run the launcher from the project directory.".to_string(),
+                                    ));
+                                    return;
+                                }
+                            };
+                            match spawn_desktop_client(&project_root) {
+                                Ok(_child) => {
+                                    // Child を意図的にドロップ。Unix では init に reparent され、
+                                    // Windows では親が終了しても子は継続する。トレイでは管理しない。
+                                }
+                                Err(msg) => {
+                                    let _ = proxy.send_event(UserEvent::ClientRunFailed(msg));
+                                }
+                            }
+                        });
                     } else if menu_event.id == quit_id {
                         let mut child_opt = zenohd_child.borrow_mut();
                         if let Some(child) = child_opt.take() {
@@ -544,6 +691,13 @@ fn main() {
                             .set_level(rfd::MessageLevel::Error)
                             .show();
                     }
+                }
+                UserEvent::ClientRunFailed(msg) => {
+                    rfd::MessageDialog::new()
+                        .set_title("Client Run Failed")
+                        .set_description(&msg)
+                        .set_level(rfd::MessageLevel::Error)
+                        .show();
                 }
                 // 将来の拡張用（クリック・ダブルクリックなどの区別など）
                 UserEvent::TrayIcon(event) => {
