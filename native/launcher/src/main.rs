@@ -1,7 +1,7 @@
-//! Phase 5: zenohd + HL-Server (Phoenix Server) + Client Run + メニュー状態・アイコン表示
+//! Phase 6: zenohd + HL-Server + Client Run + Check for Update / acknowledgements
 //!
 //! トレイアイコン表示、メニューから zenohd と mix run を起動・終了。
-//! 起動中は Run 無効・Quit 有効。両方起動時はアイコン緑、それ以外は灰色。
+//! Check for Update で GitHub releases を確認。acknowledgements で謝辞・ライセンスを表示。
 //!
 //! TODO: zenohd と Phoenix Server のメニューイベント処理が同パターンで重複している。
 //! 将来的に ServiceManager のような共通 abstraction でまとめると保守しやすい。
@@ -14,6 +14,9 @@ use std::process::{Child, Command};
 use std::rc::Rc;
 use std::thread;
 use std::time::{Duration, Instant};
+
+/// GitHub API で取得するリポジトリ
+const GITHUB_REPO: &str = "FRICK-ELDY/alchemy-engine";
 use tao::event_loop::{ControlFlow, EventLoopBuilder};
 use kill_tree::blocking::kill_tree;
 use tray_icon::{
@@ -379,6 +382,52 @@ fn spawn_desktop_client(project_root: &Path) -> Result<Child, String> {
     }
 }
 
+/// GitHub releases API で最新バージョンを取得。比較してメッセージを返す。
+///
+/// 現状は UI スレッドとは別スレッドで呼ばれるためブロックは許容されるが、
+/// 将来的にタイムアウト延長や複数 API 呼び出しを行う場合は非同期化の検討余地あり。
+fn check_for_update() -> Result<String, String> {
+    let url = format!("https://api.github.com/repos/{}/releases/latest", GITHUB_REPO);
+    let client = reqwest::blocking::Client::builder()
+        .user_agent("AlchemyEngine-Launcher")
+        .timeout(Duration::from_secs(10))
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+    let resp = client.get(&url).send().map_err(|e| format!("Network error: {}", e))?;
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let hint = if status.as_u16() == 403 {
+            " Rate limiting (e.g. 60 req/h unauthenticated) may apply."
+        } else {
+            ""
+        };
+        return Err(format!(
+            "Could not fetch release info (HTTP {}).{}\n\nIf the repository is private or has no releases, this is expected.",
+            status, hint
+        ));
+    }
+    let json: serde_json::Value = resp.json().map_err(|e| format!("Invalid JSON: {}", e))?;
+    let tag = json
+        .get("tag_name")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "No tag_name in response".to_string())?;
+    let latest = tag.trim_start_matches('v');
+    let current = env!("CARGO_PKG_VERSION");
+    match (semver::Version::parse(current), semver::Version::parse(latest)) {
+        (Ok(cur), Ok(lat)) => {
+            if lat > cur {
+                Ok(format!(
+                    "A new version is available.\n\nCurrent: {}\nLatest:  {}\n\nhttps://github.com/{}/releases",
+                    current, latest, GITHUB_REPO
+                ))
+            } else {
+                Ok(format!("You are up to date.\n\nVersion: {}", current))
+            }
+        }
+        _ => Ok(format!("Current version: {}\nLatest tag: {}", current, tag)),
+    }
+}
+
 fn main() {
     let event_loop = EventLoopBuilder::with_user_event().build();
     let proxy = event_loop.create_proxy();
@@ -393,6 +442,7 @@ fn main() {
         PhoenixServerReady,
         PhoenixServerStartFailed(String),
         ClientRunFailed(String),
+        CheckForUpdateResult(Result<String, String>),
     }
 
     TrayIconEvent::set_event_handler(Some({
@@ -409,23 +459,33 @@ fn main() {
         }
     }));
 
+    let check_for_update_id = MenuId::new("check_for_update");
+    let acknowledgements_id = MenuId::new("acknowledgements");
+    let zenohd_about_id = MenuId::new("zenohd_about");
     let zenohd_run_id = MenuId::new("zenohd_run");
     let zenohd_quit_id = MenuId::new("zenohd_quit");
+    let phoenix_about_id = MenuId::new("phoenix_about");
     let phoenix_run_id = MenuId::new("phoenix_run");
     let phoenix_quit_id = MenuId::new("phoenix_quit");
     let client_run_id = MenuId::new("client_run");
     let quit_id = MenuId::new("quit");
 
+    let check_for_update_item = MenuItem::with_id(check_for_update_id.clone(), "Check for Update...", true, None);
+    let acknowledgements_item = MenuItem::with_id(acknowledgements_id.clone(), "acknowledgements", true, None);
+    let zenohd_about_item = MenuItem::with_id(zenohd_about_id.clone(), "About", true, None);
     let zenohd_run_item = MenuItem::with_id(zenohd_run_id.clone(), "Run", true, None);
     let zenohd_quit_item = MenuItem::with_id(zenohd_quit_id.clone(), "Quit", true, None);
+    let phoenix_about_item = MenuItem::with_id(phoenix_about_id.clone(), "About", true, None);
     let phoenix_run_item = MenuItem::with_id(phoenix_run_id.clone(), "Run", true, None);
     let phoenix_quit_item = MenuItem::with_id(phoenix_quit_id.clone(), "Quit", true, None);
 
     let zenohd_submenu = Rc::new(Submenu::new("Zenoh Router : OFF", true));
+    zenohd_submenu.append(&zenohd_about_item).expect("Failed to append about");
     zenohd_submenu.append(&zenohd_run_item).expect("Failed to append run");
     zenohd_submenu.append(&zenohd_quit_item).expect("Failed to append quit");
 
     let phoenix_submenu = Rc::new(Submenu::new("Phoenix Server : OFF", true));
+    phoenix_submenu.append(&phoenix_about_item).expect("Failed to append about");
     phoenix_submenu.append(&phoenix_run_item).expect("Failed to append run");
     phoenix_submenu.append(&phoenix_quit_item).expect("Failed to append quit");
 
@@ -433,6 +493,9 @@ fn main() {
     let quit_item = MenuItem::with_id(quit_id.clone(), "Quit", true, None);
 
     let menu = Menu::new();
+    menu.append(&check_for_update_item).expect("Failed to append check for update");
+    menu.append(&acknowledgements_item).expect("Failed to append acknowledgements");
+    menu.append(&PredefinedMenuItem::separator()).expect("Failed to append separator");
     menu.append(zenohd_submenu.as_ref()).expect("Failed to append submenu");
     menu.append(phoenix_submenu.as_ref()).expect("Failed to append submenu");
     menu.append(&PredefinedMenuItem::separator()).expect("Failed to append separator");
@@ -448,6 +511,7 @@ fn main() {
             .build()
             .expect("Failed to create tray icon"),
     );
+    tray_icon.set_show_menu_on_left_click(false);
 
     let zenohd_child: Rc<RefCell<Option<Child>>> = Rc::new(RefCell::new(None));
     let zenohd_submenu = Rc::clone(&zenohd_submenu);
@@ -534,7 +598,42 @@ fn main() {
         if let tao::event::Event::UserEvent(user_event) = event {
             match user_event {
                 UserEvent::Menu(menu_event) => {
-                    if menu_event.id == zenohd_run_id {
+                    if menu_event.id == check_for_update_id {
+                        let proxy = proxy.clone();
+                        thread::spawn(move || {
+                            let result = check_for_update();
+                            let _ = proxy.send_event(UserEvent::CheckForUpdateResult(result));
+                        });
+                    } else if menu_event.id == acknowledgements_id {
+                        let text = include_str!("../acknowledgements.txt");
+                        rfd::MessageDialog::new()
+                            .set_title("Acknowledgements")
+                            .set_description(text)
+                            .set_level(rfd::MessageLevel::Info)
+                            .show();
+                    } else if menu_event.id == zenohd_about_id {
+                        rfd::MessageDialog::new()
+                            .set_title("Zenoh Router — About")
+                            .set_description(
+                                "Zenoh Router (zenohd)\n\n\
+                                Message broker for AlchemyEngine. Listens on port 7447 (TCP).\n\
+                                Relays game state and input between the Phoenix Server and desktop clients.\n\n\
+                                Install: cargo install eclipse-zenoh",
+                            )
+                            .set_level(rfd::MessageLevel::Info)
+                            .show();
+                    } else if menu_event.id == phoenix_about_id {
+                        rfd::MessageDialog::new()
+                            .set_title("Phoenix Server — About")
+                            .set_description(
+                                "Phoenix Server (mix run)\n\n\
+                                Elixir-based game server. Listens on port 4000 (HTTP/WebSocket).\n\
+                                Runs game logic, physics, and room state. Connects to Zenoh Router for client communication.\n\n\
+                                Requires Elixir and mix in PATH.",
+                            )
+                            .set_level(rfd::MessageLevel::Info)
+                            .show();
+                    } else if menu_event.id == zenohd_run_id {
                         let zenohd_started = {
                             let mut child_opt = zenohd_child.borrow_mut();
                             if child_opt.is_none() {
@@ -721,7 +820,8 @@ fn main() {
                 // Quit 完了後の遅延 Ready 受信は無視する。cancelled を false に戻すのは
                 // 次回 Run に備えてのリセットのみ。他に副作用なし。
                 UserEvent::ZenohdReady => {
-                    if *zenohd_starting_cancelled.borrow() {
+                    let cancelled = *zenohd_starting_cancelled.borrow();
+                    if cancelled {
                         *zenohd_starting_cancelled.borrow_mut() = false;
                     } else {
                         *zenohd_ready.borrow_mut() = true;
@@ -730,7 +830,8 @@ fn main() {
                     }
                 }
                 UserEvent::ZenohdStartFailed(msg) => {
-                    if *zenohd_starting_cancelled.borrow() {
+                    let cancelled = *zenohd_starting_cancelled.borrow();
+                    if cancelled {
                         *zenohd_starting_cancelled.borrow_mut() = false;
                     } else {
                         *zenohd_ready.borrow_mut() = false;
@@ -763,7 +864,8 @@ fn main() {
                 }
                 // Ready: zenohd と同様（Quit 完了後の遅延 Ready を無視し、cancelled をリセット）
                 UserEvent::PhoenixServerReady => {
-                    if *phoenix_starting_cancelled.borrow() {
+                    let cancelled = *phoenix_starting_cancelled.borrow();
+                    if cancelled {
                         *phoenix_starting_cancelled.borrow_mut() = false;
                     } else {
                         *phoenix_ready.borrow_mut() = true;
@@ -772,7 +874,8 @@ fn main() {
                     }
                 }
                 UserEvent::PhoenixServerStartFailed(msg) => {
-                    if *phoenix_starting_cancelled.borrow() {
+                    let cancelled = *phoenix_starting_cancelled.borrow();
+                    if cancelled {
                         *phoenix_starting_cancelled.borrow_mut() = false;
                     } else {
                         *phoenix_ready.borrow_mut() = false;
@@ -802,6 +905,21 @@ fn main() {
                         .set_title("Client Run Failed")
                         .set_description(&msg)
                         .set_level(rfd::MessageLevel::Error)
+                        .show();
+                }
+                UserEvent::CheckForUpdateResult(result) => {
+                    let (title, level) = match &result {
+                        Ok(_) => ("Check for Update", rfd::MessageLevel::Info),
+                        Err(_) => ("Check for Update Failed", rfd::MessageLevel::Warning),
+                    };
+                    let msg = match &result {
+                        Ok(s) => s.as_str(),
+                        Err(e) => e.as_str(),
+                    };
+                    rfd::MessageDialog::new()
+                        .set_title(title)
+                        .set_description(msg)
+                        .set_level(level)
                         .show();
                 }
                 // 将来の拡張用（クリック・ダブルクリックなどの区別など）
