@@ -1,10 +1,10 @@
 defmodule Content.BulletHell3D.RenderComponent do
   @moduledoc """
-  毎フレーム3D DrawCommand リストを組み立てて push_render_frame NIF に送るコンポーネント。
+  毎フレーム3D DrawCommand リストを組み立てて FrameBroadcaster.put で Zenoh へ配信するコンポーネント。
 
   BulletHell3D コンテンツの描画担当。
   Elixir 側のシーン state（プレイヤー・敵・弾の3D座標）から DrawCommand を組み立て、
-  Camera3D と共に RenderFrameBuffer に書き込む。
+  MessagePack エンコード後に Zenoh 経由で desktop_client に配信する。
 
   ## 描画内容
   - `DrawCommand::Skybox`    — 空色グラデーション背景

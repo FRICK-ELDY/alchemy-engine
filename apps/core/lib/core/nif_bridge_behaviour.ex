@@ -7,19 +7,6 @@ defmodule Core.NifBridge.Behaviour do
   このビヘイビアを `@behaviour` として宣言する必要はない。
   """
 
-  # ── Phase R-2: push_render_frame 引数の型エイリアス ──────────────
-  # sprite_raw が推奨。player_sprite / item はレガシー（SpriteRaw で代用可能）。
-  @type draw_command ::
-          {:sprite_raw, float(), float(), float(), float(),
-           {{float(), float()}, {float(), float()}, {float(), float(), float(), float()}}}
-          | {:player_sprite, float(), float(), non_neg_integer()}
-          | {:sprite, float(), float(), non_neg_integer(), non_neg_integer()}
-          | {:particle, float(), float(), float(), float(), float(), {float(), float()}}
-          | {:item, float(), float(), non_neg_integer()}
-          | {:obstacle, float(), float(), float(), non_neg_integer()}
-
-  @type camera_params :: {:camera_2d, float(), float()}
-
   @type hud_data ::
           {{float(), float(), non_neg_integer(), float(), non_neg_integer(), non_neg_integer(),
             non_neg_integer()}, {non_neg_integer(), non_neg_integer(), float(), boolean()},
@@ -66,24 +53,6 @@ defmodule Core.NifBridge.Behaviour do
             ) :: :ok
   @callback create_game_loop_control() :: reference()
   @callback start_rust_game_loop(reference(), reference(), pid()) :: :ok
-  @callback create_render_frame_buffer() :: reference()
-  # atlas_path: アトラス PNG のファイルパス。Rust 側でロードし、存在しない場合は埋め込みフォールバックを使用する。
-  @callback start_render_thread(reference(), reference(), pid(), String.t(), String.t()) :: :ok
-  # P3: ui (UiCanvas), cursor_grab, mesh_definitions を追加。6 引数。
-  @callback push_render_frame(
-              reference(),
-              [draw_command()],
-              camera_params(),
-              term(),
-              :grab | :release | :no_change,
-              [term()]
-            ) :: :ok
-  # P5-2: MessagePack バイナリ形式。frame_binary は Msgpax.pack! の出力。
-  @callback push_render_frame_binary(
-              reference(),
-              binary(),
-              :grab | :release | :no_change
-            ) :: :ok
   @callback pause_physics(reference()) :: :ok
   @callback resume_physics(reference()) :: :ok
 

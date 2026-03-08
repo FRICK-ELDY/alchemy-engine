@@ -20,7 +20,6 @@ defmodule Core.Component do
   `context` マップには以下のフィールドが含まれる：
 
   - `context.world_ref`       — Rust ワールドへの参照
-  - `context.render_buf_ref`  — RenderFrameBuffer への参照（push_render_frame NIF に渡す）
   - `context.now`             — 現在時刻（monotonic ms）
   - `context.elapsed`         — ゲーム開始からの経過 ms
   - `context.frame_count`     — フレームカウンタ

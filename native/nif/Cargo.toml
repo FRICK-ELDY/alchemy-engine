@@ -16,8 +16,6 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 physics = { path = "../physics", features = ["nif"] }
 audio      = { path = "../audio" }
-desktop_input      = { path = "../desktop_input" }
-desktop_render     = { path = "../desktop_render" }
 desktop_input_openxr = { path = "../desktop_input_openxr", optional = true }
 rustler = "0.37"
 rayon = "1"

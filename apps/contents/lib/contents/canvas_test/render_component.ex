@@ -1,7 +1,7 @@
 defmodule Content.CanvasTest.RenderComponent do
   @moduledoc """
   毎フレーム DrawCommand リスト・Camera3D・UiCanvas を組み立てて
-  push_render_frame NIF に送るコンポーネント。
+  FrameBroadcaster.put で Zenoh へ配信するコンポーネント。
 
   ## 描画内容
   - `DrawCommand::Skybox`    — 空色グラデーション背景

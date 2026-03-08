@@ -3527,9 +3527,7 @@ version = "0.1.0"
 dependencies = [
  "audio",
  "bincode",
- "desktop_input",
  "desktop_input_openxr",
- "desktop_render",
  "env_logger",
  "log",
  "physics",

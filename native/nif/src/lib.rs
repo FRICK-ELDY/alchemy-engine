@@ -84,11 +84,8 @@ rustler::atoms! {
 }
 
 mod formula;
-mod key_map;
 mod lock_metrics;
 mod nif;
-mod render_bridge;
-mod render_frame_buffer;
 
 #[cfg(feature = "xr")]
 mod xr_bridge;
@@ -105,7 +102,6 @@ pub use physics::world::{
     PlayerState, SpecialEntitySnapshot, BULLET_KIND_FIREBALL, BULLET_KIND_LIGHTNING,
     BULLET_KIND_NORMAL, BULLET_KIND_ROCK, BULLET_KIND_WHIP,
 };
-pub use desktop_render::RenderFrame;
 
 #[cfg(feature = "umbrella")]
 rustler::init!("Elixir.Core.NifBridge", load = nif::load);

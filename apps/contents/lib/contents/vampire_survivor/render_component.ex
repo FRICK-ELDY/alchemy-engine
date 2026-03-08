@@ -6,7 +6,7 @@ defmodule Content.VampireSurvivor.RenderComponent do
   alias Content.VampireSurvivor.WeaponFormulas
 
   @moduledoc """
-  毎フレーム DrawCommand リストを組み立てて push_render_frame NIF に送るコンポーネント。
+  毎フレーム DrawCommand リストを組み立てて FrameBroadcaster.put で Zenoh へ配信するコンポーネント。
 
   Phase R-2: render_snapshot.rs の責務を Elixir 側（contents）に移した。
   GameWorldInner への直接依存を排除し、get_render_entities NIF 経由で
@@ -15,7 +15,7 @@ defmodule Content.VampireSurvivor.RenderComponent do
   ## on_nif_sync
   1. `get_render_entities/1` で物理ワールドのスナップショットを取得する
   2. Playing シーン state から UiCanvas ツリーを組み立てる
-  3. `push_render_frame/4` で RenderFrameBuffer に書き込む
+  3. `FrameBroadcaster.put/2` で Zenoh 経由で desktop_client に配信する
   """
   @behaviour Core.Component
 
