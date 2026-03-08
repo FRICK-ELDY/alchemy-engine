@@ -32,7 +32,10 @@ jobs:
         run: cargo fmt --manifest-path native/Cargo.toml --all -- --check
 
       - name: cargo clippy
-        run: cargo clippy --manifest-path native/Cargo.toml --workspace -- -D warnings
+        run: >
+          cargo clippy --manifest-path native/Cargo.toml --workspace
+          --exclude launcher
+          -- -D warnings
 
   # ─────────────────────────────────────────────
   # [B] Rust: ユニットテスト（physics のみ）

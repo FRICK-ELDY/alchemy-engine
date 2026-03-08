@@ -464,82 +464,98 @@ defmodule Contents.GameEvents do
     runner = content.flow_runner(state.room_id)
 
     # runner が nil のときは short-circuit で GenServer.call を避ける。
-    # runner が有効な pid でもプロセス終了済みの場合は GenServer.call が exit する。
-    case runner && GenServer.call(runner, :current) do
-      nil ->
-        if state.frame_count < 5,
-          do: Logger.warning("[GameEvents] runner=nil (flow_runner unavailable)")
+    runner_result = runner && GenServer.call(runner, :current)
 
-        {:noreply, %{state | last_tick: now, frame_count: state.frame_count + 1}}
+    opts = %{
+      events: events,
+      state: state,
+      throttled?: throttled?,
+      now: now,
+      elapsed: elapsed,
+      content: content,
+      physics_scenes: physics_scenes,
+      runner: runner
+    }
 
-      :empty ->
-        if state.frame_count < 5, do: Logger.warning("[GameEvents] scene stack empty")
-        {:noreply, %{state | last_tick: now, frame_count: state.frame_count + 1}}
+    handle_frame_events_main_dispatch(runner_result, opts)
+  end
 
-      {:ok, %{module: mod, state: scene_state}} ->
-        context = build_context(state, now, elapsed, runner)
+  defp handle_frame_events_main_dispatch(nil, %{state: state, now: now}) do
+    if state.frame_count < 5, do: Logger.warning("[GameEvents] runner=nil (flow_runner unavailable)")
+    {:noreply, %{state | last_tick: now, frame_count: state.frame_count + 1}}
+  end
 
-        # ── バックプレッシャー時もスキップしない処理 ──────────────────────
-        # スコア・HP・レベルアップ等のゲーム整合性に影響するため常に実行する
+  defp handle_frame_events_main_dispatch(:empty, %{state: state, now: now}) do
+    if state.frame_count < 5, do: Logger.warning("[GameEvents] scene stack empty")
+    {:noreply, %{state | last_tick: now, frame_count: state.frame_count + 1}}
+  end
 
-        Enum.each(events, &dispatch_frame_event_to_components(&1, context))
+  defp handle_frame_events_main_dispatch(
+         {:ok, %{module: mod, state: scene_state}},
+         %{
+           events: events,
+           state: state,
+           throttled?: throttled?,
+           now: now,
+           elapsed: elapsed,
+           content: content,
+           runner: runner
+         } = opts
+       ) do
+    context = build_context(state, now, elapsed, runner)
 
-        # シーン update（遷移判断のみ）
-        result = mod.update(context, scene_state)
-        {new_scene_state, _opts} = extract_state_and_opts(result)
-        GenServer.call(runner, {:update_current, fn _ -> new_scene_state end})
+    Enum.each(events, &dispatch_frame_event_to_components(&1, context))
 
-        state = process_transition(result, state, now, content, runner)
+    result = mod.update(context, scene_state)
+    {new_scene_state, _opts} = extract_state_and_opts(result)
+    GenServer.call(runner, {:update_current, fn _ -> new_scene_state end})
 
-        # ── バックプレッシャー時にスキップする処理 ────────────────────────
-        # NIF 書き込み・物理コールバック・ブロードキャスト・ログは重い副作用のためスキップ
+    state = process_transition(result, state, now, content, runner)
 
-        unless throttled? do
-          # P5-1: フレーム注入マップを初期化（コンポーネントがマージする）
-          Process.put(:frame_injection, %{})
+    unless throttled? do
+      apply_frame_side_effects(state, mod, events, context, opts)
+    end
 
-          # 入力・物理コールバック・ブロードキャスト
-          # on_physics_process（ボス AI 等）が NIF の状態を書き換えるため、
-          # on_nif_sync より先に実行する
-          maybe_set_input_and_broadcast(state, mod, physics_scenes, events, context)
+    {:noreply, %{state | last_tick: now, frame_count: state.frame_count + 1}}
+  end
 
-          # NIF 注入をコンポーネントに委譲（frame_injection にマージ）
-          # on_physics_process の後に実行することで、物理 AI の結果を含めた
-          # 最新のシーン state を Rust 側に反映できる
-          dispatch_nif_sync_to_components(context)
+  defp apply_frame_side_effects(state, mod, events, context, opts) do
+    Process.put(:frame_injection, %{})
 
-          # P3: Zenoh フレーム配信（RenderComponent が Process.put(:zenoh_frame) に書き込んだ場合）
-          maybe_publish_zenoh_frame(state)
+    maybe_set_input_and_broadcast(state, mod, opts.physics_scenes, events, context)
+    dispatch_nif_sync_to_components(context)
+    maybe_publish_zenoh_frame(state)
+    apply_frame_injection(state)
+    Diagnostics.maybe_log_and_cache(state, mod, opts.elapsed, opts.content, opts.runner)
+  end
 
-          # P5: 収集した注入データを MessagePack バイナリで 1 回の NIF 適用
-          injection = Process.get(:frame_injection, %{})
+  defp apply_frame_injection(state) do
+    injection = Process.get(:frame_injection, %{})
 
-          if map_size(injection) > 0 do
-            case Content.MessagePackEncoder.encode_injection_map(injection) do
-              {:ok, frame_binary} ->
-                case Core.NifBridge.set_frame_injection_binary(state.world_ref, frame_binary) do
-                  {:error, reason} ->
-                    Logger.error(
-                      "[NIF ERROR] set_frame_injection_binary failed: #{inspect(reason)}"
-                    )
+    if map_size(injection) > 0 do
+      do_apply_frame_injection(state, injection)
+    end
+  end
 
-                  _ ->
-                    :ok
-                end
+  defp do_apply_frame_injection(state, injection) do
+    case Content.MessagePackEncoder.encode_injection_map(injection) do
+      {:ok, frame_binary} ->
+        apply_frame_injection_binary(state, frame_binary)
 
-              {:error, reason} ->
-                Logger.error(
-                  "[Msgpax] encode_injection_map failed (skipping frame injection): #{inspect(reason)}"
-                )
-            end
-          end
+      {:error, reason} ->
+        Logger.error(
+          "[Msgpax] encode_injection_map failed (skipping frame injection): #{inspect(reason)}"
+        )
+    end
+  end
 
-          # ログ・キャッシュ（60フレームごと）
-          Diagnostics.maybe_log_and_cache(state, mod, elapsed, content, runner)
-        end
+  defp apply_frame_injection_binary(state, frame_binary) do
+    case Core.NifBridge.set_frame_injection_binary(state.world_ref, frame_binary) do
+      {:error, reason} ->
+        Logger.error("[NIF ERROR] set_frame_injection_binary failed: #{inspect(reason)}")
 
-        # frame_count は「受信したフレーム数」として管理する（ドロップ分も含む）
-        {:noreply, %{state | last_tick: now, frame_count: state.frame_count + 1}}
+      _ ->
+        :ok
     end
   end
 
@@ -594,37 +610,49 @@ defmodule Contents.GameEvents do
   # contents は network に依存するが、テスト等で network がロードされない構成では
   # Code.ensure_loaded?/1 が false、または Process.whereis/1 が nil となり publish はスキップされ実害は小さい。
   defp maybe_publish_zenoh_frame(state) do
-    # 初回 5 フレームは常にログ（通信確認用）
     debug_first_frames = state.frame_count < 5
 
     case Process.get(:zenoh_frame) do
       {room_id, frame_binary} when is_binary(frame_binary) ->
         Process.delete(:zenoh_frame)
-
-        if Code.ensure_loaded?(Network.ZenohBridge) and Process.whereis(Network.ZenohBridge) do
-          if debug_first_frames or rem(state.frame_count, 60) == 0 do
-            Logger.info(
-              "[Zenoh] publishing frame room=#{room_id} size=#{byte_size(frame_binary)} frame_count=#{state.frame_count}"
-            )
-          end
-
-          Network.ZenohBridge.publish_frame(room_id, frame_binary)
-        else
-          if debug_first_frames or rem(state.frame_count, 120) == 0 do
-            Logger.warning("[Zenoh] ZenohBridge not available, skipping publish (debug)")
-          end
-        end
+        maybe_publish_zenoh_frame_when_available(room_id, frame_binary, state, debug_first_frames)
 
       _ ->
-        # zenoh_frame が未設定＝RenderComponent が FrameBroadcaster.put を呼んでいない
-        if debug_first_frames or rem(state.frame_count, 120) == 0 do
-          Logger.warning(
-            "[Zenoh] no zenoh_frame in process frame_count=#{state.frame_count} (debug)"
-          )
-        end
-
-        :ok
+        maybe_publish_zenoh_frame_log_no_frame(state, debug_first_frames)
     end
+  end
+
+  defp maybe_publish_zenoh_frame_when_available(room_id, frame_binary, state, debug_first_frames) do
+    zenoh_available? = Code.ensure_loaded?(Network.ZenohBridge) and Process.whereis(Network.ZenohBridge)
+
+    if zenoh_available? do
+      maybe_publish_zenoh_frame_log_publish(room_id, frame_binary, state, debug_first_frames)
+      Network.ZenohBridge.publish_frame(room_id, frame_binary)
+    else
+      maybe_publish_zenoh_frame_log_unavailable(state, debug_first_frames)
+    end
+  end
+
+  defp maybe_publish_zenoh_frame_log_publish(room_id, frame_binary, state, debug_first_frames) do
+    if debug_first_frames or rem(state.frame_count, 60) == 0 do
+      Logger.info(
+        "[Zenoh] publishing frame room=#{room_id} size=#{byte_size(frame_binary)} frame_count=#{state.frame_count}"
+      )
+    end
+  end
+
+  defp maybe_publish_zenoh_frame_log_unavailable(state, debug_first_frames) do
+    if debug_first_frames or rem(state.frame_count, 120) == 0 do
+      Logger.warning("[Zenoh] ZenohBridge not available, skipping publish (debug)")
+    end
+  end
+
+  defp maybe_publish_zenoh_frame_log_no_frame(state, debug_first_frames) do
+    if debug_first_frames or rem(state.frame_count, 120) == 0 do
+      Logger.warning("[Zenoh] no zenoh_frame in process frame_count=#{state.frame_count} (debug)")
+    end
+
+    :ok
   end
 
   defp build_context(state, now, elapsed, runner) do
