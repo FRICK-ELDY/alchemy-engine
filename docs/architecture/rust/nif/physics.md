@@ -1,8 +1,26 @@
-# Rust: physics — 物理演算・ECS
+# Rust: physics — 物理演算・ECS コードベース詳細
 
 ## 概要
 
-`physics` クレートは 60Hz 固定の物理演算・空間ハッシュ・ECS・外部注入パラメータテーブルを担当します。依存: `rustc-hash = "2"`, `rayon = "1"`, `log = "0.4"`。
+`physics` クレートは 60Hz 固定の物理演算・空間ハッシュ・ECS・外部注入パラメータテーブルを担当します。`nif` がこのクレートを利用し、Elixir からの NIF 経由で状態を注入・読み取りします。
+
+- **パス**: `native/physics/`
+- **依存**: `rustc-hash = "2"`, `rayon = "1"`, `log = "0.4"`
+
+---
+
+## クレート構成
+
+```mermaid
+graph TD
+    PHYSICS[physics]
+    WORLD[world/]
+    GAMELOGIC[game_logic/]
+    PHYS[physics/]
+    PHYSICS --> WORLD
+    PHYSICS --> GAMELOGIC
+    PHYSICS --> PHYS
+```
 
 ---
 
@@ -23,7 +41,7 @@
 
 ## `entity_params.rs` — 外部注入パラメータテーブル
 
-`EntityParamTables` 構造体として定義され、`set_entity_params` NIF 経由で Elixir 側から注入される。ハードコードされたパラメータは持たず、`default()` は空テーブルを返す。
+`EntityParamTables` は `set_entity_params` NIF 経由で Elixir 側から注入される。ハードコードされたパラメータは持たず、`default()` は空テーブルを返す。
 
 ```rust
 pub struct EntityParamTables {
@@ -93,6 +111,7 @@ struct CollisionWorld {
 - **items.rs** — アイテム収集
 - **collision.rs** — 敵 vs 障害物押し出し
 - **spawn.rs** — スポーン位置生成
+- **special_entity_collision.rs** — ボス等の特殊エンティティ衝突
 
 武器選択肢の生成は Elixir 側 `LevelSystem` が担当。
 
@@ -100,6 +119,7 @@ struct CollisionWorld {
 
 ## 関連ドキュメント
 
-- [アーキテクチャ概要](../overview.md)
-- [nif](./nif.md) / [render](./render.md)
-- [Elixir: core](../elixir/core.md)
+- [アーキテクチャ概要](../../overview.md)
+- [nif](../nif.md)
+- [desktop/render](../desktop/render.md)
+- [Elixir: core](../../elixir/core.md)

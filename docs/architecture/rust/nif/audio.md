@@ -2,7 +2,10 @@
 
 ## 概要
 
-`audio` クレートは rodio によるオーディオ再生とアセット読み込みを担当します。コマンド送信で BGM / SE の再生・停止・音量制御を行います。
+`audio` クレートは **rodio** によるオーディオ再生とアセット読み込みを担当します。SuperCollider 風のコマンド駆動オーディオスレッドで、BGM / SE の再生・一時停止・再開・音量制御を行います。
+
+- **パス**: `native/audio/`
+- **依存**: rodio
 
 ---
 
@@ -10,7 +13,7 @@
 
 ```mermaid
 graph LR
-    AC[AudioCommand enum<br/>PlayBgm / PlaySfx<br/>StopBgm / SetVolume]
+    AC[AudioCommand enum<br/>PlayBgm / PauseBgm / ResumeBgm<br/>SetBgmVolume / PlaySe / Shutdown]
     ACS[AudioCommandSender]
     AT[オーディオスレッド<br/>コマンドループ]
     AM[AudioManager<br/>bgm_sink + OutputStream]
@@ -42,7 +45,21 @@ flowchart LR
 
 ---
 
+## AudioCommand 一覧
+
+| コマンド | 説明 |
+|:---|:---|
+| `PlayBgm` | BGM 再生 |
+| `PauseBgm` | BGM 一時停止 |
+| `ResumeBgm` | BGM 再開 |
+| `SetBgmVolume(f32)` | BGM 音量 |
+| `PlaySe(AssetId)` | SE 再生 |
+| `PlaySeWithVolume(AssetId, f32)` | 音量指定で SE 再生 |
+| `Shutdown` | オーディオスレッド終了 |
+
+---
+
 ## 関連ドキュメント
 
-- [アーキテクチャ概要](../overview.md)
-- [nif](./nif.md)
+- [アーキテクチャ概要](../../overview.md)
+- [nif](../nif.md)

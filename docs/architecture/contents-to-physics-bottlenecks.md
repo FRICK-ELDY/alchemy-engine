@@ -309,7 +309,7 @@ Rust が decode して描画する）を維持する。
 ## 8. 関連ドキュメント
 
 - [Rust: nif](rust/nif.md)
-- [Rust: physics](rust/physics.md)
+- [Rust: physics](rust/nif/physics.md)
 - [Elixir: core](elixir/core.md)
 - [Elixir: contents](elixir/contents.md)
 - [draw-command-spec.md](draw-command-spec.md) — DrawCommand タグ・フィールド仕様（SSoT）
