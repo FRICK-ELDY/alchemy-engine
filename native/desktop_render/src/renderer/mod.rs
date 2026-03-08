@@ -339,7 +339,7 @@ impl Renderer {
         let shader_source = init
             .sprite_wgsl
             .as_deref()
-            .unwrap_or_else(|| include_str!("shaders/sprite.wgsl"));
+            .unwrap_or(include_str!("shaders/sprite.wgsl"));
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Sprite Shader"),
             source: wgpu::ShaderSource::Wgsl(shader_source.into()),
@@ -596,13 +596,8 @@ impl Renderer {
         // ─── R-5: 3D パス ────────────────────────────────────────
         // Camera3D 以外が渡された場合は pipeline_3d.render() 内で早期リターンする。
         // P3: mesh_definitions を渡し、パイプラインが登録して使用する。
-        self.pipeline_3d.render(
-            &mut encoder,
-            &view,
-            commands,
-            camera,
-            mesh_definitions,
-        );
+        self.pipeline_3d
+            .render(&mut encoder, &view, commands, camera, mesh_definitions);
 
         // ─── egui HUD パス ───────────────────────────────────────
         let raw_input = self.egui_winit.take_egui_input(window);

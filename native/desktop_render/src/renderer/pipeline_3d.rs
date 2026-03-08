@@ -284,8 +284,7 @@ impl Pipeline3D {
         height: u32,
         mesh_wgsl: Option<&str>,
     ) -> Self {
-        let shader_source =
-            mesh_wgsl.unwrap_or_else(|| include_str!("shaders/mesh.wgsl"));
+        let shader_source = mesh_wgsl.unwrap_or(include_str!("shaders/mesh.wgsl"));
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Mesh Shader"),
             source: wgpu::ShaderSource::Wgsl(shader_source.into()),
@@ -533,14 +532,10 @@ impl Pipeline3D {
         // これにより、SimpleBox3D → VampireSurvivor 等の切替時に前コンテンツのメッシュが
         // キャッシュに残り続けるメモリリークを防止する。
         let new_key: Vec<String> = mesh_definitions.iter().map(|d| d.name.clone()).collect();
-        let need_update = self
-            .mesh_def_cache_key
-            .as_ref()
-            .map_or(true, |prev| prev != &new_key);
+        let need_update = self.mesh_def_cache_key.as_ref() != Some(&new_key);
         if need_update {
             if let Some(ref old_key) = self.mesh_def_cache_key {
-                let new_key_set: HashSet<&str> =
-                    new_key.iter().map(String::as_str).collect();
+                let new_key_set: HashSet<&str> = new_key.iter().map(String::as_str).collect();
                 for name in old_key.iter() {
                     if !new_key_set.contains(name.as_str()) {
                         self.mesh_def_cache.remove(name);
@@ -579,24 +574,23 @@ impl Pipeline3D {
         });
 
         if let Some((top, bottom)) = sky_cmd {
-            let verts: Vec<MeshVertex> = if let Some((template, _)) =
-                self.mesh_def_cache.get("skybox_quad")
-            {
-                // P3: Elixir 定義の skybox_quad を使用し、色を top/bottom で上書き
-                template
-                    .iter()
-                    .enumerate()
-                    .map(|(i, v)| {
-                        let color = if i < 2 { top } else { bottom };
-                        MeshVertex {
-                            position: v.position,
-                            color,
-                        }
-                    })
-                    .collect()
-            } else {
-                skybox_verts(top, bottom).to_vec()
-            };
+            let verts: Vec<MeshVertex> =
+                if let Some((template, _)) = self.mesh_def_cache.get("skybox_quad") {
+                    // P3: Elixir 定義の skybox_quad を使用し、色を top/bottom で上書き
+                    template
+                        .iter()
+                        .enumerate()
+                        .map(|(i, v)| {
+                            let color = if i < 2 { top } else { bottom };
+                            MeshVertex {
+                                position: v.position,
+                                color,
+                            }
+                        })
+                        .collect()
+                } else {
+                    skybox_verts(top, bottom).to_vec()
+                };
             self.queue
                 .write_buffer(&self.sky_vbuf, 0, bytemuck::cast_slice(&verts));
 
@@ -650,34 +644,29 @@ impl Pipeline3D {
                     color,
                 } => {
                     let base = self.box_verts_scratch.len() as u32;
-                    let (verts, idx) = if let Some((template, indices)) =
-                        self.mesh_def_cache.get("unit_box")
-                    {
-                        // P3: Elixir 定義の unit_box を使用。スケール・移動・色を適用
-                        let hw = *half_w * 2.0;
-                        let hh = *half_h * 2.0;
-                        let hd = *half_d * 2.0;
-                        let verts: Vec<MeshVertex> = template
-                            .iter()
-                            .map(|v| MeshVertex {
-                                position: [
-                                    v.position[0] * hw + x,
-                                    v.position[1] * hh + y,
-                                    v.position[2] * hd + z,
-                                ],
-                                color: *color,
-                            })
-                            .collect();
-                        let idx: Vec<u32> =
-                            indices.iter().map(|&i| i + base).collect();
-                        (verts, idx)
-                    } else {
-                        let (v, i) = box_mesh(*x, *y, *z, *half_w, *half_h, *half_d, *color);
-                        (
-                            v.to_vec(),
-                            i.iter().map(|&i| i + base).collect::<Vec<_>>(),
-                        )
-                    };
+                    let (verts, idx) =
+                        if let Some((template, indices)) = self.mesh_def_cache.get("unit_box") {
+                            // P3: Elixir 定義の unit_box を使用。スケール・移動・色を適用
+                            let hw = *half_w * 2.0;
+                            let hh = *half_h * 2.0;
+                            let hd = *half_d * 2.0;
+                            let verts: Vec<MeshVertex> = template
+                                .iter()
+                                .map(|v| MeshVertex {
+                                    position: [
+                                        v.position[0] * hw + x,
+                                        v.position[1] * hh + y,
+                                        v.position[2] * hd + z,
+                                    ],
+                                    color: *color,
+                                })
+                                .collect();
+                            let idx: Vec<u32> = indices.iter().map(|&i| i + base).collect();
+                            (verts, idx)
+                        } else {
+                            let (v, i) = box_mesh(*x, *y, *z, *half_w, *half_h, *half_d, *color);
+                            (v.to_vec(), i.iter().map(|&i| i + base).collect::<Vec<_>>())
+                        };
                     self.box_verts_scratch.extend(verts);
                     self.box_indices_scratch.extend(idx);
                 }

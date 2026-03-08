@@ -2,10 +2,10 @@
 //!
 //! クライアント exe 用。サーバーと分離された別プロセスで動作する。
 
-use futures::future::{select, Either};
-use futures_timer::Delay;
 use desktop_render::window::{KeyCode, KeyState, RenderBridge};
 use desktop_render::RenderFrame;
+use futures::future::{select, Either};
+use futures_timer::Delay;
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -55,7 +55,10 @@ impl NetworkRenderBridge {
         let mut config = Config::default();
         if !connect_config.is_empty() {
             config
-                .insert_json5("connect/endpoints", format!(r#"["{}"]"#, connect_config).as_str())
+                .insert_json5(
+                    "connect/endpoints",
+                    format!(r#"["{}"]"#, connect_config).as_str(),
+                )
                 .map_err(|e| format!("zenoh connect config failed: {e}"))?;
         }
         let session = zenoh::open(config)
@@ -136,11 +139,7 @@ impl NetworkRenderBridge {
                 return;
             }
         };
-        let publisher = match self
-            .session
-            .declare_publisher(&self.action_key_expr)
-            .wait()
-        {
+        let publisher = match self.session.declare_publisher(&self.action_key_expr).wait() {
             Ok(p) => p,
             Err(e) => {
                 log::warn!("action publisher declare failed: {e}");
@@ -210,7 +209,9 @@ fn run_receiver(
             Either::Right((_, _)) => {
                 // タイムアウト: shutdown を再確認してループ継続
                 if frame_count == 0 && last_wait_log.elapsed().as_secs() >= 5 {
-                    log::warn!("[frame receiver] still waiting for frames after 5s (key={key_expr})");
+                    log::warn!(
+                        "[frame receiver] still waiting for frames after 5s (key={key_expr})"
+                    );
                     last_wait_log = std::time::Instant::now();
                 }
             }

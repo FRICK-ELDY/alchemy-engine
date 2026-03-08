@@ -48,9 +48,12 @@ pub(crate) fn update_projectiles_and_enemy_hits(w: &mut GameWorldInner, dt: f32)
         let by = w.bullets.positions_y[bi];
         let piercing = w.bullets.piercing[bi];
 
-        w.collision
-            .dynamic
-            .query_nearby_into(bx, by, w.bullet_query_radius, &mut w.spatial_query_buf);
+        w.collision.dynamic.query_nearby_into(
+            bx,
+            by,
+            w.bullet_query_radius,
+            &mut w.spatial_query_buf,
+        );
         for ei in w.spatial_query_buf.iter().copied() {
             if w.enemies.alive[ei] == 0 {
                 continue;

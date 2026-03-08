@@ -13,10 +13,10 @@ mod msgpack_decode;
 mod network_render_bridge;
 
 use audio::AssetLoader;
-use network_render_bridge::NetworkRenderBridge;
 use desktop_input::run_desktop_loop;
-use physics::constants::{SCREEN_HEIGHT, SCREEN_WIDTH};
 use desktop_render::window::{RendererInit, WindowConfig};
+use network_render_bridge::NetworkRenderBridge;
+use physics::constants::{SCREEN_HEIGHT, SCREEN_WIDTH};
 
 fn main() -> Result<(), String> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();

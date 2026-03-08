@@ -1,4 +1,9 @@
 defmodule Content.RollingBall.RenderComponent do
+  alias Content.MessagePackEncoder
+  alias Content.RollingBall.MeshDef
+  alias Contents.FrameBroadcaster
+  alias Contents.SceneStack
+
   @moduledoc """
   毎フレーム3D DrawCommand リストを組み立てて FrameBroadcaster.put で Zenoh へ配信するコンポーネント。
 
@@ -38,21 +43,21 @@ defmodule Content.RollingBall.RenderComponent do
     runner = content.flow_runner(:main)
 
     current_scene =
-      case runner && Contents.SceneStack.current(runner) do
+      case runner && SceneStack.current(runner) do
         {:ok, %{module: mod}} -> mod
         _ -> content.playing_scene()
       end
 
     playing_state =
-      (runner && Contents.SceneStack.get_scene_state(runner, content.playing_scene())) || %{}
+      (runner && SceneStack.get_scene_state(runner, content.playing_scene())) || %{}
 
     commands = build_commands(playing_state, current_scene)
     camera = build_camera()
     ui = build_ui(playing_state, current_scene, content)
 
-    mesh_defs = Content.RollingBall.MeshDef.definitions()
-    frame_binary = Content.MessagePackEncoder.encode_frame(commands, camera, ui, mesh_defs)
-    Contents.FrameBroadcaster.put(context.room_id, frame_binary)
+    mesh_defs = MeshDef.definitions()
+    frame_binary = MessagePackEncoder.encode_frame(commands, camera, ui, mesh_defs)
+    FrameBroadcaster.put(context.room_id, frame_binary)
 
     :ok
   end

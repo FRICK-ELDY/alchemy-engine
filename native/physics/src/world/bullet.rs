@@ -100,7 +100,17 @@ impl BulletWorld {
         render_kind: u8,
         hit_color: [f32; 4],
     ) {
-        self.spawn_ex(x, y, vx, vy, damage, lifetime, piercing, render_kind, hit_color);
+        self.spawn_ex(
+            x,
+            y,
+            vx,
+            vy,
+            damage,
+            lifetime,
+            piercing,
+            render_kind,
+            hit_color,
+        );
     }
 
     /// ダメージ 0・短命の表示専用エフェクト弾を生成する（Whip / Lightning 用）

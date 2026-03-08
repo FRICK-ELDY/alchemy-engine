@@ -88,12 +88,12 @@ impl VertexWire {
         let c = &self.1;
         MeshVertex {
             position: [
-                p.get(0).copied().unwrap_or(0.0) as f32,
+                p.first().copied().unwrap_or(0.0) as f32,
                 p.get(1).copied().unwrap_or(0.0) as f32,
                 p.get(2).copied().unwrap_or(0.0) as f32,
             ],
             color: [
-                c.get(0).copied().unwrap_or(0.0) as f32,
+                c.first().copied().unwrap_or(0.0) as f32,
                 c.get(1).copied().unwrap_or(0.0) as f32,
                 c.get(2).copied().unwrap_or(0.0) as f32,
                 c.get(3).copied().unwrap_or(1.0) as f32,
@@ -210,12 +210,7 @@ fn to_border(b: &Option<(Vec<f64>, f64)>) -> Option<([f32; 4], f32)> {
         return None;
     }
     Some((
-        [
-            c[0] as f32,
-            c[1] as f32,
-            c[2] as f32,
-            c[3] as f32,
-        ],
+        [c[0] as f32, c[1] as f32, c[2] as f32, c[3] as f32],
         *w as f32,
     ))
 }
@@ -231,7 +226,11 @@ impl MeshDefMsg {
     fn to_mesh_def(&self) -> MeshDef {
         MeshDef {
             name: self.name.clone(),
-            vertices: self.vertices.iter().map(VertexWire::to_mesh_vertex).collect(),
+            vertices: self
+                .vertices
+                .iter()
+                .map(VertexWire::to_mesh_vertex)
+                .collect(),
             indices: self.indices.clone(),
         }
     }
@@ -307,7 +306,12 @@ fn ui_component_from_msg(m: &UiComponentMsg) -> UiComponent {
             corner_radius: *corner_radius as f32,
             border: to_border(border),
         },
-        UiComponentMsg::Text { text, color, size, bold } => UiComponent::Text {
+        UiComponentMsg::Text {
+            text,
+            color,
+            size,
+            bold,
+        } => UiComponent::Text {
             text: text.clone(),
             color: f64_4(*color),
             size: *size as f32,
@@ -405,7 +409,15 @@ fn draw_command_from_msg(m: &DrawCommandMsg) -> DrawCommand {
             uv_size: [uv_size[0] as f32, uv_size[1] as f32],
             color_tint: f64_4(*color_tint),
         },
-        DrawCommandMsg::Particle { x, y, r, g, b, alpha, size } => DrawCommand::Particle {
+        DrawCommandMsg::Particle {
+            x,
+            y,
+            r,
+            g,
+            b,
+            alpha,
+            size,
+        } => DrawCommand::Particle {
             x: *x as f32,
             y: *y as f32,
             r: *r as f32,
@@ -442,7 +454,11 @@ fn draw_command_from_msg(m: &DrawCommandMsg) -> DrawCommand {
             half_d: *half_d as f32,
             color: f64_4(*color),
         },
-        DrawCommandMsg::GridPlane { size, divisions, color } => DrawCommand::GridPlane {
+        DrawCommandMsg::GridPlane {
+            size,
+            divisions,
+            color,
+        } => DrawCommand::GridPlane {
             size: *size as f32,
             divisions: *divisions,
             color: f64_4(*color),
@@ -450,7 +466,10 @@ fn draw_command_from_msg(m: &DrawCommandMsg) -> DrawCommand {
         DrawCommandMsg::GridPlaneVerts { vertices } => DrawCommand::GridPlaneVerts {
             vertices: vertices.iter().map(VertexWire::to_mesh_vertex).collect(),
         },
-        DrawCommandMsg::Skybox { top_color, bottom_color } => DrawCommand::Skybox {
+        DrawCommandMsg::Skybox {
+            top_color,
+            bottom_color,
+        } => DrawCommand::Skybox {
             top_color: f64_4(*top_color),
             bottom_color: f64_4(*bottom_color),
         },
@@ -492,10 +511,7 @@ fn parse_cursor_grab(s: &str) -> Option<bool> {
 /// MessagePack バイナリをデコードして RenderFrame を構築する。
 pub fn decode_render_frame(bytes: &[u8]) -> Result<RenderFrame, rmp_serde::decode::Error> {
     let frame: FrameMsg = from_slice(bytes)?;
-    let cursor_grab = frame
-        .cursor_grab
-        .as_deref()
-        .and_then(parse_cursor_grab);
+    let cursor_grab = frame.cursor_grab.as_deref().and_then(parse_cursor_grab);
     Ok(RenderFrame {
         commands: frame.commands.iter().map(draw_command_from_msg).collect(),
         camera: camera_from_msg(&frame.camera),

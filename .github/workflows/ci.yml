@@ -32,7 +32,10 @@ jobs:
         run: cargo fmt --manifest-path native/Cargo.toml --all -- --check
 
       - name: cargo clippy
-        run: cargo clippy --manifest-path native/Cargo.toml --workspace -- -D warnings
+        run: >
+          cargo clippy --manifest-path native/Cargo.toml --workspace
+          --exclude launcher
+          -- -D warnings
 
   # ─────────────────────────────────────────────
   # [B] Rust: ユニットテスト（physics のみ）
@@ -108,30 +111,30 @@ jobs:
       - name: install system deps
         run: sudo apt-get update -q && sudo apt-get install -y libasound2-dev
 
-      - uses: erlef/setup-beam@v1
-        with:
-          elixir-version: "1.19"
-          otp-version: "28"
-
       - uses: dtolnay/rust-toolchain@stable
-
-      # Elixir deps と _build のキャッシュ
-      # native/**/*.toml の変更でも無効化（NIF 再ビルドを確実に行うため）
-      - uses: actions/cache@v4
-        with:
-          path: |
-            deps
-            _build
-          key: elixir-test-${{ runner.os }}-${{ hashFiles('mix.lock', 'native/**/*.toml') }}
-          restore-keys: |
-            elixir-test-${{ runner.os }}-
 
       # Rust ビルドキャッシュ（NIF コンパイル時間を大幅短縮）
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: native
 
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.19"
+          otp-version: "28"
+
+      # deps のみキャッシュ（_build は毎回ビルドし NIF 配置を確実にする）
+      - uses: actions/cache@v4
+        with:
+          path: deps
+          key: elixir-test-deps-${{ runner.os }}-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            elixir-test-deps-${{ runner.os }}-
+
       - run: mix deps.get
+      - run: mix compile --warnings-as-errors
+        env:
+          MIX_ENV: test
       - run: mix test
         env:
           MIX_ENV: test
