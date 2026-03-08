@@ -182,30 +182,13 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 
 ### フェーズ 0: 事前整理（1〜2 週間）
 
-#### 0.1 定義の SSoT 化
-
-- [x] **entity_params 一元化**: Elixir `Content.EntityParams` を唯一の定義とし、Rust の `ENEMY_TABLE` / `boss.rs` 内のハードコードを `set_entity_params` 注入に完全移行（完了済み。`EntityParamTables` + `set_entity_params` で実現）
-- [x] **定数ドキュメント化**: `physics/constants.rs` のうち「コンテンツ固有」と「エンジン固定」を分離。コンテンツ固有は Elixir 定義 or 起動時注入に。分類は constants.rs のコメントおよび下記一覧を参照。
-- [x] **DrawCommand 仕様書の確定**: [draw-command-spec.md](../architecture/draw-command-spec.md) をプロトコル仕様として確定。MessagePack 形式は [messagepack-schema.md](../architecture/messagepack-schema.md) を参照（P5-2 と連携）
-
-##### constants 分類一覧
+#### 0.1 constants 分類一覧（参照用）
 
 | 分類 | 対象定数 | 備考 |
 |:---|:---|:---|
 | エンジン固定 | SCREEN_WIDTH/HEIGHT, FRAME_BUDGET_MS, CELL_SIZE, PARTICLE_RNG_SEED, INVINCIBLE_DURATION, PLAYER_RADIUS, BULLET_RADIUS, CAMERA_LERP_SPEED, SPRITE_SIZE | そのまま維持 |
 | コンテンツ可変 | MAP_*, PLAYER_SPEED, BULLET_*, WEAPON_*, ENEMY_DAMAGE_PER_SEC, WAVES | set_world_params / set_entity_params で注入 |
 | 未整理 | ENEMY_RADIUS, ENEMY_SEPARATION_* | 敵ごとに entity_params で上書き可能。現状はデフォルト値 |
-
-#### 0.2 既存プロトコル確認
-
-- [x] **Network.Channel** の `"input"` / `"frame"` イベント形式を確認 → [network-protocol-current.md](../architecture/network-protocol-current.md)
-- [x] **UDP プロトコル**（`Network.UDP`）のフォーマットを確認 → 同上
-- [x] 現状の `"frame"` ペイロードが DrawCommand を含むか、frame_events のみかを把握 → frame_events のみ
-
-#### 0.3 Zenohex 導入
-
-- [x] `zenohex` を `apps/network/mix.exs` に追加（`{:zenohex, "~> 0.7.2"}`）。rustler 0.37.x への昇格を実施
-- [x] Zenoh のバージョン互換性を確認（Zenohex 0.7.x は Zenoh 1.7.x に対応）
 
 ---
 
@@ -230,9 +213,6 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 | player_interp | optional | prev/curr tick_ms, prev/curr pos（クライアント側補間用） |
 | frame_id | u32 | フレーム識別 |
 
-- [x] 既存 `push_render_frame` / `push_render_frame_binary` のペイロードをベースにプロトコル仕様を策定 → [zenoh-protocol-spec.md](../architecture/zenoh-protocol-spec.md)
-- [x] MessagePack スキーマは [messagepack-schema.md](../architecture/messagepack-schema.md) に定義済み
-
 #### 1.3 入力ペイロード
 
 **movement**（`game/room/{room_id}/input/movement`）:
@@ -249,9 +229,6 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 | name | string | アクション名（select_weapon 等） |
 | payload | map | 追加パラメータ（任意） |
 
-- [x] raw_key、cursor_grab は将来拡張として検討 → [zenoh-protocol-spec.md](../architecture/zenoh-protocol-spec.md) §5
-- [x] Phoenix Channel `"input"` / `"action"` とのデータ形式の互換性を確保（GameEvents への渡し方） → 同上 §4
-
 ---
 
 ### フェーズ 2: クライアント exe の土台（2〜3 週間）
@@ -260,13 +237,7 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 
 クライアント側クレートは `desktop_` プレフィックスで命名。フェーズ 2 では `desktop_client` のみを追加。将来的に `desktop_audio`, `desktop_input`, `desktop_render` 等へリネームする際の一貫性を確保。
 
-#### 2.1 クライアント用 Rust バイナリの追加
-
-- [x] `native/` に `desktop_client` クレートを追加（`[[bin]]`）
-- [x] 依存: `render`, `input`, `physics`, `audio`, `zenoh`（フレーム subscribe / 入力 publish）
-- [x] `nif` に依存しない（Rustler を使わない）
-
-#### 2.2 RenderBridge のネットワーク版実装
+#### 2.2 RenderBridge のネットワーク版（参照用）
 
 現状の `NativeRenderBridge` は以下を持つ:
 
@@ -277,15 +248,6 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 
 - `next_frame()`: ネットワーク受信バッファから最新フレームを取得（デシリアライズ）
 - `on_*`: ネットワーク経由でサーバーに送信
-
-- [x] `render::window::RenderBridge` トレイトの実装を `NetworkRenderBridge` として作成
-- [x] 受信スレッド: `zenoh` で `game/room/{room_id}/frame` を subscribe し、ローカルバッファに格納
-- [x] 送信: movement を `game/room/{room_id}/input/movement` に publish（CongestionControl::Drop）、action を `game/room/{room_id}/input/action` に publish（Reliable）
-
-#### 2.3 エントリポイント
-
-- [x] `desktop_client/src/main.rs`: `input::run_desktop_loop(NetworkRenderBridge::new(...), config)` を起動
-- [x] 接続先・ルーム ID を `--connect`, `--room` 引数 or 環境変数 `ZENOH_CONNECT` で受け取る
 
 ---
 
@@ -299,15 +261,6 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 
 - **ルーム :main かつ ローカル描画あり**: 従来どおり RenderFrameBuffer + start_render_thread
 - **リモートクライアント接続時**: `push_render_frame` の内容を WebSocket / UDP でブロードキャスト
-
-- [x] `Contents.GameEvents` の `on_nif_sync` 後に、Zenohex で `game/room/{room_id}/frame` に publish
-- [x] Zenohex の subscriber で `game/room/*/input/movement` と `game/room/*/input/action` を受信し、GameEvents に渡す
-- [x] ローカル描画とリモート配信の両方をサポート（`config :network, :zenoh_enabled, true` で有効化）
-
-#### 3.2 入力の集約
-
-- [x] Zenohex subscriber で受信した movement / action を、既存 `Network.Channel` 経由と同様に GameEvents へ配送
-- [x] ローカル入力（NIF 経由）とリモート入力のマージ: 同一 GameEvents が `{:move_input, dx, dy}` / `{:ui_action, name}` を処理（Phoenix / Zenoh 経路を区別しない）
 
 ---
 
@@ -328,8 +281,6 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 ### フェーズ 5: ローカル描画のオプション化（任意・1〜2 週間）
 
 - [ ] サーバーをヘッドレスで起動するモード（`start_render_thread` を呼ばない）
-- [x] クライアント exe のみでプレイする運用（サーバー + クライアントを別プロセスで起動）
-  - `bin/play.bat`（Windows）、`bin/play.sh`（Linux/macOS）で zenohd + mix run + desktop_client を一括起動
 
 ---
 
@@ -373,7 +324,7 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 
 **課題**: desktop_client 終了後も zenohd は残り続ける。ユーザーが気づかず PC リソースを消費する。
 
-**対応**: → [launcher-design.md](./launcher-design.md) に統合。Discord 風トレイランチャーで zenohd / HL-Server / Client を一括管理。
+**対応**: → [improvement-plan.md I-G](./improvement-plan.md#i-g-ランチャーlauncherの課題) に統合。Discord 風トレイランチャーで zenohd / HL-Server / Client を一括管理。
 
 ---
 
