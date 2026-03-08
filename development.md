@@ -37,14 +37,15 @@ mix run --no-halt
 
 ### ランチャー（システムトレイ）
 
-zenohd / HL-Server / Client をトレイメニューから管理します。Phase 0 ではトレイ表示と Quit のみ対応。
+zenohd / HL-Server / Client をトレイメニューから管理します。Phase 1 では zenohd Run / Quit に対応。
 
 ```bash
 cargo run -p launcher
 ```
 
 - トレイにアイコンが表示されます
-- 右クリック → 「Quit」で終了
+- 右クリック → 「zenohd Run」で zenohd を起動、「zenohd Quit」で終了
+- 「Quit」でランチャーを終了
 
 ### クライアント exe のみでプレイ（一括起動）
 
