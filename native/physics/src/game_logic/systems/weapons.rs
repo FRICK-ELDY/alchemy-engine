@@ -37,10 +37,10 @@ pub(crate) fn update_weapon_attacks(w: &mut GameWorldInner, dt: f32, px: f32, py
         let dmg = w.weapon_slots_input[si].precomputed_damage;
         let level = w.weapon_slots_input[si].level;
         let bcount = w.weapon_slots_input[si].bullet_count(wp);
-        let pattern = wp.fire_pattern.clone();
+        let pattern = wp.fire_pattern;
 
         match pattern {
-            FirePattern::Aimed => fire_aimed(w, si, px, py, dmg, bcount, cd),
+            FirePattern::Aimed => fire_aimed(w, si, px, py, dmg, bcount, cd, wp.aimed_spread_rad),
             FirePattern::FixedUp => fire_fixed_up(w, si, px, py, dmg, cd),
             FirePattern::Radial => fire_radial(w, si, px, py, dmg, bcount, cd),
             FirePattern::Whip => fire_whip(w, si, px, py, dmg, level, kind_id, cd, facing_angle),
@@ -66,6 +66,7 @@ fn fire_aimed(
     dmg: i32,
     bcount: usize,
     cd: f32,
+    spread_rad: f32,
 ) {
     if let Some(ti) = find_nearest_enemy_spatial(
         &w.collision,
@@ -83,7 +84,7 @@ fn fire_aimed(
         let tx = w.enemies.positions_x[ti] + target_r;
         let ty = w.enemies.positions_y[ti] + target_r;
         let base_angle = (ty - py).atan2(tx - px);
-        let spread = std::f32::consts::PI * 0.08;
+        let spread = spread_rad;
         let half = (bcount as f32 - 1.0) / 2.0;
         for bi in 0..bcount {
             let angle = base_angle + (bi as f32 - half) * spread;
@@ -148,15 +149,27 @@ fn fire_whip(
     cd: f32,
     facing_angle: f32,
 ) {
-    let range = w
-        .params
-        .get_weapon(kind_id)
-        .map(|wp| wp.whip_range(level))
-        .unwrap_or(DEFAULT_WHIP_RANGE);
-    let whip_half_angle = std::f32::consts::PI * 0.3;
+    let wp = w.params.get_weapon(kind_id);
+    // wp が None の場合は params 未ロードなどの異常系。フォールバックで最低限動作させる。
+    let range = wp.map(|p| p.whip_range(level)).unwrap_or(DEFAULT_WHIP_RANGE);
+    let whip_half_angle = wp.map(|p| p.whip_half_angle_rad).unwrap_or(0.0);
+    let effect_lifetime = wp.map(|p| p.effect_lifetime_sec).unwrap_or(0.0);
+    if range <= 0.0 {
+        log::warn!(
+            "Whip weapon kind_id={} has no whip_range_per_level or empty table — weapon will not hit",
+            kind_id
+        );
+    }
+    if whip_half_angle <= 0.0 && wp.is_some() {
+        log::warn!(
+            "Whip weapon kind_id={} has whip_half_angle_rad=0 — cone check will never pass",
+            kind_id
+        );
+    }
     let eff_x = px + facing_angle.cos() * range * 0.5;
     let eff_y = py + facing_angle.sin() * range * 0.5;
-    w.bullets.spawn_effect(eff_x, eff_y, 0.12, BULLET_KIND_WHIP);
+    w.bullets
+        .spawn_effect(eff_x, eff_y, effect_lifetime, BULLET_KIND_WHIP);
     let whip_range_sq = range * range;
     w.collision
         .dynamic
@@ -273,11 +286,19 @@ fn fire_chain(
     kind_id: u8,
     cd: f32,
 ) {
-    let chain_count = w
-        .params
-        .get_weapon(kind_id)
+    let wp_chain = w.params.get_weapon(kind_id);
+    let chain_count = wp_chain
         .map(|wp| wp.chain_count_for_level(level))
         .unwrap_or(DEFAULT_CHAIN_COUNT);
+    let chain_effect_lifetime = wp_chain
+        .map(|p| p.effect_lifetime_sec)
+        .unwrap_or(0.0);
+    if chain_count == 0 {
+        log::warn!(
+            "Chain weapon kind_id={} has no chain_count_per_level or empty table — chain will not fire",
+            kind_id
+        );
+    }
     // 命中済み敵インデックスを O(1) で検索するためビットマスク配列を使用（300 バイト）
     let mut hit_set = [false; MAX_ENEMIES];
     let mut current = find_nearest_enemy_spatial(
@@ -302,8 +323,12 @@ fn fire_chain(
             let hit_x = w.enemies.positions_x[ei] + enemy_r;
             let hit_y = w.enemies.positions_y[ei] + enemy_r;
             w.enemies.hp[ei] -= dmg as f32;
-            w.bullets
-                .spawn_effect(hit_x, hit_y, 0.10, BULLET_KIND_LIGHTNING);
+            w.bullets.spawn_effect(
+                hit_x,
+                hit_y,
+                chain_effect_lifetime,
+                BULLET_KIND_LIGHTNING,
+            );
             w.particles.emit(hit_x, hit_y, 5, [0.3, 0.8, 1.0, 1.0]);
             if w.enemies.hp[ei] <= 0.0 {
                 let kind_e = w.enemies.kind_ids[ei];
@@ -352,7 +377,12 @@ fn fire_chain(
         if let Some((bx, by)) = special_hit {
             w.frame_events
                 .push(FrameEvent::SpecialEntityDamaged { damage: dmg as f32 });
-            w.bullets.spawn_effect(bx, by, 0.10, BULLET_KIND_LIGHTNING);
+            w.bullets.spawn_effect(
+                bx,
+                by,
+                chain_effect_lifetime,
+                BULLET_KIND_LIGHTNING,
+            );
             w.particles.emit(bx, by, 5, [0.3, 0.8, 1.0, 1.0]);
         }
     }
@@ -375,6 +405,12 @@ fn fire_aura(
         .get_weapon(kind_id)
         .map(|wp| wp.aura_radius(level))
         .unwrap_or(DEFAULT_AURA_RADIUS);
+    if radius <= 0.0 {
+        log::warn!(
+            "Aura weapon kind_id={} has no aura_radius_per_level or empty table — weapon will not hit",
+            kind_id
+        );
+    }
     let radius_sq = radius * radius;
     w.collision
         .dynamic

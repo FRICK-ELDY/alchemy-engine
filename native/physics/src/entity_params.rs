@@ -45,7 +45,7 @@ pub struct EnemyParams {
 // ─── WeaponParams ───────────────────────────────────────────────
 
 /// 武器の発射パターン
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum FirePattern {
     /// 最近接敵に向けて扇状に発射（magic_wand 等）
     Aimed,
@@ -77,12 +77,18 @@ pub struct WeaponParams {
     pub range: f32,
     /// 連鎖数（Chain パターン用）
     pub chain_count: u8,
-    /// R-F1: Whip の level ごとの実効範囲。None の場合は range + (level-1)*20 で計算
+    /// R-F1: Whip の level ごとの実効範囲。contents から注入必須。None/空の場合は 0.0
     pub whip_range_per_level: Option<Vec<f32>>,
-    /// R-F1: Aura の level ごとの実効半径。None の場合は range + (level-1)*15 で計算
+    /// R-F1: Aura の level ごとの実効半径。contents から注入必須。None/空の場合は 0.0
     pub aura_radius_per_level: Option<Vec<f32>>,
-    /// R-F1: Chain の level ごとの実効連鎖数。None の場合は chain_count + level/2 で計算
+    /// R-F1: Chain の level ごとの実効連鎖数。contents から注入必須。None/空の場合は 0
     pub chain_count_per_level: Option<Vec<usize>>,
+    /// Aimed 弾の扇状間隔（rad）。contents から注入。0 の場合は扇状にならない。
+    pub aimed_spread_rad: f32,
+    /// Whip 扇形の半角（rad）。contents から注入。
+    pub whip_half_angle_rad: f32,
+    /// 武器エフェクト表示時間（秒）。Whip/Lightning 等。contents から注入。
+    pub effect_lifetime_sec: f32,
 }
 
 impl WeaponParams {
@@ -94,34 +100,34 @@ impl WeaponParams {
             .unwrap_or(1)
     }
 
-    /// Whip の実効範囲。R-F1: テーブル優先、未定義時は range + (level - 1) * 20
+    /// Whip の実効範囲。R-F1: テーブルのみ。contents がテーブルを注入する。None/空の場合は 0.0
     /// level 9 以上は index 7 の値を常に使用（テーブル長 8 の上限）。
     pub fn whip_range(&self, level: u32) -> f32 {
         let idx = (level.clamp(1, 8) - 1) as usize;
         self.whip_range_per_level
             .as_ref()
             .and_then(|t| t.get(idx).copied())
-            .unwrap_or(self.range + (level as f32 - 1.0) * 20.0)
+            .unwrap_or(0.0)
     }
 
-    /// Aura の実効半径。R-F1: テーブル優先、未定義時は range + (level - 1) * 15
+    /// Aura の実効半径。R-F1: テーブルのみ。contents がテーブルを注入する。None/空の場合は 0.0
     /// level 9 以上は index 7 の値を常に使用（テーブル長 8 の上限）。
     pub fn aura_radius(&self, level: u32) -> f32 {
         let idx = (level.clamp(1, 8) - 1) as usize;
         self.aura_radius_per_level
             .as_ref()
             .and_then(|t| t.get(idx).copied())
-            .unwrap_or(self.range + (level as f32 - 1.0) * 15.0)
+            .unwrap_or(0.0)
     }
 
-    /// Chain の実効連鎖数。R-F1: テーブル優先、未定義時は chain_count + level / 2
+    /// Chain の実効連鎖数。R-F1: テーブルのみ。contents がテーブルを注入する。None/空の場合は 0
     /// level 9 以上は index 7 の値を常に使用（テーブル長 8 の上限）。
     pub fn chain_count_for_level(&self, level: u32) -> usize {
         let idx = (level.clamp(1, 8) - 1) as usize;
         self.chain_count_per_level
             .as_ref()
             .and_then(|t| t.get(idx).copied())
-            .unwrap_or(self.chain_count as usize + level as usize / 2)
+            .unwrap_or(0)
     }
 }
 
@@ -143,6 +149,15 @@ pub struct BossParams {
 /// NIF 経由で外部注入可能なエンティティパラメータテーブル。
 /// `GameWorldInner` に保持し、`set_entity_params` NIF で上書きする。
 /// デフォルトは空テーブル。`set_entity_params` が呼ばれるまで動作しない。
+///
+/// ## 武器テーブル注入の必須事項（新規コンテンツ追加時）
+///
+/// - **Whip パターン**: `whip_range_per_level` を必ず注入（1..8 要素のテーブル）。未注入だと範囲 0 でヒットしない。
+/// - **Aura パターン**: `aura_radius_per_level` を必ず注入。未注入だと半径 0 でヒットしない。
+/// - **Chain パターン**: `chain_count_per_level` を必ず注入。未注入だと連鎖数 0 で発動しない。
+/// - **Aimed パターン**: `aimed_spread_rad` を注入（0 だと弾が一直線になる）。
+/// - **Whip**: `whip_half_angle_rad`, `effect_lifetime_sec` も必要。
+/// - **Chain**: `effect_lifetime_sec` も必要。
 #[derive(Clone, Debug, Default)]
 pub struct EntityParamTables {
     pub enemies: Vec<EnemyParams>,
@@ -208,6 +223,9 @@ mod tests {
                 whip_range_per_level: None,
                 aura_radius_per_level: None,
                 chain_count_per_level: None,
+                aimed_spread_rad: 0.0,
+                whip_half_angle_rad: 0.0,
+                effect_lifetime_sec: 0.0,
             }],
             bosses: vec![BossParams {
                 max_hp: 1000.0,

@@ -385,6 +385,22 @@ fn decode_enemy_params(term: Term) -> NifResult<Vec<EnemyParams>> {
     .collect()
 }
 
+/// オプションの f32 パラメータをデコード。キー欠損または型違いの場合は 0.0。
+/// デコード失敗時は debug ログを出力（RUST_LOG=debug で確認可能）。
+fn decode_opt_f32_or_warn(item: Term, key: &str) -> f32 {
+    match map_get::<f64>(item, key) {
+        Ok(v) => v as f32,
+        Err(e) => {
+            log::debug!(
+                "weapon_params.{}: decode failed ({:?}), using 0.0. Use float, not integer.",
+                key,
+                e
+            );
+            0.0
+        }
+    }
+}
+
 fn decode_optional_float_vec(item: Term, key: &str) -> Option<Vec<f32>> {
     let term: Term = map_get(item, key).ok()?;
     if term.is_atom() {
@@ -454,6 +470,11 @@ fn decode_weapon_params(term: Term) -> NifResult<Vec<WeaponParams>> {
         let whip_table = decode_optional_float_vec(item, "whip_range_per_level");
         let aura_table = decode_optional_float_vec(item, "aura_radius_per_level");
         let chain_table = decode_optional_usize_vec(item, "chain_count_per_level");
+        // キー欠損または型違い（例: 整数）でデコード失敗時は 0.0 になる。Aimed/Whip/Chain 武器では
+        // 必須なので、発射時に log::warn が出力される。
+        let aimed_spread_rad = decode_opt_f32_or_warn(item, "aimed_spread_rad");
+        let whip_half_angle_rad = decode_opt_f32_or_warn(item, "whip_half_angle_rad");
+        let effect_lifetime_sec = decode_opt_f32_or_warn(item, "effect_lifetime_sec");
         Ok(WeaponParams {
             cooldown: map_get::<f64>(item, "cooldown")? as f32,
             damage: map_get::<i64>(item, "damage")? as i32,
@@ -467,6 +488,9 @@ fn decode_weapon_params(term: Term) -> NifResult<Vec<WeaponParams>> {
             whip_range_per_level: whip_table,
             aura_radius_per_level: aura_table,
             chain_count_per_level: chain_table,
+            aimed_spread_rad,
+            whip_half_angle_rad,
+            effect_lifetime_sec,
         })
     })
     .collect()

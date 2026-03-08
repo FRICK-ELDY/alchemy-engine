@@ -61,6 +61,9 @@ mod tests {
                 whip_range_per_level: None,
                 aura_radius_per_level: None,
                 chain_count_per_level: None,
+                aimed_spread_rad: 0.0,
+                whip_half_angle_rad: 0.0,
+                effect_lifetime_sec: 0.0,
             }],
             bosses: vec![],
         }
