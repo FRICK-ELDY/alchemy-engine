@@ -14,9 +14,9 @@ mod network_render_bridge;
 
 use audio::AssetLoader;
 use network_render_bridge::NetworkRenderBridge;
-use input::run_desktop_loop;
+use desktop_input::run_desktop_loop;
 use physics::constants::{SCREEN_HEIGHT, SCREEN_WIDTH};
-use render::window::{RendererInit, WindowConfig};
+use desktop_render::window::{RendererInit, WindowConfig};
 
 fn main() -> Result<(), String> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();

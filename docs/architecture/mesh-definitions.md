@@ -8,7 +8,7 @@
 
 ## 1. 共通頂点型
 
-`MeshVertex`（`native/render/src/renderer/pipeline_3d.rs`）:
+`MeshVertex`（`native/desktop_render/src/renderer/pipeline_3d.rs`）:
 
 | 属性 | 型 | 説明 |
 |:---|:---|:---|
@@ -138,7 +138,7 @@ for i in 0..n:
 
 | ファイル | 役割 |
 |:---|:---|
-| `native/render/src/lib.rs` | MeshVertex / MeshDef 定義 |
-| `native/render/src/renderer/pipeline_3d.rs` | メッシュ生成・描画（P3 以降 Elixir 定義を優先、未登録時フォールバック） |
+| `native/desktop_render/src/lib.rs` | MeshVertex / MeshDef 定義 |
+| `native/desktop_render/src/renderer/pipeline_3d.rs` | メッシュ生成・描画（P3 以降 Elixir 定義を優先、未登録時フォールバック） |
 | `docs/architecture/draw-command-spec.md` | DrawCommand タグ・フィールド仕様 |
 | `docs/plan/contents-defines-rust-executes.md` | P3 メッシュ Elixir 移行計画 |

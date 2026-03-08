@@ -1,5 +1,5 @@
 //! Path: native/nif/src/render_bridge.rs
-//! Summary: render の RenderBridge 実装
+//! Summary: desktop_render の RenderBridge 実装
 //!
 //! Phase R-2: RenderBridge::next_frame() が GameWorldInner を直接読む代わりに
 //! RenderFrameBuffer を参照するよう変更した。
@@ -13,11 +13,11 @@
 use crate::lock_metrics::record_read_wait;
 use crate::render_frame_buffer::RenderFrameBuffer;
 use audio::AssetLoader;
-use input::run_desktop_loop;
+use desktop_input::run_desktop_loop;
 use physics::constants::{PLAYER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use physics::world::GameWorld;
-use render::window::{KeyCode, KeyState, RenderBridge, RendererInit, WindowConfig};
-use render::RenderFrame;
+use desktop_render::window::{KeyCode, KeyState, RenderBridge, RendererInit, WindowConfig};
+use desktop_render::{CameraParams, DrawCommand, RenderFrame};
 use rustler::env::OwnedEnv;
 use rustler::{Encoder, LocalPid, ResourceArc};
 use std::time::Instant;
@@ -141,7 +141,7 @@ impl RenderBridge for NativeRenderBridge {
 
         // 補間は Camera2D 専用。Camera3D の場合は Elixir 側がカメラを毎フレーム計算して
         // push するため、ここでの上書きは不要かつ有害。
-        let is_2d = matches!(frame.camera, render::CameraParams::Camera2D { .. });
+        let is_2d = matches!(frame.camera, CameraParams::Camera2D { .. });
 
         if is_2d && interp_data.curr_tick_ms > 0 {
             let now_ms = std::time::SystemTime::now()
@@ -156,7 +156,7 @@ impl RenderBridge for NativeRenderBridge {
             // 契約違反検知: 先頭が SpriteRaw でない場合は補間をスキップしログを出す。
             let player_cmd = frame.commands.first_mut();
             match player_cmd {
-                Some(render::DrawCommand::SpriteRaw {
+                Some(DrawCommand::SpriteRaw {
                     ref mut x,
                     ref mut y,
                     ..
@@ -176,7 +176,7 @@ impl RenderBridge for NativeRenderBridge {
             }
             let cam_x = interp_x + PLAYER_SIZE / 2.0 - SCREEN_WIDTH / 2.0;
             let cam_y = interp_y + PLAYER_SIZE / 2.0 - SCREEN_HEIGHT / 2.0;
-            frame.camera = render::CameraParams::Camera2D {
+            frame.camera = CameraParams::Camera2D {
                 offset_x: cam_x,
                 offset_y: cam_y,
             };

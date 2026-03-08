@@ -1,7 +1,7 @@
 //! Path: native/nif/src/nif/decode/camera.rs
 //! Summary: CameraParams の Elixir タプル → Rust 変換
 
-use render::CameraParams;
+use desktop_render::CameraParams;
 use rustler::{Atom, Error as NifError, NifResult, Term};
 
 use super::tag_of;

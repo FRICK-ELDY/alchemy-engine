@@ -1,4 +1,4 @@
-//! Path: native/input_openxr/src/lib.rs
+//! Path: native/desktop_input_openxr/src/lib.rs
 //! Summary: OpenXR 入力ブリッジ（VR デバイス）
 //!
 //! 以下のイベントを nif 経由で Elixir に送信する:

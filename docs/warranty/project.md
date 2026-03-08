@@ -21,10 +21,10 @@
 |:---|:---|:---|:---|
 | **native/physics/** | ECS World・物理演算・ゲームロジック・Dead Reckoning | `cargo test` で検証済みの物理・AI・空間ハッシュ・武器ロジック。`cargo bench` による性能回帰チェック (main のみ) | GPU 依存部分。描画・オーディオとの結合 |
 | **native/audio/** | オーディオスレッド・DSP・アセット再生 | コマンド受信・再生パイプラインの基本動作 | オーディオデバイス未装着環境。低遅延保証 |
-| **native/render/** | WGPU 描画・ウィンドウ・HUD | 描画パイプラインの構築・フレーム描画の流れ | headless 環境での動作。全 GPU での互換性 |
+| **native/desktop_render/** | WGPU 描画・ウィンドウ・HUD | 描画パイプラインの構築・フレーム描画の流れ | headless 環境での動作。全 GPU での互換性 |
 | **native/nif/** | Elixir–Rust NIF 通信 | NIF 関数のエンコーディング・デコード。`mix test` 経由で結合検証 | 全 NIF 関数の個別ユニットテスト |
-| **native/input/** | デスクトップ入力・ウィンドウ | ウィンドウ・イベントループの基本動作 | 全入力デバイス・全 OS での同等挙動 |
-| **native/input_openxr/** | VR/XR 入力 | OpenXR 有効ビルド時の入力取得 | VR デバイス未接続時。全 OpenXR ランタイム |
+| **native/desktop_input/** | デスクトップ入力・ウィンドウ | ウィンドウ・イベントループの基本動作 | 全入力デバイス・全 OS での同等挙動 |
+| **native/desktop_input_openxr/** | VR/XR 入力 | OpenXR 有効ビルド時の入力取得 | VR デバイス未接続時。全 OpenXR ランタイム |
 
 > **補足**: CI の Rust ユニットテストは `physics` のみ実行。`render` / `audio` は GPU・音声デバイスが必要なため除外。`nif` は Elixir の `mix test` で結合的にカバー。
 

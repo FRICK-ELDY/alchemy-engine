@@ -1,4 +1,4 @@
-//! Path: native/render/src/renderer/mod.rs
+//! Path: native/desktop_render/src/renderer/mod.rs
 //! Summary: wgpu によるスプライト描画・パイプライン・テクスチャ管理
 //! 1.8: nif から render へ分離移設。
 

@@ -55,7 +55,7 @@ alwaysApply: false
   - 空間ハッシュ衝突検出・決定論的乱数（LCG）
   - プラットフォーム対応（ARM NEON・WASM）
 
-- **`native/render`**（描画パイプライン・シェーダー・補間）
+- **`native/desktop_render`**（描画パイプライン・シェーダー・補間）
   - wgpu インスタンス描画・WGSL シェーダー
   - サブフレーム補間（lerp）のロック外計算
   - ヘッドレスレンダラー（CI対応）

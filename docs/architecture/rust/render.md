@@ -86,7 +86,7 @@ CI / テスト環境向け。`[features] headless = []` で有効化。winit ウ
 
 | 項目 | 内容 |
 |:---|:---|
-| **パス** | `native/render/src/renderer/shaders/sprite.wgsl` |
+| **パス** | `native/desktop_render/src/renderer/shaders/sprite.wgsl` |
 | **用途** | 2D スプライト描画（アトラステクスチャ、インスタンシング） |
 | **使用箇所** | `renderer/mod.rs`, `headless.rs` |
 | **外部依存** | なし（単一 WGSL ファイル） |
@@ -153,7 +153,7 @@ CI / テスト環境向け。`[features] headless = []` で有効化。winit ウ
 
 | 項目 | 内容 |
 |:---|:---|
-| **パス** | `native/render/src/renderer/shaders/mesh.wgsl` |
+| **パス** | `native/desktop_render/src/renderer/shaders/mesh.wgsl` |
 | **用途** | 3D メッシュ（Box3D / GridPlane / Skybox）描画 |
 | **使用箇所** | `renderer/pipeline_3d.rs` |
 | **外部依存** | なし（単一 WGSL ファイル） |
@@ -228,11 +228,11 @@ CI / テスト環境向け。`[features] headless = []` で有効化。winit ウ
 
 ---
 
-## `input` クレート（native/input）
+## `desktop_input` クレート（native/desktop_input）
 
 デスクトップ入力・ウィンドウ・イベントループを担当します。**render に依存**しており、winit のイベントループの所有権はここにあります。render は描画専用、input は winit によるウィンドウ生成と入力取得を担当します。
 
-- **パス**: `native/input/`
+- **パス**: `native/desktop_input/`
 - **依存**: `render`, `winit`, `pollster`
 
 ### `desktop_loop.rs` — イベントループ・ウィンドウ・入力

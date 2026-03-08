@@ -204,7 +204,7 @@ end
 | 3 | `RenderComponent` 実装（DrawCommand・Camera・UI組み立て） | `render_component.ex` |
 | 4 | `CanvasTest` エントリポイント実装 | `canvas_test.ex` |
 | 5 | `Core.Config` へのコンテンツ登録確認 | `core/config.ex` |
-| 6 | Rust側に `mouse_delta` / `sprint` イベントが未実装の場合は追加 | `native/render/` |
+| 6 | Rust側に `mouse_delta` / `sprint` イベントが未実装の場合は追加 | `native/desktop_render/` |
 
 ---
 

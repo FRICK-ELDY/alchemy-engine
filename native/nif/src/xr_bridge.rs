@@ -1,11 +1,11 @@
 //! Path: native/nif/src/xr_bridge.rs
 //! Summary: XR 入力イベントの Elixir 送信
 //!
-//! input_openxr が生成した XrInputEvent を Elixir のメッセージ形式に
+//! desktop_input_openxr が生成した XrInputEvent を Elixir のメッセージ形式に
 //! エンコードして GameEvents に送信する。
 
 #[cfg(feature = "xr")]
-use input_openxr::{ControllerButton, Hand, XrInputEvent};
+use desktop_input_openxr::{ControllerButton, Hand, XrInputEvent};
 use rustler::env::OwnedEnv;
 use rustler::{Encoder, LocalPid};
 use std::panic::AssertUnwindSafe;

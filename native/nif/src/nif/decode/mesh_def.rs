@@ -4,7 +4,7 @@
 //! 形式: [%{name: atom, vertices: [{{x,y,z},{r,g,b,a}}], indices: [0,1,2,...]}, ...]
 
 use super::decode_mesh_vertices;
-use render::{MeshDef, MeshVertex};
+use desktop_render::{MeshDef, MeshVertex};
 use rustler::types::list::ListIterator;
 use rustler::types::map::MapIterator;
 use rustler::{Error as NifError, NifResult, Term};

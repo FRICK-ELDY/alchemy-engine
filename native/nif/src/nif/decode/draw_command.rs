@@ -8,7 +8,7 @@
 //! タグ・フィールドの仕様は Elixir 側の SSoT（`docs/architecture/draw-command-spec.md`）に従う。
 //! Rust は描画判断（メッシュ選択・UV 等）を持たず、定義に従って実行するのみ。
 
-use render::DrawCommand;
+use desktop_render::DrawCommand;
 use rustler::types::list::ListIterator;
 use rustler::{Atom, Error as NifError, NifResult, Term};
 

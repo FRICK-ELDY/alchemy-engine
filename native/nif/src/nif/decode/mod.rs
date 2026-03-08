@@ -18,7 +18,7 @@ pub use msgpack::decode_render_frame_from_msgpack;
 pub use msgpack_injection::apply_injection_from_msgpack;
 pub use ui_canvas::decode_ui_canvas;
 
-use render::MeshVertex;
+use desktop_render::MeshVertex;
 use rustler::types::list::ListIterator;
 use rustler::types::tuple::get_tuple;
 use rustler::{Error as NifError, NifResult, Term};

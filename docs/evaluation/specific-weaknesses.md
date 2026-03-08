@@ -64,21 +64,21 @@
 
 ---
 
-## native/render — 描画パイプライン
+## native/desktop_render — 描画パイプライン
 
 ### ❌ マイナス点
 
 - **build_instances 関数の重複（DRY 違反）** `-3`
   > `renderer/mod.rs` の `update_instances` と `headless.rs` の `build_instances` に、スプライト種別ごとのUV・サイズ計算ロジックがほぼ同一で重複している。スプライト種別追加・変更時に両方の修正が必要で、同期漏れのリスクがある。
-  > 対象ファイル: `native/render/src/renderer/mod.rs`, `native/render/src/headless.rs`
+  > 対象ファイル: `native/desktop_render/src/renderer/mod.rs`, `native/desktop_render/src/headless.rs`
 
 - **Skeleton/Ghost の UV がプレースホルダー** `-2`
   > `Skeleton` が `Golem` の UV を流用し、`Ghost` が `Bat` の UV を流用している。別エンティティとして存在するにもかかわらず視覚的に区別できない状態。ゲームプレイの完成度を損なっている。
-  > 対象ファイル: `native/render/src/renderer/mod.rs`（該当 UV マッピング）
+  > 対象ファイル: `native/desktop_render/src/renderer/mod.rs`（該当 UV マッピング）
 
 - **Vertex/VERTICES/INDICES 等の重複定義** `-2`
   > `renderer/mod.rs` と `headless.rs` で同一の構造体・定数が重複定義されている。`pub(crate)` で共有すべき。
-  > 対象ファイル: `native/render/src/renderer/mod.rs`, `native/render/src/headless.rs`
+  > 対象ファイル: `native/desktop_render/src/renderer/mod.rs`, `native/desktop_render/src/headless.rs`
 
 ---
 
@@ -92,7 +92,7 @@
 
 - **nif・render・audio の Rust テストがゼロ** `-3`
   > NIF ブリッジ・描画パイプライン・オーディオの Rust テストが一切存在しない。`headless.rs` が存在するにもかかわらずレンダリングテストが書かれていない。`nif` の `decode_enemy_params` 等のデコードロジックはGPU不要でテスト可能。
-  > 対象ファイル: `native/nif/src/`, `native/render/src/`, `native/audio/src/`
+  > 対象ファイル: `native/nif/src/`, `native/desktop_render/src/`, `native/audio/src/`
 
 - **E2E テストがゼロ** `-2`
   > ゲームループ全体（開始→プレイ→終了→リトライ）を通したテストが存在しない。`headless.rs` を活用したE2Eテストが可能なはずだが未実装。

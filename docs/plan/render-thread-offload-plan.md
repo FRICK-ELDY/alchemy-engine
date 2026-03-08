@@ -5,7 +5,7 @@
 
 ## 背景
 
-現状、`native/input` の `desktop_loop` は winit イベントループ上で以下を同期的に実行している：
+現状、`native/desktop_input` の `desktop_loop` は winit イベントループ上で以下を同期的に実行している：
 
 1. `bridge.next_frame()` … RenderFrame 取得・プレイヤー補間（GameWorld read）
 2. `renderer.update_instances()` … CPU: DrawCommand → 頂点/インスタンス変換
@@ -218,7 +218,7 @@ native/       # 共通コア
 
 ### 方針
 
-**案 B（`platform/` 配下）を採用する**。現状の `native/render` と `native/input` のデスクトップ部分は `platform/desktop` へ移行し、共通の描画ロジック（DrawCommand 変換など）は `native/render` に残すか `platform` 共通トレイトとして切り出す。
+**案 B（`platform/` 配下）を採用する**。現状の `native/desktop_render` と `native/desktop_input` のデスクトップ部分は `platform/desktop` へ移行し、共通の描画ロジック（DrawCommand 変換など）は `native/desktop_render` に残すか `platform` 共通トレイトとして切り出す。
 
 ---
 
