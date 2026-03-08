@@ -94,10 +94,10 @@ graph TB
 
 ### フェーズ 1: Elixir 側の Zenoh 常時有効化（1 週間）
 
-- [ ] `config :network, :zenoh_enabled` を `true` に変更
-- [ ] RenderComponent から `push_render_frame_binary` 呼び出しを削除（`FrameBroadcaster.put` のみにする）
-- [ ] `start_render_thread` の呼び出しを条件分岐でスキップするオプションを追加（`config :core, :local_render, false` 等）
-- [ ] 動作確認: `zenohd + mix run + desktop_client` でゲームがプレイ可能であること
+- [x] `config :network, :zenoh_enabled` を `true` に変更
+- [x] RenderComponent から `push_render_frame_binary` 呼び出しを削除（`FrameBroadcaster.put` のみにする）
+- [x] `start_render_thread` の呼び出しを条件分岐でスキップするオプションを追加（`config :core, :local_render, false` 等）
+- [ ] 動作確認（手動）: `zenohd + mix run + desktop_client` でゲームがプレイ可能であること
 
 ### フェーズ 2: nif から render 関連を削除（1〜2 週間）
 

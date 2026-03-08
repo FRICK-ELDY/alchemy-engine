@@ -59,7 +59,7 @@ defmodule Contents.GameEvents do
     render_buf_ref = Core.NifBridge.create_render_frame_buffer()
 
     render_started =
-      if room_id == :main do
+      if room_id == :main and Application.get_env(:core, :local_render, false) do
         content = current_content()
         window_title = build_window_title(content)
         atlas_path = resolve_atlas_path(content)

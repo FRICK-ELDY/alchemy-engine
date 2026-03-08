@@ -77,7 +77,6 @@ defmodule Content.VampireSurvivor.RenderComponent do
 
     frame_binary = Content.MessagePackEncoder.encode_frame(commands, camera, ui, [])
     Contents.FrameBroadcaster.put(context.room_id, frame_binary)
-    Core.NifBridge.push_render_frame_binary(context.render_buf_ref, frame_binary, :no_change)
 
     :ok
   end

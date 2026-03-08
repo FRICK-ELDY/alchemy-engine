@@ -43,7 +43,6 @@ defmodule Content.VRTest.RenderComponent do
 
     frame_binary = Content.MessagePackEncoder.encode_frame(commands, camera, ui, [])
     Contents.FrameBroadcaster.put(context.room_id, frame_binary)
-    Core.NifBridge.push_render_frame_binary(context.render_buf_ref, frame_binary, cursor_grab)
 
     if cursor_grab != :no_change and runner do
       Contents.SceneStack.update_by_module(
