@@ -45,7 +45,7 @@ native/launcher/
 
 ### 0.4 動作確認手順
 
-1. `bin/launcher.bat` または `cargo run -p launcher` で起動
+1. `cargo run -p launcher` で起動（[development.md](../../development.md) 参照）
 2. トレイにアイコンが出ることを確認
 3. 右クリック → メニューに「Quit」があることを確認
 4. 「Quit」クリック → ランチャーが終了することを確認
