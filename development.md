@@ -37,15 +37,25 @@ mix run --no-halt
 
 ### ランチャー（システムトレイ）
 
-zenohd / HL-Server / Client をトレイメニューから管理します。Phase 1 では zenohd Run / Quit に対応。
+zenohd / HL-Server / Client をトレイメニューから管理します。Phase 2 では Zenoh Router の Run / Quit とポート確認に対応。
 
 ```bash
 cargo run -p launcher
 ```
 
 - トレイにアイコンが表示されます
-- 右クリック → 「zenohd Run」で zenohd を起動、「zenohd Quit」で終了
+- 右クリック → 「Zenoh Router」→「Run」で zenohd を起動（ポート 7447 の応答を確認）
+- 「Zenoh Router」→「Quit」で zenohd を終了
+- 起動失敗時はダイアログで通知
 - 「Quit」でランチャーを終了
+
+zenohd の稼働確認（PowerShell）:
+
+```powershell
+Get-Process zenohd -ErrorAction SilentlyContinue
+```
+
+プロセスが返れば起動中、何も返らなければ未起動。
 
 ### クライアント exe のみでプレイ（一括起動）
 
