@@ -106,6 +106,7 @@ elixir --name b@127.0.0.1 -S mix run
 | Rust コードスタイル | `cargo fmt` | フォーマット統一 |
 | Rust 静的解析 | `cargo clippy -D warnings` | 警告ゼロ |
 | Rust ユニットテスト | `cargo test` | 物理演算ロジックの正確性 |
+| Rust パフォーマンス | `cargo bench` | main への push 時に CI でリグレッション検知（+10% 超でブロック） |
 | Elixir コードスタイル | `mix format` | フォーマット統一 |
 | Elixir 静的解析 | `mix credo --strict` | コード品質・一貫性 |
 | Elixir コンパイル | `mix compile --warnings-as-errors` | 警告ゼロ |

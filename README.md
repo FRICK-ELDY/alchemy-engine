@@ -81,7 +81,15 @@ mix run --no-halt
 
 ## ✅ 品質保証
 
-すべての push で GitHub Actions が自動実行されます。開発時の品質保証コマンドの詳細は [development.md](./development.md) および [docs/warranty/ci.md](./docs/warranty/ci.md) を参照。
+すべての push で GitHub Actions が自動実行されます。
+
+| 対象 | チェック |
+|:---|:---|
+| Rust | `cargo fmt` / `cargo clippy` / `cargo test` |
+| Elixir | `mix format` / `mix credo` / `mix compile` / `mix test` |
+| main のみ | `cargo bench` のリグレッション検知 |
+
+詳細は [development.md](./development.md) および [docs/warranty/ci.md](./docs/warranty/ci.md) を参照。
 
 ---
 

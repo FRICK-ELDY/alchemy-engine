@@ -7,7 +7,7 @@
 ## 実装状況
 
 - **launcher** クレート: `native/launcher/`
-- 起動: `bin/launcher.bat` (Windows) / `bin/launcher.sh` (Linux/macOS)
+- 起動: Phase 0 では `cargo run -p launcher`（[development.md](../../development.md) 参照）
 
 ---
 

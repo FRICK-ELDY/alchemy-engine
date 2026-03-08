@@ -33,7 +33,6 @@ fn main() {
     let proxy = event_loop.create_proxy();
 
     enum UserEvent {
-        #[allow(dead_code)]
         TrayIcon(TrayIconEvent),
         Menu(MenuEvent),
     }
@@ -65,6 +64,7 @@ fn main() {
         .expect("Failed to create tray icon");
 
     event_loop.run(move |event, _, control_flow| {
+        // Phase 0: Poll で簡易実装。将来は Wait/WaitUntil に切り替えてアイドル時の負荷を下げることを検討。
         *control_flow = ControlFlow::Poll;
 
         if let tao::event::Event::UserEvent(user_event) = event {
@@ -74,8 +74,9 @@ fn main() {
                         *control_flow = ControlFlow::Exit;
                     }
                 }
-                UserEvent::TrayIcon(_) => {
+                UserEvent::TrayIcon(event) => {
                     // Phase 0 ではトレイアイコンクリック時の特別な処理は不要
+                    let _ = event;
                 }
             }
         }
