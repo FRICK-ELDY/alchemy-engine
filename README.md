@@ -63,134 +63,39 @@ flowchart TB
 
 - [Elixir](https://elixir-lang.org/install.html) **1.19 / OTP 28**
 - [Rust](https://www.rust-lang.org/tools/install) (stable)
-- [zenohd](https://github.com/eclipse-zenoh/zenohd) :
-  ```bash
-  cargo install eclipse-zenoh
-  ```
+- [zenohd](https://github.com/eclipse-zenoh/zenohd)（一括起動・リモート起動時）: `cargo install eclipse-zenoh`
 
 ### Setup & Run
 
-1. リポジトリをクローンします。
-  ```bash
-   git clone git@github.com:FRICK-ELDY/alchemy-engine.git
-   cd alchemy-engine
-  ```
-2. Elixir の依存関係を取得し、Rust のネイティブコードをコンパイルします。
-  ```bash
-   mix deps.get
-   mix compile
-  ```
-3. 起動方法を選択します（下記参照）。
-
-### 起動方法
-
-#### ローカル起動（組み込み描画ウィンドウ）
-
-サーバー内蔵の描画ウィンドウでゲームを表示します。
-
 ```bash
+git clone git@github.com:FRICK-ELDY/alchemy-engine.git
+cd alchemy-engine
+mix deps.get
+mix compile
 mix run --no-halt
 ```
 
-#### クライアント exe のみでプレイ（一括起動）
-
-zenohd、サーバー、クライアントを一括で起動します。1 コマンドでプレイを開始できます。
-
-```bash
-# Windows
-bin\play.bat
-
-# Linux / macOS
-chmod +x bin/play.sh
-./bin/play.sh
-```
-
-- **Windows**: zenohd と mix run が別ウィンドウで起動し、その後 desktop_client が起動します。
-- **Linux / macOS**: クライアント終了時に zenohd とサーバーも自動終了します。
-
-**前提**: [zenohd](https://github.com/eclipse-zenoh/zenohd) をインストール済み（`cargo install eclipse-zenoh`）
-
-#### リモートクライアント起動（手動・3 ターミナル）
-
-Zenoh 経由でサーバーとクライアントを分離して起動します。別マシンからの接続や、ウィンドウを分けたい場合に使用します。
-
-1. ターミナル 1: zenohd を起動
-   ```bash
-   zenohd
-   ```
-
-2. ターミナル 2: サーバーを起動
-   ```bash
-   mix run --no-halt
-   ```
-
-3. ターミナル 3: デスクトップクライアントを起動
-   ```bash
-   # Windows
-   bin\windows_client.bat
-
-   # Linux / macOS
-   cargo run -p desktop_client -- --connect tcp/127.0.0.1:7447 --room main
-   ```
-
-接続先やルームを変更する場合:
-- `bin\windows_client.bat tcp/127.0.0.1:7447 main`
-- `config/config.exs` の `zenoh_connect` でサーバー側の接続先を指定
-
-クライアント exe のビルド・クロスコンパイル手順は [docs/cross-compile.md](./docs/cross-compile.md) を参照。
-
-### 分散クラスタ起動（複数ノード）
-
-複数ノードでクラスタを形成する場合は、`config/runtime.exs` に libcluster の topologies を設定したうえで、別ターミナルで各ノードを起動します。
-
-```bash
-# ターミナル 1
-elixir --name a@127.0.0.1 -S mix run
-
-# ターミナル 2
-elixir --name b@127.0.0.1 -S mix run
-```
-
-`a` と `b` はノード名（ノードを識別するための名前）で、`127.0.0.1` はホストです。libcluster の設定例は `config/config.exs` の libcluster コメントを参照してください。
+**開発者向け**: 起動手順の詳細・ランチャー・品質保証コマンドなどは [development.md](./development.md) を参照してください。
 
 ---
 
 ## ✅ 品質保証
 
-| 対象 | ツール | 保証内容 |
-|:---|:---|:---|
-| Rust コードスタイル | `cargo fmt` | フォーマット統一 |
-| Rust 静的解析 | `cargo clippy -D warnings` | 警告ゼロ |
-| Rust ユニットテスト | `cargo test` | 物理演算ロジックの正確性 |
-| Rust パフォーマンス | `cargo bench`（main のみ） | 前回比 +10% 超の劣化をブロック |
-| Elixir コードスタイル | `mix format` | フォーマット統一 |
-| Elixir 静的解析 | `mix credo --strict` | コード品質・一貫性 |
-| Elixir コンパイル | `mix compile --warnings-as-errors` | 警告ゼロ |
-| Elixir 統合テスト | `mix test`（NIF ビルド込み） | Elixir/Rust 結合の動作保証 |
+すべての push で GitHub Actions が自動実行されます。
 
-すべての push で GitHub Actions が自動実行されます。詳細は [docs/warranty/ci.md](./docs/warranty/ci.md) を参照。
+| 対象 | チェック |
+|:---|:---|
+| Rust | `cargo fmt` / `cargo clippy` / `cargo test` |
+| Elixir | `mix format` / `mix credo` / `mix compile` / `mix test` |
+| main のみ | `cargo bench` のリグレッション検知 |
+
+詳細は [development.md](./development.md) および [docs/warranty/ci.md](./docs/warranty/ci.md) を参照。
 
 ---
 
 ## 🤝 Contributing
 
 （※チーム開発時のガイドラインや、コントリビューションルールの詳細をここに記載します）
-
----
-
-## Acknowledgments
-
-### Vision Correction Pass（オプション機能）
-
-VR/HMD 向けに、ソフトウェアによる視度補正（逆畳み込み Pre-filtering）を検討しています。本機能は **On/Off 切り替え可能** に設計します。詳細は [docs/paper/vision-correction-pass-tech-spec.md](./docs/paper/vision-correction-pass-tech-spec.md) を参照。
-
-**参考研究**:
-- Xu et al., "Software Based Visual Aberration Correction for HMDs," *IEEE VR*, 2018.
-- Thibos et al., "Calculation of the geometrical point-spread function from wavefront aberrations," *Ophthalmic & Physiological Optics*, 2019.
-
-### Patent Notice（特許に関する注意）
-
-Vision Correction Pass で用いるアルゴリズム（逆畳み込み、処方箋からの PSF 導出、Wiener フィルタ等）は、第三者の特許の対象となる可能性があります。関連特許の例：US10529059B2（MIT/UCSD）、US20160314564A1（eSight）。本プロジェクトは特許の実施可能性（Freedom-to-Operate）を保証しません。利用前に適切な専門家にご相談ください。
 
 ---
 

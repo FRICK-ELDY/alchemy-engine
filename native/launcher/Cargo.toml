@@ -1,0 +1,13 @@
+[package]
+name = "launcher"
+version = "0.1.0"
+edition = "2021"
+description = "AlchemyEngine システムトレイランチャー"
+
+[[bin]]
+name = "launcher"
+path = "src/main.rs"
+
+[dependencies]
+tao = "0.34"
+tray-icon = "0.21"
