@@ -481,7 +481,9 @@ defmodule Contents.GameEvents do
   end
 
   defp handle_frame_events_main_dispatch(nil, %{state: state, now: now}) do
-    if state.frame_count < 5, do: Logger.warning("[GameEvents] runner=nil (flow_runner unavailable)")
+    if state.frame_count < 5,
+      do: Logger.warning("[GameEvents] runner=nil (flow_runner unavailable)")
+
     {:noreply, %{state | last_tick: now, frame_count: state.frame_count + 1}}
   end
 
@@ -623,7 +625,8 @@ defmodule Contents.GameEvents do
   end
 
   defp maybe_publish_zenoh_frame_when_available(room_id, frame_binary, state, debug_first_frames) do
-    zenoh_available? = Code.ensure_loaded?(Network.ZenohBridge) and Process.whereis(Network.ZenohBridge)
+    zenoh_available? =
+      Code.ensure_loaded?(Network.ZenohBridge) and Process.whereis(Network.ZenohBridge)
 
     if zenoh_available? do
       maybe_publish_zenoh_frame_log_publish(room_id, frame_binary, state, debug_first_frames)

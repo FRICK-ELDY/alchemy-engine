@@ -135,6 +135,9 @@ jobs:
           workspaces: native
 
       - run: mix deps.get
+      - run: mix compile --warnings-as-errors
+        env:
+          MIX_ENV: test
       - run: mix test
         env:
           MIX_ENV: test
