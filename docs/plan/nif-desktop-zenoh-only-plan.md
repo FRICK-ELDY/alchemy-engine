@@ -86,7 +86,7 @@ graph TB
 | `Core.NifBridgeBehaviour` | 上記コールバックを削除 |
 | `Contents.GameEvents` | `start_render_thread` 呼び出しを削除。ルーム起動時にレンダースレッドを起動しない |
 | `Contents.*.RenderComponent` | `push_render_frame_binary` 呼び出しを削除。`FrameBroadcaster.put` のみ残す |
-| `config :network, :zenoh_enabled` | デフォルトを `true` に。Zenoh を常時有効化 |
+| `config :network, :zenoh_enabled` | dev/prod で `true`。テスト時は zenohd 不要のため `false` |
 
 ---
 
@@ -94,31 +94,32 @@ graph TB
 
 ### フェーズ 1: Elixir 側の Zenoh 常時有効化（1 週間）
 
-- [x] `config :network, :zenoh_enabled` を `true` に変更
+- [x] `config :network, :zenoh_enabled` を dev/prod で `true` に（テスト時は `false`。zenohd 不要のため）
 - [x] RenderComponent から `push_render_frame_binary` 呼び出しを削除（`FrameBroadcaster.put` のみにする）
-- [x] `start_render_thread` の呼び出しを条件分岐でスキップするオプションを追加（`config :core, :local_render, false` 等）
+- [x] `start_render_thread` を廃止（条件分岐ではなく Phase 2 で完全削除）
 - [ ] 動作確認（手動）: `zenohd + mix run + desktop_client` でゲームがプレイ可能であること
 
 ### フェーズ 2: nif から render 関連を削除（1〜2 週間）
 
-- [ ] `render_nif.rs` の `start_render_thread` を削除
-- [ ] `render_bridge.rs` を削除
-- [ ] `render_frame_buffer.rs` を削除
-- [ ] `push_render_frame`, `push_render_frame_binary` を削除
-- [ ] `create_render_frame_buffer` を削除
-- [ ] nif の `Cargo.toml` から `desktop_input`, `desktop_render` 依存を削除
-- [ ] `decode/` の DrawCommand 等デコードは、他 NIF で使用していなければ削除。使用していれば `frame_schema` 等の共有クレートに移す
-- [ ] ビルド・テスト通過
+- [x] `render_nif.rs` の `start_render_thread` を削除
+- [x] `render_bridge.rs` を削除
+- [x] `render_frame_buffer.rs` を削除
+- [x] `push_render_frame`, `push_render_frame_binary` を削除
+- [x] `create_render_frame_buffer` を削除
+- [x] nif の `Cargo.toml` から `desktop_input`, `desktop_render` 依存を削除
+- [x] `decode/` の DrawCommand 等デコードを削除（msgpack_injection は world_nif で使用のため残す）
+- [x] ビルド・テスト通過
 
 ### フェーズ 3: Elixir 側の NIF 呼び出し削除（1 週間）
 
-- [ ] `Core.NifBridge` から `start_render_thread`, `create_render_frame_buffer`, `push_render_frame_binary` を削除
-- [ ] `GameEvents` のルーム起動フローから `create_render_frame_buffer`, `start_render_thread` を削除
-- [ ] `world_ref` に紐づく `render_buf_ref` を廃止
-- [ ] 各コンテンツの `content_behaviour` 等で `render_buf_ref` を要求している場合は削除
+- [x] `Core.NifBridge` から `start_render_thread`, `create_render_frame_buffer`, `push_render_frame_binary` を削除
+- [x] `GameEvents` のルーム起動フローから `create_render_frame_buffer`, `start_render_thread` を削除
+- [x] `world_ref` に紐づく `render_buf_ref` を廃止
+- [x] 各コンテンツの `content_behaviour` 等で `render_buf_ref` を要求している場合は削除
 
 ### フェーズ 4: ドキュメント・launcher 更新（数日）
 
+- [ ] `config :core, :local_render` を削除（Phase 2 で start_render_thread 削除により未使用化）
 - [ ] `docs/architecture/overview.md` からローカルモードの記述を削除
 - [ ] `docs/architecture/rust/nif.md` を更新（render 依存削除後の構成）
 - [ ] launcher のデフォルト起動順序を「zenohd → Phoenix → desktop_client」に統一

@@ -38,7 +38,8 @@ config :network, Network.UDP, port: 4001
 # true にすると game/room/{room_id}/frame へ publish、
 # game/room/*/input/movement, game/room/*/input/action を subscribe する。
 # desktop_client 等のリモートクライアント接続時に有効化。
-config :network, :zenoh_enabled, true
+# dev/prod では true、テストでは zenohd を起動しないため false。
+config :network, :zenoh_enabled, Mix.env() != :test
 
 # zenohd への接続先。未指定時は Zenohex.Config.default()（マルチキャスト scouting）を使用。
 # デフォルトは tcp/127.0.0.1:7447（IPv4 localhost）。リモート zenohd の場合は適宜変更。
@@ -68,8 +69,8 @@ config :core, :save_hmac_secret, "alchemy-engine-save-secret-v1"
 config :core, :formula_store_broadcast, {Network.Distributed, :broadcast, []}
 
 # ローカルレンダースレッド（start_render_thread）を起動するか。
-# false（デフォルト）: Zenoh 経由で desktop_client が描画。zenohd + mix run + desktop_client の 3 プロセス構成。
-# true: 従来どおり mix run 単体でウィンドウを開く（開発用。将来削除予定）。
+# Phase 2 で start_render_thread が削除されたため未使用。フェーズ 4 で削除予定。
+# 残置理由: 計画書との対応を明示するため。削除するまでは false 固定。
 config :core, :local_render, false
 
 # VR 対応 NIF をビルドする場合: features: ["xr"]

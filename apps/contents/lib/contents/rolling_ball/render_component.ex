@@ -1,6 +1,6 @@
 defmodule Content.RollingBall.RenderComponent do
   @moduledoc """
-  毎フレーム3D DrawCommand リストを組み立てて push_render_frame NIF に送るコンポーネント。
+  毎フレーム3D DrawCommand リストを組み立てて FrameBroadcaster.put で Zenoh へ配信するコンポーネント。
 
   ## 描画内容
   - `DrawCommand::Skybox` — 昼空グラデーション背景

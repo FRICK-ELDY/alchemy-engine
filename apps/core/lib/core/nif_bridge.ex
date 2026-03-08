@@ -62,52 +62,8 @@ defmodule Core.NifBridge do
   def create_game_loop_control, do: :erlang.nif_error(:nif_not_loaded)
   def start_rust_game_loop(_world, _control, _pid), do: :erlang.nif_error(:nif_not_loaded)
 
-  def create_render_frame_buffer, do: :erlang.nif_error(:nif_not_loaded)
-
-  # title: ウィンドウタイトル文字列
-  # atlas_path: アトラス PNG のファイルパス（Rust 側でロード、存在しない場合は埋め込みフォールバック）
-  def start_render_thread(_world, _render_buf, _pid, _title, _atlas_path),
-    do: :erlang.nif_error(:nif_not_loaded)
-
   # Phase 3: XR 入力スレッド起動（VR 有効時のみ。xr フィーチャー無効時は nif_not_loaded）
   def spawn_xr_input_thread(_pid), do: :erlang.nif_error(:nif_not_loaded)
-
-  # Phase R-2: Elixir 側から DrawCommand リストを RenderFrameBuffer に push する
-  # commands: DrawCommand タプルのリスト
-  # DrawCommand 仕様の SSoT: docs/architecture/draw-command-spec.md
-  #   {:sprite_raw, x, y, width, height, {{uv_ox, uv_oy}, {uv_sx, uv_sy}, {r, g, b, a}}}
-  #     — VampireSurvivor はプレイヤー・敵・弾丸・アイテムをこれで渡す
-  #   {:player_sprite, x, y, frame} — レガシー。SpriteRaw で代用可能
-  #   {:item, x, y, kind} — レガシー。SpriteRaw で代用可能
-  #   {:particle, x, y, r, g, b, {alpha, size}}
-  #   {:obstacle, x, y, radius, kind}
-  # camera: {:camera_2d, offset_x, offset_y} | {:camera_3d, ...}
-  # ui: UiCanvas ツリー形式（render_frame_nif.rs の decode_ui_canvas を参照）
-  #   {:canvas, [node]}
-  #   node: {:node, rect, component, [children]}
-  #   rect: {anchor, {offset_x, offset_y}, size}
-  #     anchor: :top_left | :top_center | :top_right | :middle_left | :center |
-  #             :middle_right | :bottom_left | :bottom_center | :bottom_right
-  #     size: :wrap | {:fixed, w, h}
-  #   component:
-  #     {:vertical_layout, spacing, {pad_left, pad_top, pad_right, pad_bottom}}
-  #     {:horizontal_layout, spacing, {pad_left, pad_top, pad_right, pad_bottom}}
-  #     {:rect, {r,g,b,a}, corner_radius, border}
-  #       border: :none | {{r,g,b,a}, width}
-  #     {:text, text, {r,g,b,a}, size, bold}
-  #     {:button, label, action, {r,g,b,a}, min_width, min_height}
-  #     {:progress_bar, value, max, width, height, {fg_high, fg_mid, fg_low, bg, corner_radius}}
-  #     :separator
-  #     {:world_text, world_x, world_y, world_z, text, {r,g,b,a}, {lifetime, max_lifetime}}
-  #     {:screen_flash, {r,g,b,a}}
-  # cursor_grab: :grab | :release | :no_change
-  # P3: mesh_definitions は 6 番目。2D は []、3D は Content.MeshDef.default_definitions() 等を渡す。
-  def push_render_frame(_render_buf, _commands, _camera, _ui, _cursor_grab, _mesh_definitions),
-    do: :erlang.nif_error(:nif_not_loaded)
-
-  # P5-2: MessagePack バイナリ形式の push_render_frame
-  def push_render_frame_binary(_render_buf, _frame_binary, _cursor_grab),
-    do: :erlang.nif_error(:nif_not_loaded)
 
   def pause_physics(_control), do: :erlang.nif_error(:nif_not_loaded)
   def resume_physics(_control), do: :erlang.nif_error(:nif_not_loaded)

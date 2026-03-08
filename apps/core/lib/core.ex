@@ -49,9 +49,6 @@ defmodule Core do
   def start_rust_game_loop(world_ref, control_ref, pid),
     do: NifBridge.start_rust_game_loop(world_ref, control_ref, pid)
 
-  def start_render_thread(world_ref, render_buf_ref, pid, title, atlas_path),
-    do: NifBridge.start_render_thread(world_ref, render_buf_ref, pid, title, atlas_path)
-
   def pause_physics(control_ref), do: NifBridge.pause_physics(control_ref)
   def resume_physics(control_ref), do: NifBridge.resume_physics(control_ref)
   def physics_step(world_ref, delta_ms), do: NifBridge.physics_step(world_ref, delta_ms)
