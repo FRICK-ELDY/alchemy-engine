@@ -1,4 +1,3 @@
-use crate::entity_params::DEFAULT_ENEMY_RADIUS;
 use crate::world::GameWorldInner;
 
 /// 1.5.2: 敵が障害物と重なっている場合に押し出す（Ghost はスキップ）
@@ -13,7 +12,7 @@ pub(crate) fn resolve_obstacles_enemy(w: &mut GameWorldInner) {
             .params
             .get_enemy(w.enemies.kind_ids[i])
             .map(|ep| ep.radius)
-            .unwrap_or(DEFAULT_ENEMY_RADIUS);
+            .unwrap_or_else(|| w.params.effective_default_enemy_radius());
         let cx = w.enemies.positions_x[i] + r;
         let cy = w.enemies.positions_y[i] + r;
         collision.query_static_nearby_into(cx, cy, r, buf);

@@ -23,6 +23,19 @@ pub const DEFAULT_AURA_RADIUS: f32 = 150.0;
 /// params テーブルに該当 ID が存在しない場合のデフォルト chain 数
 pub const DEFAULT_CHAIN_COUNT: usize = 1;
 
+// ─── P4-1: オプションの default オーバーライド ───────────────────
+
+/// P4-1: set_entity_params の opts から注入可能なデフォルト値。
+/// 指定時は Rust 定数より優先。未指定時は DEFAULT_* 定数を使用。
+#[derive(Clone, Debug, Default)]
+pub struct EntityParamDefaults {
+    pub default_enemy_radius: Option<f32>,
+    pub default_particle_color: Option<[f32; 4]>,
+    pub default_whip_range: Option<f32>,
+    pub default_aura_radius: Option<f32>,
+    pub default_chain_count: Option<usize>,
+}
+
 // ─── EnemyParams ────────────────────────────────────────────────
 
 /// 敵のパラメータ（kind_id: u8 で参照）
@@ -88,6 +101,10 @@ pub struct WeaponParams {
     pub effect_lifetime_sec: f32,
     /// P2-1: ヒット時パーティクル色 [r, g, b, a]。contents から注入。None の場合は DEFAULT_PARTICLE_COLOR。
     pub hit_particle_color: Option<[f32; 4]>,
+    /// P3-1: Radial 発射の方向数（4 or 8）の level ごとのテーブル。contents から注入。
+    /// 推奨: 8 要素（level 1..8 に対応）。7 要素以下の場合、level 7 以上で index が
+    /// 範囲外となり warn の上 4 にフォールバックする。未定義時は 4 で warn。
+    pub radial_dir_count_per_level: Option<Vec<usize>>,
 }
 
 impl WeaponParams {
@@ -128,6 +145,34 @@ impl WeaponParams {
             .and_then(|t| t.get(idx).copied())
             .unwrap_or(0)
     }
+
+    /// P3-1: Radial 発射の方向数（4 or 8）。contents がテーブルを注入する。
+    /// level 1..8 で index 0..7 を参照。level 9 以上は index 7 を使用。
+    /// None/空の場合は 4 を返し warn（Radial 武器では contents が必ず渡すこと）。
+    pub fn radial_dir_count(&self, level: u32) -> usize {
+        let idx = (level.clamp(1, 8) - 1) as usize;
+        match self
+            .radial_dir_count_per_level
+            .as_ref()
+            .and_then(|t| t.get(idx).copied())
+        {
+            Some(n) if n == 4 || n == 8 => n,
+            Some(n) => {
+                log::warn!(
+                    "radial_dir_count_per_level[{}]={} is invalid (must be 4 or 8), using 4",
+                    idx,
+                    n
+                );
+                4
+            }
+            None => {
+                log::warn!(
+                    "Radial weapon has no radial_dir_count_per_level — using 4. Define in contents."
+                );
+                4
+            }
+        }
+    }
 }
 
 // ─── BossParams ────────────────────────────────────────────────
@@ -157,11 +202,24 @@ pub struct BossParams {
 /// - **Aimed パターン**: `aimed_spread_rad` を注入（0 だと弾が一直線になる）。
 /// - **Whip**: `whip_half_angle_rad`, `effect_lifetime_sec` も必要。
 /// - **Chain**: `effect_lifetime_sec` も必要。
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct EntityParamTables {
     pub enemies: Vec<EnemyParams>,
     pub weapons: Vec<WeaponParams>,
     pub bosses: Vec<BossParams>,
+    /// P4-1: set_entity_params の opts から注入。未指定時は DEFAULT_* 定数を使用。
+    pub defaults: EntityParamDefaults,
+}
+
+impl Default for EntityParamTables {
+    fn default() -> Self {
+        Self {
+            enemies: Vec::new(),
+            weapons: Vec::new(),
+            bosses: Vec::new(),
+            defaults: EntityParamDefaults::default(),
+        }
+    }
 }
 
 impl EntityParamTables {
@@ -183,6 +241,41 @@ impl EntityParamTables {
             .map(|e| e.passes_obstacles)
             .unwrap_or(false)
     }
+
+    /// P4-1: 有効なデフォルト敵半径（opts 注入値を優先）
+    pub fn effective_default_enemy_radius(&self) -> f32 {
+        self.defaults
+            .default_enemy_radius
+            .unwrap_or(DEFAULT_ENEMY_RADIUS)
+    }
+
+    /// P4-1: 有効なデフォルトパーティクル色（opts 注入値を優先）
+    pub fn effective_default_particle_color(&self) -> [f32; 4] {
+        self.defaults
+            .default_particle_color
+            .unwrap_or(DEFAULT_PARTICLE_COLOR)
+    }
+
+    /// P4-1: 有効なデフォルト whip 射程（opts 注入値を優先）
+    pub fn effective_default_whip_range(&self) -> f32 {
+        self.defaults
+            .default_whip_range
+            .unwrap_or(DEFAULT_WHIP_RANGE)
+    }
+
+    /// P4-1: 有効なデフォルト aura 半径（opts 注入値を優先）
+    pub fn effective_default_aura_radius(&self) -> f32 {
+        self.defaults
+            .default_aura_radius
+            .unwrap_or(DEFAULT_AURA_RADIUS)
+    }
+
+    /// P4-1: 有効なデフォルト chain 数（opts 注入値を優先）
+    pub fn effective_default_chain_count(&self) -> usize {
+        self.defaults
+            .default_chain_count
+            .unwrap_or(DEFAULT_CHAIN_COUNT)
+    }
 }
 
 #[cfg(test)]
@@ -191,6 +284,7 @@ mod tests {
 
     fn make_tables() -> EntityParamTables {
         EntityParamTables {
+            defaults: EntityParamDefaults::default(),
             enemies: vec![
                 EnemyParams {
                     max_hp: 30.0,
@@ -226,6 +320,7 @@ mod tests {
                 whip_half_angle_rad: 0.0,
                 effect_lifetime_sec: 0.0,
                 hit_particle_color: None,
+                radial_dir_count_per_level: None,
             }],
             bosses: vec![BossParams {
                 max_hp: 1000.0,
@@ -236,6 +331,13 @@ mod tests {
                 special_interval: 5.0,
             }],
         }
+    }
+
+    #[test]
+    fn effective_defaults_use_constants_when_no_opts() {
+        let tables = EntityParamTables::default();
+        assert!((tables.effective_default_enemy_radius() - DEFAULT_ENEMY_RADIUS).abs() < 0.001);
+        assert_eq!(tables.effective_default_chain_count(), DEFAULT_CHAIN_COUNT);
     }
 
     #[test]
