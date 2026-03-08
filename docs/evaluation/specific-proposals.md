@@ -72,7 +72,7 @@
 
 ---
 
-## native/render — 描画パイプライン
+## native/desktop_render — 描画パイプライン
 
 ### 💡 提案
 

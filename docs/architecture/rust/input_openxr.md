@@ -4,7 +4,7 @@
 
 `input_openxr` クレートは **OpenXR** を用いた VR 入力ブリッジです。VR ヘッドセット・コントローラー・トラッカーなどの入力を受け取り、ゲームエンジン側に渡す役割を担います。
 
-- **パス**: `native/input_openxr/`
+- **パス**: `native/desktop_input_openxr/`
 - **依存**: `log = "0.4"`, `openxr = "0.21"`（optional, `openxr` feature）
 
 ## 機能

@@ -5,7 +5,7 @@
 //! DrawCommand リストを組み立てて push_render_frame NIF 経由でこのバッファに書き込む。
 //! RenderBridge::next_frame() はこのバッファから RenderFrame を取得する。
 
-use render::RenderFrame;
+use desktop_render::RenderFrame;
 use std::sync::{Arc, RwLock};
 
 /// Elixir から push された最新の RenderFrame を保持するバッファ。

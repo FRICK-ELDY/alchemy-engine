@@ -9,8 +9,8 @@ name = "desktop_client"
 path = "src/main.rs"
 
 [dependencies]
-render = { path = "../render" }
-input = { path = "../input" }
+desktop_render = { path = "../desktop_render" }
+desktop_input = { path = "../desktop_input" }
 physics = { path = "../physics" }
 audio = { path = "../audio" }
 zenoh = "1.7"

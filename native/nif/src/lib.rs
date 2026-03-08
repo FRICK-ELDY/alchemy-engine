@@ -105,7 +105,7 @@ pub use physics::world::{
     PlayerState, SpecialEntitySnapshot, BULLET_KIND_FIREBALL, BULLET_KIND_LIGHTNING,
     BULLET_KIND_NORMAL, BULLET_KIND_ROCK, BULLET_KIND_WHIP,
 };
-pub use render::RenderFrame;
+pub use desktop_render::RenderFrame;
 
 #[cfg(feature = "umbrella")]
 rustler::init!("Elixir.Core.NifBridge", load = nif::load);

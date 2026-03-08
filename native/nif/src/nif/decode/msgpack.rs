@@ -2,9 +2,9 @@
 //! Summary: P5-2 MessagePack バイナリ → RenderFrame 変換
 //!
 //! Elixir の msgpax で pack されたバイナリを rmp-serde でデコードし、
-//! render::RenderFrame に変換する。スキーマ: docs/architecture/messagepack-schema.md
+//! desktop_render::RenderFrame に変換する。スキーマ: docs/architecture/messagepack-schema.md
 
-use render::{
+use desktop_render::{
     CameraParams, DrawCommand, MeshDef, MeshVertex, RenderFrame, UiAnchor, UiCanvas, UiComponent,
     UiNode, UiRect, UiSize,
 };

@@ -1,4 +1,4 @@
-//! Path: native/render/src/window.rs
+//! Path: native/desktop_render/src/window.rs
 //! Summary: RenderBridge トレイト・ウィンドウ設定型
 //!
 //! Phase 2: イベントループは input に移行。render は描画専用。

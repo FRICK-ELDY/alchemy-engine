@@ -1,5 +1,5 @@
 [package]
-name = "render"
+name = "desktop_render"
 version = "0.1.0"
 edition = "2021"
 description = "WGPU描画パイプライン・HUD"

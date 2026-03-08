@@ -1,10 +1,10 @@
 [package]
-name = "input"
+name = "desktop_input"
 version = "0.1.0"
 edition = "2021"
 description = "デスクトップ入力・ウィンドウ・イベントループ（winit）"
 
 [dependencies]
-render = { path = "../render" }
+desktop_render = { path = "../desktop_render" }
 winit = "0.30.12"
 pollster = "0.3"

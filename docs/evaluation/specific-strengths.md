@@ -124,17 +124,17 @@
 
 ---
 
-## native/render — 描画パイプライン
+## native/desktop_render — 描画パイプライン
 
 ### ✅ プラス点
 
 - **wgpu インスタンス描画（1 draw_indexed で全スプライト）** `+4`
   > `#[repr(C)] + bytemuck::Pod` でGPUバッファへのゼロコピー転送。全スプライトを1回の `draw_indexed` で描画するドローコール最小化設計。
-  > 対象ファイル: `native/render/src/renderer/mod.rs`
+  > 対象ファイル: `native/desktop_render/src/renderer/mod.rs`
 
 - **CI 用ヘッドレスレンダラー** `+4`
   > `headless.rs` でオフスクリーンレンダラーを実装。CIでGPUレンダリングをテストできる設計は個人プロジェクトでは極めて珍しい。
-  > 対象ファイル: `native/render/src/headless.rs`
+  > 対象ファイル: `native/desktop_render/src/headless.rs`
 
 - **サブフレーム補間（lerp）のロック外計算** `+3`
   > `prev_tick_ms`/`curr_tick_ms` の差分でフレーム間の経過割合 α を計算し、`clamp(0.0, 1.0)` でオーバーシュートを防止。60fps物理と高フレームレート描画を分離。

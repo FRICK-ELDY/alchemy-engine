@@ -14,7 +14,7 @@ use super::decode::{
     decode_render_frame_from_msgpack, decode_ui_canvas,
 };
 use crate::render_frame_buffer::RenderFrameBuffer;
-use render::RenderFrame;
+use desktop_render::RenderFrame;
 use rustler::{Atom, Binary, NifResult, ResourceArc, Term};
 
 use crate::ok;

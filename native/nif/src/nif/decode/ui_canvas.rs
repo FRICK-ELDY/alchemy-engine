@@ -1,7 +1,7 @@
 //! Path: native/nif/src/nif/decode/ui_canvas.rs
 //! Summary: UiCanvas / UiNode / UiComponent の Elixir タプル → Rust 変換
 
-use render::{UiAnchor, UiCanvas, UiComponent, UiNode, UiRect, UiSize};
+use desktop_render::{UiAnchor, UiCanvas, UiComponent, UiNode, UiRect, UiSize};
 use rustler::types::list::ListIterator;
 use rustler::{Atom, Error as NifError, NifResult, Term};
 

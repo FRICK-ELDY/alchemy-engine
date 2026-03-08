@@ -3,10 +3,10 @@ resolver = "2"
 members = [
     "physics",
     "audio",
-    "render",
+    "desktop_render",
     "nif",
-    "input",
-    "input_openxr",
+    "desktop_input",
+    "desktop_input_openxr",
     "desktop_client",
     "launcher",
 ]

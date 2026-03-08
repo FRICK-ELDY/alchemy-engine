@@ -4,8 +4,8 @@
 
 use futures::future::{select, Either};
 use futures_timer::Delay;
-use render::window::{KeyCode, KeyState, RenderBridge};
-use render::RenderFrame;
+use desktop_render::window::{KeyCode, KeyState, RenderBridge};
+use desktop_render::RenderFrame;
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -252,7 +252,7 @@ impl RenderBridge for NetworkRenderBridge {
     }
 
     fn on_raw_mouse_motion(&self, _dx: f32, _dy: f32) {
-        // マウスデルタは将来拡張
+        // マウスデルタ用スタブ。将来のマウス入力拡張（例: 視点操作）用に _dx, _dy を利用する。
     }
 
     fn on_focus_lost(&self) {

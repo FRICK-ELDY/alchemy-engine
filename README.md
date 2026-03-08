@@ -27,8 +27,8 @@ flowchart TB
     
     subgraph Client["Windows/Linux/MacOS"]
         direction TB
-        Render[native/render<br/>wgpu 描画]
-        Input[native/input<br/>winit 入力]
+        Render[native/desktop_render<br/>wgpu 描画]
+        Input[native/desktop_input<br/>winit 入力]
         Bridge[NetworkRenderBridge]
         
         Render --> Bridge
