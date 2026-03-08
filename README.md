@@ -196,9 +196,4 @@ Vision Correction Pass で用いるアルゴリズム（逆畳み込み、処方
 
 ## 📄 License
 
-This project is licensed under either of
-
-- [Apache License, Version 2.0](LICENSE-APACHE)
-- [MIT License](LICENSE)
-
-at your option.
+This project is licensed under the [Eclipse Public License 2.0 (EPL-2.0)](LICENSE).
