@@ -39,6 +39,10 @@ flowchart TD
 
 ---
 
+## デフォルト起動順序
+
+ゲームをプレイするには **zenohd → Phoenix Server → desktop_client** の順で起動する。Client Run は zenohd と Phoenix のポート応答を確認してから desktop_client を起動する。
+
 ## メニュー構成
 
 | メニュー | 動作 |

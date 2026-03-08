@@ -119,11 +119,11 @@ graph TB
 
 ### フェーズ 4: ドキュメント・launcher 更新（数日）
 
-- [ ] `config :core, :local_render` を削除（Phase 2 で start_render_thread 削除により未使用化）
-- [ ] `docs/architecture/overview.md` からローカルモードの記述を削除
-- [ ] `docs/architecture/rust/nif.md` を更新（render 依存削除後の構成）
-- [ ] launcher のデフォルト起動順序を「zenohd → Phoenix → desktop_client」に統一
-- [ ] `mix run` 単体ではウィンドウが開かないことを README 等に明記
+- [x] `config :core, :local_render` を削除（Phase 2 で start_render_thread 削除により未使用化）
+- [x] `docs/architecture/overview.md` からローカルモードの記述を削除
+- [x] `docs/architecture/rust/nif.md` を更新（render 依存削除後の構成）
+- [x] launcher のデフォルト起動順序を「zenohd → Phoenix → desktop_client」に文書化（launcher.md）
+- [x] `mix run` 単体ではウィンドウが開かないことを README・development.md に明記
 
 ### フェーズ 5: render_interpolation（3D 補間のクライアント移行）
 
