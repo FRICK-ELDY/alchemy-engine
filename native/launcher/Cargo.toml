@@ -9,5 +9,6 @@ name = "launcher"
 path = "src/main.rs"
 
 [dependencies]
+kill_tree = "0.2"
 tao = "0.34"
 tray-icon = "0.21"
