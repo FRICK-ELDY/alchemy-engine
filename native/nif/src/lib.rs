@@ -86,15 +86,16 @@ rustler::atoms! {
 mod formula;
 mod lock_metrics;
 mod nif;
+pub mod physics;
 
 pub use audio::{
     start_audio_thread, AssetId, AssetLoader, AudioCommand, AudioCommandSender, AudioManager,
 };
 pub use nif::SaveSnapshot;
-pub use physics::game_logic::{
+pub use crate::physics::game_logic::{
     find_nearest_enemy, find_nearest_enemy_spatial, find_nearest_enemy_spatial_excluding,
 };
-pub use physics::world::{
+pub use crate::physics::world::{
     BulletWorld, EnemyWorld, FrameEvent, GameLoopControl, GameWorld, GameWorldInner, ParticleWorld,
     PlayerState, SpecialEntitySnapshot, BULLET_KIND_FIREBALL, BULLET_KIND_LIGHTNING,
     BULLET_KIND_NORMAL, BULLET_KIND_ROCK, BULLET_KIND_WHIP,

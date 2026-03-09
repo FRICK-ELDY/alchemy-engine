@@ -4,8 +4,8 @@
 //! Elixir の msgpax で pack された injection_map バイナリを rmp-serde でデコードし、
 //! GameWorldInner に適用する。スキーマ: docs/architecture/messagepack-schema.md §7
 
-use physics::weapon::WeaponSlot;
-use physics::world::{GameWorldInner, SpecialEntitySnapshot};
+use crate::physics::weapon::WeaponSlot;
+use crate::physics::world::{GameWorldInner, SpecialEntitySnapshot};
 use rmp_serde::from_slice;
 use serde::Deserialize;
 

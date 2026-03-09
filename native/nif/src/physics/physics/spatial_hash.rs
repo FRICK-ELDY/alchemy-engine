@@ -1,0 +1,171 @@
+//! Path: native/physics/src/physics/spatial_hash.rs
+//! Summary: 空間ハッシュによる衝突検出・近傍クエリ
+
+use rustc_hash::FxHashMap;
+
+pub struct SpatialHash {
+    pub cell_size: f32,
+    cells: FxHashMap<(i32, i32), Vec<usize>>,
+}
+
+impl SpatialHash {
+    pub fn new(cell_size: f32) -> Self {
+        Self {
+            cell_size,
+            cells: FxHashMap::default(),
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.cells.clear();
+    }
+
+    pub fn insert(&mut self, id: usize, x: f32, y: f32) {
+        let key = self.cell_key(x, y);
+        self.cells.entry(key).or_default().push(id);
+    }
+
+    fn cell_key(&self, x: f32, y: f32) -> (i32, i32) {
+        (
+            (x / self.cell_size).floor() as i32,
+            (y / self.cell_size).floor() as i32,
+        )
+    }
+
+    /// 指定円の範囲内にあるエンティティ ID を `buf` に書き込む（アロケーションなし）。
+    /// 呼び出し前に `buf` をクリアする必要はない（内部で `clear()` する）。
+    pub fn query_nearby_into(&self, x: f32, y: f32, radius: f32, buf: &mut Vec<usize>) {
+        buf.clear();
+        let r = (radius / self.cell_size).ceil() as i32;
+        let cx = (x / self.cell_size).floor() as i32;
+        let cy = (y / self.cell_size).floor() as i32;
+        for ix in (cx - r)..=(cx + r) {
+            for iy in (cy - r)..=(cy + r) {
+                if let Some(ids) = self.cells.get(&(ix, iy)) {
+                    buf.extend_from_slice(ids);
+                }
+            }
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct StaticObstacle {
+    pub x: f32,
+    pub y: f32,
+    pub radius: f32,
+    pub kind: u8,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn spatial_hash_cross_cell_query() {
+        let mut sh = SpatialHash::new(80.0);
+        sh.insert(0, 79.0, 79.0); // セル (0,0) の境界付近
+        sh.insert(1, 81.0, 81.0); // セル (1,1)
+        let mut buf = Vec::new();
+        sh.query_nearby_into(80.0, 80.0, 40.0, &mut buf);
+        assert!(
+            buf.contains(&0),
+            "セル境界付近のエンティティが検出されるべき"
+        );
+        assert!(buf.contains(&1), "隣接セルのエンティティが検出されるべき");
+    }
+
+    #[test]
+    fn spatial_hash_no_false_negatives_within_radius() {
+        let mut sh = SpatialHash::new(100.0);
+        sh.insert(0, 50.0, 50.0);
+        sh.insert(1, 200.0, 200.0); // 範囲外
+        let mut buf = Vec::new();
+        sh.query_nearby_into(50.0, 50.0, 10.0, &mut buf);
+        assert!(buf.contains(&0));
+        // id=1 は含まれない（範囲外）
+        assert!(!buf.contains(&1));
+    }
+
+    #[test]
+    fn spatial_hash_clear_removes_all_entries() {
+        let mut sh = SpatialHash::new(80.0);
+        sh.insert(0, 10.0, 10.0);
+        sh.insert(1, 20.0, 20.0);
+        sh.clear();
+        let mut buf = Vec::new();
+        sh.query_nearby_into(15.0, 15.0, 50.0, &mut buf);
+        assert!(buf.is_empty(), "clear 後はクエリ結果が空であるべき");
+    }
+
+    #[test]
+    fn spatial_hash_same_cell_multiple_entities() {
+        let mut sh = SpatialHash::new(100.0);
+        sh.insert(0, 10.0, 10.0);
+        sh.insert(1, 20.0, 20.0);
+        sh.insert(2, 30.0, 30.0);
+        let mut buf = Vec::new();
+        sh.query_nearby_into(20.0, 20.0, 50.0, &mut buf);
+        assert!(buf.contains(&0));
+        assert!(buf.contains(&1));
+        assert!(buf.contains(&2));
+    }
+
+    #[test]
+    fn collision_world_rebuild_static_and_query() {
+        let mut cw = CollisionWorld::new(80.0);
+        let obstacles = vec![(100.0_f32, 100.0_f32, 30.0_f32, 1_u8)];
+        cw.rebuild_static(&obstacles);
+        assert_eq!(cw.obstacles.len(), 1);
+        let mut buf = Vec::new();
+        // プレイヤー半径 20 で障害物に接触する位置
+        cw.query_static_nearby_into(100.0, 100.0, 20.0, &mut buf);
+        assert!(!buf.is_empty(), "障害物が近傍クエリで検出されるべき");
+    }
+}
+
+pub struct CollisionWorld {
+    pub dynamic: SpatialHash,
+    pub static_hash: SpatialHash,
+    pub obstacles: Vec<StaticObstacle>,
+}
+
+impl CollisionWorld {
+    pub fn new(cell_size: f32) -> Self {
+        Self {
+            dynamic: SpatialHash::new(cell_size),
+            static_hash: SpatialHash::new(cell_size),
+            obstacles: Vec::new(),
+        }
+    }
+
+    pub fn rebuild_static(&mut self, obstacles: &[(f32, f32, f32, u8)]) {
+        self.obstacles.clear();
+        self.static_hash.clear();
+        for (x, y, radius, kind) in obstacles {
+            let idx = self.obstacles.len();
+            self.obstacles.push(StaticObstacle {
+                x: *x,
+                y: *y,
+                radius: *radius,
+                kind: *kind,
+            });
+            self.static_hash.insert(idx, *x, *y);
+        }
+    }
+
+    pub fn query_static_nearby_into(&self, x: f32, y: f32, radius: f32, buf: &mut Vec<usize>) {
+        self.static_hash.query_nearby_into(x, y, radius + 80.0, buf);
+        let obstacles = &self.obstacles;
+        buf.retain(|&idx| {
+            if let Some(o) = obstacles.get(idx) {
+                let hit_r = radius + o.radius;
+                let dx = x - o.x;
+                let dy = y - o.y;
+                dx * dx + dy * dy <= hit_r * hit_r
+            } else {
+                false
+            }
+        });
+    }
+}

@@ -3,7 +3,7 @@
 //! 1.8: nif から render へ分離移設。
 
 use crate::DrawCommand;
-use physics::constants::{BG_B, BG_G, BG_R};
+use nif::physics::constants::{BG_B, BG_G, BG_R};
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
 use winit::window::Window;

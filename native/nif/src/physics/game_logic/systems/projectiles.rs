@@ -1,0 +1,99 @@
+use crate::world::{FrameEvent, GameWorldInner};
+
+pub(crate) fn update_projectiles_and_enemy_hits(w: &mut GameWorldInner, dt: f32) {
+    // ── 弾丸を移動・寿命更新 ─────────────────────────────────────
+    let bullet_len = w.bullets.len();
+    for i in 0..bullet_len {
+        if !w.bullets.alive[i] {
+            continue;
+        }
+        w.bullets.positions_x[i] += w.bullets.velocities_x[i] * dt;
+        w.bullets.positions_y[i] += w.bullets.velocities_y[i] * dt;
+        w.bullets.lifetime[i] -= dt;
+        if w.bullets.lifetime[i] <= 0.0 {
+            w.bullets.kill(i);
+            continue;
+        }
+        // 障害物に当たったら弾を消す
+        let bx = w.bullets.positions_x[i];
+        let by = w.bullets.positions_y[i];
+        w.collision.query_static_nearby_into(
+            bx,
+            by,
+            crate::constants::BULLET_RADIUS,
+            &mut w.obstacle_query_buf,
+        );
+        if !w.obstacle_query_buf.is_empty() {
+            w.bullets.kill(i);
+            continue;
+        }
+        // マップ外に出た弾丸も消す（P2-3: map_margin は contents から注入）
+        let m = w.map_margin;
+        if bx < -m || bx > w.map_width + m || by < -m || by > w.map_height + m {
+            w.bullets.kill(i);
+        }
+    }
+
+    // ── 弾丸 vs 敵 衝突判定（P2-3: bullet_query_radius は contents から注入）──
+    for bi in 0..bullet_len {
+        if !w.bullets.alive[bi] {
+            continue;
+        }
+        let dmg = w.bullets.damage[bi];
+        // ダメージ 0 はエフェクト専用弾（Whip / Lightning）— 衝突判定をスキップ
+        if dmg == 0 {
+            continue;
+        }
+        let bx = w.bullets.positions_x[bi];
+        let by = w.bullets.positions_y[bi];
+        let piercing = w.bullets.piercing[bi];
+
+        w.collision.dynamic.query_nearby_into(
+            bx,
+            by,
+            w.bullet_query_radius,
+            &mut w.spatial_query_buf,
+        );
+        for ei in w.spatial_query_buf.iter().copied() {
+            if w.enemies.alive[ei] == 0 {
+                continue;
+            }
+            let kind_id = w.enemies.kind_ids[ei];
+            let (enemy_r, particle_color) = w
+                .params
+                .get_enemy(kind_id)
+                .map(|e| (e.radius, e.particle_color))
+                .unwrap_or_else(|| {
+                    (
+                        w.params.effective_default_enemy_radius(),
+                        w.params.effective_default_particle_color(),
+                    )
+                });
+            let hit_r = crate::constants::BULLET_RADIUS + enemy_r;
+            let ex = w.enemies.positions_x[ei] + enemy_r;
+            let ey = w.enemies.positions_y[ei] + enemy_r;
+            let ddx = bx - ex;
+            let ddy = by - ey;
+            if ddx * ddx + ddy * ddy < hit_r * hit_r {
+                w.enemies.hp[ei] -= dmg as f32;
+                if w.enemies.hp[ei] <= 0.0 {
+                    w.enemies.kill(ei);
+                    w.frame_events.push(FrameEvent::EnemyKilled {
+                        enemy_kind: kind_id,
+                        x: ex,
+                        y: ey,
+                    });
+                    w.particles.emit(ex, ey, 8, particle_color);
+                } else {
+                    let hit_color = w.bullets.hit_particle_color[bi];
+                    w.particles.emit(ex, ey, 3, hit_color);
+                }
+                // 貫通弾は消えない、通常弾は消す
+                if !piercing {
+                    w.bullets.kill(bi);
+                    break;
+                }
+            }
+        }
+    }
+}

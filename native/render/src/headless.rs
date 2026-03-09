@@ -9,7 +9,7 @@ use crate::{
     RenderFrame,
 };
 use image::{ImageBuffer, Rgba};
-use physics::constants::{BG_B, BG_G, BG_R};
+use nif::physics::constants::{BG_B, BG_G, BG_R};
 use wgpu::util::DeviceExt;
 
 const DEFAULT_WIDTH: u32 = 800;

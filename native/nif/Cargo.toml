@@ -13,8 +13,8 @@ name = "nif"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-physics = { path = "../physics", features = ["nif"] }
-audio      = { path = "../audio" }
+audio = { path = "../audio" }
+rustc-hash = "2"
 rustler = "0.37"
 rayon = "1"
 log = "0.4"

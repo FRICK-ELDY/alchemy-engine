@@ -13,7 +13,7 @@ client = { path = "../client" }
 network = { path = "../network" }
 render = { path = "../render" }
 window = { path = "../window" }
-physics = { path = "../physics" }
+nif = { path = "../nif" }
 audio = { path = "../audio" }
 rmp-serde = "1.3"
 serde = { version = "1", features = ["derive"] }

@@ -3,26 +3,26 @@
 
 use super::decode::apply_injection_from_msgpack;
 use super::util::{lock_poisoned_err, params_not_loaded_err};
-use physics::constants::{
+use crate::physics::constants::{
     BULLET_LIFETIME, BULLET_SPEED, CELL_SIZE, MAP_HEIGHT, MAP_WIDTH, PARTICLE_RNG_SEED,
     PLAYER_SIZE, PLAYER_SPEED, SCREEN_HEIGHT, SCREEN_WIDTH,
 };
-use physics::entity_params::{
+use crate::physics::entity_params::{
     BossParams, EnemyParams, EntityParamDefaults, EntityParamTables, FirePattern, WeaponParams,
 };
-use physics::game_logic::systems::spawn::get_spawn_positions_around_player;
-use physics::item::ItemWorld;
-use physics::physics::rng::SimpleRng;
-use physics::physics::spatial_hash::CollisionWorld;
-use physics::weapon::WeaponSlot;
-use physics::world::{GameWorld, GameWorldInner, PlayerState};
+use crate::physics::game_logic::systems::spawn::get_spawn_positions_around_player;
+use crate::physics::item::ItemWorld;
+use crate::physics::physics::rng::SimpleRng;
+use crate::physics::physics::spatial_hash::CollisionWorld;
+use crate::physics::weapon::WeaponSlot;
+use crate::physics::world::{GameWorld, GameWorldInner, PlayerState};
 use rustler::types::list::ListIterator;
 use rustler::TermType;
 use rustler::{Atom, Binary, NifResult, ResourceArc, Term};
 use std::sync::RwLock;
 
 use crate::{ok, BulletWorld, EnemyWorld, ParticleWorld};
-use physics::entity_params::DEFAULT_PARTICLE_COLOR;
+use crate::physics::entity_params::DEFAULT_PARTICLE_COLOR;
 
 #[rustler::nif]
 pub fn create_world() -> ResourceArc<GameWorld> {
@@ -371,7 +371,7 @@ pub fn set_frame_injection_binary(
 }
 
 fn apply_special_entity_snapshot(w: &mut GameWorldInner, snapshot: Term) {
-    use physics::world::SpecialEntitySnapshot;
+    use crate::physics::world::SpecialEntitySnapshot;
 
     if snapshot.is_atom() {
         w.special_entity_snapshot = None;

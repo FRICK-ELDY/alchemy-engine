@@ -8,7 +8,7 @@ description = "wgpu を用いた共通レンダラー（The Eye）"
 headless = []
 
 [dependencies]
-physics = { path = "../physics" }
+nif = { path = "../nif" }
 wgpu = "24"
 winit = "0.30.12"
 bytemuck = { version = "1", features = ["derive"] }
