@@ -1,0 +1,20 @@
+# client 系クレートのビルド・リリース用エイリアス
+# 使用例:
+#   cargo client-desktop           # デバッグビルド
+#   cargo client-desktop --release # リリースビルド
+#   cargo client-run-desktop       # 実行（デスクトップのみ対応）
+
+[alias]
+client-desktop  = "build -p client_desktop"
+client-web      = "build -p client_web"
+client-android  = "build -p client_android"
+client-ios      = "build -p client_ios"
+
+# リリースビルドのショートカット（--release 付きでも可: cargo client-desktop --release）
+client-release-desktop  = "build -p client_desktop --release"
+client-release-web      = "build -p client_web --release"
+client-release-android  = "build -p client_android --release"
+client-release-ios      = "build -p client_ios --release"
+
+# 実行（client_desktop のみ現状実装済み）
+client-run-desktop = "run -p client_desktop"

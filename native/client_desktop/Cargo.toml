@@ -9,6 +9,7 @@ name = "client_desktop"
 path = "src/main.rs"
 
 [dependencies]
+client = { path = "../client" }
 desktop_render = { path = "../desktop_render" }
 desktop_input = { path = "../desktop_input" }
 physics = { path = "../physics" }

@@ -9,4 +9,5 @@ name = "client_android"
 path = "src/main.rs"
 
 [dependencies]
+client = { path = "../client" }
 # TODO: ndk, jni 等で実装

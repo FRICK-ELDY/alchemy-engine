@@ -9,4 +9,5 @@ name = "client_ios"
 path = "src/main.rs"
 
 [dependencies]
+client = { path = "../client" }
 # TODO: objc, metal 等で実装
