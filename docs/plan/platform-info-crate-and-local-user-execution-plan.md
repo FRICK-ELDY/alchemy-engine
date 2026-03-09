@@ -250,7 +250,9 @@ end
 
 ---
 
-## 7. フェーズ 5: MenuComponent で OS 表示
+## 7. フェーズ 5: MenuComponent で OS 表示 ✅ 完了
+
+- **実施日**: 2026-03-09
 
 ### 7.1 get_menu_ui の更新
 
@@ -315,7 +317,7 @@ NIF モード（Elixir と同一プロセス、Zenoh 未使用）の場合、cli
 | 2   | client_desktop     | `client` 依存追加、`publish_client_info` 実装、起動時に publish                                              | ✅ 完了 |
 | 3   | ZenohBridge        | `contents/room/*/client/info` 購読、`handle_client_info` で `:client_info` ETS に保存 | ✅ 完了 |
 | 4   | LocalUserComponent | `get_client_info/1` 追加（`:client_info` から読み取り）                                  | ✅ 完了 |
-| 5   | MenuComponent      | `get_menu_ui` に OS 表示行を追加                                                       | 未実施 |
+| 5   | MenuComponent      | `get_menu_ui` に OS 表示行を追加                                                       | ✅ 完了 |
 | 6   | （任意）NIF モード        | NIF から `client::info::ClientInfo` を取得し、`:client_info` に保存するパスを追加        | 未実施 |
 
 

@@ -994,7 +994,10 @@ checksum = "3a822ea5bc7590f9d40f1ba12c0dc3c2760f3482c6984db1573ad11031420831"
 name = "client"
 version = "0.1.0"
 dependencies = [
+ "futures",
+ "futures-timer",
  "serde",
+ "zenoh",
 ]
 
 [[package]]
@@ -1013,13 +1016,10 @@ dependencies = [
  "desktop_input",
  "desktop_render",
  "env_logger",
- "futures",
- "futures-timer",
  "log",
  "physics",
  "rmp-serde",
  "serde",
- "zenoh",
 ]
 
 [[package]]

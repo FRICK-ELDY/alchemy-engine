@@ -82,6 +82,14 @@ defmodule Contents.MenuComponent do
     dy_str = format_float(mouse_map.delta_y)
     mouse_display = "x: #{x_str}, y: #{y_str}, delta: {x: #{dx_str}, y: #{dy_str}}"
 
+    info_str =
+      case Contents.LocalUserComponent.get_client_info(room_id) do
+        nil -> "OS: —"
+        %{os: os, arch: arch} -> "OS: #{os} / #{arch}"
+        %{"os" => os, "arch" => arch} -> "OS: #{os} / #{arch}"
+        _ -> "OS: —"
+      end
+
     [
       {:node, {:center, {0.0, 0.0}, :wrap}, {:rect, @color_bg, 18.0, :none},
        [
@@ -93,6 +101,8 @@ defmodule Contents.MenuComponent do
             {:node, {:top_left, {0.0, 0.0}, :wrap}, {:text, fps_text, @color_label, 15.0, false},
              []},
             {:node, {:top_left, {0.0, 0.0}, :wrap}, :separator, []},
+            {:node, {:top_left, {0.0, 0.0}, :wrap},
+             {:text, info_str, @color_value, 14.0, false}, []},
             {:node, {:top_left, {0.0, 0.0}, :wrap},
              {:text, "keyboard: \"#{keyboard_str}\"", @color_value, 14.0, false}, []},
             {:node, {:top_left, {0.0, 0.0}, :wrap},
