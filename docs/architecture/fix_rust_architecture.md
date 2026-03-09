@@ -75,10 +75,14 @@ native/
 │
 ├── nif/                      # 【サーバー】Elixir NIF用 Rustコード
 │   ├── src/
-│   │   └── lib.rs            # Rustlerによる関数露出（sharedを参照）
+│   │   ├── lib.rs            # Rustlerによる関数露出（sharedを参照）
+│   │   ├── physics.rs        # 剛体物理等の演算
+│   │   ├── ai.rs             # contents制作用のAIアシスタント
+│   │   └── audio_sync.rs     # オーケストラなどの音同期
 │
 └── tools/                    # 【開発支援】プロダクトには含まれないツール
     └── launcher/             # ルーター、サーバー、クライアントの一括起動ツール
+        ├── src/main.rs
 ```
 
 ## 2. 各レイヤーの責務と設計指針
