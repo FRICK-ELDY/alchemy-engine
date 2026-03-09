@@ -235,20 +235,18 @@ defmodule Network.ZenohBridge do
   @client_info_max_rooms 100
 
   defp handle_client_info(room_id, payload) do
-    cond do
-      not valid_room_id_for_client_info?(room_id) ->
-        Logger.debug("[ZenohBridge] Rejected client_info: invalid room_id=#{inspect(room_id)}")
+    if valid_room_id_for_client_info?(room_id) do
+      room_key = if room_id == "main", do: :main, else: room_id
 
-      true ->
-        room_key = if room_id == "main", do: :main, else: room_id
-
-        if new_client_info_room?(room_key) and client_info_table_at_limit?() do
-          Logger.warning(
-            "[ZenohBridge] Rejected client_info: max rooms (#{@client_info_max_rooms}) reached"
-          )
-        else
-          do_handle_client_info(room_id, room_key, payload)
-        end
+      if new_client_info_room?(room_key) and client_info_table_at_limit?() do
+        Logger.warning(
+          "[ZenohBridge] Rejected client_info: max rooms (#{@client_info_max_rooms}) reached"
+        )
+      else
+        do_handle_client_info(room_id, room_key, payload)
+      end
+    else
+      Logger.debug("[ZenohBridge] Rejected client_info: invalid room_id=#{inspect(room_id)}")
     end
   end
 
