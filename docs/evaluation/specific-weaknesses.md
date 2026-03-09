@@ -76,6 +76,16 @@
 
 ---
 
+## native/network — Zenoh 通信層（Rust）
+
+### ❌ マイナス点
+
+- **network が render に依存しておりアーキテクチャ違反** `-3`
+  > `native-restructure-migration-plan.md` §2 の目標依存関係では `NETWORK --> SHARED` のみ。現状 `network` は `render` に依存しており、`NetworkRenderBridge` と `msgpack_decode` が render の型（`RenderFrame`、`RenderBridge`、`DrawCommand` 等）を使用しているため発生。network 層は描画層から独立すべき。解決方針: これら2モジュールを `app` クレートへ移動。
+  > 対象ファイル: `native/network/Cargo.toml`, `native/network/src/network_render_bridge.rs`, `native/network/src/msgpack_decode.rs`
+
+---
+
 ## native/nif — NIF設計・ブリッジ
 
 ### ❌ マイナス点
@@ -86,9 +96,13 @@
 
 ---
 
-## native/desktop_render — 描画パイプライン
+## native/render — 描画パイプライン
 
 ### ❌ マイナス点
+
+- **render が nif に依存しておりアーキテクチャ違反** `-3`
+  > `native-restructure-migration-plan.md` §2 の目標依存関係では `RENDER --> SHARED` のみ。現状 `render` は `nif` に依存しており、`nif::physics::constants` の背景色定数（`BG_R`、`BG_G`、`BG_B`）を参照しているため発生。描画層はサーバー側 NIF から独立すべき。解決方針: 共有定数を `shared` クレートへ移動。
+  > 対象ファイル: `native/render/Cargo.toml`, `native/render/src/headless.rs`, `native/render/src/renderer/mod.rs`
 
 - **build_instances 関数の重複（DRY 違反）** `-3`
   > `renderer/mod.rs` の `update_instances` と `headless.rs` の `build_instances` に、スプライト種別ごとのUV・サイズ計算ロジックがほぼ同一で重複している。スプライト種別追加・変更時に両方の修正が必要で、同期漏れのリスクがある。

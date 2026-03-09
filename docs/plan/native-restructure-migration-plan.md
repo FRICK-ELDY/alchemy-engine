@@ -121,3 +121,81 @@ flowchart TB
 - **nif の XR 依存削除**: 現行の `nif/xr_bridge` は umbrella モードで VR 入力を Elixir へ送っている。移行後は app が xr で入力取得 → network で Zenoh publish → Elixir が subscribe する形に変更する必要あり
 - **physics 移行**: クレート境界変更に伴い、`physics` 参照をすべて `nif::physics` へ変更
 - **既存 doc 参照**: `docs/architecture/rust/` 以下は移行後に別タスクでパス・モジュール名を修正
+
+---
+
+## 5. 重大な課題（未解消）
+
+### network クレートの render 依存違反
+
+**重大度**: 重大（アーキテクチャ違反）
+
+**概要**
+
+`native/network` クレートが `native/render` クレートに依存しており、本プラン §2 で定義した目標依存関係（`NETWORK --> SHARED` のみ）に違反している。network 層は描画層から独立すべきである。
+
+**原因**
+
+- `NetworkRenderBridge` と `msgpack_decode` が render クレートの型（`RenderFrame`、`RenderBridge`、`KeyCode`、`KeyState`、`DrawCommand`、`CameraParams`、`UiCanvas` 等）を使用しているため、network が render に依存している
+- これらは本質的に「Zenoh バイト列 ↔ 描画フレーム」のブリッジであり、network と render の**両方**に依存する責務を持つ
+
+**影響**
+
+- network を render なしで利用できない（ヘッドレスサーバー・非グラフィカルクライアントの妨げ）
+- レイヤー境界の不明確化・保守性低下
+- fix_rust_architecture.md の「network (The Pipe) は transport agnostic」という設計方針との矛盾
+
+**解決方針**
+
+`NetworkRenderBridge` と `msgpack_decode` を `native/network` から `native/app` へ移動する。app はすでに network と render の両方に依存しており、両レイヤーを結合する責務を担う。
+
+**作業内容**
+
+1. `network/src/network_render_bridge.rs` → `app/src/network_render_bridge.rs` へ移動
+2. `network/src/msgpack_decode.rs` → `app/src/msgpack_decode.rs` へ移動
+3. `network/Cargo.toml` から `render` 依存を削除
+4. `network/src/lib.rs` から該当モジュール・再エクスポートを削除
+5. `app` で `network::ClientSession`・`network::common`（トピック名等）を参照するよう修正
+6. `app/Cargo.toml` に `rmp-serde` を追加
+
+**参照**
+
+- 本ドキュメント §2 依存関係（目標）の Mermaid 図
+- [fix_rust_architecture.md](../architecture/fix_rust_architecture.md) §2 network (The Pipe)
+
+---
+
+### render クレートの nif 依存違反
+
+**重大度**: 重大（アーキテクチャ違反）
+
+**概要**
+
+`native/render` クレートが `native/nif` クレートに依存しており、本プラン §2 で定義した目標依存関係（`RENDER --> SHARED` のみ）に違反している。描画層はサーバー側の NIF 実装から独立すべきである。
+
+**原因**
+
+- `render` が `nif::physics::constants` の背景色定数（`BG_R`、`BG_G`、`BG_B`）を参照している
+- これにより render が nif（サーバー層）に依存し、クライアント・サーバー境界が不明確になる
+
+**影響**
+
+- クライアント（render）とサーバー（nif）の責務分離が損なわれる
+- 描画層が NIF の内部実装に紐づき、保守性低下
+- fix_rust_architecture.md の「render (The Eye) は描画に専念」という設計方針との矛盾
+
+**解決方針**
+
+背景色等の共通定数を `native/shared` クレートへ移動する。shared は render と nif の両方から参照されるため、依存関係がクリーンになる。
+
+**作業内容**
+
+1. `nif::physics::constants` の共有すべき定数（`BG_R`、`BG_G`、`BG_B` 等）を `shared` に定義または再エクスポート
+2. `render` の `headless.rs`・`renderer/mod.rs` で `shared` の定数を参照するよう変更
+3. `nif::physics::constants` では `shared` の定数を re-export するか、shared を参照
+4. `render/Cargo.toml` から `nif`・`physics` 依存を削除
+
+**参照**
+
+- 本ドキュメント §2 依存関係（目標）の Mermaid 図
+- 対象: `native/render/src/headless.rs`, `native/render/src/renderer/mod.rs`
