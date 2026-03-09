@@ -1,10 +1,10 @@
 //! Phase 6: zenohd + HL-Server + Client Run + Check for Update / acknowledgements
 //!
-//! ???????????????? zenohd ? mix run ???????
-//! Check for Update ? GitHub releases ????acknowledgements ?????????????
+//! トレイアイコン表示、メニューから zenohd と mix run を起動・終了。
+//! Check for Update で GitHub releases を確認。acknowledgements で謝辞・ライセンスを表示。
 //!
-//! TODO: zenohd ? Phoenix Server ?????????????????????????
-//! ???? ServiceManager ?????? abstraction ?????????????
+//! TODO: zenohd と Phoenix Server のメニューイベント処理が同パターンで重複している。
+//! 将来的に ServiceManager のような共通 abstraction でまとめると保守しやすい。
 
 use std::cell::RefCell;
 use std::env;
@@ -15,7 +15,7 @@ use std::rc::Rc;
 use std::thread;
 use std::time::{Duration, Instant};
 
-/// GitHub API ??????????
+/// GitHub API で取得するリポジトリ
 const GITHUB_REPO: &str = "FRICK-ELDY/alchemy-engine";
 use kill_tree::blocking::kill_tree;
 use tao::event_loop::{ControlFlow, EventLoopBuilder};
@@ -24,46 +24,46 @@ use tray_icon::{
     Icon, TrayIcon, TrayIconBuilder, TrayIconEvent,
 };
 
-/// zenohd ????????
+/// zenohd の待ち受けポート
 const ZENOHD_PORT: u16 = 7447;
-/// Phoenix Server (mix run) ????????
+/// Phoenix Server (mix run) の待ち受けポート
 const PHOENIX_SERVER_PORT: u16 = 4000;
-/// ???????????????1 ?????
+/// ポート確認の接続タイムアウト（1 回あたり）
 const PORT_CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
-/// ??????
+/// 最大待機時間
 const PORT_WAIT_TIMEOUT: Duration = Duration::from_secs(60);
-/// ???????
+/// ポーリング間隔
 const PORT_POLL_INTERVAL: Duration = Duration::from_secs(1);
 
-// ????????
+// アイコン用の定数
 const ICON_SIZE: u32 = 16;
 const ICON_MARGIN: u32 = 2;
 const ICON_ALPHA_EDGE: u8 = 0x80;
 const ICON_ALPHA_CENTER: u8 = 0xFF;
 
-/// ????????zenohd / Phoenix Server ??????????
+/// 灰色アイコン用（zenohd / Phoenix Server のいずれかが未起動）
 const ICON_GRAY_R: u8 = 0x80;
 const ICON_GRAY_G: u8 = 0x80;
 const ICON_GRAY_B: u8 = 0x80;
 
-/// ???????????????
+/// 緑色アイコン用（両方起動済み）
 const ICON_GREEN_R: u8 = 0x22;
 const ICON_GREEN_G: u8 = 0x8B;
 const ICON_GREEN_B: u8 = 0x22;
 
-/// zenohd ? tcp/[::]:7447 ?????????IPv4 ? IPv6 ???????
+/// zenohd は tcp/[::]:7447 で待ち受けるため、IPv4 と IPv6 の両方を試す。
 const PORT_CHECK_ADDRESSES: &[&str] = &["127.0.0.1", "[::1]"];
 
-/// zenohd ????? bind ??????????
-/// Phoenix ? Elixir ???????????????????????????????
-/// ??????????????????????????
+/// zenohd がポートに bind するまでの初回待機。
+/// Phoenix は Elixir 起動に数秒かかることもあり、初回チェックが早すぎる可能性はある
+/// （設計書「初回待機・ポーリング間隔の見直し」参照）。
 const PORT_INITIAL_DELAY: Duration = Duration::from_millis(500);
 
-/// mix.exs ????????????????
-/// 1) current_dir ????????cargo run ?????????????????
-/// 2) ?????????????????????exe ?????? current_dir ???????
+/// mix.exs を含むプロジェクトルートを探す。
+/// 1) current_dir から上位を検索（cargo run 時は通常プロジェクトルートになる）
+/// 2) 見つからなければ実行ファイルの親から検索（exe 直接起動時は current_dir が不定のため）
 ///
-/// ???: exe.parent() ? None ??????????????????? None ????
+/// 境界値: exe.parent() が None になる（ルート直下など）稀なケースでは None を返す。
 fn find_project_root() -> Option<PathBuf> {
     if let Some(root) = search_mix_exs_upward(std::env::current_dir().ok()?) {
         return Some(root);
@@ -85,7 +85,7 @@ fn search_mix_exs_upward(mut dir: PathBuf) -> Option<PathBuf> {
     }
 }
 
-/// Elixir ????????????mix_path_with_elixir_dirs ? find_mix_exe ??????
+/// Elixir の検索対象ディレクトリ。mix_path_with_elixir_dirs と find_mix_exe で共通利用。
 #[cfg(windows)]
 fn elixir_search_dirs() -> Vec<PathBuf> {
     let mut dirs = Vec::new();
@@ -112,11 +112,11 @@ fn elixir_search_dirs() -> Vec<PathBuf> {
     dirs
 }
 
-/// mix ???? PATH?Windows ? GUI ???????????????????
-/// ???? Elixir ??????????????????
+/// mix 実行用の PATH。Windows の GUI アプリはターミナルと環境が異なるため、
+/// よくある Elixir のインストールパスを先頭に追加する。
 ///
-/// PATH ????????????????? None ???????? spawn_mix_run ?
-/// ????????? cmd.env("PATH", path) ??????????????????????
+/// PATH が未設定の環境（極端なケース）では None を返す。その場合 spawn_mix_run の
+/// フォールバックでは cmd.env("PATH", path) が呼ばれず、親プロセスの環境継承のみとなる。
 #[cfg(windows)]
 fn mix_path_with_elixir_dirs() -> Option<std::ffi::OsString> {
     let base_path = env::var_os("PATH")?;
@@ -142,8 +142,8 @@ fn mix_path_with_elixir_dirs() -> Option<std::ffi::OsString> {
     env::var_os("PATH")
 }
 
-/// Windows: PATH ???? %USERPROFILE%\.cargo\bin ????
-/// GUI ????????? PATH ?????????????bin\windows_client.bat ???????
+/// Windows: PATH の先頭に %USERPROFILE%\.cargo\bin を追加。
+/// GUI アプリ経由起動では PATH が限られることがあるため、bin\windows_client.bat と同様の対応。
 #[cfg(windows)]
 fn path_with_cargo_bin() -> std::ffi::OsString {
     let base = env::var_os("PATH").unwrap_or_default();
@@ -158,10 +158,10 @@ fn path_with_cargo_bin() -> std::ffi::OsString {
     base
 }
 
-/// mix.bat / mix.exe ???????????????? Some ????
+/// mix.bat / mix.exe のフルパスを検索する。見つかれば Some を返す。
 #[cfg(windows)]
 fn find_mix_exe() -> Option<PathBuf> {
-    // ????????????????????: ALCHEMY_MIX_PATH=C:\...\mix.bat ??? ...\bin?
+    // 環境変数で指定されていればそれを使用（例: ALCHEMY_MIX_PATH=C:\...\mix.bat または ...\bin）
     if let Ok(p) = env::var("ALCHEMY_MIX_PATH") {
         let path = PathBuf::from(&p);
         if path.is_file() {
@@ -187,7 +187,7 @@ fn find_mix_exe() -> Option<PathBuf> {
     None
 }
 
-/// Windows: mix ??????mix.bat/mix.exe ????????????? bin ? PATH ??????? mix ????
+/// Windows: mix を起動する。mix.bat/mix.exe のフルパスが分かれば、その bin を PATH 先頭に追加して mix を実行。
 #[cfg(windows)]
 fn spawn_mix_run(project_root: &Path) -> std::io::Result<Child> {
     if let Some(mix_path) = find_mix_exe() {
@@ -201,7 +201,7 @@ fn spawn_mix_run(project_root: &Path) -> std::io::Result<Child> {
                 .spawn();
         }
     }
-    // ???????: cmd ??? mix ???
+    // フォールバック: cmd 経由で mix を探す
     let mut cmd = Command::new("cmd");
     cmd.args(["/c", "mix", "run", "--no-halt"])
         .current_dir(project_root);
@@ -221,7 +221,7 @@ fn spawn_mix_run(project_root: &Path) -> std::io::Result<Child> {
     cmd.spawn()
 }
 
-/// 16x16 ??????????????r,g,b ??????
+/// 16x16 のプレースホルダーアイコン。r,g,b で色を指定。
 fn create_icon_with_color(r: u8, g: u8, b: u8) -> Icon {
     let mut rgba = Vec::with_capacity((ICON_SIZE * ICON_SIZE * 4) as usize);
     for y in 0..ICON_SIZE {
@@ -239,15 +239,15 @@ fn create_icon_with_color(r: u8, g: u8, b: u8) -> Icon {
     Icon::from_rgba(rgba, ICON_SIZE, ICON_SIZE).expect("Failed to create icon")
 }
 
-/// ???????????????
+/// ポートが応答するまで待機する。
 ///
-/// - ??: `true` ??????????????????????
-/// - ??????: `false` ???
-/// - ?????? I/O ????????????????
-/// - `skip_initial_delay`: true ??????????????????????????
+/// - 成功: `true` を返す（いずれかのアドレスに接続できた場合）
+/// - タイムアウト: `false` を返す
+/// - 接続試行中の I/O エラーは無視してリトライを続ける
+/// - `skip_initial_delay`: true なら初回待機を省略（連続呼び出し時の累積遅延短縮用）
 fn wait_for_port(port: u16, timeout: Duration, skip_initial_delay: bool) -> bool {
-    // PORT_CHECK_ADDRESSES ?????????? parse ????????????????
-    // ??????????? None ???????????????????
+    // PORT_CHECK_ADDRESSES は固定リテラルなので parse は通常成功する。アドレス編集時に
+    // 不正が混入した場合のみ None となり、その場合は静かにスキップする。
     let addrs: Vec<SocketAddr> = PORT_CHECK_ADDRESSES
         .iter()
         .filter_map(|host| format!("{}:{}", host, port).parse().ok())
@@ -271,40 +271,40 @@ fn wait_for_port(port: u16, timeout: Duration, skip_initial_delay: bool) -> bool
     false
 }
 
-/// zenohd ??????????????????
+/// zenohd を終了（同期）。アプリ終了時に使用。
 fn terminate_zenohd_sync(mut child: Child, submenu: &Submenu) {
     let pid = child.id();
     if let Err(e) = kill_tree(pid) {
-        eprintln!("zenohd ??????????: {}", e);
+        eprintln!("zenohd の終了に失敗しました: {}", e);
     }
     let _ = child.wait();
     submenu.set_text("Zenoh Router : OFF");
 }
 
-/// Phoenix Server ??????????????????
+/// Phoenix Server を終了（同期）。アプリ終了時に使用。
 fn terminate_phoenix_server_sync(mut child: Child, submenu: &Submenu) {
     let pid = child.id();
     if let Err(e) = kill_tree(pid) {
-        eprintln!("Phoenix Server ??????????: {}", e);
+        eprintln!("Phoenix Server の終了に失敗しました: {}", e);
     }
     let _ = child.wait();
     submenu.set_text("Phoenix Server : OFF");
 }
 
-/// client_desktop ? exe ??????release ???????? debug?
-fn find_client_desktop_exe(project_root: &Path) -> Option<PathBuf> {
+/// app の exe パスを検索。release を優先、なければ debug。
+fn find_app_exe(project_root: &Path) -> Option<PathBuf> {
     let native_dir = project_root.join("native");
     let release = native_dir
         .join("target")
         .join("release")
-        .join(exe_name("client_desktop"));
+        .join(exe_name("app"));
     if release.is_file() {
         return Some(release);
     }
     let debug = native_dir
         .join("target")
         .join("debug")
-        .join(exe_name("client_desktop"));
+        .join(exe_name("app"));
     if debug.is_file() {
         return Some(debug);
     }
@@ -320,9 +320,9 @@ fn exe_name(base: &str) -> String {
     base.to_string()
 }
 
-/// client_desktop ????zenohd ? Phoenix Server ???????? spawn?
-/// ???? Ok(Child)????? Err(msg)?
-fn spawn_client_desktop(project_root: &Path) -> Result<Child, String> {
+/// app を起動。zenohd と Phoenix Server のポート確認後に spawn。
+/// 成功時は Ok(Child)、失敗時は Err(msg)。
+fn spawn_app(project_root: &Path) -> Result<Child, String> {
     if !wait_for_port(ZENOHD_PORT, PORT_WAIT_TIMEOUT, false) {
         return Err(format!(
             "Zenoh Router (port {}) did not respond within {} seconds.\n\nStart Zenoh Router first.",
@@ -337,7 +337,7 @@ fn spawn_client_desktop(project_root: &Path) -> Result<Child, String> {
             PORT_WAIT_TIMEOUT.as_secs()
         ));
     }
-    // TODO: ????? config ??????????????
+    // TODO: 環境変数や config で接続先を切り替え可能にする
     let connect = "tcp/127.0.0.1:7447";
     let room = "main";
 
@@ -346,12 +346,12 @@ fn spawn_client_desktop(project_root: &Path) -> Result<Child, String> {
         return Err("native/Cargo.toml not found. Project structure may be invalid. Run the launcher from the project root.".to_string());
     }
 
-    if let Some(exe) = find_client_desktop_exe(project_root) {
+    if let Some(exe) = find_app_exe(project_root) {
         Command::new(exe)
             .args(["--connect", connect, "--room", room])
             .current_dir(project_root)
             .spawn()
-            .map_err(|e| format!("Failed to start client_desktop: {}", e))
+            .map_err(|e| format!("Failed to start app: {}", e))
     } else {
         let manifest_str = manifest.to_string_lossy();
         #[cfg(windows)]
@@ -365,8 +365,6 @@ fn spawn_client_desktop(project_root: &Path) -> Result<Child, String> {
                     &manifest_str,
                     "-p",
                     "app",
-                    "--bin",
-                    "client_desktop",
                     "--",
                     "--connect",
                     connect,
@@ -376,7 +374,7 @@ fn spawn_client_desktop(project_root: &Path) -> Result<Child, String> {
                 .current_dir(project_root)
                 .env("PATH", path_with_cargo_bin())
                 .spawn()
-                .map_err(|e| format!("Failed to run client_desktop (cargo run): {}", e))
+                .map_err(|e| format!("Failed to run app (cargo run): {}", e))
         }
         #[cfg(not(windows))]
         {
@@ -387,8 +385,6 @@ fn spawn_client_desktop(project_root: &Path) -> Result<Child, String> {
                     &manifest_str,
                     "-p",
                     "app",
-                    "--bin",
-                    "client_desktop",
                     "--",
                     "--connect",
                     connect,
@@ -397,15 +393,15 @@ fn spawn_client_desktop(project_root: &Path) -> Result<Child, String> {
                 ])
                 .current_dir(project_root)
                 .spawn()
-                .map_err(|e| format!("Failed to run client_desktop (cargo run): {}", e))
+                .map_err(|e| format!("Failed to run app (cargo run): {}", e))
         }
     }
 }
 
-/// GitHub releases API ?????????????????????????
+/// GitHub releases API で最新バージョンを取得。比較してメッセージを返す。
 ///
-/// ??? UI ??????????????????????????????
-/// ??????????????? API ??????????????????????
+/// 現状は UI スレッドとは別スレッドで呼ばれるためブロックは許容されるが、?
+/// 将来的にタイムアウト延長や複数 API 呼び出しを行う場合は非同期化の検討余地あり。
 fn check_for_update() -> Result<String, String> {
     let url = format!(
         "https://api.github.com/repos/{}/releases/latest",
@@ -614,7 +610,7 @@ fn main() {
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
 
-        // zenohd ??????????????????
+        // zenohd がクラッシュ・外部終了した場合の検知
         let zenohd_crash = {
             let mut child_opt = zenohd_child.borrow_mut();
             if let Some(ref mut child) = *child_opt {
@@ -634,7 +630,7 @@ fn main() {
             update_menu_and_icon();
         }
 
-        // Phoenix Server ??????????????????
+        // Phoenix Server がクラッシュ・外部終了した場合の検知
         let phoenix_crash = {
             let mut child_opt = phoenix_child.borrow_mut();
             if let Some(ref mut child) = *child_opt {
@@ -672,7 +668,7 @@ fn main() {
                             .show();
                     } else if menu_event.id == zenohd_about_id {
                         rfd::MessageDialog::new()
-                            .set_title("Zenoh Router ? About")
+                            .set_title("Zenoh Router — About")
                             .set_description(
                                 "Zenoh Router (zenohd)\n\n\
                                 Message broker for AlchemyEngine. Listens on port 7447 (TCP).\n\
@@ -683,7 +679,7 @@ fn main() {
                             .show();
                     } else if menu_event.id == phoenix_about_id {
                         rfd::MessageDialog::new()
-                            .set_title("Phoenix Server ? About")
+                            .set_title("Phoenix Server — About")
                             .set_description(
                                 "Phoenix Server (mix run)\n\n\
                                 Elixir-based game server. Listens on port 4000 (HTTP/WebSocket).\n\
@@ -743,7 +739,7 @@ fn main() {
                                 let proxy = proxy.clone();
                                 thread::spawn(move || {
                                     if let Err(e) = kill_tree(pid) {
-                                        eprintln!("zenohd ??????????: {}", e);
+                                        eprintln!("zenohd の終了に失敗しました: {}", e);
                                     }
                                     let _ = child.wait();
                                     let _ = proxy.send_event(UserEvent::ZenohdQuitComplete);
@@ -820,7 +816,7 @@ fn main() {
                                 let proxy = proxy.clone();
                                 thread::spawn(move || {
                                     if let Err(e) = kill_tree(pid) {
-                                        eprintln!("Phoenix Server ??????????: {}", e);
+                                        eprintln!("Phoenix Server の終了に失敗しました: {}", e);
                                     }
                                     let _ = child.wait();
                                     let _ = proxy.send_event(UserEvent::PhoenixServerQuitComplete);
@@ -846,10 +842,10 @@ fn main() {
                                     return;
                                 }
                             };
-                            match spawn_client_desktop(&project_root) {
+                            match spawn_app(&project_root) {
                                 Ok(_child) => {
-                                    // Child ??????????Unix ?? init ? reparent ???
-                                    // Windows ???????????????????????????
+                                    // Child を意図的にドロップ。Unix では init に reparent され、
+                                    // Windows では親が終了しても子は継続する。トレイでは管理しない。
                                 }
                                 Err(msg) => {
                                     let _ = proxy.send_event(UserEvent::ClientRunFailed(msg));
@@ -868,16 +864,16 @@ fn main() {
                         *control_flow = ControlFlow::Exit;
                     }
                 }
-                // Quit ????????? set_text("OFF") ??????????????????
-                // ?????????????try_wait ????????????? OFF ???
-                // ???????????????
+                // Quit クリック時には既に set_text("OFF") しているが、バックグラウンド終了完了
+                // イベントでも再度設定する。try_wait 検知やイベント順序の競合で OFF 表示が
+                // 抜ける場合の整合性を保つため。
                 UserEvent::ZenohdQuitComplete => {
                     *zenohd_ready.borrow_mut() = false;
                     zenohd_submenu.set_text("Zenoh Router : OFF");
                     update_menu_and_icon();
                 }
-                // Quit ?????? Ready ????????cancelled ? false ?????
-                // ?? Run ????????????????????
+                // Quit 完了後の遅延 Ready 受信は無視する。cancelled を false に戻すのは
+                // 次回 Run に備えてのリセットのみ。他に副作用なし。
                 UserEvent::ZenohdReady => {
                     let cancelled = *zenohd_starting_cancelled.borrow();
                     if cancelled {
@@ -899,10 +895,10 @@ fn main() {
                             let pid = child.id();
                             thread::spawn(move || {
                                 if let Err(e) = kill_tree(pid) {
-                                    eprintln!("zenohd ??????????: {}", e);
+                                    eprintln!("zenohd の終了に失敗しました: {}", e);
                                 }
                                 if let Err(e) = child.wait() {
-                                    eprintln!("zenohd wait ???: {}", e);
+                                    eprintln!("zenohd wait エラー: {}", e);
                                 }
                             });
                         }
@@ -915,13 +911,13 @@ fn main() {
                             .show();
                     }
                 }
-                // QuitComplete: ???zenohd ??????????
+                // QuitComplete: 同上（zenohd と同様の整合性保証）
                 UserEvent::PhoenixServerQuitComplete => {
                     *phoenix_ready.borrow_mut() = false;
                     phoenix_submenu.set_text("Phoenix Server : OFF");
                     update_menu_and_icon();
                 }
-                // Ready: zenohd ????Quit ?????? Ready ?????cancelled ??????
+                // Ready: zenohd と同様（Quit 完了後の遅延 Ready を無視し、cancelled をリセット）
                 UserEvent::PhoenixServerReady => {
                     let cancelled = *phoenix_starting_cancelled.borrow();
                     if cancelled {
@@ -943,10 +939,10 @@ fn main() {
                             let pid = child.id();
                             thread::spawn(move || {
                                 if let Err(e) = kill_tree(pid) {
-                                    eprintln!("Phoenix Server ??????????: {}", e);
+                                    eprintln!("Phoenix Server の終了に失敗しました: {}", e);
                                 }
                                 if let Err(e) = child.wait() {
-                                    eprintln!("Phoenix Server wait ???: {}", e);
+                                    eprintln!("Phoenix Server wait エラー: {}", e);
                                 }
                             });
                         }
@@ -981,7 +977,7 @@ fn main() {
                         .set_level(level)
                         .show();
                 }
-                // ???????????????????????????
+                // 将来の拡張用（クリック・ダブルクリックなどの区別など）
                 UserEvent::TrayIcon(event) => {
                     let _ = event;
                 }

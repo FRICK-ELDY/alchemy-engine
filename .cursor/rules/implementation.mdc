@@ -19,9 +19,8 @@ alwaysApply: true
 
 - **Elixir = SSoT（Single Source of Truth）**：ゲームロジックの制御フロー・パラメータはElixir側で持つ（シーン管理は contents レイヤーの責務）
 - **Rust 側のコンポーネントの設計は Elixir の `apps/contents` で定義する**。パラメータ・スキーマは contents が持つ。Rust は受け取った定義に基づいて SoA で実行する。
-- **Rust = 演算層**：物理演算・描画・オーディオはRust側で処理し、Elixirからパラメータを注入する
-- Elixir側からRust側へのパラメータ注入は `nif` 経由（Rustler NIF）で行う
-- Rust側でゲームルールをハードコードしない
+- Elixir側からRust側へのパラメータ注入は `nif` 経由（Rustler NIF）で行う、`クライアント`側はZenoh経由で行う。
+- Rust側でゲームルールをハードコードしない、Elixirのcontents層で定義する。
 
 ## 層間インターフェース設計の原則
 

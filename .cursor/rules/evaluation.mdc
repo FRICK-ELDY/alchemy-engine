@@ -49,29 +49,54 @@ alwaysApply: false
 
 各 Rust クレートを独立して評価する。
 
-- **`native/physics`**（ECS・SoA・SIMD・衝突・決定論性）
-  - SoA 構造・`free_list` O(1) スポーン/キル
-  - SIMD 実装（SSE2）・rayon 並列・スカラーフォールバックの3段階戦略
-  - 空間ハッシュ衝突検出・決定論的乱数（LCG）
-  - プラットフォーム対応（ARM NEON・WASM）
+- **`native/shared`**（共通データ・Elixir 契約・ゼロコピー）
+  - `#[repr(C)]` 構造体・bytemuck Pod/Zeroable
+  - Elixir-Rust 間の契約型定義の一貫性
+  - 予測・補間ロジック（interp/predict）の設計
 
-- **`native/desktop_render`**（描画パイプライン・シェーダー・補間）
+- **`native/network`**（Zenoh 通信・msgpack デコード・NetworkRenderBridge）
+  - Zenoh による Pub/Sub トランスポート
+  - MessagePack デコード・RenderFrame 変換
+  - `ClientSession` / `NetworkRenderBridge` の責務分離
+  - プラットフォーム切り替え（desktop / web）
+
+- **`native/render`**（描画パイプライン・シェーダー・補間）
   - wgpu インスタンス描画・WGSL シェーダー
   - サブフレーム補間（lerp）のロック外計算
   - ヘッドレスレンダラー（CI対応）
   - レンダーグラフ設計・フラスタムカリング・アロケーション効率
 
+- **`native/window`**（窓層・イベント管理・デスクトップループ）
+  - winit による窓・ライフサイクル管理
+  - 入力イベント正規化・RenderBridge インターフェース
+  - プラットフォーム固有処理の抽象化
+
 - **`native/audio`**（非同期設計・フォールバック・アセット管理）
   - コマンドパターン + `mpsc::channel` 非同期設計
   - デバイス不在時のグレースフルフォールバック
   - ボイスリミット・優先度システム・空間オーディオ
+  - platform/ による OS 別実装
 
-- **`native/nif`**（NIF設計・Elixir×Rust ブリッジ・SSoT一貫性）
+- **`native/nif`**（NIF 設計・Elixir×Rust ブリッジ・physics 統合）
   - NIF 関数カテゴリ分類（ロック競合の予測可能性）
   - `ResourceArc` による GC 連動ライフタイム管理
   - パラメータ注入パターン（Rust にゲームバランス値なし）
   - `NifBridgeBehaviour` + Mox によるモック設計
   - NIF バージョニング・ABI 互換性・エラーハンドリング
+  - **`nif/physics`**（ECS・SoA・SIMD・衝突・決定論性）
+    - SoA 構造・`free_list` O(1) スポーン/キル
+    - SIMD 実装（SSE2）・rayon 並列・スカラーフォールバックの 3 段階戦略
+    - 空間ハッシュ衝突検出・決定論的乱数（LCG）
+    - プラットフォーム対応（ARM NEON・WASM）
+
+- **`native/app`**（統合層・デスクトップエントリ）
+  - 各クレート（window / render / network / audio / nif）の組み合わせ
+  - デスクトップクライアント（Zenoh 経由で RenderFrame 受信・入力送信）
+  - エントリポイントの責務分離
+
+- **`native/tools/launcher`**（開発支援・トレイ起動ツール）
+  - zenohd / Phoenix Server / app の一括起動・終了
+  - トレイアイコン・Check for Update / acknowledgements
 
 ---
 
