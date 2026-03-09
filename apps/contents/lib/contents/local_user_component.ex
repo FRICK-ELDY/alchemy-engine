@@ -136,6 +136,9 @@ defmodule Contents.LocalUserComponent do
   room_id に対応するクライアント情報を返す。
   ZenohBridge が contents/room/{id}/client/info を受信すると :client_info ETS に格納される。
   未受信時は nil。%{os: "windows", arch: "x86_64", family: "windows"} 等。
+
+  room_id は `:main` または binary を想定する。ZenohBridge はキー式から常に文字列を受け取るため、
+  ETS のキーは `:main` と `"main"` を正規化して `:main` に統一する。
   """
   def get_client_info(room_id) do
     room_key = normalize_room_id_for_client_info(room_id)

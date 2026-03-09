@@ -226,31 +226,98 @@ defmodule Network.ZenohBridge do
     end
   end
 
-  defp handle_client_info(room_id, payload) do
-    room_key = if room_id == "main", do: :main, else: room_id
+  # client_info の room_id 最大数（DoS 対策: 無制限の room 作成でメモリ枯渇を防ぐ）
+  @client_info_max_rooms 100
 
+  defp handle_client_info(room_id, payload) do
+    cond do
+      not valid_room_id_for_client_info?(room_id) ->
+        Logger.debug("[ZenohBridge] Rejected client_info: invalid room_id=#{inspect(room_id)}")
+
+      true ->
+        room_key = if room_id == "main", do: :main, else: room_id
+
+        if new_client_info_room?(room_key) and client_info_table_at_limit?() do
+          Logger.warning("[ZenohBridge] Rejected client_info: max rooms (#{@client_info_max_rooms}) reached")
+        else
+          do_handle_client_info(room_id, room_key, payload)
+        end
+    end
+  end
+
+  defp do_handle_client_info(room_id, room_key, payload) do
     case decode_client_info(payload) do
       {:ok, info} when is_map(info) ->
-        :ets.insert(:client_info, {{room_key, :info}, normalize_client_info(info)})
+        case normalize_client_info(info) do
+          normalized when is_map(normalized) ->
+            :ets.insert(:client_info, {{room_key, :info}, normalized})
+
+          _ ->
+            Logger.debug("[ZenohBridge] Invalid client info structure room=#{room_id}")
+        end
 
       _ ->
         Logger.debug("[ZenohBridge] Invalid client info payload room=#{room_id}")
     end
   end
 
-  defp decode_client_info(payload) when is_binary(payload) do
+  defp valid_room_id_for_client_info?(room_id) when is_binary(room_id) do
+    byte_size(room_id) in 1..64 and Regex.match?(~r/^[a-zA-Z0-9_-]+$/, room_id)
+  end
+
+  defp valid_room_id_for_client_info?(_), do: false
+
+  defp new_client_info_room?(room_key) do
+    :ets.whereis(:client_info) != :undefined and
+      :ets.lookup(:client_info, {room_key, :info}) == []
+  end
+
+  defp client_info_table_at_limit? do
+    case :ets.info(:client_info, :size) do
+      size when is_integer(size) -> size >= @client_info_max_rooms
+      _ -> false
+    end
+  end
+
+  defp decode_client_info(payload) when is_binary(payload) and byte_size(payload) > 0 do
     Msgpax.unpack(payload)
   end
 
-  defp normalize_client_info(%{os: o, arch: a, family: f}) when is_binary(o) do
-    %{os: o, arch: to_string(a), family: to_string(f)}
-  end
+  defp decode_client_info(_), do: :error
 
-  defp normalize_client_info(%{"os" => o, "arch" => a, "family" => f}) when is_binary(o) do
-    %{os: o, arch: to_string(a), family: to_string(f)}
+  defp normalize_client_info(%{os: o, arch: a, family: f}) do
+    with {:ok, os} <- safe_to_string(o),
+         {:ok, arch} <- safe_to_string(a),
+         {:ok, family} <- safe_to_string(f) do
+      %{os: os, arch: arch, family: family}
+    else
+      _ -> nil
+    end
   end
 
   defp normalize_client_info(%{"os" => o, "arch" => a, "family" => f}) do
-    %{os: to_string(o), arch: to_string(a), family: to_string(f)}
+    with {:ok, os} <- safe_to_string(o),
+         {:ok, arch} <- safe_to_string(a),
+         {:ok, family} <- safe_to_string(f) do
+      %{os: os, arch: arch, family: family}
+    else
+      _ -> nil
+    end
   end
+
+  defp normalize_client_info(_), do: nil
+
+  # to_string/1 は map や不正な list 等で ArgumentError を起こすため、
+  # 攻撃者が ZenohBridge をクラッシュさせる DoS の原因になる。
+  # 安全な型のみ許可する。
+  defp safe_to_string(v) when is_binary(v), do: {:ok, v}
+  defp safe_to_string(v) when is_atom(v), do: {:ok, Atom.to_string(v)}
+  defp safe_to_string(v) when is_integer(v), do: {:ok, Integer.to_string(v)}
+  defp safe_to_string(v) when is_float(v), do: {:ok, Float.to_string(v)}
+
+  defp safe_to_string(v) when is_list(v) do
+    if List.ascii_printable?(v), do: {:ok, List.to_string(v)}, else: :error
+  end
+
+  defp safe_to_string(_), do: :error
 end

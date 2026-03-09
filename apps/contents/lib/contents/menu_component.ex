@@ -84,9 +84,7 @@ defmodule Contents.MenuComponent do
 
     info_str =
       case Contents.LocalUserComponent.get_client_info(room_id) do
-        nil -> "OS: —"
         %{os: os, arch: arch} -> "OS: #{os} / #{arch}"
-        %{"os" => os, "arch" => arch} -> "OS: #{os} / #{arch}"
         _ -> "OS: —"
       end
 
