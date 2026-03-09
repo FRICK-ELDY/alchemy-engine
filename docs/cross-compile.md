@@ -16,7 +16,7 @@ cargo build --release -p app
 | Linux | `native/target/release/VRAlchemy` |
 | macOS | `native/target/release/VRAlchemy` |
 
-`native/` ディレクトリで実行するか、`--manifest-path native/Cargo.toml` を指定してください。
+`mix alchemy.build` または `cargo build -p app` を使用してください。`native/` ディレクトリで実行するか、`--manifest-path native/Cargo.toml` を指定してください。
 
 ## クロスコンパイル
 
@@ -88,12 +88,6 @@ VRAlchemy.exe --connect tcp/127.0.0.1:7447 --room main
 
 ### zenohd
 
-zenohd をバックグラウンドで非表示に起動する場合、VBScript ランチャーを使用します。
+zenohd の起動は `mix alchemy.router` または `mix alchemy.launcher` から行えます。
 
-```batch
-wscript.exe bin\run_zenohd_hidden.vbs
-```
-
-これで zenohd のコンソールウィンドウは表示されません。ランチャーバッチ内で呼び出せます。
-
-**注意**: mix run（サーバー）は長時間実行のため、同様に非表示にすると問題発生時の確認が難しくなります。開発時はターミナルで起動し、製品運用時はサービス化や別プロセス管理を検討してください。
+**注意**: mix run（サーバー）は長時間実行のため、非表示で起動すると問題発生時の確認が難しくなります。開発時はターミナルで起動し、製品運用時はサービス化や別プロセス管理を検討してください。
