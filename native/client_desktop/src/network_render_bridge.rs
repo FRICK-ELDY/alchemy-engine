@@ -1,19 +1,15 @@
 //! NetworkRenderBridge: Zenoh 経由でフレーム受信・入力送信
 //!
 //! クライアント exe 用。サーバーと分離された別プロセスで動作する。
+//! Zenoh 通信は client::zenoh を経由する（zenoh クレートへの直接依存なし）。
 
+use client::zenoh::ClientSession;
 use desktop_render::window::{KeyCode, KeyState, RenderBridge};
 use desktop_render::RenderFrame;
-use futures::future::{select, Either};
-use futures_timer::Delay;
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::Duration;
-use zenoh::config::Config;
-use zenoh::qos::CongestionControl;
-use zenoh::{Session, Wait};
 
 fn frame_key(room_id: &str) -> String {
     format!("game/room/{room_id}/frame")
@@ -25,6 +21,10 @@ fn movement_key(room_id: &str) -> String {
 
 fn action_key(room_id: &str) -> String {
     format!("game/room/{room_id}/input/action")
+}
+
+fn client_info_key(room_id: &str) -> String {
+    format!("contents/room/{room_id}/client/info")
 }
 
 /// WASD / 矢印キー → dx, dy
@@ -39,7 +39,7 @@ fn move_vector_from_keys(keys: &HashSet<KeyCode>) -> (f32, f32) {
 pub struct NetworkRenderBridge {
     frame_buffer: Arc<Mutex<Option<RenderFrame>>>,
     keys_held: Arc<Mutex<HashSet<KeyCode>>>,
-    session: Session,
+    session: ClientSession,
     movement_key_expr: String,
     action_key_expr: String,
     #[allow(dead_code)]
@@ -50,20 +50,8 @@ pub struct NetworkRenderBridge {
 
 impl NetworkRenderBridge {
     /// connect_config: Zenoh 接続先（例: "tcp/127.0.0.1:7447"）。空ならデフォルト（scouting）。
-    /// 指定時は Config の connect.endpoints に設定する。
     pub fn new(connect_config: &str, room_id: &str) -> Result<Self, String> {
-        let mut config = Config::default();
-        if !connect_config.is_empty() {
-            config
-                .insert_json5(
-                    "connect/endpoints",
-                    format!(r#"["{}"]"#, connect_config).as_str(),
-                )
-                .map_err(|e| format!("zenoh connect config failed: {e}"))?;
-        }
-        let session = zenoh::open(config)
-            .wait()
-            .map_err(|e| format!("zenoh open failed: {e}"))?;
+        let session = ClientSession::open(connect_config)?;
 
         let frame_buffer: Arc<Mutex<Option<RenderFrame>>> = Arc::new(Mutex::new(None));
         let keys_held = Arc::new(Mutex::new(HashSet::new()));
@@ -72,15 +60,21 @@ impl NetworkRenderBridge {
         let sub_key = frame_key(room_id);
         let buf_clone = Arc::clone(&frame_buffer);
         let shutdown_clone = Arc::clone(&shutdown);
-        let session_clone = session.clone();
 
-        let recv_handle = thread::spawn(move || {
-            if let Err(e) = run_receiver(&session_clone, &sub_key, buf_clone, shutdown_clone) {
-                log::error!("frame receiver error: {e}");
+        let recv_handle = session.spawn_subscriber(&sub_key, shutdown_clone, move |bytes| {
+            match crate::msgpack_decode::decode_render_frame(&bytes) {
+                Ok(frame) => {
+                    if let Ok(mut guard) = buf_clone.lock() {
+                        *guard = Some(frame);
+                    }
+                }
+                Err(e) => {
+                    log::warn!("[frame receiver] decode error: {e} (payload size={})", bytes.len());
+                }
             }
         });
 
-        Ok(Self {
+        let bridge = Self {
             frame_buffer,
             keys_held,
             session,
@@ -89,7 +83,26 @@ impl NetworkRenderBridge {
             room_id: room_id.to_string(),
             recv_handle: Some(recv_handle),
             shutdown,
-        })
+        };
+        bridge.publish_client_info(room_id);
+        Ok(bridge)
+    }
+
+    fn publish_client_info(&self, room_id: &str) {
+        let info = client::info::ClientInfo::current();
+        let payload = match rmp_serde::to_vec(&info) {
+            Ok(p) => p,
+            Err(e) => {
+                log::warn!("client info serialize error: {e}");
+                return;
+            }
+        };
+        let key = client_info_key(room_id);
+        if let Err(e) = self.session.put(&key, &payload) {
+            log::warn!("client info publish error: {e}");
+        } else {
+            log::info!("[client info] published to {key}");
+        }
     }
 
     fn publish_movement(&self, dx: f32, dy: f32) {
@@ -108,19 +121,9 @@ impl NetworkRenderBridge {
                 return;
             }
         };
-        let publisher = match self
-            .session
-            .declare_publisher(&self.movement_key_expr)
-            .congestion_control(CongestionControl::Drop)
-            .wait()
-        {
-            Ok(p) => p,
-            Err(e) => {
-                log::warn!("movement publisher declare failed: {e}");
-                return;
-            }
-        };
-        let _ = publisher.put(payload).wait();
+        if let Err(e) = self.session.put_drop(&self.movement_key_expr, &payload) {
+            log::warn!("movement publish failed: {e}");
+        }
     }
 
     fn publish_action(&self, name: &str) {
@@ -139,14 +142,9 @@ impl NetworkRenderBridge {
                 return;
             }
         };
-        let publisher = match self.session.declare_publisher(&self.action_key_expr).wait() {
-            Ok(p) => p,
-            Err(e) => {
-                log::warn!("action publisher declare failed: {e}");
-                return;
-            }
-        };
-        let _ = publisher.put(payload).wait();
+        if let Err(e) = self.session.put(&self.action_key_expr, &payload) {
+            log::warn!("action publish failed: {e}");
+        }
     }
 }
 
@@ -157,67 +155,6 @@ impl Drop for NetworkRenderBridge {
             let _ = h.join();
         }
     }
-}
-
-/// 100ms ごとに shutdown を確認するためのポーリング間隔
-const SHUTDOWN_POLL_MS: u64 = 100;
-
-fn run_receiver(
-    session: &Session,
-    key_expr: &str,
-    frame_buffer: Arc<Mutex<Option<RenderFrame>>>,
-    shutdown: Arc<AtomicBool>,
-) -> Result<(), String> {
-    let subscriber = session
-        .declare_subscriber(key_expr)
-        .wait()
-        .map_err(|e| format!("subscribe failed: {e}"))?;
-
-    log::info!("[frame receiver] subscribed to {key_expr}, waiting for frames...");
-
-    let mut frame_count: u64 = 0;
-    let mut last_wait_log = std::time::Instant::now();
-    while !shutdown.load(Ordering::SeqCst) {
-        let recv_fut = subscriber.recv_async();
-        let timeout = Delay::new(Duration::from_millis(SHUTDOWN_POLL_MS));
-
-        match futures::executor::block_on(select(recv_fut, timeout)) {
-            Either::Left((Ok(sample), _)) => {
-                let payload = sample.payload();
-                let len = payload.to_bytes().len();
-                if frame_count == 0 {
-                    log::info!("[frame receiver] first raw sample received size={len} bytes");
-                }
-                match crate::msgpack_decode::decode_render_frame(payload.to_bytes().as_ref()) {
-                    Ok(frame) => {
-                        if let Ok(mut guard) = frame_buffer.lock() {
-                            *guard = Some(frame);
-                        }
-                        frame_count += 1;
-                        if frame_count == 1 {
-                            log::info!("[frame receiver] first frame received and decoded");
-                        }
-                    }
-                    Err(e) => {
-                        log::warn!("[frame receiver] decode error: {e} (payload size={len})");
-                    }
-                }
-            }
-            Either::Left((Err(e), _)) => {
-                log::debug!("recv error: {e}");
-            }
-            Either::Right((_, _)) => {
-                // タイムアウト: shutdown を再確認してループ継続
-                if frame_count == 0 && last_wait_log.elapsed().as_secs() >= 5 {
-                    log::warn!(
-                        "[frame receiver] still waiting for frames after 5s (key={key_expr})"
-                    );
-                    last_wait_log = std::time::Instant::now();
-                }
-            }
-        }
-    }
-    Ok(())
 }
 
 impl RenderBridge for NetworkRenderBridge {

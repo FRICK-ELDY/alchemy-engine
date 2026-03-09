@@ -9,3 +9,6 @@ crate-type = ["rlib"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
+zenoh = "1.7"
+futures = "0.3"
+futures-timer = "3.0"
