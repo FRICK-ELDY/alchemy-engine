@@ -4,7 +4,7 @@
 
 `launcher` はトレイアイコンを表示し、メニューから **zenohd**・**Phoenix Server（mix run）**・**client_desktop** を起動・終了するデスクトップアプリケーションです。Check for Update で GitHub releases を確認し、acknowledgements で謝辞・ライセンスを表示します。
 
-- **パス**: `native/launcher/`
+- **パス**: `native/tools/launcher/`
 - **依存**: tao, tray-icon, kill_tree, reqwest, rfd, semver
 
 ---

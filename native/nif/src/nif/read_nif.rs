@@ -2,7 +2,7 @@
 //! Summary: 読み取り専用 NIF（get_*、debug_dump_world、is_player_dead）
 
 use super::util::lock_poisoned_err;
-use physics::world::GameWorld;
+use crate::physics::world::GameWorld;
 use rustler::{Atom, NifResult, ResourceArc};
 
 use crate::none;
@@ -149,7 +149,7 @@ pub fn get_full_game_state(world: ResourceArc<GameWorld>) -> NifResult<(u32, f64
 /// Elixir 側（contents）がこのデータを使って DrawCommand リストを組み立てる。
 ///
 /// 戻り値（ネストタプル）:
-/// ```
+/// ```text
 /// {
 ///   {player_x, player_y, frame_id, enemy_count, bullet_count},
 ///   {enemies, bullets, particles},

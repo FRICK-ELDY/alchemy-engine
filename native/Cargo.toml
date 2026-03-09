@@ -1,18 +1,15 @@
 [workspace]
 resolver = "2"
 members = [
-    "client",
-    "physics",
+    "shared",
+    "network",
     "audio",
-    "desktop_render",
+    "render",
     "nif",
-    "desktop_input",
-    "desktop_input_openxr",
-    "client_desktop",
-    "client_web",
-    "client_android",
-    "client_ios",
-    "launcher",
+    "window",
+    "xr",
+    "app",
+    "tools/launcher",
 ]
 
 [profile.dev]

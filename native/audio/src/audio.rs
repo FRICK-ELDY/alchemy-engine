@@ -4,7 +4,8 @@
 //! 音声データは [AssetLoader](crate::asset::AssetLoader) 経由で取得すること（Single Source of Truth）。
 
 use crate::asset::{AssetId, AssetLoader};
-use rodio::{Decoder, OutputStream, OutputStreamBuilder, Sink, Source};
+use crate::platform;
+use rodio::{Decoder, OutputStream, Sink, Source};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 
@@ -16,7 +17,7 @@ pub struct AudioManager {
 
 impl AudioManager {
     pub fn new() -> Option<Self> {
-        let stream = OutputStreamBuilder::open_default_stream().ok()?;
+        let stream = platform::open_default_stream()?;
         let bgm_sink = Sink::connect_new(stream.mixer());
         Some(Self {
             _stream: stream,

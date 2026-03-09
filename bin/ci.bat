@@ -57,12 +57,12 @@ if /i "%FILTER%"=="check"  goto :rust_test_skip
 
 echo.
 echo ============================================================
-echo  [B] Rust — unit tests (physics)
+echo  [B] Rust — unit tests (nif/physics)
 echo ============================================================
 
 echo.
-echo [STEP] cargo test physics
-cargo test --manifest-path "%NATIVE%\Cargo.toml" -p physics
+echo [STEP] cargo test nif
+cargo test --manifest-path "%NATIVE%\Cargo.toml" -p nif
 if errorlevel 1 (set "FAILED=!FAILED! [cargo test]") else (echo [PASS] cargo test)
 
 :rust_test_skip

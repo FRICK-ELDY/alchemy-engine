@@ -2,9 +2,9 @@
 //! Summary: セーブ・ロード NIF
 
 use super::util::lock_poisoned_err;
-use physics::constants::PARTICLE_RNG_SEED;
-use physics::item::ItemWorld;
-use physics::world::{BulletWorld, GameWorld};
+use crate::physics::constants::PARTICLE_RNG_SEED;
+use crate::physics::item::ItemWorld;
+use crate::physics::world::{BulletWorld, GameWorld};
 use rustler::{Atom, NifResult, ResourceArc};
 
 use crate::{ok, EnemyWorld, ParticleWorld};

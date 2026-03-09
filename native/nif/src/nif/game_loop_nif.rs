@@ -4,8 +4,8 @@
 use super::events::drain_frame_events_inner;
 use super::util::lock_poisoned_err;
 use crate::lock_metrics::record_write_wait;
-use physics::game_logic::physics_step_inner;
-use physics::world::{GameLoopControl, GameWorld};
+use crate::physics::game_logic::physics_step_inner;
+use crate::physics::world::{GameLoopControl, GameWorld};
 use rustler::env::OwnedEnv;
 use rustler::{Atom, Encoder, LocalPid, NifResult, ResourceArc};
 use std::thread;

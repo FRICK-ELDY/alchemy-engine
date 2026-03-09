@@ -1,0 +1,22 @@
+[package]
+name = "app"
+version = "0.1.0"
+edition = "2021"
+description = "統合層・各ターゲットのエントリポイント（app exe）"
+
+[[bin]]
+name = "app"
+path = "src/main.rs"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+network = { path = "../network" }
+render = { path = "../render" }
+window = { path = "../window" }
+xr = { path = "../xr" }
+nif = { path = "../nif" }
+audio = { path = "../audio" }
+log = "0.4"
+env_logger = "0.11"

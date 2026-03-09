@@ -2,11 +2,11 @@
 //! Summary: アクション NIF（set_weapon_slots, spawn_item, 汎用エンティティ操作 等）
 
 use super::util::{lock_poisoned_err, params_not_loaded_err};
-use physics::constants::POPUP_Y_OFFSET;
-use physics::game_logic::systems::spawn::get_spawn_positions_around_player;
-use physics::item::ItemKind;
-use physics::weapon::WeaponSlot;
-use physics::world::{GameWorld, SpecialEntitySnapshot, DEFAULT_BULLET_HIT_COLOR};
+use crate::physics::constants::POPUP_Y_OFFSET;
+use crate::physics::game_logic::systems::spawn::get_spawn_positions_around_player;
+use crate::physics::item::ItemKind;
+use crate::physics::weapon::WeaponSlot;
+use crate::physics::world::{GameWorld, SpecialEntitySnapshot, DEFAULT_BULLET_HIT_COLOR};
 use rustler::{Atom, NifResult, ResourceArc};
 
 use crate::{alive, ok};
