@@ -8,4 +8,5 @@ description = "Web 用クライアント（WASM 等）。将来実装予定。"
 crate-type = ["rlib"]
 
 [dependencies]
+client = { path = "../client" }
 # TODO: wasm-bindgen, web-sys 等で実装

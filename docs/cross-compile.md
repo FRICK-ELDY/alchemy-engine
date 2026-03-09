@@ -1,6 +1,36 @@
-# client_desktop クロスコンパイル
+# client クロスコンパイル・ビルド
 
-`client_desktop` を各プラットフォーム向けにビルドする手順です。
+各 client（desktop / web / android / ios）をプラットフォーム向けにビルドする手順です。
+
+## クライアント指定ビルド（エイリアス）
+
+`native/` で `cargo` を実行する場合、プラットフォームを指定するエイリアスが使えます。
+
+```bash
+cd native
+
+# デバッグビルド
+cargo client-desktop
+cargo client-web
+cargo client-android
+cargo client-ios
+
+# リリースビルド
+cargo client-desktop --release
+cargo client-release-desktop   # 同上
+cargo client-release-web
+cargo client-release-android
+cargo client-release-ios
+
+# 実行（desktop のみ）
+cargo client-run-desktop
+```
+
+プロジェクトルートから実行する場合は `--manifest-path` を付けてください。
+
+```bash
+cargo client-desktop --release --manifest-path native/Cargo.toml
+```
 
 ## ネイティブビルド（推奨）
 

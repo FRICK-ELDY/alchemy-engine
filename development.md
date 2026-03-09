@@ -142,6 +142,24 @@ elixir --name b@127.0.0.1 -S mix run
 
 CI の詳細は [docs/warranty/ci.md](./docs/warranty/ci.md) を参照。
 
+## クライアントビルド（bin\build.bat）
+
+Windows で各 client クレートをビルドする場合は `bin\build.bat` を使用します。
+
+```batch
+bin\build.bat                    # デフォルト: desktop の debug ビルド
+bin\build.bat --desktop          # desktop の debug ビルド
+bin\build.bat --desktop --debug  # desktop の debug ビルド
+bin\build.bat --desktop --release # desktop の release ビルド
+bin\build.bat --web              # web の debug ビルド
+bin\build.bat --web --release    # web の release ビルド
+bin\build.bat --android [--release]
+bin\build.bat --ios [--release]
+```
+
+- クライアント未指定時は `--desktop`
+- プロファイル未指定時は `--debug`
+
 ## 関連ドキュメント
 
 - [ビジョンと設計思想](./docs/vision.md)
