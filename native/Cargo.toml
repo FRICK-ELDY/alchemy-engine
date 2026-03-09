@@ -9,7 +9,7 @@ members = [
     "render",
     "nif",
     "window",
-    "desktop_input_openxr",
+    "xr",
     "client_desktop",
     "client_web",
     "client_android",

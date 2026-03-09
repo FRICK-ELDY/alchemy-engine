@@ -7,7 +7,6 @@ description = "Elixir <-> Rust NIF通信インターフェース（Rustler）"
 [features]
 default = ["umbrella"]
 umbrella = []
-xr = ["desktop_input_openxr", "desktop_input_openxr/openxr"]
 
 [lib]
 name = "nif"
@@ -16,7 +15,6 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 physics = { path = "../physics", features = ["nif"] }
 audio      = { path = "../audio" }
-desktop_input_openxr = { path = "../desktop_input_openxr", optional = true }
 rustler = "0.37"
 rayon = "1"
 log = "0.4"

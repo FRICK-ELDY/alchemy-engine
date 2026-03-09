@@ -87,9 +87,6 @@ mod formula;
 mod lock_metrics;
 mod nif;
 
-#[cfg(feature = "xr")]
-mod xr_bridge;
-
 pub use audio::{
     start_audio_thread, AssetId, AssetLoader, AudioCommand, AudioCommandSender, AudioManager,
 };
