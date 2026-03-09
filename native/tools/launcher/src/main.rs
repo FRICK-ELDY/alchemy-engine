@@ -512,25 +512,25 @@ fn main() {
 
     let zenohd_submenu = Rc::new(Submenu::new("Zenoh Router : OFF", true));
     zenohd_submenu
-        .append(&zenohd_about_item)
-        .expect("Failed to append about");
-    zenohd_submenu
         .append(&zenohd_run_item)
         .expect("Failed to append run");
     zenohd_submenu
         .append(&zenohd_quit_item)
         .expect("Failed to append quit");
+    zenohd_submenu
+        .append(&zenohd_about_item)
+        .expect("Failed to append about");
 
     let phoenix_submenu = Rc::new(Submenu::new("Phoenix Server : OFF", true));
-    phoenix_submenu
-        .append(&phoenix_about_item)
-        .expect("Failed to append about");
     phoenix_submenu
         .append(&phoenix_run_item)
         .expect("Failed to append run");
     phoenix_submenu
         .append(&phoenix_quit_item)
         .expect("Failed to append quit");
+    phoenix_submenu
+        .append(&phoenix_about_item)
+        .expect("Failed to append about");
 
     let client_run_item = MenuItem::with_id(client_run_id.clone(), "Client Run", true, None);
     let quit_item = MenuItem::with_id(quit_id.clone(), "Quit", true, None);
@@ -566,7 +566,7 @@ fn main() {
             .build()
             .expect("Failed to create tray icon"),
     );
-    tray_icon.set_show_menu_on_left_click(false);
+    tray_icon.set_show_menu_on_left_click(true);
 
     let zenohd_child: Rc<RefCell<Option<Child>>> = Rc::new(RefCell::new(None));
     let zenohd_submenu = Rc::clone(&zenohd_submenu);
