@@ -6,6 +6,7 @@ pub mod constants;
 pub mod enemy;
 pub mod entity_params;
 pub mod item;
+#[allow(clippy::module_inception)]
 pub mod physics;
 pub mod util;
 pub mod weapon;

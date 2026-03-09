@@ -45,7 +45,9 @@ impl WeaponSlot {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::physics::entity_params::{EntityParamDefaults, EntityParamTables, FirePattern, WeaponParams};
+    use crate::physics::entity_params::{
+        EntityParamDefaults, EntityParamTables, FirePattern, WeaponParams,
+    };
 
     fn make_test_tables() -> EntityParamTables {
         EntityParamTables {

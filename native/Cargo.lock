@@ -205,8 +205,6 @@ dependencies = [
  "network",
  "nif",
  "render",
- "rmp-serde",
- "serde",
  "window",
  "xr",
 ]
@@ -3368,6 +3366,9 @@ dependencies = [
  "futures",
  "futures-timer",
  "log",
+ "render",
+ "rmp-serde",
+ "serde",
  "shared",
  "zenoh",
 ]

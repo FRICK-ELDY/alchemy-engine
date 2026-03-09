@@ -46,9 +46,11 @@ impl Vec2 {
 }
 
 /// タイムスタンプ付きスナップショットのヘッダ（将来の拡張用）
+/// Pod/Zeroable のため、パディングを明示的に埋める。
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Pod, Zeroable)]
 pub struct SnapshotHeader {
     pub timestamp_ms: u64,
     pub sequence: u32,
+    pub _pad: [u8; 4],
 }

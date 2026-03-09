@@ -21,8 +21,8 @@ use rustler::TermType;
 use rustler::{Atom, Binary, NifResult, ResourceArc, Term};
 use std::sync::RwLock;
 
-use crate::{ok, BulletWorld, EnemyWorld, ParticleWorld};
 use crate::physics::entity_params::DEFAULT_PARTICLE_COLOR;
+use crate::{ok, BulletWorld, EnemyWorld, ParticleWorld};
 
 #[rustler::nif]
 pub fn create_world() -> ResourceArc<GameWorld> {

@@ -2,9 +2,7 @@
 
 use futures::future::{select, Either};
 use futures_timer::Delay;
-use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 use zenoh::config::Config;
@@ -13,12 +11,9 @@ use zenoh::{Session, Wait};
 
 const SHUTDOWN_POLL_MS: u64 = 100;
 
-const CACHE_KEY_DROP_SUFFIX: &str = ":drop";
-
 /// Zenoh セッションのラッパー。publish / subscribe を抽象化。
 pub struct ClientSession {
     inner: Session,
-    publisher_cache: Mutex<HashMap<String, zenoh::Publisher<'static>>>,
 }
 
 impl ClientSession {
@@ -36,14 +31,15 @@ impl ClientSession {
         let session = zenoh::open(config)
             .wait()
             .map_err(|e| format!("zenoh open failed: {e}"))?;
-        Ok(Self {
-            inner: session,
-            publisher_cache: Mutex::new(HashMap::new()),
-        })
+        Ok(Self { inner: session })
     }
 
     pub fn put(&self, key: &str, payload: &[u8]) -> Result<(), String> {
-        let publisher = self.get_or_create_publisher(key, false)?;
+        let publisher = self
+            .inner
+            .declare_publisher(key)
+            .wait()
+            .map_err(|e| format!("publisher declare failed: {e}"))?;
         publisher
             .put(payload)
             .wait()
@@ -52,43 +48,14 @@ impl ClientSession {
     }
 
     pub fn put_drop(&self, key: &str, payload: &[u8]) -> Result<(), String> {
-        let publisher = self.get_or_create_publisher(key, true)?;
-        let _ = publisher.put(payload).wait();
-        Ok(())
-    }
-
-    fn get_or_create_publisher(
-        &self,
-        key: &str,
-        use_drop: bool,
-    ) -> Result<zenoh::Publisher<'static>, String> {
-        let cache_key = if use_drop {
-            format!("{key}{CACHE_KEY_DROP_SUFFIX}")
-        } else {
-            key.to_string()
-        };
-
-        let mut cache = self
-            .publisher_cache
-            .lock()
-            .map_err(|e| format!("publisher cache lock poisoned: {e}"))?;
-
-        if let Some(p) = cache.get(&cache_key) {
-            return Ok(p.clone());
-        }
-
-        let builder = if use_drop {
-            self.inner
-                .declare_publisher(key)
-                .congestion_control(CongestionControl::Drop)
-        } else {
-            self.inner.declare_publisher(key)
-        };
-        let publisher = builder
+        let publisher = self
+            .inner
+            .declare_publisher(key)
+            .congestion_control(CongestionControl::Drop)
             .wait()
             .map_err(|e| format!("publisher declare failed: {e}"))?;
-        cache.insert(cache_key, publisher.clone());
-        Ok(publisher)
+        let _ = publisher.put(payload).wait();
+        Ok(())
     }
 
     pub fn spawn_subscriber<F>(

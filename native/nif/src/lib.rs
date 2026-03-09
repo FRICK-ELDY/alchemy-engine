@@ -88,10 +88,6 @@ mod lock_metrics;
 mod nif;
 pub mod physics;
 
-pub use audio::{
-    start_audio_thread, AssetId, AssetLoader, AudioCommand, AudioCommandSender, AudioManager,
-};
-pub use nif::SaveSnapshot;
 pub use crate::physics::game_logic::{
     find_nearest_enemy, find_nearest_enemy_spatial, find_nearest_enemy_spatial_excluding,
 };
@@ -100,6 +96,10 @@ pub use crate::physics::world::{
     PlayerState, SpecialEntitySnapshot, BULLET_KIND_FIREBALL, BULLET_KIND_LIGHTNING,
     BULLET_KIND_NORMAL, BULLET_KIND_ROCK, BULLET_KIND_WHIP,
 };
+pub use audio::{
+    start_audio_thread, AssetId, AssetLoader, AudioCommand, AudioCommandSender, AudioManager,
+};
+pub use nif::SaveSnapshot;
 
 #[cfg(feature = "umbrella")]
 rustler::init!("Elixir.Core.NifBridge", load = nif::load);

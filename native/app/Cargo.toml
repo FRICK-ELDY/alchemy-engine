@@ -2,14 +2,10 @@
 name = "app"
 version = "0.1.0"
 edition = "2021"
-description = "統合層・各ターゲットのエントリポイント（app / client_desktop）"
+description = "統合層・各ターゲットのエントリポイント（app exe）"
 
 [[bin]]
 name = "app"
-path = "src/main.rs"
-
-[[bin]]
-name = "client_desktop"
 path = "src/main.rs"
 
 [lib]
@@ -22,7 +18,5 @@ window = { path = "../window" }
 xr = { path = "../xr" }
 nif = { path = "../nif" }
 audio = { path = "../audio" }
-rmp-serde = "1.3"
-serde = { version = "1", features = ["derive"] }
 log = "0.4"
 env_logger = "0.11"

@@ -1,6 +1,8 @@
 use crate::physics::constants::{MAX_ENEMIES, WEAPON_SEARCH_RADIUS};
 use crate::physics::entity_params::FirePattern;
-use crate::physics::game_logic::{find_nearest_enemy_spatial, find_nearest_enemy_spatial_excluding};
+use crate::physics::game_logic::{
+    find_nearest_enemy_spatial, find_nearest_enemy_spatial_excluding,
+};
 use crate::physics::world::{
     FrameEvent, GameWorldInner, BULLET_KIND_LIGHTNING, BULLET_KIND_WHIP, DEFAULT_BULLET_HIT_COLOR,
     DEFAULT_PIERCING_HIT_COLOR,

@@ -5,6 +5,9 @@ edition = "2021"
 description = "Zenoh による高速トランスポート（The Pipe）"
 
 [dependencies]
+render = { path = "../render" }
+rmp-serde = "1.3"
+serde = { version = "1", features = ["derive"] }
 shared = { path = "../shared" }
 zenoh = "1.7"
 futures = "0.3"
