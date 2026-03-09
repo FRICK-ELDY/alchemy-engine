@@ -47,9 +47,11 @@ flowchart LR
 
 ---
 
-## 3. フェーズ 1: native/client 内に info モジュール作成
+## 3. フェーズ 1: native/client 内に info モジュール作成 ✅ 完了
 
 ※ `native/client` の作成は [env-and-serialization-migration-plan](./env-and-serialization-migration-plan.md) §5 に従う。
+
+- **実施日**: 2026-03-09
 
 ### 3.1 info モジュール作成
 
@@ -301,14 +303,14 @@ NIF モード（Elixir と同一プロセス、Zenoh 未使用）の場合、cli
 ## 9. 実行順序サマリ
 
 
-| 順序  | フェーズ               | 内容                                                                              |
-| --- | ------------------ | ------------------------------------------------------------------------------- |
-| 1   | native/client 作成     | `client` クレート作成、`info` モジュール（`src/info.rs`）追加（[env-and-serialization-migration-plan](./env-and-serialization-migration-plan.md) §5 参照） |
-| 2   | client_desktop     | `client` 依存追加、`publish_client_info` 実装、起動時に publish                                              |
-| 3   | ZenohBridge        | `contents/room/*/client/info` 購読、`handle_client_info` で `:client_info` ETS に保存 |
-| 4   | LocalUserComponent | `get_client_info/1` 追加（`:client_info` から読み取り）                                  |
-| 5   | MenuComponent      | `get_menu_ui` に OS 表示行を追加                                                       |
-| 6   | （任意）NIF モード        | NIF から `client::info::ClientInfo` を取得し、`:client_info` に保存するパスを追加        |
+| 順序  | フェーズ               | 内容                                                                              | 状態 |
+| --- | ------------------ | ------------------------------------------------------------------------------- | --- |
+| 1   | native/client 作成     | `client` クレート作成、`info` モジュール（`src/info.rs`）追加（[env-and-serialization-migration-plan](./env-and-serialization-migration-plan.md) §5 参照） | ✅ 完了 |
+| 2   | client_desktop     | `client` 依存追加、`publish_client_info` 実装、起動時に publish                                              | 未実施 |
+| 3   | ZenohBridge        | `contents/room/*/client/info` 購読、`handle_client_info` で `:client_info` ETS に保存 | 未実施 |
+| 4   | LocalUserComponent | `get_client_info/1` 追加（`:client_info` から読み取り）                                  | 未実施 |
+| 5   | MenuComponent      | `get_menu_ui` に OS 表示行を追加                                                       | 未実施 |
+| 6   | （任意）NIF モード        | NIF から `client::info::ClientInfo` を取得し、`:client_info` に保存するパスを追加        | 未実施 |
 
 
 ---

@@ -5,3 +5,5 @@
 //! - Erlang term エンコード/デコード
 //!
 //! client_desktop, client_web, client_android, client_ios から参照される。
+
+pub mod info;
