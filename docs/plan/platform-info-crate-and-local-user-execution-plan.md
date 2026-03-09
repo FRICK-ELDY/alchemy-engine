@@ -220,7 +220,9 @@ defp normalize_client_info(%{"os" => o, "arch" => a, "family" => f}) when is_bin
 
 ---
 
-## 6. フェーズ 4: LocalUserComponent の拡張
+## 6. フェーズ 4: LocalUserComponent の拡張 ✅ 完了
+
+- **実施日**: 2026-03-09
 
 クライアント情報は ZenohBridge が `:client_info` ETS に直接書き込む。LocalUserComponent は読み取り専用の `get_client_info/1` を提供する。
 
@@ -312,7 +314,7 @@ NIF モード（Elixir と同一プロセス、Zenoh 未使用）の場合、cli
 | 1   | native/client 作成     | `client` クレート作成、`info` モジュール（`src/info.rs`）追加（[env-and-serialization-migration-plan](./env-and-serialization-migration-plan.md) §5 参照） | ✅ 完了 |
 | 2   | client_desktop     | `client` 依存追加、`publish_client_info` 実装、起動時に publish                                              | ✅ 完了 |
 | 3   | ZenohBridge        | `contents/room/*/client/info` 購読、`handle_client_info` で `:client_info` ETS に保存 | ✅ 完了 |
-| 4   | LocalUserComponent | `get_client_info/1` 追加（`:client_info` から読み取り）                                  | 未実施 |
+| 4   | LocalUserComponent | `get_client_info/1` 追加（`:client_info` から読み取り）                                  | ✅ 完了 |
 | 5   | MenuComponent      | `get_menu_ui` に OS 表示行を追加                                                       | 未実施 |
 | 6   | （任意）NIF モード        | NIF から `client::info::ClientInfo` を取得し、`:client_info` に保存するパスを追加        | 未実施 |
 
