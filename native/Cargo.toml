@@ -8,7 +8,7 @@ members = [
     "audio",
     "render",
     "nif",
-    "desktop_input",
+    "window",
     "desktop_input_openxr",
     "client_desktop",
     "client_web",

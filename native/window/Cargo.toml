@@ -1,0 +1,10 @@
+[package]
+name = "window"
+version = "0.1.0"
+edition = "2021"
+description = "窓層・winit によるイベント管理（The Shell）"
+
+[dependencies]
+render = { path = "../render" }
+winit = "0.30.12"
+pollster = "0.3"

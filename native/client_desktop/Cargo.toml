@@ -12,7 +12,7 @@ path = "src/main.rs"
 client = { path = "../client" }
 network = { path = "../network" }
 render = { path = "../render" }
-desktop_input = { path = "../desktop_input" }
+window = { path = "../window" }
 physics = { path = "../physics" }
 audio = { path = "../audio" }
 rmp-serde = "1.3"

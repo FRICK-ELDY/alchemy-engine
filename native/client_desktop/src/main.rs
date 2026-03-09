@@ -13,7 +13,7 @@ mod msgpack_decode;
 mod network_render_bridge;
 
 use audio::AssetLoader;
-use desktop_input::run_desktop_loop;
+use window::run_desktop_loop;
 use render::window::{RendererInit, WindowConfig};
 use network_render_bridge::NetworkRenderBridge;
 use physics::constants::{SCREEN_HEIGHT, SCREEN_WIDTH};
