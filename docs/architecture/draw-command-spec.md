@@ -169,5 +169,5 @@
 ## 5. 関連ドキュメント
 
 - [contents-defines-rust-executes.md](../plan/contents-defines-rust-executes.md) — 方針・リファクタリング計画
-- [Rust: desktop_render](rust/desktop/render.md) — 描画パイプライン
+- [Rust: render](rust/desktop/render.md) — 描画パイプライン（render クレート）
 - [Rust: nif](rust/nif.md) — NIF インターフェース

@@ -35,7 +35,7 @@ flowchart TB
         PS[physics_step_inner]
     end
     
-    subgraph Render["native/desktop_render"]
+    subgraph Render["native/render"]
         RFB[(RenderFrameBuffer)]
         RB[render_bridge<br/>next_frame]
     end

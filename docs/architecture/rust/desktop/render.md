@@ -1,26 +1,26 @@
-# Rust: desktop_render — 描画パイプライン・HUD
+# Rust: render — 描画パイプライン・HUD
 
 ## 概要
 
-`desktop_render` は **wgpu** による GPU 描画パイプライン・**egui** HUD・ヘッドレスモードを担当します。ウィンドウとイベントループは [desktop_input](./input.md) が担当します。
+`render` クレートは **wgpu** による GPU 描画パイプライン・**egui** HUD・ヘッドレスモードを担当します（The Eye）。ウィンドウとイベントループは [window](./input.md) が担当します。
 
-**RenderFrame**（DrawCommand リスト・CameraParams・UiCanvas）は Elixir 側の RenderComponent が MessagePack にエンコードし、`FrameBroadcaster.put` → `Network.ZenohBridge.publish_frame` で Zenoh へ publish する。`client_desktop` は Zenoh 経由で `game/room/{room_id}/frame` を subscribe し、RenderFrame を受信して描画する。ローカル描画（NIF 内 RenderFrameBuffer）は廃止済み（Zenoh 専用）。
+**RenderFrame**（DrawCommand リスト・CameraParams・UiCanvas）は Elixir 側の RenderComponent が MessagePack にエンコードし、`FrameBroadcaster.put` → `Network.ZenohBridge.publish_frame` で Zenoh へ publish する。`app`（VRAlchemy）は `network` 経由で Zenoh の `game/room/{room_id}/frame` を subscribe し、RenderFrame を受信して描画する。ローカル描画（NIF 内 RenderFrameBuffer）は廃止済み（Zenoh 専用）。
 
-- **パス**: `native/desktop_render/`
-- **依存**: `physics`, `wgpu`, `winit`, `egui`, `bytemuck`, `image`, `pollster`, `log`
+- **パス**: `native/render/`
+- **依存**: `nif`, `wgpu`, `winit`, `egui`, `bytemuck`, `image`, `pollster`, `log`
 
 ---
 
 ## クレート構成
 
 ```mermaid
-graph LR
-    DRENDER[desktop_render]
-    PHYSICS[physics]
-    DINPUT[desktop_input]
+graph TB
+    RENDER[render]
+    NIF[nif]
+    WINDOW[window]
 
-    DRENDER -->|依存| PHYSICS
-    DINPUT -->|依存| DRENDER
+    RENDER -->|依存| NIF
+    WINDOW -->|依存| RENDER
 ```
 
 ---
@@ -71,9 +71,9 @@ flowchart TB
     renderer --> ui
 ```
 
-### フレーム描画フロー（desktop_input 経由）
+### フレーム描画フロー（window 経由）
 
-`desktop_input` のイベントループが `RedrawRequested` で描画を駆動する。`RenderBridge` を介して `desktop_render` が呼ばれる。
+`window` のイベントループが `RedrawRequested` で描画を駆動する。`RenderBridge` を介して `render` が呼ばれる。
 
 ```mermaid
 sequenceDiagram
@@ -312,7 +312,7 @@ pub trait RenderBridge: Send + 'static {
 | D / → | 右移動 |
 | 斜め入力 | 正規化（速度一定） |
 
-### フレームループ（desktop_input の RedrawRequested）
+### フレームループ（window の RedrawRequested）
 
 `bridge.next_frame()` → `renderer.update_instances(frame)` → `renderer.render` → `bridge.on_ui_action(pending_action)`。
 
@@ -398,7 +398,7 @@ CI / テスト向け。`[features] headless = []` で有効化。winit ウィン
 
 | 項目 | 内容 |
 |:---|:---|
-| **パス** | `native/desktop_render/src/renderer/shaders/sprite.wgsl` |
+| **パス** | `native/render/src/renderer/shaders/sprite.wgsl` または `assets/{game_id}/shaders/sprite.wgsl` |
 | **用途** | 2D スプライト描画（アトラステクスチャ、インスタンシング） |
 | **使用箇所** | `renderer/mod.rs`, `headless.rs` |
 
@@ -431,7 +431,7 @@ CI / テスト向け。`[features] headless = []` で有効化。winit ウィン
 
 | 項目 | 内容 |
 |:---|:---|
-| **パス** | `native/desktop_render/src/renderer/shaders/mesh.wgsl` |
+| **パス** | `native/render/src/renderer/shaders/mesh.wgsl` または `assets/{game_id}/shaders/mesh.wgsl` |
 | **用途** | 3D メッシュ（Box3D / GridPlane / Skybox）描画 |
 | **使用箇所** | `renderer/pipeline_3d.rs` |
 
@@ -469,18 +469,18 @@ CI / テスト向け。`[features] headless = []` で有効化。winit ウィン
 
 ---
 
-## desktop_input との責務分担
+## window との責務分担
 
-デスクトップ入力・ウィンドウ・イベントループは [desktop_input](./input.md) が担当。desktop_render は描画専用、desktop_input は winit によるウィンドウ生成と入力取得を担当。VR 入力は [desktop/input_openxr](./input_openxr.md) を参照。
+デスクトップ入力・ウィンドウ・イベントループは [window](./input.md) が担当。`render` は描画専用、`window` は winit によるウィンドウ生成と入力取得を担当。VR 入力は [desktop/input_openxr](./input_openxr.md) を参照。
 
 ---
 
 ## 関連ドキュメント
 
 - [アーキテクチャ概要](../../overview.md)
-- [client_desktop](../client_desktop.md)
-- [desktop/input](./input.md)
-- [nif](../nif.md)（NativeRenderBridge）
+- [desktop_client](../desktop_client.md)（app / VRAlchemy）
+- [desktop/input](./input.md)（window クレート）
+- [nif](../nif.md)
 - [mesh-definitions.md](../../mesh-definitions.md) — メッシュ頂点型
 - [shader-elixir-interface.md](../../shader-elixir-interface.md)
 - [contents-defines-rust-executes.md](../../plan/contents-defines-rust-executes.md)

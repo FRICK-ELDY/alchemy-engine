@@ -21,7 +21,7 @@ graph TB
             GN[network<br/>Phoenix Channels / Zenoh]
         end
         subgraph RustServer["Rust（サーバー内）"]
-            GNIF[nif<br/>NIF インターフェース / ゲームループ / physics]
+            GNIF[nif<br/>NIF インターフェース / physics / ゲームループ]
             GAUDIO[audio<br/>rodio オーディオ]
         end
         GS --> GE
@@ -31,19 +31,22 @@ graph TB
     end
 
     subgraph Client["クライアント（app）"]
-        APP[app<br/>client_desktop exe]
-        DINPUT[window<br/>winit イベントループ]
-        DRENDER[render<br/>wgpu 描画]
-        DXR[xr<br/>OpenXR]
-        APP --> DINPUT
-        APP --> DXR
-        DINPUT --> DRENDER
+        APP[app<br/>VRAlchemy exe]
+        WIN[window<br/>winit イベントループ]
+        RENDER[render<br/>wgpu 描画]
+        NET[network<br/>Zenoh フレーム受信・入力送信]
+        XR[xr<br/>OpenXR]
+        APP --> WIN
+        APP --> NET
+        APP --> XR
+        WIN --> RENDER
+        NET --> RENDER
     end
 
-    LAUNCHER[tools/launcher<br/>zenohd / Phoenix / client_desktop 起動]
+    LAUNCHER[tools/launcher<br/>zenohd / Phoenix / VRAlchemy 起動]
 
-    GN -->|Zenoh<br/>frame publish| APP
-    APP -->|Zenoh<br/>input publish| GN
+    GN -->|Zenoh<br/>frame publish| NET
+    NET -->|Zenoh<br/>input publish| GN
     LAUNCHER -.->|起動| Server
     LAUNCHER -.->|起動| Client
 ```
@@ -183,20 +186,56 @@ alchemy-engine/
 │   ├── Cargo.toml                   # Rust ワークスペース定義
 │   ├── Cargo.lock
 │   │
-│   ├── shared/                      # Elixir との契約・型・補間・予測
-│   ├── network/                     # Zenoh 通信層
-│   ├── audio/                       # rodio オーディオ・platform/ で OS 切り替え
-│   ├── render/                      # wgpu 描画パイプライン・egui HUD
-│   ├── window/                      # winit イベントループ・窓層
-│   ├── xr/                          # OpenXR 入力ブリッジ（VR）
-│   ├── app/                         # 統合層（app / client_desktop バイナリ）
-│   ├── nif/                         # NIF ブリッジ・ゲームループ・physics 内包
+│   ├── shared/                      # Elixir との契約・型・補間・予測（依存なし）
+│   ├── audio/                       # rodio オーディオ（依存なし）
+│   ├── xr/                          # OpenXR 入力ブリッジ（VR、依存なし）
+│   ├── nif/                         # NIF ブリッジ・physics 内包 → audio
+│   ├── render/                      # wgpu 描画・egui HUD → nif
+│   ├── window/                      # winit イベントループ・窓層 → render
+│   ├── network/                     # Zenoh 通信層 → render, shared
+│   ├── app/                         # 統合層（VRAlchemy exe）→ network, render, window, xr, nif, audio
 │   └── tools/
-│       └── launcher/                # トレイアイコン・zenohd / Phoenix / client_desktop 起動
+│       └── launcher/                # トレイアイコン・zenohd / Phoenix / VRAlchemy 起動（依存なし）
 │
 ├── assets/                          # スプライト・音声アセット
 └── saves/                           # セーブデータ
 ```
+
+---
+
+## Rust クレート依存関係
+
+```mermaid
+graph TB
+    subgraph Base["基底クレート（依存なし）"]
+        SHARED[shared]
+        AUDIO[audio]
+        XR[xr]
+    end
+
+    NIF[nif] --> AUDIO
+    RENDER[render] --> NIF
+    WINDOW[window] --> RENDER
+    NETWORK[network] --> RENDER
+    NETWORK --> SHARED
+
+    subgraph App["統合層"]
+        APP[app<br/>VRAlchemy exe]
+    end
+
+    APP --> NETWORK
+    APP --> RENDER
+    APP --> WINDOW
+    APP --> XR
+    APP --> NIF
+    APP --> AUDIO
+
+    LAUNCHER[tools/launcher<br/>独立ツール]
+```
+
+- **サーバー側**: `nif` が Elixir NIF としてロードされ、`audio` でオーディオ再生
+- **クライアント側**: `app` が `window` + `render` で描画、`network` で Zenoh 経由のフレーム受信・入力送信
+- **physics**: `nif` クレート内の `nif/src/physics/` に内包（独立クレートではない）
 
 ---
 
@@ -212,8 +251,8 @@ alchemy-engine/
 | `render` | GPU 描画パイプライン・HUD・ヘッドレスモード（ウィンドウは window が生成） | Rust / wgpu / egui |
 | `window` | winit イベントループ・窓生成・キーボード・マウス入力 | Rust / winit |
 | `xr` | OpenXR セッション・VR 入力管理 | Rust / OpenXR |
-| `app` | 統合層（client_desktop exe：Zenoh 経由で RenderFrame 受信・入力送信） | Rust / Zenoh |
-| `tools/launcher` | トレイアイコン・zenohd / Phoenix Server / client_desktop の起動・終了 | Rust / tao / tray-icon |
+| `app` | 統合層（VRAlchemy exe：Zenoh 経由で RenderFrame 受信・入力送信） | Rust / Zenoh |
+| `tools/launcher` | トレイアイコン・zenohd / Phoenix Server / VRAlchemy の起動・終了 | Rust / tao / tray-icon |
 | `audio` | オーディオ管理・アセット読み込み（platform/ で OS 切り替え） | Rust / rodio |
 
 ---
@@ -270,7 +309,7 @@ sequenceDiagram
 
 ### 4. 描画命令の Zenoh 配信
 
-Elixir 側（contents）の RenderComponent が DrawCommand リスト・CameraParams・UiCanvas を組み立て、`Contents.MessagePackEncoder` で MessagePack にエンコードし、`FrameBroadcaster.put(room_id, frame_binary)` で Zenoh へ publish する。`Network.ZenohBridge` が受信し、`app`（client_desktop exe）が subscribe して描画する。ローカル描画は廃止済み（Zenoh 専用）。
+Elixir 側（contents）の RenderComponent が DrawCommand リスト・CameraParams・UiCanvas を組み立て、`Contents.MessagePackEncoder` で MessagePack にエンコードし、`FrameBroadcaster.put(room_id, frame_binary)` で Zenoh へ publish する。`Network.ZenohBridge` が受信し、`app`（VRAlchemy exe）が subscribe して描画する。ローカル描画は廃止済み（Zenoh 専用）。
 
 ### 5. ContentBehaviour + Component による拡張設計
 
@@ -390,13 +429,13 @@ flowchart TD
 
 ## クライアント動作モード
 
-常に Zenoh 経由で `client_desktop`（app が生成）がフレームを受信する。`mix run` 単体ではウィンドウは開かず、サーバーのみ起動する。ゲームをプレイするには `zenohd` + `mix run` + `client_desktop` の 3 プロセスが必要。
+常に Zenoh 経由で `VRAlchemy`（app が生成）がフレームを受信する。`mix run` 単体ではウィンドウは開かず、サーバーのみ起動する。ゲームをプレイするには `zenohd` + `mix run` + `VRAlchemy` の 3 プロセスが必要。
 
 ---
 
 ## レンダリングフロー
 
-Elixir の RenderComponent が `FrameBroadcaster.put` で Zenoh へ frame を publish。`app`（client_desktop exe）の `NetworkRenderBridge` が subscribe して描画する。
+Elixir の RenderComponent が `FrameBroadcaster.put` で Zenoh へ frame を publish。`app`（VRAlchemy exe）の `NetworkRenderBridge`（network クレート）が subscribe して描画する。
 
 ---
 
@@ -566,7 +605,7 @@ graph TB
     end
 ```
 
-描画は `app`（client_desktop exe）プロセス内で行われる（Zenoh 経由で frame を受信）。
+描画は `app`（VRAlchemy exe）プロセス内で行われる（Zenoh 経由で frame を受信）。
 
 ---
 
@@ -574,5 +613,5 @@ graph TB
 
 - [**ビジョンと設計思想**](../vision.md) ← エンジン・ワールド・ルール・ゲームの定義
 - **Elixir レイヤー**: [server](./elixir/server.md) / [core](./elixir/core.md) / [contents](./elixir/contents.md)（ゲームコンテンツ一覧・設計パターン含む）/ [network](./elixir/network.md)
-- **Rust レイヤー**: [nif](./rust/nif.md) / [desktop_client](./rust/desktop_client.md)（client_desktop）/ [desktop 詳細](./rust/desktop/)（[input](./rust/desktop/input.md) / [input_openxr](./rust/desktop/input_openxr.md) / [render](./rust/desktop/render.md)）/ [nif/physics](./rust/nif/physics.md) / [audio](./rust/nif/audio.md) / [launcher](./rust/launcher.md)
+- **Rust レイヤー**: [nif](./rust/nif.md)（physics 内包）/ [desktop_client](./rust/desktop_client.md)（app / VRAlchemy）/ [desktop 詳細](./rust/desktop/)（[input](./rust/desktop/input.md) = window / [render](./rust/desktop/render.md) = render / [input_openxr](./rust/desktop/input_openxr.md)）/ [nif/physics](./rust/nif/physics.md) / [audio](./rust/nif/audio.md) / [launcher](./rust/launcher.md)
 - [改善計画](../plan/improvement-plan.md) ← 既知の弱点と改善方針
