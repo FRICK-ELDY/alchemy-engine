@@ -1,19 +1,19 @@
-# Rust: physics — 物理演算・ECS コードベース詳細
+# Rust: nif/physics — 物理演算・ECS コードベース詳細
 
 ## 概要
 
-`physics` クレートは 60Hz 固定の物理演算・空間ハッシュ・ECS・外部注入パラメータテーブルを担当します。`nif` がこのクレートを利用し、Elixir からの NIF 経由で状態を注入・読み取りします。
+`physics` は **nif クレート内のモジュール**（`native/nif/src/physics/`）です。60Hz 固定の物理演算・空間ハッシュ・ECS・外部注入パラメータテーブルを担当します。独立したクレートではなく、`nif` が Elixir からの NIF 経由で状態を注入・読み取ります。
 
-- **パス**: `native/physics/`
-- **依存**: `rustc-hash = "2"`, `rayon = "1"`, `log = "0.4"`
+- **パス**: `native/nif/src/physics/`
+- **親クレート**: `nif`（`rustc-hash`, `rayon`, `log` を nif の依存で利用）
 
 ---
 
-## クレート構成
+## モジュール構成
 
 ```mermaid
 graph TD
-    PHYSICS[physics]
+    PHYSICS[nif::physics]
     WORLD[world/]
     GAMELOGIC[game_logic/]
     PHYS[physics/]
@@ -121,5 +121,5 @@ struct CollisionWorld {
 
 - [アーキテクチャ概要](../../overview.md)
 - [nif](../nif.md)
-- [desktop/render](../desktop/render.md)
+- [desktop/render](../desktop/render.md)（render クレート）
 - [Elixir: core](../../elixir/core.md)

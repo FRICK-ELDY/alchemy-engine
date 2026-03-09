@@ -2,20 +2,24 @@
 
 ## 概要
 
-`nif` クレートは Elixir と Rust のブリッジです。Rustler NIF のエントリポイント・ゲームループ制御・セーブ/ロードを担当します。描画は Zenoh 経由で `client_desktop` に委譲するため、nif は [physics](./nif/physics.md) と [audio](./nif/audio.md) のみに依存します。
+`nif` クレートは Elixir と Rust のブリッジです。Rustler NIF のエントリポイント・ゲームループ制御・セーブ/ロードを担当します。描画は Zenoh 経由で `app`（VRAlchemy）に委譲するため、nif は [physics](./nif/physics.md)（nif 内包）と [audio](./nif/audio.md) のみに依存します。
+
+**physics** は独立クレートではなく、`native/nif/src/physics/` に内包されています。
 
 ---
 
 ## クレート構成
 
 ```mermaid
-graph LR
-    GN[nif]
-    GS[physics]
-    GA[audio]
+graph TB
+    subgraph NIF_CRATE[nif クレート]
+        NIF[nif ルート]
+        PHYSICS[physics<br/>nif/src/physics/]
+    end
+    AUDIO[audio]
 
-    GN -->|依存| GS
-    GN -->|依存| GA
+    NIF --> PHYSICS
+    NIF -->|依存| AUDIO
 ```
 
 ---
@@ -129,7 +133,7 @@ NIF ローダー。パニックフック（debug 時）・GameWorld / GameLoopCo
 | `pause_physics(control)` | 物理演算を一時停止 |
 | `resume_physics(control)` | 物理演算を再開 |
 
-描画は Elixir の RenderComponent が `FrameBroadcaster.put` で Zenoh へ配信し、`client_desktop` が受信する。nif は描画系に依存しない。
+描画は Elixir の RenderComponent が `FrameBroadcaster.put` で Zenoh へ配信し、`app`（VRAlchemy）が `network` 経由で受信する。nif は描画系に依存しない。
 
 ---
 
@@ -146,5 +150,5 @@ NIF ローダー。パニックフック（debug 時）・GameWorld / GameLoopCo
 ## 関連ドキュメント
 
 - [アーキテクチャ概要](../overview.md)
-- [nif/physics](./nif/physics.md) / [audio](./nif/audio.md) / [client_desktop](./client_desktop.md)
+- [nif/physics](./nif/physics.md) / [audio](./nif/audio.md) / [desktop_client](./desktop_client.md)
 - [Elixir: core](../elixir/core.md)

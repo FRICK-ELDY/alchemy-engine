@@ -1,10 +1,10 @@
-# Rust: desktop_input_openxr — OpenXR 入力ブリッジ（VR）
+# Rust: xr — OpenXR 入力ブリッジ（VR）
 
 ## 概要
 
-`desktop_input_openxr` は **OpenXR** を用いた VR 入力ブリッジです。VR ヘッドセット・コントローラー・トラッカーの入力を受け取り、ゲームエンジンに渡す役割を担います。
+`xr` クレートは **OpenXR** を用いた VR 入力ブリッジです（The Shell for VR）。VR ヘッドセット・コントローラー・トラッカーの入力を受け取り、app が network 経由で Elixir に渡す役割を担います。
 
-- **パス**: `native/desktop_input_openxr/`
+- **パス**: `native/xr/`
 - **依存**: `log = "0.4"`, `openxr = "0.21"`（`openxr` feature 有効時）
 
 ---
@@ -13,7 +13,7 @@
 
 ```mermaid
 graph LR
-    XR[desktop_input_openxr]
+    XR[xr]
 
     subgraph optional["feature = openxr"]
         OX[OpenXR ランタイム]
@@ -27,7 +27,7 @@ graph LR
 ## 機能
 
 - **openxr** feature を有効にすると、OpenXR ランタイム経由で VR デバイスの入力を取得可能
-- デスクトップのキーボード・マウスは [desktop_input](./input.md)（winit）が担当
+- デスクトップのキーボード・マウスは [window](./input.md)（winit）が担当
 - VR 入力は本クレートで別途扱う設計
 
 ---

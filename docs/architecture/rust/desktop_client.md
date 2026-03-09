@@ -1,11 +1,12 @@
-# Rust: client_desktop — Zenoh 経由のデスクトップクライアント（Windows/Linux/macOS）
+# Rust: app — Zenoh 経由のデスクトップクライアント（VRAlchemy exe）
 
 ## 概要
 
-`client_desktop` は **Zenoh** 経由で Phoenix Server に接続し、RenderFrame を受信して描画するスタンドアロンクライアント exe です。Elixir の NIF を使わず、サーバーと分離された別プロセスで動作します。デスクトップ（Windows/Linux/macOS）向け。Web/Android/iOS は `client_web`, `client_android`, `client_ios` で将来実装予定。
+`app` クレートは **Zenoh** 経由でサーバーに接続し、RenderFrame を受信して描画するスタンドアロンクライアント exe（バイナリ名: **VRAlchemy**）です。Elixir の NIF を使わず、サーバーと分離された別プロセスで動作します。デスクトップ（Windows/Linux/macOS）向け。Web/Android/iOS は将来実装予定。
 
-- **パス**: `native/client_desktop/`
-- **依存**: `desktop_input`, `desktop_render`, `physics`, `audio`, `zenoh`, `rmp-serde`, `serde`
+- **パス**: `native/app/`
+- **バイナリ**: VRAlchemy
+- **依存**: `network`, `render`, `window`, `xr`, `nif`, `audio`
 
 ---
 
@@ -13,26 +14,25 @@
 
 ```mermaid
 flowchart TB
-    subgraph client_desktop
+    subgraph app
         MAIN[main.rs]
-        MSGPACK[msgpack_decode.rs]
-        BRIDGE[network_render_bridge.rs]
     end
 
     subgraph 依存クレート
-        DINPUT[desktop_input]
-        DRENDER[desktop_render]
-        PHYSICS[physics]
-        AUDIO[audio]
+        NETWORK[network<br/>NetworkRenderBridge<br/>msgpack_decode]
+        WINDOW[window<br/>run_desktop_loop]
+        RENDER[render<br/>Renderer, WindowConfig]
+        NIF[nif<br/>physics::constants]
+        XR[xr]
+        AUDIO[audio<br/>AssetLoader]
     end
 
-    MAIN --> MSGPACK
-    MAIN --> BRIDGE
-    MAIN --> DINPUT
-    MAIN --> DRENDER
-    BRIDGE --> MSGPACK
-    DINPUT --> DRENDER
-    DRENDER --> PHYSICS
+    MAIN --> NETWORK
+    MAIN --> WINDOW
+    MAIN --> RENDER
+    MAIN --> NIF
+    WINDOW --> RENDER
+    NETWORK --> RENDER
 ```
 
 ---
@@ -83,7 +83,7 @@ flowchart LR
         ZB[ZenohBridge.publish_frame]
     end
 
-    subgraph Client["client_desktop"]
+    subgraph Client["app (VRAlchemy)"]
         Recv[run_receiver]
         Decode[msgpack_decode::decode_render_frame]
         FromSlice[rmp_serde::from_slice]
@@ -102,15 +102,15 @@ flowchart LR
     Convert --> RF
 ```
 
-**エンコード（サーバー側）**:
+**エンコード（サーバー側・Elixir）**:
 
 - `Content.MessagePackEncoder.encode_frame/4` で `commands`, `camera`, `ui`, `mesh_definitions` を map に組み立て
 - `Msgpax.pack!` で MessagePack バイナリ化
 - `Network.ZenohBridge.publish_frame(room_id, frame_binary)` で Zenoh へ publish
 
-**デコード（クライアント側）**:
+**デコード（クライアント側・Rust）**:
 
-- `msgpack_decode::decode_render_frame(bytes)` がエントリ
+- `network::msgpack_decode::decode_render_frame(bytes)` がエントリ（`native/network/src/msgpack_decode.rs`）
 - `rmp_serde::from_slice` で `FrameMsg` にデシリアライズ
 - `DrawCommandMsg`, `CameraMsg`, `UiNodeMsg`, `MeshDefMsg` を `DrawCommand`, `CameraParams`, `UiNode`, `MeshDef` へ変換（f64 → f32 キャスト含む）
 
@@ -118,7 +118,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    subgraph Client["client_desktop"]
+    subgraph Client["app (VRAlchemy)"]
         Keys[keys_held HashSet]
         MoveVec[move_vector_from_keys]
         Payload1[MovementPayload {dx, dy}]
@@ -141,7 +141,7 @@ flowchart LR
     Msgpax --> GE
 ```
 
-**movement エンコード**（`network_render_bridge.rs`）:
+**movement エンコード**（`native/network/src/network_render_bridge.rs`）:
 
 ```rust
 struct MovementPayload { dx: f64, dy: f64 }
@@ -203,19 +203,35 @@ flowchart TB
 ## クレート構成
 
 ```mermaid
-graph LR
-    DCLIENT[client_desktop]
-    DINPUT[desktop_input]
-    DRENDER[desktop_render]
-    PHYSICS[physics]
-    AUDIO[audio]
+graph TB
+    subgraph app
+        APP[app / VRAlchemy exe]
+    end
 
-    DCLIENT --> DINPUT
-    DCLIENT --> DRENDER
-    DCLIENT --> PHYSICS
-    DCLIENT --> AUDIO
-    DINPUT --> DRENDER
-    DRENDER --> PHYSICS
+    subgraph deps [app の依存]
+        NETWORK[network]
+        RENDER[render]
+        WINDOW[window]
+        NIF[nif]
+        XR[xr]
+        AUDIO[audio]
+    end
+
+    subgraph deps2 [下位依存]
+        SHARED[shared]
+    end
+
+    APP --> NETWORK
+    APP --> RENDER
+    APP --> WINDOW
+    APP --> NIF
+    APP --> XR
+    APP --> AUDIO
+    WINDOW --> RENDER
+    RENDER --> NIF
+    NETWORK --> RENDER
+    NETWORK --> SHARED
+    NIF --> AUDIO
 ```
 
 ---
@@ -226,11 +242,11 @@ graph LR
 
 ```mermaid
 flowchart TD
-    MAIN[main]
+    MAIN[main<br/>native/app/src/main.rs]
     PARSE[parse_args]
-    LOAD[アセット・シェーダー読み込み]
-    BRIDGE[NetworkRenderBridge::new]
-    LOOP[run_desktop_loop]
+    LOAD[アセット・シェーダー読み込み<br/>AssetLoader, sprite.wgsl, mesh.wgsl]
+    BRIDGE[NetworkRenderBridge::new<br/>network クレート]
+    LOOP[run_desktop_loop<br/>window クレート]
 
     MAIN --> PARSE
     PARSE -->|connect, room_id, assets_path| LOAD
@@ -238,7 +254,7 @@ flowchart TD
     BRIDGE --> LOOP
 ```
 
-### イベントループ内のフロー（desktop_input）
+### イベントループ内のフロー（window クレート）
 
 ```mermaid
 flowchart TD
@@ -292,9 +308,11 @@ flowchart TD
 
 | トピック | 方向 | 内容 |
 |:---|:---|:---|
-| `game/room/{room_id}/frame` | subscribe | MessagePack エンコードの RenderFrame |
+| `game/room/{room_id}/frame` | subscribe | MessagePack エンコードの RenderFrame（`network` クレート） |
 | `game/room/{room_id}/input/movement` | publish | `{dx, dy}` 移動ベクトル（MessagePack） |
 | `game/room/{room_id}/input/action` | publish | `{name, payload}` UI アクション（MessagePack） |
+
+`NetworkRenderBridge` は `native/network/src/network_render_bridge.rs` に定義。`render::RenderFrame` 型を使用。
 
 ### 受信スレッドのフロー（run_receiver）
 
@@ -331,6 +349,6 @@ flowchart TD
 
 - [MessagePack スキーマ](../messagepack-schema.md)（Frame / DrawCommand / Camera / UI のバイナリ形式）
 - [アーキテクチャ概要](../overview.md)（クライアント動作モード）
-- [desktop/input](./desktop/input.md)
-- [desktop/render](./desktop/render.md)
-- [launcher](./launcher.md)（client_desktop の起動）
+- [desktop/input](./desktop/input.md)（window クレート）
+- [desktop/render](./desktop/render.md)（render クレート）
+- [launcher](./launcher.md)（VRAlchemy の起動）

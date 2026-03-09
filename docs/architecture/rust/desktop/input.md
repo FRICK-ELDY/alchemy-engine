@@ -1,11 +1,11 @@
-# Rust: desktop_input — デスクトップ入力・ウィンドウ・イベントループ
+# Rust: window — デスクトップ入力・ウィンドウ・イベントループ
 
 ## 概要
 
-`desktop_input` は **winit** によるウィンドウ生成とイベントループを担当します。`desktop_render` の `Renderer` を用いて描画しますが、イベントループの所有権はここにあります。
+`window` クレートは **winit** によるウィンドウ生成とイベントループを担当します（The Shell）。`render` の `Renderer` を用いて描画しますが、イベントループの所有権はここにあります。
 
-- **パス**: `native/desktop_input/`
-- **依存**: `desktop_render`, `winit`, `pollster`
+- **パス**: `native/window/`
+- **依存**: `render`, `winit`, `pollster`
 
 ---
 
@@ -13,10 +13,10 @@
 
 ```mermaid
 graph LR
-    DINPUT[desktop_input]
-    DRENDER[desktop_render]
+    WINDOW[window]
+    RENDER[render]
 
-    DINPUT -->|依存| DRENDER
+    WINDOW -->|依存| RENDER
 ```
 
 ---
@@ -35,12 +35,15 @@ pub fn run_desktop_loop<B: RenderBridge>(bridge: B, config: WindowConfig) -> Res
 
 | 呼び出し元 | ブリッジ | 用途 |
 |:---|:---|:---|
-| `nif`（`run_render_thread`） | `NativeRenderBridge` | ローカル NIF モード |
-| `client_desktop` | `NetworkRenderBridge` | Zenoh リモートモード |
+| `app`（VRAlchemy） | `NetworkRenderBridge` | Zenoh リモートモード（現行） |
+
+ローカル NIF 描画モードは廃止済み。描画は Zenoh 経由で client 側に委譲。
 
 ---
 
 ## desktop_loop.rs — イベントハンドリング
+
+`native/window/src/desktop_loop.rs` に配置。
 
 ### DesktopApp 構造体
 
@@ -107,11 +110,11 @@ flowchart TB
     end
 
     subgraph callers [呼び出し元]
-        DC[client_desktop::main]
+        DC[app::main]
         DC --> |NetworkRenderBridge, WindowConfig| RUN
     end
 
-    subgraph desktop_loop_rs [desktop_loop.rs]
+    subgraph desktop_loop_rs [window/desktop_loop.rs]
         RUN[run_desktop_loop&lt;B: RenderBridge&gt;]
     end
 
@@ -226,13 +229,15 @@ flowchart TD
 
 ### RenderBridge トレイトとブリッジ実装
 
+`RenderBridge` トレイトは `render` クレートの `render::window` モジュールに定義。
+
 ```mermaid
 flowchart LR
-    subgraph desktop_input ["desktop_input (呼び出し側)"]
+    subgraph window ["window (呼び出し側)"]
         BRIDGE["bridge: B"]
     end
 
-    subgraph RenderBridge_trait ["desktop_render::window::RenderBridge"]
+    subgraph RenderBridge_trait ["render::window::RenderBridge"]
         NF[next_frame]
         OUA[on_ui_action]
         ORK[on_raw_key]
@@ -250,23 +255,23 @@ flowchart LR
 
 ### ファイル・関数参照一覧
 
-| ファイル | 行 | 関数/要素 | 役割 |
-|:---|:---|:---|:---|
-| `lib.rs` | 7-9 | `mod desktop_loop`, `pub use run_desktop_loop` | エクスポート |
-| `desktop_loop.rs` | 20-31 | `run_desktop_loop` | エントリ、EventLoop 構築・起動 |
-| `desktop_loop.rs` | 34-42 | `struct DesktopApp<B>` | アプリ状態 |
-| `desktop_loop.rs` | 44-55 | `DesktopApp::new` | 初期化 |
-| `desktop_loop.rs` | 56-67 | `set_cursor_grabbed` | カーソルグラブ切替 |
-| `desktop_loop.rs` | 70-76 | `device_event` | 生マウス移動 |
-| `desktop_loop.rs` | 79-102 | `resumed` | ウィンドウ・Renderer 生成 |
-| `desktop_loop.rs` | 104-184 | `window_event` | ウィンドウイベント分岐 |
-| `desktop_render/window.rs` | 33-39 | `trait RenderBridge` | ブリッジインターフェース |
+| ファイル | 関数/要素 | 役割 |
+|:---|:---|:---|
+| `native/window/src/lib.rs` | `mod desktop_loop`, `pub use run_desktop_loop` | エクスポート |
+| `native/window/src/desktop_loop.rs` | `run_desktop_loop` | エントリ、EventLoop 構築・起動 |
+| `native/window/src/desktop_loop.rs` | `struct DesktopApp<B>` | アプリ状態 |
+| `native/window/src/desktop_loop.rs` | `DesktopApp::new` | 初期化 |
+| `native/window/src/desktop_loop.rs` | `set_cursor_grabbed` | カーソルグラブ切替 |
+| `native/window/src/desktop_loop.rs` | `device_event` | 生マウス移動 |
+| `native/window/src/desktop_loop.rs` | `resumed` | ウィンドウ・Renderer 生成 |
+| `native/window/src/desktop_loop.rs` | `window_event` | ウィンドウイベント分岐 |
+| `native/render/src/window.rs` | `trait RenderBridge` | ブリッジインターフェース |
 
 ---
 
 ## 関連ドキュメント
 
 - [アーキテクチャ概要](../../overview.md)
-- [client_desktop](../client_desktop.md)
-- [desktop/render](./render.md)（RenderBridge トレイト定義）
+- [desktop_client](../desktop_client.md)（app / VRAlchemy）
+- [desktop/render](./render.md)（render クレート、RenderBridge トレイト定義）
 - [desktop/input_openxr](./input_openxr.md)（VR 入力）

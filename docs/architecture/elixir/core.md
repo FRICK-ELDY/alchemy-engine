@@ -269,7 +269,7 @@ Formula 内の `read_store` / `write_store` ノードが参照するキー・値
 
 ```mermaid
 graph LR
-    GE["core\n(rustler ~> 0.34\ntelemetry ~> 1.3\njason\nmox)"]
+    GE["core\n(rustler ~> 0.37\ntelemetry ~> 1.3\njason\nmox)"]
 ```
 
 ---
