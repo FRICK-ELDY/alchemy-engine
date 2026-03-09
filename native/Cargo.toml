@@ -9,10 +9,7 @@ members = [
     "nif",
     "window",
     "xr",
-    "client_desktop",
-    "client_web",
-    "client_android",
-    "client_ios",
+    "app",
     "launcher",
 ]
 

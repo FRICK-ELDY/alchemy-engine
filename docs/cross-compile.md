@@ -9,20 +9,14 @@
 ```bash
 cd native
 
-# デバッグビルド
+# デバッグビルド（client_desktop バイナリ）
 cargo client-desktop
-cargo client-web
-cargo client-android
-cargo client-ios
 
 # リリースビルド
 cargo client-desktop --release
 cargo client-release-desktop   # 同上
-cargo client-release-web
-cargo client-release-android
-cargo client-release-ios
 
-# 実行（desktop のみ）
+# 実行
 cargo client-run-desktop
 ```
 
@@ -37,7 +31,7 @@ cargo client-desktop --release --manifest-path native/Cargo.toml
 各 OS 上でその環境向けのバイナリを生成します。コマンドは同一です。
 
 ```bash
-cargo build --release -p client_desktop
+cargo build --release -p app --bin client_desktop
 ```
 
 | プラットフォーム | 出力パス |
@@ -72,19 +66,19 @@ rustup target add aarch64-apple-darwin
 
 ```bash
 # Windows 向け（Linux/macOS ホストから）
-cargo build --release -p client_desktop --manifest-path native/Cargo.toml \
+cargo build --release -p app --bin client_desktop --manifest-path native/Cargo.toml \
   --target x86_64-pc-windows-gnu
 
 # Linux 向け（macOS ホストから等）
-cargo build --release -p client_desktop --manifest-path native/Cargo.toml \
+cargo build --release -p app --bin client_desktop --manifest-path native/Cargo.toml \
   --target x86_64-unknown-linux-gnu
 
 # macOS Intel 向け
-cargo build --release -p client_desktop --manifest-path native/Cargo.toml \
+cargo build --release -p app --bin client_desktop --manifest-path native/Cargo.toml \
   --target x86_64-apple-darwin
 
 # macOS Apple Silicon (M1/M2 等) 向け
-cargo build --release -p client_desktop --manifest-path native/Cargo.toml \
+cargo build --release -p app --bin client_desktop --manifest-path native/Cargo.toml \
   --target aarch64-apple-darwin
 ```
 
