@@ -34,28 +34,35 @@ defmodule Mix.Tasks.Alchemy.Clean do
 
     existing = Enum.filter(dirs, &File.exists?/1)
 
-    if existing == [] do
-      Mix.shell().info("削除するディレクトリはありません。")
-    else
-      proceed? =
-        Keyword.get(opts, :force, false) or
-          (
-            Mix.shell().info("以下を削除します:")
-            Enum.each(existing, &Mix.shell().info("  #{&1}"))
-            Mix.shell().info("")
-            Mix.shell().yes?("続行しますか?")
-          )
+    cond do
+      existing == [] ->
+        Mix.shell().info("削除するディレクトリはありません。")
 
-      if proceed? do
-        Enum.each(existing, fn dir ->
-          Mix.shell().info("削除: #{dir}")
-          File.rm_rf!(dir)
-        end)
-
+      confirm_delete?(opts, existing) ->
+        do_delete(existing)
         Mix.shell().info("完了しました。")
-      else
+
+      true ->
         Mix.shell().info("中断しました。")
-      end
     end
+  end
+
+  defp confirm_delete?(opts, existing) do
+    force? = Keyword.get(opts, :force, false)
+    force? or prompt_user(existing)
+  end
+
+  defp prompt_user(existing) do
+    Mix.shell().info("以下を削除します:")
+    Enum.each(existing, &Mix.shell().info("  #{&1}"))
+    Mix.shell().info("")
+    Mix.shell().yes?("続行しますか?")
+  end
+
+  defp do_delete(existing) do
+    Enum.each(existing, fn dir ->
+      Mix.shell().info("削除: #{dir}")
+      File.rm_rf!(dir)
+    end)
   end
 end
