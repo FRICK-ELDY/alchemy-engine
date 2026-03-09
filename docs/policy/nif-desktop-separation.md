@@ -8,7 +8,7 @@
 ## 1. 方針
 
 - **NIF（サーバー側）** は `desktop_render` および `desktop_input` に依存しない
-- **クライアント側**（描画・入力）は `desktop_client` として別プロセスで動作
+- **クライアント側**（描画・入力）は `client_desktop` として別プロセスで動作
 - **サーバー・クライアント間の通信は Zenoh のみ**。ローカルモード（同一プロセス内レンダー）は廃止
 
 ---
@@ -23,7 +23,7 @@
 
 ## 3. 影響
 
-- 開発時は常に `zenohd + mix run + desktop_client` の 3 プロセス構成
+- 開発時は常に `zenohd + mix run + client_desktop` の 3 プロセス構成
 - `mix run` 単体ではウィンドウは開かない（ヘッドレス）
 
 ---

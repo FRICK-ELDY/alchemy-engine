@@ -1,20 +1,20 @@
-# desktop_client クロスコンパイル
+# client_desktop クロスコンパイル
 
-`desktop_client` を各プラットフォーム向けにビルドする手順です。
+`client_desktop` を各プラットフォーム向けにビルドする手順です。
 
 ## ネイティブビルド（推奨）
 
 各 OS 上でその環境向けのバイナリを生成します。コマンドは同一です。
 
 ```bash
-cargo build --release -p desktop_client
+cargo build --release -p client_desktop
 ```
 
 | プラットフォーム | 出力パス |
 |:---|:---|
-| Windows | `native/target/release/desktop_client.exe` |
-| Linux | `native/target/release/desktop_client` |
-| macOS | `native/target/release/desktop_client` |
+| Windows | `native/target/release/client_desktop.exe` |
+| Linux | `native/target/release/client_desktop` |
+| macOS | `native/target/release/client_desktop` |
 
 `native/` ディレクトリで実行するか、`--manifest-path native/Cargo.toml` を指定してください。
 
@@ -42,19 +42,19 @@ rustup target add aarch64-apple-darwin
 
 ```bash
 # Windows 向け（Linux/macOS ホストから）
-cargo build --release -p desktop_client --manifest-path native/Cargo.toml \
+cargo build --release -p client_desktop --manifest-path native/Cargo.toml \
   --target x86_64-pc-windows-gnu
 
 # Linux 向け（macOS ホストから等）
-cargo build --release -p desktop_client --manifest-path native/Cargo.toml \
+cargo build --release -p client_desktop --manifest-path native/Cargo.toml \
   --target x86_64-unknown-linux-gnu
 
 # macOS Intel 向け
-cargo build --release -p desktop_client --manifest-path native/Cargo.toml \
+cargo build --release -p client_desktop --manifest-path native/Cargo.toml \
   --target x86_64-apple-darwin
 
 # macOS Apple Silicon (M1/M2 等) 向け
-cargo build --release -p desktop_client --manifest-path native/Cargo.toml \
+cargo build --release -p client_desktop --manifest-path native/Cargo.toml \
   --target aarch64-apple-darwin
 ```
 
@@ -72,17 +72,17 @@ cargo build --release -p desktop_client --manifest-path native/Cargo.toml \
 
 ```bash
 # Windows
-desktop_client.exe --connect tcp/127.0.0.1:7447 --room main
+client_desktop.exe --connect tcp/127.0.0.1:7447 --room main
 
 # Linux / macOS
-./desktop_client --connect tcp/127.0.0.1:7447 --room main
+./client_desktop --connect tcp/127.0.0.1:7447 --room main
 ```
 
 詳細は [README の起動方法](../README.md#起動方法) を参照してください。
 
 ## 製品配布時のウィンドウ非表示（Windows）
 
-### desktop_client exe
+### client_desktop exe
 
 `cargo build --release` でビルドした exe は、`#![windows_subsystem = "windows"]` によりコンソールが表示されません。ゲームウィンドウのみが表示されます。
 

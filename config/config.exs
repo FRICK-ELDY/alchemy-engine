@@ -37,7 +37,7 @@ config :network, Network.UDP, port: 4001
 # ── Network.ZenohBridge（Zenoh フレーム配信・入力受信）────────────────
 # true にすると game/room/{room_id}/frame へ publish、
 # game/room/*/input/movement, game/room/*/input/action を subscribe する。
-# desktop_client 等のリモートクライアント接続時に有効化。
+# client_desktop 等のリモートクライアント接続時に有効化。
 # dev/prod では true、テストでは zenohd を起動しないため false。
 config :network, :zenoh_enabled, Mix.env() != :test
 

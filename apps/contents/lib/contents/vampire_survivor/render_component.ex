@@ -15,7 +15,7 @@ defmodule Content.VampireSurvivor.RenderComponent do
   ## on_nif_sync
   1. `get_render_entities/1` で物理ワールドのスナップショットを取得する
   2. Playing シーン state から UiCanvas ツリーを組み立てる
-  3. `FrameBroadcaster.put/2` で Zenoh 経由で desktop_client に配信する
+  3. `FrameBroadcaster.put/2` で Zenoh 経由で client_desktop に配信する
   """
   @behaviour Core.Component
 

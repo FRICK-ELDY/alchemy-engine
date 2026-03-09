@@ -4,7 +4,7 @@
 
 `desktop_render` は **wgpu** による GPU 描画パイプライン・**egui** HUD・ヘッドレスモードを担当します。ウィンドウとイベントループは [desktop_input](./input.md) が担当します。
 
-**RenderFrame**（DrawCommand リスト・CameraParams・UiCanvas）は Elixir 側の RenderComponent が MessagePack にエンコードし、`FrameBroadcaster.put` → `Network.ZenohBridge.publish_frame` で Zenoh へ publish する。`desktop_client` は Zenoh 経由で `game/room/{room_id}/frame` を subscribe し、RenderFrame を受信して描画する。ローカル描画（NIF 内 RenderFrameBuffer）は廃止済み（Zenoh 専用）。
+**RenderFrame**（DrawCommand リスト・CameraParams・UiCanvas）は Elixir 側の RenderComponent が MessagePack にエンコードし、`FrameBroadcaster.put` → `Network.ZenohBridge.publish_frame` で Zenoh へ publish する。`client_desktop` は Zenoh 経由で `game/room/{room_id}/frame` を subscribe し、RenderFrame を受信して描画する。ローカル描画（NIF 内 RenderFrameBuffer）は廃止済み（Zenoh 専用）。
 
 - **パス**: `native/desktop_render/`
 - **依存**: `physics`, `wgpu`, `winit`, `egui`, `bytemuck`, `image`, `pollster`, `log`
@@ -21,6 +21,263 @@ graph LR
 
     DRENDER -->|依存| PHYSICS
     DINPUT -->|依存| DRENDER
+```
+
+---
+
+## ソースコードレベルの流れ
+
+### モジュール構成
+
+```mermaid
+flowchart TB
+    subgraph lib [lib.rs]
+        TYPES[RenderFrame, DrawCommand, CameraParams, UiCanvas, MeshDef]
+    end
+
+    subgraph window [window.rs]
+        RB[RenderBridge トレイト]
+        WI[WindowConfig, RendererInit, KeyState]
+    end
+
+    subgraph renderer [renderer/mod.rs]
+        RENDERER[Renderer]
+        BUILD[build_sprite_instances]
+        SPRITE_PASS[スプライト描画パス]
+    end
+
+    subgraph pipeline3d [renderer/pipeline_3d.rs]
+        P3D[Pipeline3D]
+        SKY[スカイボックスパス]
+        GRID[グリッドパス]
+        MESH[メッシュパス]
+    end
+
+    subgraph ui [renderer/ui.rs]
+        RENDER_UI[render_ui_canvas]
+        RENDER_NODE[render_node]
+        RENDER_COMP[render_component_in_ui]
+    end
+
+    subgraph headless [headless.rs]
+        HR[HeadlessRenderer]
+        RFO[render_frame_offscreen]
+    end
+
+    lib --> window
+    lib --> renderer
+    lib --> headless
+    renderer --> pipeline3d
+    renderer --> ui
+```
+
+### フレーム描画フロー（desktop_input 経由）
+
+`desktop_input` のイベントループが `RedrawRequested` で描画を駆動する。`RenderBridge` を介して `desktop_render` が呼ばれる。
+
+```mermaid
+sequenceDiagram
+    participant DL as desktop_loop
+    participant RB as RenderBridge
+    participant R as Renderer
+
+    Note over DL,R: RedrawRequested イベント
+
+    DL->>RB: next_frame()
+    RB-->>DL: RenderFrame
+
+    DL->>DL: cursor_grab 適用
+
+    DL->>R: update_instances(frame)
+    Note over R: CameraUniform 更新<br/>build_sprite_instances → instance_buffer
+
+    DL->>R: render(window, ui, camera, commands, mesh_definitions, ui_state)
+    Note over R: 描画パス実行（後述）
+    R-->>DL: Option&lt;String&gt; (UI アクション)
+
+    opt action あり
+        DL->>RB: on_ui_action(action)
+    end
+
+    DL->>DL: window.request_redraw()
+```
+
+### render() 内部の描画パス順序
+
+```mermaid
+flowchart LR
+    subgraph render_method [Renderer::render]
+        A[surface.get_current_texture]
+        B[CommandEncoder 作成]
+
+        subgraph pass1 [1. スプライトパス]
+            B1[begin_render_pass]
+            B2[Clear BG]
+            B3[set_pipeline: sprite]
+            B4[set_bind_group 0,1,2]
+            B5[set_vertex_buffer]
+            B6[draw_indexed]
+        end
+
+        subgraph pass2 [2. 3D パス]
+            C1[pipeline_3d.render]
+            C2[スカイボックスパス]
+            C3[グリッド+ボックスパス]
+        end
+
+        subgraph pass3 [3. egui HUD パス]
+            D1[egui_winit.take_egui_input]
+            D2[egui_ctx.run → ui::render_ui_canvas]
+            D3[egui_renderer.update_buffers]
+            D4[begin_render_pass Load]
+            D5[egui_renderer.render]
+        end
+
+        E[queue.submit]
+        F[output.present]
+    end
+
+    A --> B --> B1 --> B2 --> B3 --> B4 --> B5 --> B6
+    B6 --> C1 --> C2 --> C3
+    C3 --> D1 --> D2 --> D3 --> D4 --> D5 --> E --> F
+```
+
+### DrawCommand → GPU 描画の変換フロー
+
+```mermaid
+flowchart TB
+    subgraph input [RenderFrame.commands]
+        DC[Vec&lt;DrawCommand&gt;]
+    end
+
+    subgraph sprite_path [2D スプライトパス - sprite.wgsl]
+        BUILD[sprite_instance_from_command]
+        SI[Vec&lt;SpriteInstance&gt;]
+        VB[instance_buffer]
+        SP[スプライトパイプライン]
+    end
+
+    subgraph path3d [3D パス - mesh.wgsl]
+        P3D[Pipeline3D::render]
+        SKY[DrawCommand::Skybox → sky_pipeline vs_sky]
+        GRID[GridPlane/GridPlaneVerts → grid_pipeline]
+        BOX[DrawCommand::Box3D → mesh_pipeline]
+    end
+
+    subgraph sprite_commands [2D 対象 DrawCommand]
+        PARTICLE[Particle]
+        OBSTACLE[Obstacle]
+        SPRITERAW[SpriteRaw]
+    end
+
+    subgraph ignored [スプライトパスでは無視]
+        PLAYER[PlayerSprite]
+        ITEM[Item]
+    end
+
+    DC --> BUILD
+    BUILD --> PARTICLE
+    BUILD --> OBSTACLE
+    BUILD --> SPRITERAW
+    BUILD -.->|None| PLAYER
+    BUILD -.->|None| ITEM
+
+    BUILD --> SI --> VB --> SP
+
+    DC --> P3D
+    P3D --> SKY
+    P3D --> GRID
+    P3D --> BOX
+```
+
+### UiCanvas 描画フロー
+
+```mermaid
+flowchart TB
+    subgraph entry [Renderer::render]
+        EGUI_RUN[egui_ctx.run]
+    end
+
+    subgraph ui_render [ui::render_ui_canvas]
+        TOAST[save_toast 更新]
+        PENDING{pending_action?}
+        CANVAS[canvas.nodes 走査]
+        DIALOG[build_load_dialog]
+        SAVE_TOAST_UI[build_save_toast]
+    end
+
+    subgraph render_node [render_node]
+        FLASH[ScreenFlash → render_screen_flash]
+        WT[WorldText → render_world_text]
+        AREA[その他 → render_node_as_area]
+    end
+
+    subgraph render_component [render_component_in_ui]
+        V[VerticalLayout]
+        H[HorizontalLayout]
+        RECT[Rect]
+        TEXT[Text]
+        BTN[Button]
+        PB[ProgressBar]
+        SEP[Separator]
+        SPC[Spacing]
+    end
+
+    EGUI_RUN --> ui_render
+    ui_render --> TOAST
+    TOAST --> PENDING
+    PENDING -->|Some| CANVAS
+    PENDING -->|None| CANVAS
+    CANVAS --> render_node
+    render_node --> FLASH
+    render_node --> WT
+    render_node --> AREA
+    AREA --> render_component
+    render_component --> V
+    render_component --> H
+    render_component --> RECT
+    render_component --> TEXT
+    render_component --> BTN
+    render_component --> PB
+    render_component --> SEP
+    render_component --> SPC
+    V --> render_component
+    H --> render_component
+    RECT --> render_component
+    render_node --> DIALOG
+    render_node --> SAVE_TOAST_UI
+```
+
+### ヘッドレスモード（CI/テスト用）
+
+```mermaid
+flowchart LR
+    subgraph headless [HeadlessRenderer]
+        NEW[HeadlessRenderer::new]
+        RFO[render_frame_offscreen]
+    end
+
+    subgraph new_flow [new]
+        A1[wgpu Instance/Adapter/Device]
+        A2[アトラステクスチャ作成]
+        A3[バインドグループ 0,1,2]
+        A4[sprite.wgsl パイプライン]
+        A5[頂点・インスタンスバッファ]
+    end
+
+    subgraph rfo_flow [render_frame_offscreen]
+        B1[CameraUniform 更新]
+        B2[build_sprite_instances]
+        B3[write_buffer instance]
+        B4[オフスクリーン target_texture]
+        B5[RenderPass 実行]
+        B6[copy_texture_to_buffer]
+        B7[map_async → ピクセル取得]
+        B8[PNG エンコード]
+    end
+
+    NEW --> A1 --> A2 --> A3 --> A4 --> A5
+    RFO --> B1 --> B2 --> B3 --> B4 --> B5 --> B6 --> B7 --> B8
 ```
 
 ---
@@ -221,7 +478,7 @@ CI / テスト向け。`[features] headless = []` で有効化。winit ウィン
 ## 関連ドキュメント
 
 - [アーキテクチャ概要](../../overview.md)
-- [desktop_client](../desktop_client.md)
+- [client_desktop](../client_desktop.md)
 - [desktop/input](./input.md)
 - [nif](../nif.md)（NativeRenderBridge）
 - [mesh-definitions.md](../../mesh-definitions.md) — メッシュ頂点型

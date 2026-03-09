@@ -36,7 +36,7 @@ pub fn run_desktop_loop<B: RenderBridge>(bridge: B, config: WindowConfig) -> Res
 | 呼び出し元 | ブリッジ | 用途 |
 |:---|:---|:---|
 | `nif`（`run_render_thread`） | `NativeRenderBridge` | ローカル NIF モード |
-| `desktop_client` | `NetworkRenderBridge` | Zenoh リモートモード |
+| `client_desktop` | `NetworkRenderBridge` | Zenoh リモートモード |
 
 ---
 
@@ -94,9 +94,179 @@ flowchart TD
 
 ---
 
+## ソースコードレベルの流れ
+
+### モジュール構成とエントリポイント
+
+```mermaid
+flowchart TB
+    subgraph lib_rs [lib.rs]
+        MOD[mod desktop_loop]
+        EXPORT[pub use desktop_loop::run_desktop_loop]
+        MOD --> EXPORT
+    end
+
+    subgraph callers [呼び出し元]
+        DC[client_desktop::main]
+        DC --> |NetworkRenderBridge, WindowConfig| RUN
+    end
+
+    subgraph desktop_loop_rs [desktop_loop.rs]
+        RUN[run_desktop_loop&lt;B: RenderBridge&gt;]
+    end
+
+    EXPORT -.-> RUN
+```
+
+### run_desktop_loop の起動シーケンス
+
+```mermaid
+flowchart TD
+    subgraph run_desktop_loop ["run_desktop_loop (desktop_loop.rs:20-31)"]
+        A[EventLoop::builder]
+        B[cfg windows: builder.with_any_thread]
+        C[event_loop.build]
+        D[DesktopApp::new]
+        E[event_loop.run_app]
+        A --> B
+        B --> C
+        C --> D
+        D --> E
+    end
+
+    subgraph DesktopApp_new ["DesktopApp::new (desktop_loop.rs:44-55)"]
+        N1[bridge, config を保持]
+        N2[window: None, renderer: None]
+        N3[ui_state, cursor_grabbed, suppress_grab_frames 初期化]
+    end
+```
+
+### ApplicationHandler イベントディスパッチ（ソース対応）
+
+```mermaid
+flowchart TD
+    subgraph winit [winit EventLoop]
+        LOOP[event_loop.run_app]
+    end
+
+    subgraph impl_ApplicationHandler ["impl ApplicationHandler for DesktopApp&lt;B&gt;"]
+        DEVICE[device_event]
+        RESUMED[resumed]
+        WINDOW[window_event]
+    end
+
+    LOOP --> DEVICE
+    LOOP --> RESUMED
+    LOOP --> WINDOW
+
+    subgraph device_event ["device_event (L70-76)"]
+        D1{cursor_grabbed?}
+        D2[DeviceEvent::MouseMotion]
+        D3[bridge.on_raw_mouse_motion]
+        D1 -->|Yes| D2
+        D2 --> D3
+    end
+
+    subgraph resumed ["resumed (L79-102)"]
+        R1{window.is_some?}
+        R2[event_loop.create_window]
+        R3[pollster::block_on Renderer::new]
+        R4[window.request_redraw]
+        R1 -->|No| R2
+        R2 --> R3
+        R3 --> R4
+    end
+
+    subgraph window_event ["window_event (L104-184)"]
+        W1[renderer.handle_window_event]
+        W2{event の match}
+    end
+
+    DEVICE --> device_event
+    RESUMED --> resumed
+    WINDOW --> W1
+    W1 --> W2
+```
+
+### WindowEvent 分岐（ソース関数・処理の対応）
+
+```mermaid
+flowchart TD
+    subgraph match_event ["match event (desktop_loop.rs:110-183)"]
+        E1[CloseRequested]
+        E2[Focused]
+        E3[MouseInput]
+        E4[KeyboardInput]
+        E5[Resized]
+        E6[RedrawRequested]
+        E7[その他]
+    end
+
+    E1 --> A1[event_loop.exit]
+    E2 --> A2[set_cursor_grabbed false]
+    E2 --> A2b[bridge.on_focus_lost]
+    E3 --> A3[suppress_grab_frames 確認]
+    E3 --> A3b[set_cursor_grabbed true]
+    E4 --> A4{event.repeat?}
+    A4 -->|No| A4b[bridge.on_raw_key]
+    E5 --> A5[renderer.resize]
+    E6 --> REDRAW
+    E7 --> NOOP["_ => {}"]
+
+    subgraph REDRAW ["RedrawRequested 内 (L148-181)"]
+        R1[bridge.next_frame]
+        R2[frame.cursor_grab で set_cursor_grabbed 同期]
+        R3[renderer.update_instances]
+        R4[renderer.render]
+        R5[on_ui_action]
+        R6[window.request_redraw]
+        R1 --> R2 --> R3 --> R4 --> R5 --> R6
+    end
+```
+
+### RenderBridge トレイトとブリッジ実装
+
+```mermaid
+flowchart LR
+    subgraph desktop_input ["desktop_input (呼び出し側)"]
+        BRIDGE["bridge: B"]
+    end
+
+    subgraph RenderBridge_trait ["desktop_render::window::RenderBridge"]
+        NF[next_frame]
+        OUA[on_ui_action]
+        ORK[on_raw_key]
+        ORM[on_raw_mouse_motion]
+        OFL[on_focus_lost]
+    end
+
+    subgraph implementations [実装]
+        NRB[NetworkRenderBridge]
+    end
+
+    BRIDGE --> RenderBridge_trait
+    RenderBridge_trait --> NRB
+```
+
+### ファイル・関数参照一覧
+
+| ファイル | 行 | 関数/要素 | 役割 |
+|:---|:---|:---|:---|
+| `lib.rs` | 7-9 | `mod desktop_loop`, `pub use run_desktop_loop` | エクスポート |
+| `desktop_loop.rs` | 20-31 | `run_desktop_loop` | エントリ、EventLoop 構築・起動 |
+| `desktop_loop.rs` | 34-42 | `struct DesktopApp<B>` | アプリ状態 |
+| `desktop_loop.rs` | 44-55 | `DesktopApp::new` | 初期化 |
+| `desktop_loop.rs` | 56-67 | `set_cursor_grabbed` | カーソルグラブ切替 |
+| `desktop_loop.rs` | 70-76 | `device_event` | 生マウス移動 |
+| `desktop_loop.rs` | 79-102 | `resumed` | ウィンドウ・Renderer 生成 |
+| `desktop_loop.rs` | 104-184 | `window_event` | ウィンドウイベント分岐 |
+| `desktop_render/window.rs` | 33-39 | `trait RenderBridge` | ブリッジインターフェース |
+
+---
+
 ## 関連ドキュメント
 
 - [アーキテクチャ概要](../../overview.md)
-- [desktop_client](../desktop_client.md)
+- [client_desktop](../client_desktop.md)
 - [desktop/render](./render.md)（RenderBridge トレイト定義）
 - [desktop/input_openxr](./input_openxr.md)（VR 入力）

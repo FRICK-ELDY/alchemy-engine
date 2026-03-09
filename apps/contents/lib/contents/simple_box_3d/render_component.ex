@@ -4,7 +4,7 @@ defmodule Content.SimpleBox3D.RenderComponent do
 
   Phase R-6: SimpleBox3D コンテンツの描画担当。
   Elixir 側のシーン state（プレイヤー・敵の3D座標）から DrawCommand を組み立て、
-  MessagePack エンコード後に Zenoh 経由で desktop_client に配信する。
+  MessagePack エンコード後に Zenoh 経由で client_desktop に配信する。
 
   ## 描画内容
   - `DrawCommand::Skybox` — 空色グラデーション背景

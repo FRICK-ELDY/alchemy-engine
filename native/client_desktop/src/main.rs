@@ -1,8 +1,8 @@
-//! desktop_client: Zenoh 経由でサーバーに接続するデスクトップゲームクライアント
+//! client_desktop: Zenoh 経由でサーバーに接続するデスクトップクライアント（Windows/Linux/macOS）
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 //!
 //! 使用方法:
-//!   desktop_client [--connect CONNECT] [--room ROOM_ID] [--assets PATH]
+//!   client_desktop [--connect CONNECT] [--room ROOM_ID] [--assets PATH]
 //!
 //! 環境変数:
 //!   ZENOH_CONNECT - 接続先（例: tcp/127.0.0.1:7447）。未指定時は zenoh のデフォルト
