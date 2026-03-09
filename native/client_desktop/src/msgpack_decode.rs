@@ -1,7 +1,7 @@
 //! MessagePack バイナリ → RenderFrame 変換
 //!
 //! スキーマ: docs/architecture/messagepack-schema.md, zenoh-protocol-spec.md
-//! nif の decode/msgpack.rs と同一ロジック。desktop_client は nif に依存しないためここに配置。
+//! nif の decode/msgpack.rs と同一ロジック。client_desktop は nif に依存しないためここに配置。
 
 use desktop_render::{
     CameraParams, DrawCommand, MeshDef, MeshVertex, RenderFrame, UiAnchor, UiCanvas, UiComponent,

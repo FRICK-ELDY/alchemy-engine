@@ -1,0 +1,12 @@
+[package]
+name = "client_ios"
+version = "0.1.0"
+edition = "2021"
+description = "iOS 用クライアント。将来実装予定。"
+
+[[bin]]
+name = "client_ios"
+path = "src/main.rs"
+
+[dependencies]
+# TODO: objc, metal 等で実装

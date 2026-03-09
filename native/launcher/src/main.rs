@@ -291,20 +291,20 @@ fn terminate_phoenix_server_sync(mut child: Child, submenu: &Submenu) {
     submenu.set_text("Phoenix Server : OFF");
 }
 
-/// desktop_client の exe パスを検索。release を優先、なければ debug。
-fn find_desktop_client_exe(project_root: &Path) -> Option<PathBuf> {
+/// client_desktop の exe パスを検索。release を優先、なければ debug。
+fn find_client_desktop_exe(project_root: &Path) -> Option<PathBuf> {
     let native_dir = project_root.join("native");
     let release = native_dir
         .join("target")
         .join("release")
-        .join(exe_name("desktop_client"));
+        .join(exe_name("client_desktop"));
     if release.is_file() {
         return Some(release);
     }
     let debug = native_dir
         .join("target")
         .join("debug")
-        .join(exe_name("desktop_client"));
+        .join(exe_name("client_desktop"));
     if debug.is_file() {
         return Some(debug);
     }
@@ -320,9 +320,9 @@ fn exe_name(base: &str) -> String {
     base.to_string()
 }
 
-/// desktop_client を起動。zenohd と Phoenix Server のポート確認後に spawn。
+/// client_desktop を起動。zenohd と Phoenix Server のポート確認後に spawn。
 /// 成功時は Ok(Child)、失敗時は Err(msg)。
-fn spawn_desktop_client(project_root: &Path) -> Result<Child, String> {
+fn spawn_client_desktop(project_root: &Path) -> Result<Child, String> {
     if !wait_for_port(ZENOHD_PORT, PORT_WAIT_TIMEOUT, false) {
         return Err(format!(
             "Zenoh Router (port {}) did not respond within {} seconds.\n\nStart Zenoh Router first.",
@@ -346,12 +346,12 @@ fn spawn_desktop_client(project_root: &Path) -> Result<Child, String> {
         return Err("native/Cargo.toml not found. Project structure may be invalid. Run the launcher from the project root.".to_string());
     }
 
-    if let Some(exe) = find_desktop_client_exe(project_root) {
+    if let Some(exe) = find_client_desktop_exe(project_root) {
         Command::new(exe)
             .args(["--connect", connect, "--room", room])
             .current_dir(project_root)
             .spawn()
-            .map_err(|e| format!("Failed to start desktop_client: {}", e))
+            .map_err(|e| format!("Failed to start client_desktop: {}", e))
     } else {
         let manifest_str = manifest.to_string_lossy();
         #[cfg(windows)]
@@ -364,7 +364,7 @@ fn spawn_desktop_client(project_root: &Path) -> Result<Child, String> {
                     "--manifest-path",
                     &manifest_str,
                     "-p",
-                    "desktop_client",
+                    "client_desktop",
                     "--",
                     "--connect",
                     connect,
@@ -374,7 +374,7 @@ fn spawn_desktop_client(project_root: &Path) -> Result<Child, String> {
                 .current_dir(project_root)
                 .env("PATH", path_with_cargo_bin())
                 .spawn()
-                .map_err(|e| format!("Failed to run desktop_client (cargo run): {}", e))
+                .map_err(|e| format!("Failed to run client_desktop (cargo run): {}", e))
         }
         #[cfg(not(windows))]
         {
@@ -384,7 +384,7 @@ fn spawn_desktop_client(project_root: &Path) -> Result<Child, String> {
                     "--manifest-path",
                     &manifest_str,
                     "-p",
-                    "desktop_client",
+                    "client_desktop",
                     "--",
                     "--connect",
                     connect,
@@ -393,7 +393,7 @@ fn spawn_desktop_client(project_root: &Path) -> Result<Child, String> {
                 ])
                 .current_dir(project_root)
                 .spawn()
-                .map_err(|e| format!("Failed to run desktop_client (cargo run): {}", e))
+                .map_err(|e| format!("Failed to run client_desktop (cargo run): {}", e))
         }
     }
 }
@@ -842,7 +842,7 @@ fn main() {
                                     return;
                                 }
                             };
-                            match spawn_desktop_client(&project_root) {
+                            match spawn_client_desktop(&project_root) {
                                 Ok(_child) => {
                                     // Child を意図的にドロップ。Unix では init に reparent され、
                                     // Windows では親が終了しても子は継続する。トレイでは管理しない。

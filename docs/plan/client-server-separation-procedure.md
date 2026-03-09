@@ -235,7 +235,7 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 
 #### 2.0 構成方針（desktop_ プレフィックス）
 
-クライアント側クレートは `desktop_` プレフィックスで命名。フェーズ 2 では `desktop_client` のみを追加。将来的に `desktop_audio`, `desktop_input`, `desktop_render` 等へリネームする際の一貫性を確保。
+クライアント側クレートは `desktop_` プレフィックスで命名。フェーズ 2 では `client_desktop` のみを追加。将来的に `desktop_audio`, `desktop_input`, `desktop_render` 等へリネームする際の一貫性を確保。
 
 #### 2.2 RenderBridge のネットワーク版（参照用）
 
@@ -268,7 +268,7 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 
 #### 4.1 クライアント exe ビルド
 
-- [ ] `cargo build --release -p desktop_client` で Windows exe を生成
+- [ ] `cargo build --release -p client_desktop` で Windows exe を生成
 - [ ] CI にクライアントビルドを追加
 
 #### 4.2 アセット・設定
@@ -322,7 +322,7 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 
 ### zenohd トレイインジケーター
 
-**課題**: desktop_client 終了後も zenohd は残り続ける。ユーザーが気づかず PC リソースを消費する。
+**課題**: client_desktop 終了後も zenohd は残り続ける。ユーザーが気づかず PC リソースを消費する。
 
 **対応**: → [improvement-plan.md I-G](./improvement-plan.md#i-g-ランチャーlauncherの課題) に統合。Discord 風トレイランチャーで zenohd / HL-Server / Client を一括管理。
 

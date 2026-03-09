@@ -2,7 +2,7 @@
 
 ## 概要
 
-`launcher` はトレイアイコンを表示し、メニューから **zenohd**・**Phoenix Server（mix run）**・**desktop_client** を起動・終了するデスクトップアプリケーションです。Check for Update で GitHub releases を確認し、acknowledgements で謝辞・ライセンスを表示します。
+`launcher` はトレイアイコンを表示し、メニューから **zenohd**・**Phoenix Server（mix run）**・**client_desktop** を起動・終了するデスクトップアプリケーションです。Check for Update で GitHub releases を確認し、acknowledgements で謝辞・ライセンスを表示します。
 
 - **パス**: `native/launcher/`
 - **依存**: tao, tray-icon, kill_tree, reqwest, rfd, semver
@@ -16,7 +16,7 @@ graph TB
     LAUNCHER[launcher]
     LAUNCHER -->|起動| ZENOHD[zenohd]
     LAUNCHER -->|起動| MIX[mix run]
-    LAUNCHER -->|起動| DCLIENT[desktop_client]
+    LAUNCHER -->|起動| DCLIENT[client_desktop]
 ```
 
 launcher は physics / nif 等のゲームクレートに依存せず、独立したバイナリです。
@@ -41,7 +41,7 @@ flowchart TD
 
 ## デフォルト起動順序
 
-ゲームをプレイするには **zenohd → Phoenix Server → desktop_client** の順で起動する。Client Run は zenohd と Phoenix のポート応答を確認してから desktop_client を起動する。
+ゲームをプレイするには **zenohd → Phoenix Server → client_desktop** の順で起動する。Client Run は zenohd と Phoenix のポート応答を確認してから client_desktop を起動する。
 
 ## メニュー構成
 
@@ -51,7 +51,7 @@ flowchart TD
 | acknowledgements | 謝辞・ライセンステキスト表示 |
 | Zenoh Router : Run / Quit | zenohd の起動・終了 |
 | Phoenix Server : Run / Quit | `mix run --no-halt` の起動・終了 |
-| Client Run | zenohd と Phoenix のポート応答確認後に desktop_client 起動 |
+| Client Run | zenohd と Phoenix のポート応答確認後に client_desktop 起動 |
 | Quit | zenohd / Phoenix を終了し、アプリ終了 |
 
 ---
@@ -70,12 +70,12 @@ flowchart TD
 
 ---
 
-## desktop_client 起動条件
+## client_desktop 起動条件
 
 1. zenohd がポート 7447 で応答
 2. Phoenix Server がポート 4000 で応答
 3. `native/Cargo.toml` が存在
-4. desktop_client exe を `native/target/release/` または `debug/` から検出。なければ `cargo run -p desktop_client` で起動
+4. client_desktop exe を `native/target/release/` または `debug/` から検出。なければ `cargo run -p client_desktop` で起動
 
 起動引数: `--connect tcp/127.0.0.1:7447 --room main`
 
@@ -99,4 +99,4 @@ flowchart TD
 ## 関連ドキュメント
 
 - [アーキテクチャ概要](../overview.md)
-- [desktop_client](./desktop_client.md)
+- [client_desktop](./client_desktop.md)

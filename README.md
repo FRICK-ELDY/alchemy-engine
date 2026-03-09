@@ -75,7 +75,7 @@ mix compile
 mix run --no-halt
 ```
 
-`mix run` 単体ではウィンドウは開かず、サーバーのみ起動します。ゲームをプレイするには `zenohd` + `mix run` + `desktop_client` の 3 プロセスが必要です。
+`mix run` 単体ではウィンドウは開かず、サーバーのみ起動します。ゲームをプレイするには `zenohd` + `mix run` + `client_desktop` の 3 プロセスが必要です。
 
 **開発者向け**: 起動手順の詳細・ランチャー・品質保証コマンドなどは [development.md](./development.md) を参照してください。
 

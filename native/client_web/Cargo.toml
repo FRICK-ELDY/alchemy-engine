@@ -1,0 +1,11 @@
+[package]
+name = "client_web"
+version = "0.1.0"
+edition = "2021"
+description = "Web 用クライアント（WASM 等）。将来実装予定。"
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+# TODO: wasm-bindgen, web-sys 等で実装

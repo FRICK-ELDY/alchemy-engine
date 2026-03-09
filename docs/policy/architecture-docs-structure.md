@@ -22,7 +22,7 @@ docs/architecture/
 │   ├── nif/                # サーバー内 Rust
 │   │   ├── physics.md
 │   │   └── audio.md
-│   ├── desktop_client.md   # クライアント exe
+│   ├── client_desktop.md   # クライアント exe
 │   ├── desktop/            # クライアント側
 │   │   ├── input.md
 │   │   ├── input_openxr.md

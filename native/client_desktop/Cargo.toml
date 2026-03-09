@@ -1,11 +1,11 @@
 [package]
-name = "desktop_client"
+name = "client_desktop"
 version = "0.1.0"
 edition = "2021"
-description = "デスクトップ用ゲームクライアント（Zenoh 経由でサーバーに接続）"
+description = "デスクトップ（Windows/Linux/macOS）用クライアント（Zenoh 経由でサーバーに接続）"
 
 [[bin]]
-name = "desktop_client"
+name = "client_desktop"
 path = "src/main.rs"
 
 [dependencies]

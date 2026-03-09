@@ -2,7 +2,7 @@
 
 ## 概要
 
-`nif` クレートは Elixir と Rust のブリッジです。Rustler NIF のエントリポイント・ゲームループ制御・セーブ/ロードを担当します。描画は Zenoh 経由で `desktop_client` に委譲するため、nif は [physics](./nif/physics.md) と [audio](./nif/audio.md) のみに依存します。
+`nif` クレートは Elixir と Rust のブリッジです。Rustler NIF のエントリポイント・ゲームループ制御・セーブ/ロードを担当します。描画は Zenoh 経由で `client_desktop` に委譲するため、nif は [physics](./nif/physics.md) と [audio](./nif/audio.md) のみに依存します。
 
 ---
 
@@ -129,7 +129,7 @@ NIF ローダー。パニックフック（debug 時）・GameWorld / GameLoopCo
 | `pause_physics(control)` | 物理演算を一時停止 |
 | `resume_physics(control)` | 物理演算を再開 |
 
-描画は Elixir の RenderComponent が `FrameBroadcaster.put` で Zenoh へ配信し、`desktop_client` が受信する。nif は描画系に依存しない。
+描画は Elixir の RenderComponent が `FrameBroadcaster.put` で Zenoh へ配信し、`client_desktop` が受信する。nif は描画系に依存しない。
 
 ---
 
@@ -146,5 +146,5 @@ NIF ローダー。パニックフック（debug 時）・GameWorld / GameLoopCo
 ## 関連ドキュメント
 
 - [アーキテクチャ概要](../overview.md)
-- [nif/physics](./nif/physics.md) / [audio](./nif/audio.md) / [desktop_client](./desktop_client.md)
+- [nif/physics](./nif/physics.md) / [audio](./nif/audio.md) / [client_desktop](./client_desktop.md)
 - [Elixir: core](../elixir/core.md)
