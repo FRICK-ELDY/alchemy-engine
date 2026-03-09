@@ -1,6 +1,6 @@
 # AlchemyEngine — 提案（0点）詳細一覧
 
-> 最終更新: 2026-03-07（evaluation-2026-03-07 に基づく）
+> 最終更新: 2026-03-10（evaluation-2026-03-10 再評価に基づく）
 
 ## 採点基準
 
@@ -88,7 +88,26 @@
 
 ---
 
-## native/desktop_render — 描画パイプライン
+## native/shared — 共通データ
+
+### 💡 提案
+
+- **predict_input の実装** `0`
+  > クライアント予測（レイテンシ対策）のため、過去の入力履歴と delta_ms から補間した入力を返す。network 連携後に追加予定とコメントされている。
+  > 参考: predict.rs の「詳細な実装は network 連携後に追加予定」
+
+- **Store の実装** `0`
+  > スナップショットの過去・現在ペアを保持し、補間用のデータを提供する。network 連携後に追加予定とコメントされている。
+
+## native/xr — XR層
+
+### 💡 提案
+
+- **OpenXR 統合の実装** `0`
+  > `run_openxr_loop` に OpenXR インスタンス・ヘッドレスセッション作成、`xrLocateSpace` で head/controller pose 取得、ポーリングループで `on_event` を呼ぶ実装を追加する。XrInputEvent 型は既に定義済み。
+  > 参考: lib.rs の TODO コメント
+
+## native/render — 描画パイプライン
 
 ### 💡 提案
 

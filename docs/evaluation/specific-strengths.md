@@ -1,6 +1,6 @@
 # AlchemyEngine — プラス点 詳細一覧
 
-> 最終更新: 2026-03-07（evaluation-2026-03-07 に基づく）
+> 最終更新: 2026-03-10（evaluation-2026-03-10 に基づく）
 
 ## 採点基準
 
@@ -106,47 +106,75 @@
 
 ---
 
-## native/physics — ECS・SoA・SIMD
+## native/shared — 共通データ・Elixir 契約
+
+### ✅ プラス点
+
+- **#[repr(C)] + Pod/Zeroable による Zero-Copy 設計** `+2`
+  > `Vec2`・`SnapshotHeader` が bytemuck で Zero-Copy 可能。ClientInfo.current() で環境情報を取得。interp（lerp, lerp_vec2）が明確に実装されている。
+  > 対象ファイル: `native/shared/src/types.rs`, `native/shared/src/interp.rs`
+
+---
+
+## native/network — Zenoh 通信層
+
+### ✅ プラス点
+
+- **MessagePack デコードの網羅性** `+4`
+  > DrawCommand, CameraParams, UiCanvas, MeshDef, UiComponent 等を MessagePack から RenderFrame へ変換。UiAnchor の未知値フォールバック、VertexWire 変換が実装されている。
+  > 対象ファイル: `native/network/src/msgpack_decode.rs`
+
+- **NetworkRenderBridge による RenderBridge 実装** `+2`
+  > Zenoh 購読スレッド・frame_buffer・keys_held 管理。put_drop で CongestionControl::Drop。ClientInfo の発行。
+  > 対象ファイル: `native/network/src/network_render_bridge.rs`
+
+- **platform 切り替え（desktop / web）** `+2`
+  > `#[cfg(not(target_family = "wasm"))]` で desktop、`#[cfg(target_family = "wasm")]` で web を切り替え。ClientSession の共通インターフェース。
+  > 対象ファイル: `native/network/src/platform/mod.rs`
+
+---
+
+## native/nif（physics 含む）— NIF・ECS・SoA・SIMD
 
 ### ✅ プラス点
 
 - **全エンティティで統一されたSoA構造** `+5`
   > `EnemyWorld`・`BulletWorld`・`ParticleWorld`・`ItemWorld` の全エンティティ種別でSoA（Structure of Arrays）が統一されている。`alive: Vec<u8>` が `0xFF`/`0x00` の2値を取る設計はSSE2 SIMDマスクとして直接ロードできるよう意図されている。
-  > 対象ファイル: `native/physics/src/world/`
+  > 対象ファイル: `native/nif/src/physics/world/`
 
 - **SIMD SSE2 + rayon 並列 + スカラーフォールバックの3段階戦略** `+5`
   > `chase_ai.rs` に `#[cfg(target_arch = "x86_64")]` でSSE2 SIMD版・`RAYON_THRESHOLD` でrayon並列版・端数処理のスカラーフォールバックが実装されている。unsafeブロックに安全性根拠コメントが充実しており、SIMD/スカラー一致テストも完備。
-  > 対象ファイル: `native/physics/src/game_logic/chase_ai.rs`
+  > 対象ファイル: `native/nif/src/physics/game_logic/chase_ai.rs`
 
 - **free_list O(1) スポーン/キル（spawn の Vec<usize> 返却）** `+4`
   > `spawn` は `Vec<usize>` で使用スロットを返し、free_list 再利用スロットの誤特定リスクを排除。全エンティティ種別で統一された O(1) 設計。
-  > 対象ファイル: `native/physics/src/world/enemy.rs` 等
+  > 対象ファイル: `native/nif/src/physics/world/enemy.rs` 等
 
 - **空間ハッシュ衝突検出（FxHashMap・ゼロアロケーション）** `+4`
   > `FxHashMap`（rustc-hash）による高速な空間ハッシュと、`query_nearby_into` でバッファ再利用。動的・静的の分離・2段階フィルタリングが実装されている。
-  > 対象ファイル: `native/physics/src/physics/spatial_hash.rs`
+  > 対象ファイル: `native/nif/src/physics/physics/spatial_hash.rs`
 
 - **決定論的 LCG 乱数** `+3`
   > Knuth LCG の定番定数を使用し、`wrapping_mul/add` で安全なオーバーフロー処理。再現性テストも完備。
-  > 対象ファイル: `native/physics/src/physics/rng.rs`
+  > 対象ファイル: `native/nif/src/physics/physics/rng.rs`
 
 ---
 
-## native/desktop_render — 描画パイプライン
+## native/render — 描画パイプライン
 
 ### ✅ プラス点
 
 - **wgpu インスタンス描画（1 draw_indexed で全スプライト）** `+4`
   > `#[repr(C)] + bytemuck::Pod` でGPUバッファへのゼロコピー転送。全スプライトを1回の `draw_indexed` で描画するドローコール最小化設計。
-  > 対象ファイル: `native/desktop_render/src/renderer/mod.rs`
+  > 対象ファイル: `native/render/src/renderer/mod.rs`
 
 - **CI 用ヘッドレスレンダラー** `+4`
   > `headless.rs` でオフスクリーンレンダラーを実装。CIでGPUレンダリングをテストできる設計は個人プロジェクトでは極めて珍しい。
-  > 対象ファイル: `native/desktop_render/src/headless.rs`
+  > 対象ファイル: `native/render/src/headless.rs`
 
 - **サブフレーム補間（lerp）のロック外計算** `+3`
   > `prev_tick_ms`/`curr_tick_ms` の差分でフレーム間の経過割合 α を計算し、`clamp(0.0, 1.0)` でオーバーシュートを防止。60fps物理と高フレームレート描画を分離。
-  > 対象ファイル: `native/nif/src/render_snapshot.rs`
+  > 対象ファイル: `native/nif/src/physics/world/render_snapshot.rs`
 
 ---
 
@@ -161,6 +189,40 @@
 - **define_assets! マクロによる SSoT** `+2`
   > ID・パス・埋め込みデータを一箇所に定義。`include_bytes!` でコンパイル時バイナリ埋め込みと実行時ロードの2段階フォールバック。
   > 対象ファイル: `native/audio/src/asset/mod.rs`
+
+---
+
+## native/window — 窓層・イベント管理
+
+### ✅ プラス点
+
+- **イベントループ所有権と RenderBridge 抽象化** `+3`
+  > desktop_loop が winit ApplicationHandler を実装し、イベントループの所有権を持つ。RenderBridge トレイトで render と分離。カーソルグラブ制御。
+  > 対象ファイル: `native/window/src/desktop_loop.rs`
+
+---
+
+## native/xr — XR層
+
+### ✅ プラス点
+
+- **XrInputEvent 型設計の明確さ** `+1`
+  > HeadPose, ControllerPose, ControllerButton, TrackerPose の enum 定義。Hand, ControllerButton の列挙。openxr は optional feature。
+  > 対象ファイル: `native/xr/src/lib.rs`
+
+---
+
+## native/app — 統合層
+
+### ✅ プラス点
+
+- **デスクトップエントリの整理** `+2`
+  > main.rs で parse_args, GAME_ASSETS_PATH, NetworkRenderBridge, run_desktop_loop を組み立て。--connect, --room, --assets の引数解析。
+  > 対象ファイル: `native/app/src/main.rs`
+
+- **環境変数・アセットローダーの統合** `+2`
+  > ZENOH_CONNECT, GAME_ASSETS_PATH の設定。loader_for_assets, load_atlas, load_shaders によるアセット取得。
+  > 対象ファイル: `native/app/src/main.rs`
 
 ---
 
@@ -208,9 +270,9 @@
 
 ### ✅ プラス点
 
-- **bin/ci.bat と GitHub Actions の設計思想の一致** `+3`
-  > ci.bat が GitHub Actions の各ジョブ（A/B/C/D）と1:1対応。`check` オプションでフォーマット+Lint のみの軽量実行も可能。`cargo fmt` / `cargo clippy -D warnings` / `mix compile --warnings-as-errors` を一括実行。
-  > 対象ファイル: `bin/ci.bat`, `.github/workflows/ci.yml`
+- **mix alchemy.ci と GitHub Actions の設計思想の一致** `+3`
+  > `mix alchemy.ci` が GitHub Actions の各ジョブ（A/B/C/D）と1:1対応。`check` オプションでフォーマット+Lint のみの軽量実行も可能。cargo fmt / clippy / mix compile / format / credo / test を一括実行し、エラーゼロで通過することを確認済み。
+  > 対象ファイル: `apps/core/lib/mix/tasks/alchemy.ci.ex`, `.github/workflows/ci.yml`
 
 - **ベンチマーク回帰テスト（main push 時）** `+3`
   > bench-regression ジョブが main push 時に `cargo bench -p physics` を実行し、前回比+10%超でCIをブロック。
