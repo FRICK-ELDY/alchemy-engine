@@ -1,7 +1,7 @@
-use crate::constants::{MAX_ENEMIES, WEAPON_SEARCH_RADIUS};
-use crate::entity_params::FirePattern;
-use crate::game_logic::{find_nearest_enemy_spatial, find_nearest_enemy_spatial_excluding};
-use crate::world::{
+use crate::physics::constants::{MAX_ENEMIES, WEAPON_SEARCH_RADIUS};
+use crate::physics::entity_params::FirePattern;
+use crate::physics::game_logic::{find_nearest_enemy_spatial, find_nearest_enemy_spatial_excluding};
+use crate::physics::world::{
     FrameEvent, GameWorldInner, BULLET_KIND_LIGHTNING, BULLET_KIND_WHIP, DEFAULT_BULLET_HIT_COLOR,
     DEFAULT_PIERCING_HIT_COLOR,
 };
@@ -112,7 +112,7 @@ fn fire_aimed(
                 dmg,
                 w.bullet_lifetime,
                 false,
-                crate::world::BULLET_KIND_NORMAL,
+                crate::physics::world::BULLET_KIND_NORMAL,
                 hit_color,
             );
         }
@@ -137,7 +137,7 @@ fn fire_fixed_up(
         dmg,
         w.bullet_lifetime,
         false,
-        crate::world::BULLET_KIND_NORMAL,
+        crate::physics::world::BULLET_KIND_NORMAL,
         hit_color,
     );
     w.weapon_slots_input[si].cooldown_timer = cd;
@@ -182,7 +182,7 @@ fn fire_radial(
             dmg,
             w.bullet_lifetime,
             false,
-            crate::world::BULLET_KIND_NORMAL,
+            crate::physics::world::BULLET_KIND_NORMAL,
             hit_color,
         );
     }
@@ -342,7 +342,7 @@ fn fire_piercing(
             dmg,
             w.bullet_lifetime,
             true,
-            crate::world::BULLET_KIND_FIREBALL,
+            crate::physics::world::BULLET_KIND_FIREBALL,
             hit_color,
         );
         w.weapon_slots_input[si].cooldown_timer = cd;

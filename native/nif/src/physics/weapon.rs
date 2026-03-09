@@ -4,7 +4,7 @@
 //! Phase 3-A: WeaponKind enum を除去。
 //! パラメータは EntityParamTables 経由で参照する。
 
-use crate::entity_params::WeaponParams;
+use crate::physics::entity_params::WeaponParams;
 
 pub const MAX_WEAPON_LEVEL: u32 = 8;
 pub const MAX_WEAPON_SLOTS: usize = 6;
@@ -45,7 +45,7 @@ impl WeaponSlot {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::entity_params::{EntityParamDefaults, EntityParamTables, FirePattern, WeaponParams};
+    use crate::physics::entity_params::{EntityParamDefaults, EntityParamTables, FirePattern, WeaponParams};
 
     fn make_test_tables() -> EntityParamTables {
         EntityParamTables {

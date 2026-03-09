@@ -1,4 +1,4 @@
-use crate::world::{FrameEvent, GameWorldInner};
+use crate::physics::world::{FrameEvent, GameWorldInner};
 
 pub(crate) fn update_projectiles_and_enemy_hits(w: &mut GameWorldInner, dt: f32) {
     // ── 弾丸を移動・寿命更新 ─────────────────────────────────────
@@ -20,7 +20,7 @@ pub(crate) fn update_projectiles_and_enemy_hits(w: &mut GameWorldInner, dt: f32)
         w.collision.query_static_nearby_into(
             bx,
             by,
-            crate::constants::BULLET_RADIUS,
+            crate::physics::constants::BULLET_RADIUS,
             &mut w.obstacle_query_buf,
         );
         if !w.obstacle_query_buf.is_empty() {
@@ -69,7 +69,7 @@ pub(crate) fn update_projectiles_and_enemy_hits(w: &mut GameWorldInner, dt: f32)
                         w.params.effective_default_particle_color(),
                     )
                 });
-            let hit_r = crate::constants::BULLET_RADIUS + enemy_r;
+            let hit_r = crate::physics::constants::BULLET_RADIUS + enemy_r;
             let ex = w.enemies.positions_x[ei] + enemy_r;
             let ey = w.enemies.positions_y[ei] + enemy_r;
             let ddx = bx - ex;

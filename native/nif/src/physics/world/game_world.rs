@@ -5,11 +5,11 @@ use super::{
     BulletWorld, EnemyWorld, ParticleWorld, PlayerState, RenderSnapshotBuffer,
     SpecialEntitySnapshot,
 };
-use crate::entity_params::EntityParamTables;
-use crate::item::ItemWorld;
-use crate::physics::rng::SimpleRng;
-use crate::physics::spatial_hash::CollisionWorld;
-use crate::weapon::WeaponSlot;
+use crate::physics::entity_params::EntityParamTables;
+use crate::physics::item::ItemWorld;
+use crate::physics::physics::rng::SimpleRng;
+use crate::physics::physics::spatial_hash::CollisionWorld;
+use crate::physics::weapon::WeaponSlot;
 use std::sync::RwLock;
 
 use super::FrameEvent;
@@ -243,8 +243,6 @@ impl GameWorldInner {
 /// ゲームワールド（RwLock で保護された内部状態）
 pub struct GameWorld(pub RwLock<GameWorldInner>);
 
-#[cfg(feature = "nif")]
 impl rustler::Resource for GameWorld {}
 
-#[cfg(feature = "nif")]
 impl rustler::Resource for super::game_loop_control::GameLoopControl {}

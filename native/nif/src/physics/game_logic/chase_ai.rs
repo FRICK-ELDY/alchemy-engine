@@ -1,8 +1,8 @@
 //! Path: native/physics/src/game_logic/chase_ai.rs
 //! Summary: 敵 Chase AI と最近接探索（find_nearest_*）
 
-use crate::physics::spatial_hash::CollisionWorld;
-use crate::world::EnemyWorld;
+use crate::physics::physics::spatial_hash::CollisionWorld;
+use crate::physics::world::EnemyWorld;
 use rayon::prelude::*;
 
 /// 最近接の生存敵インデックスを返す
@@ -222,8 +222,8 @@ pub fn update_chase_ai_simd(enemies: &mut EnemyWorld, player_x: f32, player_y: f
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::entity_params::EnemyParams;
-    use crate::world::EnemyWorld;
+    use crate::physics::entity_params::EnemyParams;
+    use crate::physics::world::EnemyWorld;
 
     fn make_enemy_params() -> EnemyParams {
         EnemyParams {

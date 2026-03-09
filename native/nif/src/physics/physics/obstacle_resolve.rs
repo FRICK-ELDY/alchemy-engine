@@ -2,7 +2,7 @@
 //! Summary: プレイヤーと障害物の衝突解決・押し出し処理
 
 use super::spatial_hash::CollisionWorld;
-use crate::constants::PLAYER_RADIUS;
+use crate::physics::constants::PLAYER_RADIUS;
 
 /// プレイヤーが障害物と重なっている場合に押し出す（複数障害物対応）
 pub fn resolve_obstacles_player(
@@ -39,7 +39,7 @@ pub fn resolve_obstacles_player(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::physics::spatial_hash::CollisionWorld;
+    use crate::physics::physics::spatial_hash::CollisionWorld;
 
     #[test]
     fn player_pushed_out_of_obstacle() {

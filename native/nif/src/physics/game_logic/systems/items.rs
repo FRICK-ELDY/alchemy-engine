@@ -1,5 +1,5 @@
-use crate::item::ItemKind;
-use crate::world::{FrameEvent, GameWorldInner};
+use crate::physics::item::ItemKind;
+use crate::physics::world::{FrameEvent, GameWorldInner};
 
 /// 1.2.4: アイテム更新（磁石エフェクト + 自動収集）
 pub(crate) fn update_items(w: &mut GameWorldInner, dt: f32, px: f32, py: f32) {

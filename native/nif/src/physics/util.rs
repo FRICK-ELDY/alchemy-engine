@@ -1,8 +1,8 @@
 //! Path: native/physics/src/util.rs
 //! Summary: 経験値計算・ウェーブ設定・スポーン位置などの共通ユーティリティ
 
-use crate::constants::WAVES;
-use crate::physics::rng::SimpleRng;
+use crate::physics::constants::WAVES;
+use crate::physics::physics::rng::SimpleRng;
 
 /// 経過時間に応じた現在のウェーブ設定を返す (interval_secs, count_per_tick)
 #[allow(dead_code)] // main スタンドアロンのみで使用

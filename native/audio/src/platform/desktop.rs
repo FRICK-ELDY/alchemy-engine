@@ -8,6 +8,5 @@ use rodio::{OutputStream, OutputStreamBuilder};
 ///
 /// 失敗時は None（デバイス未検出・権限不足等）。
 pub fn open_default_stream() -> Option<OutputStream> {
-    let (stream, _handle) = OutputStreamBuilder::open_default_stream().ok()?;
-    Some(stream)
+    OutputStreamBuilder::open_default_stream().ok()
 }

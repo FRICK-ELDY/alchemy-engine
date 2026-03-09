@@ -1,8 +1,8 @@
 //! Path: native/physics/src/world/enemy.rs
 //! Summary: 敵 SoA（EnemyWorld）と EnemySeparation の実装
 
-use crate::entity_params::EnemyParams;
-use crate::physics::separation::EnemySeparation;
+use crate::physics::entity_params::EnemyParams;
+use crate::physics::physics::separation::EnemySeparation;
 
 /// 敵 SoA（Structure of Arrays）
 #[derive(Clone)]
@@ -112,7 +112,7 @@ impl EnemyWorld {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::entity_params::EnemyParams;
+    use crate::physics::entity_params::EnemyParams;
 
     fn default_params() -> EnemyParams {
         EnemyParams {

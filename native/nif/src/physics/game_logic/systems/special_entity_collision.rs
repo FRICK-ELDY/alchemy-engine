@@ -4,8 +4,8 @@
 //! Elixir SSoT 移行後: Rust は永続状態を持たず、スナップショットで衝突のみ判定。
 //! SpecialEntityDamaged / PlayerDamaged を発行。SpecialEntityDefeated は発行しない。
 
-use crate::constants::{BULLET_RADIUS, PLAYER_RADIUS};
-use crate::world::{FrameEvent, GameWorldInner};
+use crate::physics::constants::{BULLET_RADIUS, PLAYER_RADIUS};
+use crate::physics::world::{FrameEvent, GameWorldInner};
 
 /// 特殊エンティティスナップショットと弾丸・プレイヤーとの衝突を判定する。
 /// HP 減算・撃破判定は Elixir が行う。

@@ -11,12 +11,12 @@ use super::systems::items::update_items;
 use super::systems::projectiles::update_projectiles_and_enemy_hits;
 use super::systems::special_entity_collision::collide_special_entity_snapshot;
 use super::systems::weapons::update_weapon_attacks;
-use crate::constants::{
+use crate::physics::constants::{
     ENEMY_SEPARATION_FORCE, ENEMY_SEPARATION_RADIUS, FRAME_BUDGET_MS, PLAYER_RADIUS, PLAYER_SIZE,
 };
-use crate::physics::obstacle_resolve;
-use crate::physics::separation::apply_separation;
-use crate::world::{FrameEvent, GameWorldInner};
+use crate::physics::physics::obstacle_resolve;
+use crate::physics::physics::separation::apply_separation;
+use crate::physics::world::{FrameEvent, GameWorldInner};
 
 /// 物理ステップの内部実装（NIF と Rust ゲームループスレッドの両方から呼ぶ）
 pub fn physics_step_inner(w: &mut GameWorldInner, delta_ms: f64) {

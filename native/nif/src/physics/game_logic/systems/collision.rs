@@ -1,4 +1,4 @@
-use crate::world::GameWorldInner;
+use crate::physics::world::GameWorldInner;
 
 /// 1.5.2: 敵が障害物と重なっている場合に押し出す（Ghost はスキップ）
 pub(crate) fn resolve_obstacles_enemy(w: &mut GameWorldInner) {

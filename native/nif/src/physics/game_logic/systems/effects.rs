@@ -1,4 +1,4 @@
-use crate::world::GameWorldInner;
+use crate::physics::world::GameWorldInner;
 
 pub(crate) fn update_score_popups(w: &mut GameWorldInner, dt: f32) {
     for (_, _, _, lt) in w.score_popups.iter_mut() {

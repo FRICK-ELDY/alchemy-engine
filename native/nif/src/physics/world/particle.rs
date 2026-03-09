@@ -1,7 +1,7 @@
 //! Path: native/physics/src/world/particle.rs
 //! Summary: パーティクル SoA（ParticleWorld）
 
-use crate::physics::rng::SimpleRng;
+use crate::physics::physics::rng::SimpleRng;
 
 /// パーティクル SoA（Structure of Arrays）
 pub struct ParticleWorld {
