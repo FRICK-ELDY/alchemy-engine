@@ -38,9 +38,9 @@ jobs:
           -- -D warnings
 
   # ─────────────────────────────────────────────
-  # [B] Rust: ユニットテスト（physics のみ）
+  # [B] Rust: ユニットテスト（nif/physics）
   #   render / audio は GPU・音声デバイスが必要なため除外
-  #   nif は BEAM VM が必要なため [D] elixir-test でカバー
+  #   nif の physics モジュール内テストを実行
   # ─────────────────────────────────────────────
   rust-test:
     name: "Rust — unit tests"
@@ -54,8 +54,8 @@ jobs:
         with:
           workspaces: native
 
-      - name: cargo test (physics)
-        run: cargo test --manifest-path native/Cargo.toml -p physics
+      - name: cargo test (nif/physics)
+        run: cargo test --manifest-path native/Cargo.toml -p nif
 
   # ─────────────────────────────────────────────
   # [C] Elixir: コンパイル + フォーマット + Credo
@@ -160,7 +160,7 @@ jobs:
         run: >
           cargo bench
           --manifest-path native/Cargo.toml
-          -p physics
+          -p nif
           -- --output-format bencher
           | tee bench_output.txt
 

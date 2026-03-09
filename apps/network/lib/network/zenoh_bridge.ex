@@ -44,12 +44,17 @@ defmodule Network.ZenohBridge do
     case Zenohex.Session.open(zenoh_config()) do
       {:ok, session_id} ->
         ensure_client_info_table()
+
         # movement / action / client_info の subscriber を登録（自プロセスにメッセージ配送）
         {:ok, _mov} = Zenohex.Session.declare_subscriber(session_id, @movement_selector, self())
         {:ok, _act} = Zenohex.Session.declare_subscriber(session_id, @action_selector, self())
-        {:ok, _info} = Zenohex.Session.declare_subscriber(session_id, @client_info_selector, self())
 
-        Logger.info("[ZenohBridge] Started, frame publish + movement/action/client_info subscribe")
+        {:ok, _info} =
+          Zenohex.Session.declare_subscriber(session_id, @client_info_selector, self())
+
+        Logger.info(
+          "[ZenohBridge] Started, frame publish + movement/action/client_info subscribe"
+        )
 
         {:ok, %{session_id: session_id}}
 
@@ -238,7 +243,9 @@ defmodule Network.ZenohBridge do
         room_key = if room_id == "main", do: :main, else: room_id
 
         if new_client_info_room?(room_key) and client_info_table_at_limit?() do
-          Logger.warning("[ZenohBridge] Rejected client_info: max rooms (#{@client_info_max_rooms}) reached")
+          Logger.warning(
+            "[ZenohBridge] Rejected client_info: max rooms (#{@client_info_max_rooms}) reached"
+          )
         else
           do_handle_client_info(room_id, room_key, payload)
         end
