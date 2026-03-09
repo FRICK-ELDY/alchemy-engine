@@ -52,7 +52,7 @@ config :network, :zenoh_connect, "tcp/localhost:7447"
 # Content.BulletHell3D    — 3D 弾幕避けゲーム
 # Content.VRTest          — VR 動作検証（Phase A: マウスで見回し）
 # Content.FormulaTest     — Formula エンジン検証（Elixir→Rust→Elixir）
-config :server, :current, Content.VampireSurvivor
+config :server, :current, Content.FormulaTest
 config :server, :map, :plain
 config :server, :game_events_module, Contents.GameEvents
 

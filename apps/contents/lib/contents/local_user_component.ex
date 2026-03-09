@@ -132,6 +132,32 @@ defmodule Contents.LocalUserComponent do
     %{x: px, y: py, delta_x: dx, delta_y: dy}
   end
 
+  @doc """
+  room_id に対応するクライアント情報を返す。
+  ZenohBridge が contents/room/{id}/client/info を受信すると :client_info ETS に格納される。
+  未受信時は nil。%{os: "windows", arch: "x86_64", family: "windows"} 等。
+
+  room_id は `:main` または binary を想定する。ZenohBridge はキー式から常に文字列を受け取るため、
+  ETS のキーは `:main` と `"main"` を正規化して `:main` に統一する。
+  """
+  def get_client_info(room_id) do
+    room_key = normalize_room_id_for_client_info(room_id)
+
+    if :ets.whereis(:client_info) == :undefined do
+      nil
+    else
+      case :ets.lookup(:client_info, {room_key, :info}) do
+        [{{^room_key, :info}, info}] -> info
+        [] -> nil
+      end
+    end
+  end
+
+  defp normalize_room_id_for_client_info(:main), do: :main
+  defp normalize_room_id_for_client_info("main"), do: :main
+  defp normalize_room_id_for_client_info(id) when is_binary(id), do: id
+  defp normalize_room_id_for_client_info(id) when is_atom(id), do: id
+
   defp get_keys_held_private(room_id) do
     case :ets.lookup(@table, {room_id, :keys_held}) do
       [{{^room_id, :keys_held}, keys}] -> keys

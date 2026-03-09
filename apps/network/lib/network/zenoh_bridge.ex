@@ -4,6 +4,7 @@ defmodule Network.ZenohBridge do
 
   - フレーム publish: `game/room/{room_id}/frame`
   - movement/action subscribe: `game/room/*/input/movement`, `game/room/*/input/action`
+  - client_info subscribe: `contents/room/*/client/info` → `:client_info` ETS に保存
   - 受信した入力は `Contents.GameEvents` へ `{:move_input, dx, dy}` / `{:ui_action, name}` で配送
 
   設定: `config :network, :zenoh_enabled, true` で有効化。
@@ -18,6 +19,7 @@ defmodule Network.ZenohBridge do
   # ワイルドカード購読用
   @movement_selector "game/room/*/input/movement"
   @action_selector "game/room/*/input/action"
+  @client_info_selector "contents/room/*/client/info"
 
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
@@ -41,11 +43,13 @@ defmodule Network.ZenohBridge do
   def init(_opts) do
     case Zenohex.Session.open(zenoh_config()) do
       {:ok, session_id} ->
-        # movement / action の subscriber を登録（自プロセスにメッセージ配送）
+        ensure_client_info_table()
+        # movement / action / client_info の subscriber を登録（自プロセスにメッセージ配送）
         {:ok, _mov} = Zenohex.Session.declare_subscriber(session_id, @movement_selector, self())
         {:ok, _act} = Zenohex.Session.declare_subscriber(session_id, @action_selector, self())
+        {:ok, _info} = Zenohex.Session.declare_subscriber(session_id, @client_info_selector, self())
 
-        Logger.info("[ZenohBridge] Started, frame publish + movement/action subscribe")
+        Logger.info("[ZenohBridge] Started, frame publish + movement/action/client_info subscribe")
 
         {:ok, %{session_id: session_id}}
 
@@ -118,6 +122,9 @@ defmodule Network.ZenohBridge do
       {:action, room_id} ->
         handle_action(room_id, payload)
 
+      {:client_info, room_id} ->
+        handle_client_info(room_id, payload)
+
       :unknown ->
         :ok
     end
@@ -127,9 +134,13 @@ defmodule Network.ZenohBridge do
 
   defp parse_input_key(key_expr) do
     # "game/room/main/input/movement" -> {:movement, "main"}
+    # "contents/room/main/client/info" -> {:client_info, "main"}
     parts = String.split(key_expr, "/")
 
     case parts do
+      ["contents", "room", room_id, "client", "info"] ->
+        {:client_info, room_id}
+
       ["game", "room", room_id | _rest] ->
         suffix = Enum.drop(parts, 3) |> Enum.join("/")
 
@@ -206,4 +217,107 @@ defmodule Network.ZenohBridge do
   # Core.RoomRegistry の登録形式: :main は atom、他ルームは binary のまま
   defp room_id_for_registry("main"), do: :main
   defp room_id_for_registry(id) when is_binary(id), do: id
+
+  # ── client_info ETS ──────────────────────────────────────────────────────
+
+  defp ensure_client_info_table do
+    if :ets.whereis(:client_info) == :undefined do
+      :ets.new(:client_info, [:named_table, :public, :set, read_concurrency: true])
+    end
+  end
+
+  # client_info の room_id 最大数（DoS 対策: 無制限の room 作成でメモリ枯渇を防ぐ）
+  @client_info_max_rooms 100
+
+  defp handle_client_info(room_id, payload) do
+    cond do
+      not valid_room_id_for_client_info?(room_id) ->
+        Logger.debug("[ZenohBridge] Rejected client_info: invalid room_id=#{inspect(room_id)}")
+
+      true ->
+        room_key = if room_id == "main", do: :main, else: room_id
+
+        if new_client_info_room?(room_key) and client_info_table_at_limit?() do
+          Logger.warning("[ZenohBridge] Rejected client_info: max rooms (#{@client_info_max_rooms}) reached")
+        else
+          do_handle_client_info(room_id, room_key, payload)
+        end
+    end
+  end
+
+  defp do_handle_client_info(room_id, room_key, payload) do
+    case decode_client_info(payload) do
+      {:ok, info} when is_map(info) ->
+        case normalize_client_info(info) do
+          normalized when is_map(normalized) ->
+            :ets.insert(:client_info, {{room_key, :info}, normalized})
+
+          _ ->
+            Logger.debug("[ZenohBridge] Invalid client info structure room=#{room_id}")
+        end
+
+      _ ->
+        Logger.debug("[ZenohBridge] Invalid client info payload room=#{room_id}")
+    end
+  end
+
+  defp valid_room_id_for_client_info?(room_id) when is_binary(room_id) do
+    byte_size(room_id) in 1..64 and Regex.match?(~r/^[a-zA-Z0-9_-]+$/, room_id)
+  end
+
+  defp valid_room_id_for_client_info?(_), do: false
+
+  defp new_client_info_room?(room_key) do
+    :ets.whereis(:client_info) != :undefined and
+      :ets.lookup(:client_info, {room_key, :info}) == []
+  end
+
+  defp client_info_table_at_limit? do
+    case :ets.info(:client_info, :size) do
+      size when is_integer(size) -> size >= @client_info_max_rooms
+      _ -> false
+    end
+  end
+
+  defp decode_client_info(payload) when is_binary(payload) and byte_size(payload) > 0 do
+    Msgpax.unpack(payload)
+  end
+
+  defp decode_client_info(_), do: :error
+
+  defp normalize_client_info(%{os: o, arch: a, family: f}) do
+    with {:ok, os} <- safe_to_string(o),
+         {:ok, arch} <- safe_to_string(a),
+         {:ok, family} <- safe_to_string(f) do
+      %{os: os, arch: arch, family: family}
+    else
+      _ -> nil
+    end
+  end
+
+  defp normalize_client_info(%{"os" => o, "arch" => a, "family" => f}) do
+    with {:ok, os} <- safe_to_string(o),
+         {:ok, arch} <- safe_to_string(a),
+         {:ok, family} <- safe_to_string(f) do
+      %{os: os, arch: arch, family: family}
+    else
+      _ -> nil
+    end
+  end
+
+  defp normalize_client_info(_), do: nil
+
+  # to_string/1 は map や不正な list 等で ArgumentError を起こすため、
+  # 攻撃者が ZenohBridge をクラッシュさせる DoS の原因になる。
+  # 安全な型のみ許可する。
+  defp safe_to_string(v) when is_binary(v), do: {:ok, v}
+  defp safe_to_string(v) when is_atom(v), do: {:ok, Atom.to_string(v)}
+  defp safe_to_string(v) when is_integer(v), do: {:ok, Integer.to_string(v)}
+  defp safe_to_string(v) when is_float(v), do: {:ok, Float.to_string(v)}
+
+  defp safe_to_string(v) when is_list(v) do
+    if List.ascii_printable?(v), do: {:ok, List.to_string(v)}, else: :error
+  end
+
+  defp safe_to_string(_), do: :error
 end

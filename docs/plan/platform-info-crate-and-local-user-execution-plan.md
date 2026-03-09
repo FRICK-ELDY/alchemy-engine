@@ -47,9 +47,11 @@ flowchart LR
 
 ---
 
-## 3. フェーズ 1: native/client 内に info モジュール作成
+## 3. フェーズ 1: native/client 内に info モジュール作成 ✅ 完了
 
 ※ `native/client` の作成は [env-and-serialization-migration-plan](./env-and-serialization-migration-plan.md) §5 に従う。
+
+- **実施日**: 2026-03-09
 
 ### 3.1 info モジュール作成
 
@@ -102,7 +104,9 @@ cargo build -p client
 
 ---
 
-## 4. フェーズ 2: client_desktop から Zenoh で info 送信
+## 4. フェーズ 2: client_desktop から Zenoh で info 送信 ✅ 完了
+
+- **実施日**: 2026-03-09
 
 ### 4.1 依存関係追加
 
@@ -151,7 +155,9 @@ fn publish_client_info(&self, room_id: &str) {
 
 ---
 
-## 5. フェーズ 3: ZenohBridge で info 受信・保存
+## 5. フェーズ 3: ZenohBridge で info 受信・保存 ✅ 完了
+
+- **実施日**: 2026-03-09
 
 ### 5.1 トピック購読追加
 
@@ -214,7 +220,9 @@ defp normalize_client_info(%{"os" => o, "arch" => a, "family" => f}) when is_bin
 
 ---
 
-## 6. フェーズ 4: LocalUserComponent の拡張
+## 6. フェーズ 4: LocalUserComponent の拡張 ✅ 完了
+
+- **実施日**: 2026-03-09
 
 クライアント情報は ZenohBridge が `:client_info` ETS に直接書き込む。LocalUserComponent は読み取り専用の `get_client_info/1` を提供する。
 
@@ -242,7 +250,9 @@ end
 
 ---
 
-## 7. フェーズ 5: MenuComponent で OS 表示
+## 7. フェーズ 5: MenuComponent で OS 表示 ✅ 完了
+
+- **実施日**: 2026-03-09
 
 ### 7.1 get_menu_ui の更新
 
@@ -301,14 +311,14 @@ NIF モード（Elixir と同一プロセス、Zenoh 未使用）の場合、cli
 ## 9. 実行順序サマリ
 
 
-| 順序  | フェーズ               | 内容                                                                              |
-| --- | ------------------ | ------------------------------------------------------------------------------- |
-| 1   | native/client 作成     | `client` クレート作成、`info` モジュール（`src/info.rs`）追加（[env-and-serialization-migration-plan](./env-and-serialization-migration-plan.md) §5 参照） |
-| 2   | client_desktop     | `client` 依存追加、`publish_client_info` 実装、起動時に publish                                              |
-| 3   | ZenohBridge        | `contents/room/*/client/info` 購読、`handle_client_info` で `:client_info` ETS に保存 |
-| 4   | LocalUserComponent | `get_client_info/1` 追加（`:client_info` から読み取り）                                  |
-| 5   | MenuComponent      | `get_menu_ui` に OS 表示行を追加                                                       |
-| 6   | （任意）NIF モード        | NIF から `client::info::ClientInfo` を取得し、`:client_info` に保存するパスを追加        |
+| 順序  | フェーズ               | 内容                                                                              | 状態 |
+| --- | ------------------ | ------------------------------------------------------------------------------- | --- |
+| 1   | native/client 作成     | `client` クレート作成、`info` モジュール（`src/info.rs`）追加（[env-and-serialization-migration-plan](./env-and-serialization-migration-plan.md) §5 参照） | ✅ 完了 |
+| 2   | client_desktop     | `client` 依存追加、`publish_client_info` 実装、起動時に publish                                              | ✅ 完了 |
+| 3   | ZenohBridge        | `contents/room/*/client/info` 購読、`handle_client_info` で `:client_info` ETS に保存 | ✅ 完了 |
+| 4   | LocalUserComponent | `get_client_info/1` 追加（`:client_info` から読み取り）                                  | ✅ 完了 |
+| 5   | MenuComponent      | `get_menu_ui` に OS 表示行を追加                                                       | ✅ 完了 |
+| 6   | （任意）NIF モード        | NIF から `client::info::ClientInfo` を取得し、`:client_info` に保存するパスを追加        | 未実施 |
 
 
 ---
