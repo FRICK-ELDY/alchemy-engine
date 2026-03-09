@@ -4,6 +4,7 @@ defmodule Network.ZenohBridge do
 
   - フレーム publish: `game/room/{room_id}/frame`
   - movement/action subscribe: `game/room/*/input/movement`, `game/room/*/input/action`
+  - client_info subscribe: `contents/room/*/client/info` → `:client_info` ETS に保存
   - 受信した入力は `Contents.GameEvents` へ `{:move_input, dx, dy}` / `{:ui_action, name}` で配送
 
   設定: `config :network, :zenoh_enabled, true` で有効化。
@@ -18,6 +19,7 @@ defmodule Network.ZenohBridge do
   # ワイルドカード購読用
   @movement_selector "game/room/*/input/movement"
   @action_selector "game/room/*/input/action"
+  @client_info_selector "contents/room/*/client/info"
 
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
@@ -41,11 +43,13 @@ defmodule Network.ZenohBridge do
   def init(_opts) do
     case Zenohex.Session.open(zenoh_config()) do
       {:ok, session_id} ->
-        # movement / action の subscriber を登録（自プロセスにメッセージ配送）
+        ensure_client_info_table()
+        # movement / action / client_info の subscriber を登録（自プロセスにメッセージ配送）
         {:ok, _mov} = Zenohex.Session.declare_subscriber(session_id, @movement_selector, self())
         {:ok, _act} = Zenohex.Session.declare_subscriber(session_id, @action_selector, self())
+        {:ok, _info} = Zenohex.Session.declare_subscriber(session_id, @client_info_selector, self())
 
-        Logger.info("[ZenohBridge] Started, frame publish + movement/action subscribe")
+        Logger.info("[ZenohBridge] Started, frame publish + movement/action/client_info subscribe")
 
         {:ok, %{session_id: session_id}}
 
@@ -118,6 +122,9 @@ defmodule Network.ZenohBridge do
       {:action, room_id} ->
         handle_action(room_id, payload)
 
+      {:client_info, room_id} ->
+        handle_client_info(room_id, payload)
+
       :unknown ->
         :ok
     end
@@ -127,9 +134,13 @@ defmodule Network.ZenohBridge do
 
   defp parse_input_key(key_expr) do
     # "game/room/main/input/movement" -> {:movement, "main"}
+    # "contents/room/main/client/info" -> {:client_info, "main"}
     parts = String.split(key_expr, "/")
 
     case parts do
+      ["contents", "room", room_id, "client", "info"] ->
+        {:client_info, room_id}
+
       ["game", "room", room_id | _rest] ->
         suffix = Enum.drop(parts, 3) |> Enum.join("/")
 
@@ -206,4 +217,40 @@ defmodule Network.ZenohBridge do
   # Core.RoomRegistry の登録形式: :main は atom、他ルームは binary のまま
   defp room_id_for_registry("main"), do: :main
   defp room_id_for_registry(id) when is_binary(id), do: id
+
+  # ── client_info ETS ──────────────────────────────────────────────────────
+
+  defp ensure_client_info_table do
+    if :ets.whereis(:client_info) == :undefined do
+      :ets.new(:client_info, [:named_table, :public, :set, read_concurrency: true])
+    end
+  end
+
+  defp handle_client_info(room_id, payload) do
+    room_key = if room_id == "main", do: :main, else: room_id
+
+    case decode_client_info(payload) do
+      {:ok, info} when is_map(info) ->
+        :ets.insert(:client_info, {{room_key, :info}, normalize_client_info(info)})
+
+      _ ->
+        Logger.debug("[ZenohBridge] Invalid client info payload room=#{room_id}")
+    end
+  end
+
+  defp decode_client_info(payload) when is_binary(payload) do
+    Msgpax.unpack(payload)
+  end
+
+  defp normalize_client_info(%{os: o, arch: a, family: f}) when is_binary(o) do
+    %{os: o, arch: to_string(a), family: to_string(f)}
+  end
+
+  defp normalize_client_info(%{"os" => o, "arch" => a, "family" => f}) when is_binary(o) do
+    %{os: o, arch: to_string(a), family: to_string(f)}
+  end
+
+  defp normalize_client_info(%{"os" => o, "arch" => a, "family" => f}) do
+    %{os: to_string(o), arch: to_string(a), family: to_string(f)}
+  end
 end
