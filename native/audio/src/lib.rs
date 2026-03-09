@@ -3,6 +3,7 @@
 
 pub mod asset;
 mod audio;
+mod platform;
 
 pub use asset::{AssetId, AssetLoader};
 pub use audio::{start_audio_thread, AudioCommand, AudioCommandSender, AudioManager};
