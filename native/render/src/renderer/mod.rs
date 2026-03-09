@@ -1,0 +1,744 @@
+//! Path: native/desktop_render/src/renderer/mod.rs
+//! Summary: wgpu によるスプライト描画・パイプライン・テクスチャ管理
+//! 1.8: nif から render へ分離移設。
+
+use crate::DrawCommand;
+use physics::constants::{BG_B, BG_G, BG_R};
+use std::sync::Arc;
+use wgpu::util::DeviceExt;
+use winit::window::Window;
+pub(crate) mod pipeline_3d;
+mod ui;
+
+// ─── 頂点・インデックス ────────────────────────────────────────
+
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+struct Vertex {
+    position: [f32; 2],
+}
+
+const VERTICES: &[Vertex] = &[
+    Vertex {
+        position: [0.0, 0.0],
+    }, // 左上
+    Vertex {
+        position: [1.0, 0.0],
+    }, // 右上
+    Vertex {
+        position: [1.0, 1.0],
+    }, // 右下
+    Vertex {
+        position: [0.0, 1.0],
+    }, // 左下
+];
+
+const INDICES: &[u16] = &[0, 1, 2, 0, 2, 3];
+
+// ─── インスタンスデータ ────────────────────────────────────────
+
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct SpriteInstance {
+    pub position: [f32; 2],   // ワールド座標（左上）
+    pub size: [f32; 2],       // ピクセルサイズ
+    pub uv_offset: [f32; 2],  // アトラス UV オフセット（0.0〜1.0）
+    pub uv_size: [f32; 2],    // アトラス UV サイズ（0.0〜1.0）
+    pub color_tint: [f32; 4], // RGBA 乗算カラー
+}
+
+// ─── アトラス UV（R-R1: ゲーム固有 UV は contents SpriteParams が SSoT。Particle/Obstacle のみ汎用 placeholder）──
+const ATLAS_W: f32 = 1664.0;
+const FRAME_W: f32 = 64.0;
+const PARTICLE_ATLAS_OFFSET_X: f32 = 832.0;
+
+fn particle_uv() -> ([f32; 2], [f32; 2]) {
+    (
+        [PARTICLE_ATLAS_OFFSET_X / ATLAS_W, 0.0],
+        [FRAME_W / ATLAS_W, 1.0],
+    )
+}
+
+// ─── 画面サイズ Uniform ────────────────────────────────────────
+
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+struct ScreenUniform {
+    half_size: [f32; 2],
+    _pad: [f32; 2],
+}
+
+impl ScreenUniform {
+    fn new(width: u32, height: u32) -> Self {
+        Self {
+            half_size: [width as f32 / 2.0, height as f32 / 2.0],
+            _pad: [0.0; 2],
+        }
+    }
+}
+
+// ─── カメラ Uniform（1.2.5: プレイヤー追従スクロール）──────
+
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+struct CameraUniform {
+    offset: [f32; 2],
+    _pad: [f32; 2],
+}
+
+impl CameraUniform {
+    fn new(offset_x: f32, offset_y: f32) -> Self {
+        Self {
+            offset: [offset_x, offset_y],
+            _pad: [0.0; 2],
+        }
+    }
+}
+
+// ─── インスタンスバッファの最大容量 ────────────────────────────
+// Player 1 + Boss 1 + Enemies 10000 + Bullets 2000 + Particles 2000 + Items 500 + Obstacles 8
+// = 14510
+// Enemies 内訳: うちエリート敵は最大 30% = 3000 体（kind: 21/22/23）。
+//               エリート敵は通常敵スロットを共有するため Enemies 合計は変わらない。
+// Obstacles: MapLoader の最大マップ（:forest）で 8 体。
+pub(crate) const MAX_INSTANCES: usize = 14510;
+
+/// ロードダイアログの種別
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum LoadDialogKind {
+    /// セーブデータが存在する場合の「ロードしますか？」確認ダイアログ
+    Confirm,
+    /// セーブデータが存在しない場合の「セーブデータなし」通知ダイアログ
+    NoSaveData,
+}
+
+/// 1.5.3: セーブ・ロード用 UI 状態
+#[derive(Default)]
+pub struct GameUiState {
+    /// トースト表示 (メッセージ, 残り秒数)
+    pub save_toast: Option<(String, f32)>,
+    /// ロードダイアログ: None=閉, Some(Confirm)=確認待ち, Some(NoSaveData)=「セーブデータなし」
+    pub load_dialog: Option<LoadDialogKind>,
+    pub has_save: bool,
+    /// ボタンクリックでセットするアクション（毎フレーム消費）
+    pub pending_action: Option<String>,
+}
+
+// ─── Renderer ─────────────────────────────────────────────────
+
+pub struct Renderer {
+    surface: wgpu::Surface<'static>,
+    device: Arc<wgpu::Device>,
+    queue: Arc<wgpu::Queue>,
+    config: wgpu::SurfaceConfiguration,
+    render_pipeline: wgpu::RenderPipeline,
+    vertex_buffer: wgpu::Buffer,
+    index_buffer: wgpu::Buffer,
+    instance_buffer: wgpu::Buffer,
+    instance_count: u32,
+    bind_group: wgpu::BindGroup,
+    screen_uniform_buf: wgpu::Buffer,
+    screen_bind_group: wgpu::BindGroup,
+    // 1.2.5: カメラ Uniform
+    camera_uniform_buf: wgpu::Buffer,
+    camera_bind_group: wgpu::BindGroup,
+    // R-5: 3D パイプライン
+    pipeline_3d: pipeline_3d::Pipeline3D,
+    // egui
+    egui_ctx: egui::Context,
+    egui_renderer: egui_wgpu::Renderer,
+    egui_winit: egui_winit::State,
+    // FPS 計測
+    frame_count: u32,
+    fps_timer: std::time::Instant,
+    pub current_fps: f32,
+}
+
+impl Renderer {
+    /// 1.7.2: atlas_bytes を引数で受け取る。1.7.3 で asset が game_native に移動したら
+    /// 呼び出し元（render_thread 等）で AssetLoader から取得して渡す。
+    /// P4: init.sprite_wgsl / init.mesh_wgsl が Some の場合はコンテンツ定義の WGSL を使用。
+    /// None の場合は include_str! フォールバック。
+    pub async fn new(window: Arc<Window>, init: &crate::window::RendererInit) -> Self {
+        let atlas_bytes = &init.atlas_png;
+        let instance = wgpu::Instance::default();
+        let surface = instance
+            .create_surface(window.clone())
+            .expect("サーフェスの作成に失敗しました");
+
+        let adapter = instance
+            .request_adapter(&wgpu::RequestAdapterOptions {
+                power_preference: wgpu::PowerPreference::HighPerformance,
+                compatible_surface: Some(&surface),
+                ..Default::default()
+            })
+            .await
+            .expect("アダプターの取得に失敗しました");
+
+        let (device_raw, queue_raw) = adapter
+            .request_device(&wgpu::DeviceDescriptor::default(), None)
+            .await
+            .expect("デバイスとキューの取得に失敗しました");
+        let device = Arc::new(device_raw);
+        let queue = Arc::new(queue_raw);
+
+        let size = window.inner_size();
+        let config = surface
+            .get_default_config(&adapter, size.width, size.height)
+            .expect("サーフェス設定の取得に失敗しました");
+        surface.configure(&device, &config);
+
+        // ─── テクスチャアトラス（1.7.2: atlas_bytes を引数で受け取る。1.7.3 で AssetLoader 利用）──
+        let atlas_image = image::load_from_memory(atlas_bytes)
+            .expect("atlas.png の読み込みに失敗しました")
+            .to_rgba8();
+        let atlas_size = wgpu::Extent3d {
+            width: atlas_image.width(),
+            height: atlas_image.height(),
+            depth_or_array_layers: 1,
+        };
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("Atlas Texture"),
+            size: atlas_size,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
+        });
+        queue.write_texture(
+            wgpu::TexelCopyTextureInfo {
+                texture: &texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            &atlas_image,
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(4 * atlas_image.width()),
+                rows_per_image: Some(atlas_image.height()),
+            },
+            atlas_size,
+        );
+        let texture_view = texture.create_view(&Default::default());
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("Atlas Sampler"),
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Nearest,
+            min_filter: wgpu::FilterMode::Nearest,
+            ..Default::default()
+        });
+
+        // ─── バインドグループ group(0): テクスチャ ───────────────
+        let texture_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Texture Bind Group Layout"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                ],
+            });
+
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Texture Bind Group"),
+            layout: &texture_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&texture_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&sampler),
+                },
+            ],
+        });
+
+        // ─── バインドグループ group(1): 画面サイズ Uniform ──────
+        let screen_uniform = ScreenUniform::new(size.width, size.height);
+        let screen_uniform_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Screen Uniform Buffer"),
+            contents: bytemuck::bytes_of(&screen_uniform),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
+        let screen_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Screen Bind Group Layout"),
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+            });
+
+        let screen_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Screen Bind Group"),
+            layout: &screen_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: screen_uniform_buf.as_entire_binding(),
+            }],
+        });
+
+        // ─── バインドグループ group(2): カメラ Uniform（1.2.5）─
+        let camera_uniform = CameraUniform::new(0.0, 0.0);
+        let camera_uniform_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Camera Uniform Buffer"),
+            contents: bytemuck::bytes_of(&camera_uniform),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
+        let camera_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Camera Bind Group Layout"),
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+            });
+
+        let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Camera Bind Group"),
+            layout: &camera_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: camera_uniform_buf.as_entire_binding(),
+            }],
+        });
+
+        // ─── シェーダー・パイプライン（P4: コンテンツ定義 or include_str! フォールバック）───
+        let shader_source = init
+            .sprite_wgsl
+            .as_deref()
+            .unwrap_or(include_str!("shaders/sprite.wgsl"));
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("Sprite Shader"),
+            source: wgpu::ShaderSource::Wgsl(shader_source.into()),
+        });
+
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("Sprite Pipeline Layout"),
+            bind_group_layouts: &[
+                &texture_bind_group_layout,
+                &screen_bind_group_layout,
+                &camera_bind_group_layout,
+            ],
+            push_constant_ranges: &[],
+        });
+
+        let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("Sprite Pipeline"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &shader,
+                entry_point: Some("vs_main"),
+                buffers: &[
+                    wgpu::VertexBufferLayout {
+                        array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
+                        step_mode: wgpu::VertexStepMode::Vertex,
+                        attributes: &wgpu::vertex_attr_array![0 => Float32x2],
+                    },
+                    wgpu::VertexBufferLayout {
+                        array_stride: std::mem::size_of::<SpriteInstance>() as wgpu::BufferAddress,
+                        step_mode: wgpu::VertexStepMode::Instance,
+                        attributes: &wgpu::vertex_attr_array![
+                            1 => Float32x2, // i_position
+                            2 => Float32x2, // i_size
+                            3 => Float32x2, // i_uv_offset
+                            4 => Float32x2, // i_uv_size
+                            5 => Float32x4, // i_color_tint
+                        ],
+                    },
+                ],
+                compilation_options: Default::default(),
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &shader,
+                entry_point: Some("fs_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: config.format,
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: Default::default(),
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: None,
+                ..Default::default()
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            multiview: None,
+            cache: None,
+        });
+
+        // ─── 頂点・インデックスバッファ ──────────────────────────
+        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Vertex Buffer"),
+            contents: bytemuck::cast_slice(VERTICES),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Index Buffer"),
+            contents: bytemuck::cast_slice(INDICES),
+            usage: wgpu::BufferUsages::INDEX,
+        });
+
+        // ─── インスタンスバッファ（動的・最大 MAX_INSTANCES 体）──
+        let instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Instance Buffer"),
+            size: (std::mem::size_of::<SpriteInstance>() * MAX_INSTANCES) as u64,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        // ─── egui 初期化 ─────────────────────────────────────────
+        let egui_ctx = egui::Context::default();
+        let egui_renderer = egui_wgpu::Renderer::new(&device, config.format, None, 1, false);
+        let egui_winit = egui_winit::State::new(
+            egui_ctx.clone(),
+            egui::ViewportId::ROOT,
+            &window,
+            None,
+            None,
+            None,
+        );
+
+        // ─── R-5: 3D パイプライン初期化（P4: mesh_wgsl はコンテンツ定義 or include_str!）────
+        let pipeline_3d = pipeline_3d::Pipeline3D::new(
+            Arc::clone(&device),
+            Arc::clone(&queue),
+            config.format,
+            size.width,
+            size.height,
+            init.mesh_wgsl.as_deref(),
+        );
+
+        Self {
+            surface,
+            device,
+            queue,
+            config,
+            render_pipeline,
+            vertex_buffer,
+            index_buffer,
+            instance_buffer,
+            instance_count: 0,
+            bind_group,
+            screen_uniform_buf,
+            screen_bind_group,
+            camera_uniform_buf,
+            camera_bind_group,
+            pipeline_3d,
+            egui_ctx,
+            egui_renderer,
+            egui_winit,
+            frame_count: 0,
+            fps_timer: std::time::Instant::now(),
+            current_fps: 0.0,
+        }
+    }
+
+    /// winit のウィンドウイベントを egui に転送する
+    pub fn handle_window_event(
+        &mut self,
+        window: &Window,
+        event: &winit::event::WindowEvent,
+    ) -> bool {
+        self.egui_winit.on_window_event(window, event).consumed
+    }
+
+    /// `RenderFrame` の `DrawCommand` リストからインスタンスを構築して GPU バッファを更新する。
+    pub fn update_instances(&mut self, frame: &crate::RenderFrame) {
+        let (offset_x, offset_y) = frame.camera.offset_xy();
+        let cam_uniform = CameraUniform::new(offset_x, offset_y);
+        self.queue.write_buffer(
+            &self.camera_uniform_buf,
+            0,
+            bytemuck::bytes_of(&cam_uniform),
+        );
+
+        let instances = build_sprite_instances(&frame.commands);
+        self.instance_count = instances.len() as u32;
+
+        if !instances.is_empty() {
+            self.queue
+                .write_buffer(&self.instance_buffer, 0, bytemuck::cast_slice(&instances));
+        }
+    }
+
+    pub fn resize(&mut self, new_width: u32, new_height: u32) {
+        if new_width == 0 || new_height == 0 {
+            return;
+        }
+        self.config.width = new_width;
+        self.config.height = new_height;
+        self.surface.configure(&self.device, &self.config);
+
+        let screen_uniform = ScreenUniform::new(new_width, new_height);
+        self.queue.write_buffer(
+            &self.screen_uniform_buf,
+            0,
+            bytemuck::bytes_of(&screen_uniform),
+        );
+
+        self.pipeline_3d.resize(new_width, new_height);
+    }
+
+    /// UI を描画し、ボタンが押された場合はアクション文字列を返す。
+    /// ui_state でセーブ/ロードダイアログ・トーストを制御する。
+    /// R-5: `CameraParams::Camera3D` の場合は 3D パイプラインを使用する。
+    /// P3: mesh_definitions が非空の場合、3D パイプラインにメッシュを登録する。
+    pub fn render(
+        &mut self,
+        window: &Window,
+        ui: &crate::UiCanvas,
+        camera: &crate::CameraParams,
+        commands: &[DrawCommand],
+        mesh_definitions: &[crate::MeshDef],
+        ui_state: &mut GameUiState,
+    ) -> Option<String> {
+        // ─── FPS 計測 ────────────────────────────────────────────
+        self.frame_count += 1;
+        let elapsed = self.fps_timer.elapsed();
+        if elapsed.as_secs_f32() >= 1.0 {
+            self.current_fps = self.frame_count as f32 / elapsed.as_secs_f32();
+            self.frame_count = 0;
+            self.fps_timer = std::time::Instant::now();
+        }
+
+        // ─── サーフェス取得 ──────────────────────────────────────
+        let output = match self.surface.get_current_texture() {
+            Ok(t) => t,
+            Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
+                self.surface.configure(&self.device, &self.config);
+                return None;
+            }
+            Err(e) => {
+                eprintln!("Surface error: {e:?}");
+                return None;
+            }
+        };
+
+        let view = output.texture.create_view(&Default::default());
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Render Encoder"),
+            });
+
+        // ─── スプライト描画パス ──────────────────────────────────
+        {
+            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("Sprite Pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                            r: BG_R,
+                            g: BG_G,
+                            b: BG_B,
+                            a: 1.0,
+                        }),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+            });
+
+            if self.instance_count > 0 {
+                pass.set_pipeline(&self.render_pipeline);
+                pass.set_bind_group(0, &self.bind_group, &[]);
+                pass.set_bind_group(1, &self.screen_bind_group, &[]);
+                pass.set_bind_group(2, &self.camera_bind_group, &[]);
+                pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+                pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
+                pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+                pass.draw_indexed(0..INDICES.len() as u32, 0, 0..self.instance_count);
+            }
+        }
+
+        // ─── R-5: 3D パス ────────────────────────────────────────
+        // Camera3D 以外が渡された場合は pipeline_3d.render() 内で早期リターンする。
+        // P3: mesh_definitions を渡し、パイプラインが登録して使用する。
+        self.pipeline_3d
+            .render(&mut encoder, &view, commands, camera, mesh_definitions);
+
+        // ─── egui HUD パス ───────────────────────────────────────
+        let raw_input = self.egui_winit.take_egui_input(window);
+        let mut chosen_weapon: Option<String> = None;
+        let full_output = self.egui_ctx.run(raw_input, |ctx| {
+            chosen_weapon = ui::render_ui_canvas(ctx, ui, camera, self.current_fps, ui_state);
+        });
+
+        self.egui_winit
+            .handle_platform_output(window, full_output.platform_output);
+
+        let tris = self
+            .egui_ctx
+            .tessellate(full_output.shapes, full_output.pixels_per_point);
+
+        for (id, delta) in full_output.textures_delta.set {
+            self.egui_renderer
+                .update_texture(&self.device, &self.queue, id, &delta);
+        }
+
+        let screen_desc = egui_wgpu::ScreenDescriptor {
+            size_in_pixels: [self.config.width, self.config.height],
+            pixels_per_point: full_output.pixels_per_point,
+        };
+        self.egui_renderer.update_buffers(
+            &self.device,
+            &self.queue,
+            &mut encoder,
+            &tris,
+            &screen_desc,
+        );
+
+        // egui_renderer.render() は RenderPass を消費するため、別スコープで処理する
+        {
+            let render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("egui Pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Load,
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+            });
+            // egui-wgpu 0.31 では render() が RenderPass を所有する形に変更された
+            self.egui_renderer
+                .render(&mut render_pass.forget_lifetime(), &tris, &screen_desc);
+        }
+
+        for id in full_output.textures_delta.free {
+            self.egui_renderer.free_texture(&id);
+        }
+
+        self.queue.submit([encoder.finish()]);
+        output.present();
+
+        chosen_weapon
+    }
+}
+
+/// `DrawCommand` リストから `SpriteInstance` リストを構築する。
+pub(crate) fn build_sprite_instances(commands: &[DrawCommand]) -> Vec<SpriteInstance> {
+    let mut instances: Vec<SpriteInstance> = Vec::with_capacity(commands.len());
+
+    for cmd in commands {
+        if instances.len() >= MAX_INSTANCES {
+            break;
+        }
+        let Some(inst) = sprite_instance_from_command(cmd) else {
+            continue;
+        };
+        instances.push(inst);
+    }
+
+    instances
+}
+
+/// `DrawCommand` 1件を `SpriteInstance` に変換する。
+/// R-R1: PlayerSprite / Item は contents が SpriteRaw で渡すため廃止。
+/// スプライト描画は SpriteRaw 経由のみ。Particle / Obstacle は汎用 placeholder UV 使用。
+fn sprite_instance_from_command(cmd: &DrawCommand) -> Option<SpriteInstance> {
+    match *cmd {
+        DrawCommand::Particle {
+            x,
+            y,
+            r,
+            g,
+            b,
+            alpha,
+            size,
+        } => {
+            let (uv_off, uv_sz) = particle_uv();
+            Some(SpriteInstance {
+                position: [x - size / 2.0, y - size / 2.0],
+                size: [size, size],
+                uv_offset: uv_off,
+                uv_size: uv_sz,
+                color_tint: [r, g, b, alpha],
+            })
+        }
+        DrawCommand::Obstacle { x, y, radius, kind } => {
+            let (r, g, b) = if kind == 0 {
+                (0.35_f32, 0.55_f32, 0.2_f32)
+            } else {
+                (0.45_f32, 0.45_f32, 0.5_f32)
+            };
+            let sz = radius * 2.0;
+            let (uv_off, uv_sz) = particle_uv();
+            Some(SpriteInstance {
+                position: [x - radius, y - radius],
+                size: [sz, sz],
+                uv_offset: uv_off,
+                uv_size: uv_sz,
+                color_tint: [r, g, b, 1.0],
+            })
+        }
+        DrawCommand::SpriteRaw {
+            x,
+            y,
+            width,
+            height,
+            uv_offset,
+            uv_size,
+            color_tint,
+        } => Some(SpriteInstance {
+            position: [x, y],
+            size: [width, height],
+            uv_offset,
+            uv_size,
+            color_tint,
+        }),
+        // R-R1: 非推奨。contents は SpriteRaw で渡すこと。
+        DrawCommand::PlayerSprite { .. } | DrawCommand::Item { .. } => None,
+        // 3D コマンドはスプライトパイプラインでは描画しない
+        DrawCommand::Box3D { .. }
+        | DrawCommand::GridPlane { .. }
+        | DrawCommand::GridPlaneVerts { .. }
+        | DrawCommand::Skybox { .. } => None,
+    }
+}

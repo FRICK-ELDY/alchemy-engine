@@ -5,6 +5,6 @@ edition = "2021"
 description = "デスクトップ入力・ウィンドウ・イベントループ（winit）"
 
 [dependencies]
-desktop_render = { path = "../desktop_render" }
+render = { path = "../render" }
 winit = "0.30.12"
 pollster = "0.3"

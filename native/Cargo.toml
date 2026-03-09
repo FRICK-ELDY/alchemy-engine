@@ -6,7 +6,7 @@ members = [
     "client",
     "physics",
     "audio",
-    "desktop_render",
+    "render",
     "nif",
     "desktop_input",
     "desktop_input_openxr",

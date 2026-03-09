@@ -11,7 +11,7 @@ path = "src/main.rs"
 [dependencies]
 client = { path = "../client" }
 network = { path = "../network" }
-desktop_render = { path = "../desktop_render" }
+render = { path = "../render" }
 desktop_input = { path = "../desktop_input" }
 physics = { path = "../physics" }
 audio = { path = "../audio" }

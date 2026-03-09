@@ -3,7 +3,7 @@
 //! スキーマ: docs/architecture/messagepack-schema.md, zenoh-protocol-spec.md
 //! nif の decode/msgpack.rs と同一ロジック。client_desktop は nif に依存しないためここに配置。
 
-use desktop_render::{
+use render::{
     CameraParams, DrawCommand, MeshDef, MeshVertex, RenderFrame, UiAnchor, UiCanvas, UiComponent,
     UiNode, UiRect, UiSize,
 };

@@ -1,0 +1,21 @@
+[package]
+name = "render"
+version = "0.1.0"
+edition = "2021"
+description = "wgpu を用いた共通レンダラー（The Eye）"
+
+[features]
+headless = []
+
+[dependencies]
+physics = { path = "../physics" }
+wgpu = "24"
+winit = "0.30.12"
+bytemuck = { version = "1", features = ["derive"] }
+# image は通常レンダラー（atlas.png 読み込み）でも必須のため optional にできない
+image = "0.25"
+egui = "0.31"
+egui-wgpu = "0.31"
+egui-winit = "0.31"
+pollster = "0.3"
+log = "0.4"

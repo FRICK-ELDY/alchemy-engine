@@ -1,10 +1,10 @@
 //! Path: native/desktop_input/src/desktop_loop.rs
 //! Summary: winit イベントループ・ウィンドウ生成・入力イベント処理
 //!
-//! desktop_render の Renderer を用いて描画するが、イベントループの所有権はここにある。
+//! render の Renderer を用いて描画するが、イベントループの所有権はここにある。
 
-use desktop_render::window::{KeyState, RenderBridge, WindowConfig};
-use desktop_render::{GameUiState, Renderer};
+use render::window::{KeyState, RenderBridge, WindowConfig};
+use render::{GameUiState, Renderer};
 use std::sync::Arc;
 use winit::{
     application::ApplicationHandler,

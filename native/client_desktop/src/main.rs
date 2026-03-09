@@ -14,7 +14,7 @@ mod network_render_bridge;
 
 use audio::AssetLoader;
 use desktop_input::run_desktop_loop;
-use desktop_render::window::{RendererInit, WindowConfig};
+use render::window::{RendererInit, WindowConfig};
 use network_render_bridge::NetworkRenderBridge;
 use physics::constants::{SCREEN_HEIGHT, SCREEN_WIDTH};
 

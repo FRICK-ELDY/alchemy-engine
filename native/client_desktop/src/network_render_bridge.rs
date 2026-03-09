@@ -4,8 +4,8 @@
 //! Zenoh 通信は client::zenoh を経由する（zenoh クレートへの直接依存なし）。
 
 use client::zenoh::ClientSession;
-use desktop_render::window::{KeyCode, KeyState, RenderBridge};
-use desktop_render::RenderFrame;
+use render::window::{KeyCode, KeyState, RenderBridge};
+use render::RenderFrame;
 use network::{action_key, client_info_key, frame_key, movement_key};
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
