@@ -7,14 +7,16 @@
 
 ## 1. 現行 bin スクリプト一覧
 
-| スクリプト | 役割 |
-|:---|:---|
-| [bin/build.bat](../bin/build.bat) | `cargo build -p client_*`（desktop/web/android/ios × debug/release） |
-| [bin/ci.bat](../bin/ci.bat) | Rust fmt/clippy/test + Elixir compile/format/credo/test。filter: rust / elixir / check |
-| [bin/credo.bat](../bin/credo.bat) | `mix credo`（strict / suggest / explain） |
-| [bin/format.bat](../bin/format.bat) | `cargo fmt` + `mix format`。filter: rust / elixir / check |
-| [bin/test.bat](../bin/test.bat) | `cargo test -p physics` + `mix test`。filter: rust / elixir / cover |
-| [bin/windows_client.bat](../bin/windows_client.bat) | クライアント exe 起動（connect, room 指定可） |
+
+| スクリプト                                               | 役割                                                                                    |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| [bin/build.bat](../bin/build.bat)                   | `cargo build -p client_*`（desktop/web/android/ios × debug/release）                    |
+| [bin/ci.bat](../bin/ci.bat)                         | Rust fmt/clippy/test + Elixir compile/format/credo/test。filter: rust / elixir / check |
+| [bin/credo.bat](../bin/credo.bat)                   | `mix credo`（strict / suggest / explain）                                               |
+| [bin/format.bat](../bin/format.bat)                 | `cargo fmt` + `mix format`。filter: rust / elixir / check                              |
+| [bin/test.bat](../bin/test.bat)                     | `cargo test -p physics` + `mix test`。filter: rust / elixir / cover                    |
+| [bin/windows_client.bat](../bin/windows_client.bat) | クライアント exe 起動（connect, room 指定可）                                                      |
+
 
 ---
 
@@ -24,21 +26,25 @@
 
 ### 2.1 修正対象（コード・設定）
 
-| ファイル | 現状 | 修正内容 |
-|:---|:---|:---|
-| [native/.cargo/config.toml](../../native/.cargo/config.toml) | `--bin client_desktop` のエイリアス | `--bin app` に統一。コメントも修正 |
-| [bin/windows_client.bat](../bin/windows_client.bat) | `-p app --bin client_desktop` | `-p app` に変更（bin は app のみなので省略可、または `--bin app`） |
-| [bin/build.bat](../bin/build.bat) | `-p client_%CLIENT%`（client_desktop 等） | `-p app` に統一。`--desktop` のみ現状対応。web/android/ios は将来対応時に追加 |
+
+| ファイル                                                         | 現状                                     | 修正内容                                                      |
+| ------------------------------------------------------------ | -------------------------------------- | --------------------------------------------------------- |
+| [native/.cargo/config.toml](../../native/.cargo/config.toml) | `--bin client_desktop` のエイリアス          | `--bin app` に統一。コメントも修正                                   |
+| [bin/windows_client.bat](../bin/windows_client.bat)          | `-p app --bin client_desktop`          | `-p app` に変更（bin は app のみなので省略可、または `--bin app`）          |
+| [bin/build.bat](../bin/build.bat)                            | `-p client_%CLIENT%`（client_desktop 等） | `-p app` に統一。`--desktop` のみ現状対応。web/android/ios は将来対応時に追加 |
+
 
 ### 2.2 ドキュメント・コメントの整理
 
 以下は概念説明（「デスクトップクライアント exe」の別名として）として `client_desktop` を使っている場合がある。`app` または「デスクトップクライアント」に統一するか、文脈に応じて判断。
 
-| カテゴリ | ファイル例 | 方針 |
-|:---|:---|:---|
-| コマンド・パス | [development.md](../../development.md), [docs/cross-compile.md](../cross-compile.md) | `cargo run -p app` / `app.exe` に統一 |
-| アーキテクチャ説明 | [docs/architecture/overview.md](../architecture/overview.md), [docs/architecture/rust/](..) | 「app（デスクトップクライアント exe）」等に統一可能 |
-| 計画・手順 | [docs/plan/improvement-plan.md](improvement-plan.md) 等 | 実コマンド・パスは `app` に統一 |
+
+| カテゴリ      | ファイル例                                                                                       | 方針                                 |
+| --------- | ------------------------------------------------------------------------------------------- | ---------------------------------- |
+| コマンド・パス   | [development.md](../../development.md), [docs/cross-compile.md](../cross-compile.md)        | `cargo run -p app` / `app.exe` に統一 |
+| アーキテクチャ説明 | [docs/architecture/overview.md](../architecture/overview.md), [docs/architecture/rust/](..) | 「app（デスクトップクライアント exe）」等に統一可能      |
+| 計画・手順     | [docs/plan/improvement-plan.md](improvement-plan.md) 等                                      | 実コマンド・パスは `app` に統一                |
+
 
 **ランチャー**: [native/tools/launcher/src/main.rs](../../native/tools/launcher/src/main.rs) は既に `exe_name("app")` と `-p app` を使用しており修正不要。
 
@@ -53,19 +59,21 @@
 
 ### 3.1 一覧
 
-| タスク | 対応 bin | 概要 |
-|:---|:---|:---|
-| `mix alchemy.clean` | （新規） | `_build`、`deps`、`native/target` を削除 |
-| `mix alchemy.setup` | （新規） | `mix deps.get` + `mix compile` |
-| `mix alchemy.launcher` | （新規） | `cargo run -p launcher` |
-| `mix alchemy.build` | build.bat | `-p app` で desktop ビルド（debug/release） |
-| `mix alchemy.ci` | ci.bat | CI 相当（filter: rust / elixir / check） |
-| `mix alchemy.format` | format.bat | Elixir + Rust 同時フォーマット |
-| `mix alchemy.credo` | credo.bat | `mix credo`（strict / suggest / explain） |
-| `mix alchemy.test` | test.bat | Elixir + Rust 同時テスト |
-| `mix alchemy.router` | （新規） | `zenohd` 起動 |
-| `mix alchemy.server` | （新規） | `mix run --no-halt` |
-| `mix alchemy.client` | windows_client.bat | クライアント起動（`cargo run -p app --`） |
+
+| タスク                    | 対応 bin             | 概要                                      |
+| ---------------------- | ------------------ | --------------------------------------- |
+| `mix alchemy.clean`    | （新規）               | `_build`、`deps`、`native/target` を削除     |
+| `mix alchemy.setup`    | （新規）               | `mix deps.get` + `mix compile`          |
+| `mix alchemy.launcher` | （新規）               | `cargo run -p launcher`                 |
+| `mix alchemy.build`    | build.bat          | `-p app` で desktop ビルド（debug/release）   |
+| `mix alchemy.ci`       | ci.bat             | CI 相当（filter: rust / elixir / check）    |
+| `mix alchemy.format`   | format.bat         | Elixir + Rust 同時フォーマット                  |
+| `mix alchemy.credo`    | credo.bat          | `mix credo`（strict / suggest / explain） |
+| `mix alchemy.test`     | test.bat           | Elixir + Rust 同時テスト                     |
+| `mix alchemy.router`   | （新規）               | `zenohd` 起動                             |
+| `mix alchemy.server`   | （新規）               | `mix run --no-halt`                     |
+| `mix alchemy.client`   | windows_client.bat | クライアント起動（`cargo run -p app --`）         |
+
 
 ### 3.2 各タスクの挙動
 
@@ -95,24 +103,24 @@
 
 ### フェーズ 1: 基盤タスク
 
-5. `lib/mix/tasks/` を用意（適切な app またはルート）
-6. `mix alchemy.clean`, `setup`, `format`, `test`, `build`, `ci`
+1. `lib/mix/tasks/` を用意（適切な app またはルート）
+2. `mix alchemy.clean`, `setup`, `format`, `test`, `build`, `ci`
 
 ### フェーズ 2: 起動系タスク
 
-7. `mix alchemy.launcher`, `router`, `server`, `client`
+1. `mix alchemy.launcher`, `router`, `server`, `client`
 
 ### フェーズ 3: 統合・廃止
 
-8. `mix alchemy.credo`
-9. `bin/` ディレクトリの削除、ドキュメント更新
+1. `mix alchemy.credo`
+2. `bin/` ディレクトリの削除、ドキュメント更新
 
 ---
 
 ## 5. bin の削除
 
 - `bin/` ディレクトリは削除する（ラッパーは残さない）
-- [development.md](../../development.md)、[README.md](../../README.md)、[docs/cross-compile.md](../cross-compile.md) を `mix alchemy.*` ベースに更新
+- [development.md](../../development.md)、[README.md](../../README.md)、[docs/cross-compile.md](../cross-compile.md) を `mix alchemy.`* ベースに更新
 - `mix alchemy.up` は不要（launcher で router / server / client の起動を管理するため）
 
 ---
@@ -121,3 +129,4 @@
 
 - **app に統一**: ビルド成果物・コマンドはすべて `-p app` / `app` に統一
 - **ci.bat vs test.bat**: ci.bat は `-p nif`、test.bat は `-p physics`。CI に合わせて `-p nif` を採用
+

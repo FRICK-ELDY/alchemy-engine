@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 :: ============================================================
-:: bin/windows_client.bat - client_desktop only (minimal)
+:: bin/windows_client.bat - app (desktop client) only (minimal)
 ::
 :: Prerequisites: run zenohd and mix run in separate terminals first.
 ::
@@ -30,4 +30,4 @@ echo Alchemy Client - connect=%CONNECT% room=%ROOM%
 echo (Ensure zenohd and mix run are running first)
 echo.
 
-cargo run --manifest-path "%NATIVE%\Cargo.toml" -p app --bin client_desktop -- --connect %CONNECT% --room %ROOM%
+cargo run --manifest-path "%NATIVE%\Cargo.toml" -p app -- --connect %CONNECT% --room %ROOM%

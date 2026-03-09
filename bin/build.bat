@@ -18,15 +18,14 @@ shift
 goto parse
 
 :build
-set "PKG=client_%CLIENT%"
 cd /d "%ROOT%"
 
 echo.
-echo Building %PKG% (%PROFILE%)...
+echo Building app (%PROFILE%)...
 echo.
 
 if "%PROFILE%"=="release" (
-    cargo build --manifest-path "%NATIVE%\Cargo.toml" -p %PKG% --release
+    cargo build --manifest-path "%NATIVE%\Cargo.toml" -p app --release
 ) else (
-    cargo build --manifest-path "%NATIVE%\Cargo.toml" -p %PKG%
+    cargo build --manifest-path "%NATIVE%\Cargo.toml" -p app
 )
