@@ -5,7 +5,9 @@
 
 use futures::future::{select, Either};
 use futures_timer::Delay;
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 use zenoh::config::Config;
@@ -14,9 +16,14 @@ use zenoh::{Session, Wait};
 
 const SHUTDOWN_POLL_MS: u64 = 100;
 
+/// put_drop 用のキャッシュキーサフィックス
+const CACHE_KEY_DROP_SUFFIX: &str = ":drop";
+
 /// Zenoh セッションのラッパー。publish / subscribe を抽象化して提供。
 pub struct ClientSession {
     inner: Session,
+    /// 同じ key への put を高速化するため Publisher をキャッシュする。
+    publisher_cache: Mutex<HashMap<String, zenoh::Publisher<'static>>>,
 }
 
 impl ClientSession {
@@ -34,16 +41,15 @@ impl ClientSession {
         let session = zenoh::open(config)
             .wait()
             .map_err(|e| format!("zenoh open failed: {e}"))?;
-        Ok(Self { inner: session })
+        Ok(Self {
+            inner: session,
+            publisher_cache: Mutex::new(HashMap::new()),
+        })
     }
 
     /// key に payload を publish する。
     pub fn put(&self, key: &str, payload: &[u8]) -> Result<(), String> {
-        let publisher = self
-            .inner
-            .declare_publisher(key)
-            .wait()
-            .map_err(|e| format!("publisher declare failed: {e}"))?;
+        let publisher = self.get_or_create_publisher(key, false)?;
         publisher
             .put(payload)
             .wait()
@@ -53,18 +59,50 @@ impl ClientSession {
 
     /// CongestionControl::Drop で publish。movement 等の高頻度メッセージ向け。
     pub fn put_drop(&self, key: &str, payload: &[u8]) -> Result<(), String> {
-        let publisher = self
-            .inner
-            .declare_publisher(key)
-            .congestion_control(CongestionControl::Drop)
-            .wait()
-            .map_err(|e| format!("publisher declare failed: {e}"))?;
+        let publisher = self.get_or_create_publisher(key, true)?;
         let _ = publisher.put(payload).wait();
         Ok(())
     }
 
+    fn get_or_create_publisher(
+        &self,
+        key: &str,
+        use_drop: bool,
+    ) -> Result<zenoh::Publisher<'static>, String> {
+        let cache_key = if use_drop {
+            format!("{key}{CACHE_KEY_DROP_SUFFIX}")
+        } else {
+            key.to_string()
+        };
+
+        let mut cache = self
+            .publisher_cache
+            .lock()
+            .map_err(|e| format!("publisher cache lock poisoned: {e}"))?;
+
+        if let Some(p) = cache.get(&cache_key) {
+            return Ok(p.clone());
+        }
+
+        let builder = if use_drop {
+            self.inner
+                .declare_publisher(key)
+                .congestion_control(CongestionControl::Drop)
+        } else {
+            self.inner.declare_publisher(key)
+        };
+        let publisher = builder
+            .wait()
+            .map_err(|e| format!("publisher declare failed: {e}"))?;
+        cache.insert(cache_key, publisher.clone());
+        Ok(publisher)
+    }
+
     /// key を subscribe し、受信した payload を on_payload で渡すスレッドを起動する。
     /// shutdown が true になったらループを終了する。
+    ///
+    /// Session は Clone を実装しており、clone した session がスレッドに move される。
+    /// 親の ClientSession が drop されても、スレッド内の clone は subscriber の寿命に従う。
     pub fn spawn_subscriber<F>(&self, key: &str, shutdown: std::sync::Arc<AtomicBool>, on_payload: F) -> thread::JoinHandle<()>
     where
         F: Fn(Vec<u8>) + Send + 'static,

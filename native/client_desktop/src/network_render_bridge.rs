@@ -7,7 +7,7 @@ use client::zenoh::ClientSession;
 use desktop_render::window::{KeyCode, KeyState, RenderBridge};
 use desktop_render::RenderFrame;
 use std::collections::HashSet;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
@@ -60,19 +60,30 @@ impl NetworkRenderBridge {
         let sub_key = frame_key(room_id);
         let buf_clone = Arc::clone(&frame_buffer);
         let shutdown_clone = Arc::clone(&shutdown);
+        let frame_count = Arc::new(AtomicU64::new(0));
 
-        let recv_handle = session.spawn_subscriber(&sub_key, shutdown_clone, move |bytes| {
-            match crate::msgpack_decode::decode_render_frame(&bytes) {
-                Ok(frame) => {
-                    if let Ok(mut guard) = buf_clone.lock() {
-                        *guard = Some(frame);
+        let recv_handle = {
+            let frame_count_clone = Arc::clone(&frame_count);
+            session.spawn_subscriber(&sub_key, shutdown_clone, move |bytes| {
+                match crate::msgpack_decode::decode_render_frame(&bytes) {
+                    Ok(frame) => {
+                        let prev = frame_count_clone.fetch_add(1, Ordering::Relaxed);
+                        if prev == 0 {
+                            log::info!("[frame receiver] first frame received and decoded");
+                        }
+                        if let Ok(mut guard) = buf_clone.lock() {
+                            *guard = Some(frame);
+                        }
+                    }
+                    Err(e) => {
+                        log::warn!(
+                            "[frame receiver] decode error: {e} (payload size={})",
+                            bytes.len()
+                        );
                     }
                 }
-                Err(e) => {
-                    log::warn!("[frame receiver] decode error: {e} (payload size={})", bytes.len());
-                }
-            }
-        });
+            })
+        };
 
         let bridge = Self {
             frame_buffer,
