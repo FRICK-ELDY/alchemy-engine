@@ -71,11 +71,11 @@ flowchart TB
 git clone git@github.com:FRICK-ELDY/alchemy-engine.git
 cd alchemy-engine
 mix deps.get
-mix compile
-mix run --no-halt
+mix alchemy.setup
+mix alchemy.server
 ```
 
-`mix run` 単体ではウィンドウは開かず、サーバーのみ起動します。ゲームをプレイするには `zenohd` + `mix run` + `client_desktop` の 3 プロセスが必要です。
+`mix alchemy.server` はサーバーのみ起動します。ゲームをプレイするには `zenohd` + サーバー + VRAlchemy の 3 プロセスが必要です。`mix alchemy.launcher` で一括管理できます。
 
 **開発者向け**: 起動手順の詳細・ランチャー・品質保証コマンドなどは [development.md](./development.md) を参照してください。
 

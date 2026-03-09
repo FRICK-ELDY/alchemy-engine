@@ -2,10 +2,10 @@
 name = "app"
 version = "0.1.0"
 edition = "2021"
-description = "統合層・各ターゲットのエントリポイント（app exe）"
+description = "統合層・各ターゲットのエントリポイント（VRAlchemy exe）"
 
 [[bin]]
-name = "app"
+name = "VRAlchemy"
 path = "src/main.rs"
 
 [lib]

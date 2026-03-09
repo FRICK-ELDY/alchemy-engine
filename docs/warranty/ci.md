@@ -18,22 +18,22 @@
 
 コミット前に以下のコマンドで CI と同等のチェックを実行できます。
 
-```bat
-bin\format.bat          # フォーマット自動修正（Rust + Elixir）
-bin\ci.bat check        # 静的解析のみ（高速、テストなし）
-bin\credo.bat           # Elixir 静的解析のみ
-bin\ci.bat              # 全チェック（テスト含む）
+```bash
+mix alchemy.format          # フォーマット自動修正（Rust + Elixir）
+mix alchemy.ci check        # 静的解析のみ（高速、テストなし）
+mix alchemy.credo           # Elixir 静的解析のみ
+mix alchemy.ci              # 全チェック（テスト含む）
 ```
 
-| スクリプト | 用途 |
+| コマンド | 用途 |
 |:---|:---|
-| `bin\format.bat` | Rust + Elixir のフォーマット自動修正 |
-| `bin\format.bat check` | フォーマット差分チェックのみ（変更なし） |
-| `bin\ci.bat check` | fmt + clippy + compile + format + credo（テストなし） |
-| `bin\ci.bat rust` | Rust のみ（fmt + clippy + test） |
-| `bin\ci.bat elixir` | Elixir のみ（compile + format + credo + test） |
-| `bin\ci.bat` | 全ジョブ実行 |
-| `bin\credo.bat` | `mix credo --strict` 単体実行 |
+| `mix alchemy.format` | Rust + Elixir のフォーマット自動修正 |
+| `mix alchemy.format --check` | フォーマット差分チェックのみ（変更なし） |
+| `mix alchemy.ci check` | fmt + clippy + compile + format + credo（テストなし） |
+| `mix alchemy.ci rust` | Rust のみ（fmt + clippy + test） |
+| `mix alchemy.ci elixir` | Elixir のみ（compile + format + credo + test） |
+| `mix alchemy.ci` | 全ジョブ実行 |
+| `mix alchemy.credo` | `mix credo --strict` 単体実行 |
 
 ---
 

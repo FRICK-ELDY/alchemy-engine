@@ -297,14 +297,14 @@ fn find_app_exe(project_root: &Path) -> Option<PathBuf> {
     let release = native_dir
         .join("target")
         .join("release")
-        .join(exe_name("app"));
+        .join(exe_name("VRAlchemy"));
     if release.is_file() {
         return Some(release);
     }
     let debug = native_dir
         .join("target")
         .join("debug")
-        .join(exe_name("app"));
+        .join(exe_name("VRAlchemy"));
     if debug.is_file() {
         return Some(debug);
     }
