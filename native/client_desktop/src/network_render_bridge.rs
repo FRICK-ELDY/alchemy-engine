@@ -6,26 +6,11 @@
 use client::zenoh::ClientSession;
 use desktop_render::window::{KeyCode, KeyState, RenderBridge};
 use desktop_render::RenderFrame;
+use network::{action_key, client_info_key, frame_key, movement_key};
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
-
-fn frame_key(room_id: &str) -> String {
-    format!("game/room/{room_id}/frame")
-}
-
-fn movement_key(room_id: &str) -> String {
-    format!("game/room/{room_id}/input/movement")
-}
-
-fn action_key(room_id: &str) -> String {
-    format!("game/room/{room_id}/input/action")
-}
-
-fn client_info_key(room_id: &str) -> String {
-    format!("contents/room/{room_id}/client/info")
-}
 
 /// WASD / 矢印キー → dx, dy
 fn move_vector_from_keys(keys: &HashSet<KeyCode>) -> (f32, f32) {

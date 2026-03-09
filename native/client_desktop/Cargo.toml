@@ -10,6 +10,7 @@ path = "src/main.rs"
 
 [dependencies]
 client = { path = "../client" }
+network = { path = "../network" }
 desktop_render = { path = "../desktop_render" }
 desktop_input = { path = "../desktop_input" }
 physics = { path = "../physics" }

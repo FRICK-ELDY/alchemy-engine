@@ -2,14 +2,11 @@
 name = "client"
 version = "0.1.0"
 edition = "2021"
-description = "クライアント共通ライブラリ（client_info, Zenoh 接続, エンコード/デコード）"
+description = "クライアント共通ライブラリ（client_info, Zenoh 接続）。network + shared の薄いラッパー"
 
 [lib]
 crate-type = ["rlib"]
 
 [dependencies]
-serde = { version = "1", features = ["derive"] }
-zenoh = "1.7"
-futures = "0.3"
-futures-timer = "3.0"
-log = "0.4"
+network = { path = "../network" }
+shared = { path = "../shared" }

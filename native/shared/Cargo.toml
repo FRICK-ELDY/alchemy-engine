@@ -6,3 +6,4 @@ description = "Elixirとの契約・型・補間・予測（The Mirror）"
 
 [dependencies]
 bytemuck = { version = "1", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }

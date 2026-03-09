@@ -1,0 +1,12 @@
+[package]
+name = "network"
+version = "0.1.0"
+edition = "2021"
+description = "Zenoh による高速トランスポート（The Pipe）"
+
+[dependencies]
+shared = { path = "../shared" }
+zenoh = "1.7"
+futures = "0.3"
+futures-timer = "3.0"
+log = "0.4"

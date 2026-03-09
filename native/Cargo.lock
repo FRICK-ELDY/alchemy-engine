@@ -994,11 +994,8 @@ checksum = "3a822ea5bc7590f9d40f1ba12c0dc3c2760f3482c6984db1573ad11031420831"
 name = "client"
 version = "0.1.0"
 dependencies = [
- "futures",
- "futures-timer",
- "log",
- "serde",
- "zenoh",
+ "network",
+ "shared",
 ]
 
 [[package]]
@@ -1018,6 +1015,7 @@ dependencies = [
  "desktop_render",
  "env_logger",
  "log",
+ "network",
  "physics",
  "rmp-serde",
  "serde",
@@ -3546,6 +3544,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "network"
+version = "0.1.0"
+dependencies = [
+ "futures",
+ "futures-timer",
+ "log",
+ "shared",
+ "zenoh",
+]
+
+[[package]]
 name = "new_debug_unreachable"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5665,6 +5674,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f40ca3c46823713e0d4209592e8d6e826aa57e928f09752619fc696c499637f6"
 dependencies = [
  "lazy_static",
+]
+
+[[package]]
+name = "shared"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "serde",
 ]
 
 [[package]]
