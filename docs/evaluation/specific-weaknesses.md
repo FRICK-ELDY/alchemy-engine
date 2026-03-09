@@ -1,6 +1,6 @@
 # AlchemyEngine — マイナス点 詳細一覧
 
-> 最終更新: 2026-03-07（evaluation-2026-03-07 に基づく）
+> 最終更新: 2026-03-10（evaluation-2026-03-10 に基づく）
 
 ## 採点基準
 
@@ -76,6 +76,20 @@
 
 ---
 
+## native/shared — 共通データ・Elixir 契約
+
+### ❌ マイナス点
+
+- **predict_input がスケルトン** `-1`
+  > `predict_input(current, _delta_ms)` が `current` をそのまま返すのみ。レイテンシ対策の入力予測ロジックが未実装。
+  > 対象ファイル: `native/shared/src/predict.rs`
+
+- **Store がスケルトン** `-1`
+  > `Store` が `_placeholder: ()` のみ。スナップショットの過去・現在ペア管理が未実装。
+  > 対象ファイル: `native/shared/src/store.rs`
+
+---
+
 ## native/network — Zenoh 通信層（Rust）
 
 ### ❌ マイナス点
@@ -94,6 +108,10 @@
   > `create_world()` のみ `ResourceArc<GameWorld>` を直接返している。他 NIF は `NifResult<T>` で統一。将来失敗しうる処理が追加された場合、パニックが BEAM VM クラッシュに直結する。
   > 対象ファイル: `native/nif/src/nif/world_nif.rs`（L27-28）
 
+- **nif が shared に非依存** `-1`
+  > `native-restructure-migration-plan.md` の目標では NIF → SHARED のみ。現状 nif の Cargo.toml に shared 依存がなく、型・定数の共有が未活用。
+  > 対象ファイル: `native/nif/Cargo.toml`
+
 ---
 
 ## native/render — 描画パイプライン
@@ -106,15 +124,49 @@
 
 - **build_instances 関数の重複（DRY 違反）** `-3`
   > `renderer/mod.rs` の `update_instances` と `headless.rs` の `build_instances` に、スプライト種別ごとのUV・サイズ計算ロジックがほぼ同一で重複している。スプライト種別追加・変更時に両方の修正が必要で、同期漏れのリスクがある。
-  > 対象ファイル: `native/desktop_render/src/renderer/mod.rs`, `native/desktop_render/src/headless.rs`
+  > 対象ファイル: `native/render/src/renderer/mod.rs`, `native/render/src/headless.rs`
 
 - **Skeleton/Ghost の UV がプレースホルダー** `-2`
   > `Skeleton` が `Golem` の UV を流用し、`Ghost` が `Bat` の UV を流用している。別エンティティとして存在するにもかかわらず視覚的に区別できない状態。ゲームプレイの完成度を損なっている。
-  > 対象ファイル: `native/desktop_render/src/renderer/mod.rs`（該当 UV マッピング）
+  > 対象ファイル: `native/render/src/renderer/mod.rs`（該当 UV マッピング）
 
 - **Vertex/VERTICES/INDICES 等の重複定義** `-2`
   > `renderer/mod.rs` と `headless.rs` で同一の構造体・定数が重複定義されている。`pub(crate)` で共有すべき。
-  > 対象ファイル: `native/desktop_render/src/renderer/mod.rs`, `native/desktop_render/src/headless.rs`
+  > 対象ファイル: `native/render/src/renderer/mod.rs`, `native/render/src/headless.rs`
+
+---
+
+## native/xr — XR層
+
+### ❌ マイナス点
+
+- **OpenXR 統合が未実装** `-3`
+  > `run_openxr_loop` が `Err("OpenXR integration not yet implemented")` を返すのみ。VR ヘッドセット・コントローラー入力が動作しない。
+  > 対象ファイル: `native/xr/src/lib.rs`
+
+---
+
+## native/app — 統合層
+
+### ❌ マイナス点
+
+- **app が nif に依存（SCREEN_WIDTH/HEIGHT 取得）** `-1`
+  > main.rs が `nif::physics::constants::{SCREEN_WIDTH, SCREEN_HEIGHT}` を参照。shared 経由で取得すべき定数が nif に依存している。
+  > 対象ファイル: `native/app/src/main.rs`
+
+- **android/ios が未実装** `-1`
+  > android.rs / ios.rs が「将来実装」のコメントのみ。モバイルターゲットのエントリが存在しない。
+  > 対象ファイル: `native/app/src/android.rs`, `native/app/src/ios.rs`
+
+---
+
+## native/window — 窓層
+
+### ❌ マイナス点
+
+- **common（入力正規化）が未実装** `-1`
+  > `common.rs` が「詳細は platform 連携後に拡張予定」のコメントのみ。OS ごとのマウス座標・DPI スケール変換が未実装。
+  > 対象ファイル: `native/window/src/common.rs`
 
 ---
 
@@ -124,11 +176,11 @@
 
 - **プロパティベーステスト・ファジングが完全に存在しない** `-3`
   > `StreamData` / `ExUnitProperties` / `PropCheck` / `Quixir` の使用がゼロ。Rustのファズターゲットも存在しない。ゲームロジックの境界条件・不変条件の自動検証が未整備。
-  > 対象ファイル: `apps/contents/test/`, `native/physics/`
+  > 対象ファイル: `apps/contents/test/`, `native/nif/src/physics/`
 
-- **nif・render・audio の Rust テストがゼロ** `-3`
-  > NIF ブリッジ・描画パイプライン・オーディオの Rust テストが一切存在しない。`headless.rs` が存在するにもかかわらずレンダリングテストが書かれていない。`nif` の `decode_enemy_params` 等のデコードロジックはGPU不要でテスト可能。
-  > 対象ファイル: `native/nif/src/`, `native/desktop_render/src/`, `native/audio/src/`
+- **nif・render・audio・network・shared の Rust テストがゼロ** `-3`
+  > NIF ブリッジ・描画パイプライン・オーディオ・network・shared の Rust テストが一切存在しない。`headless.rs` が存在するにもかかわらずレンダリングテストが書かれていない。nif 内 physics の entity_params 等はテストあり。
+  > 対象ファイル: `native/nif/src/nif/`, `native/render/src/`, `native/audio/src/`, `native/network/src/`, `native/shared/src/`
 
 - **E2E テストがゼロ** `-2`
   > ゲームループ全体（開始→プレイ→終了→リトライ）を通したテストが存在しない。`headless.rs` を活用したE2Eテストが可能なはずだが未実装。
@@ -177,16 +229,12 @@
   > 対象ファイル: `.github/workflows/ci.yml`
 
 - **bench-regression のローカル実行スクリプトが存在しない** `-1`
-  > `bin/ci.bat` がジョブA〜Dと1:1対応しているが、ジョブE（bench-regression）のローカル実行スクリプトが存在しない。ベンチマーク回帰をローカルで確認する手段がない。
-  > 対象ファイル: `bin/`
+  > `mix alchemy.ci` がジョブA〜Dと1:1対応しているが、ジョブE（bench-regression）のローカル実行スクリプトが存在しない。ベンチマーク回帰をローカルで確認する手段がない。
+  > 対象ファイル: `apps/core/lib/mix/`
 
 - **README の Contributing セクションがプレースホルダー** `-1`
   > `README.md` の Contributing セクションが「（※チーム開発時のガイドラインや...）」というプレースホルダーのまま。
   > 対象ファイル: `README.md`
-
-- **bin/ci.bat と GitHub CI の clippy スコープの差** `-1`
-  > CI yml は `--exclude launcher` で clippy を実行するが、`bin/ci.bat` は launcher を含む workspace 全体で clippy を実行。ローカルで launcher に警告があると ci.bat が失敗し、CI では通る不整合がありうる。
-  > 対象ファイル: `bin/ci.bat`（L46）, `.github/workflows/ci.yml`（L37）
 
 ---
 
