@@ -8,3 +8,4 @@ pub mod platform;
 
 pub use common::*;
 pub use platform::ClientSession;
+pub use shared::ClientInfo;

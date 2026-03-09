@@ -16,7 +16,6 @@ path = "src/main.rs"
 path = "src/lib.rs"
 
 [dependencies]
-client = { path = "../client" }
 network = { path = "../network" }
 render = { path = "../render" }
 window = { path = "../window" }
