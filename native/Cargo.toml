@@ -10,7 +10,7 @@ members = [
     "window",
     "xr",
     "app",
-    "launcher",
+    "tools/launcher",
 ]
 
 [profile.dev]

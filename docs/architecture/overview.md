@@ -190,7 +190,8 @@ alchemy-engine/
 │   ├── desktop_input/               # デスクトップ入力・winit イベントループ（desktop_render に依存）
 │   ├── desktop_input_openxr/        # OpenXR 入力ブリッジ（VR）
 │   ├── client_desktop/              # Zenoh 経由でサーバーに接続するスタンドアロンクライアント
-│   └── launcher/                    # トレイアイコン・zenohd / Phoenix / Client Run
+│   └── tools/
+│       └── launcher/                # トレイアイコン・zenohd / Phoenix / Client Run
 │
 ├── assets/                          # スプライト・音声アセット
 └── saves/                           # セーブデータ
