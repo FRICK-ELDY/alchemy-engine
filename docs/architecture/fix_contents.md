@@ -9,7 +9,7 @@
 - **Contents（体験）**: ユーザーが知覚する最終的な物語や空間。既存の `lib/contents/` 配下に配置。
 - **Objects（空間のピア）**: 空間に存在する実体（Entities）。GenServer として動作。
 - **Components（状態のピア）**: ノードを束ねて特定の「機能」を持たせた細胞。状態を保持する。GenServer として動作。
-- **Nodes（論理のピア）**: Action と Logic が交差する処理の原子。Logic Processors。GenServer として動作。
+- **Nodes（論理のピア）**: Action と Logic が交差する処理の原子。Logic Processors。プロセス化しない。
 - **Schemas（設計図）**: 世界に存在する物質そのものの定義。ノード・コンポーネントが扱うデータの型。
 
 ## 2. 依存関係（Dependency Direction）
@@ -26,18 +26,18 @@ schemas |> components |> objects
 schemas |> nodes |> components |> objects
 ```
 
-## 3. 二つの血流（Action & Logic Lines）
+## 3. 二種類のピン（Action & Logic Pins）
 
-ノードプログラミングを「時間の制御」と「データの参照」に分離し、それらを自由に組み合わせます。
+ノードプログラミングを「時間の制御」と「データの参照」に分離し、それらを自由に組み合わせます。各ノードは **pin**（接続点）を持ち、これらを接続して処理を構築します。
 
-- **Action Line（実行フロー）**:
+- **Action pins（実行フロー）**:
   - 役割: 「いつ（When）」を司る。パルス（信号）による実行権限の委譲。
   - 機能: 順次処理、並列処理、および複数の時間を束ねる Sync（同期）。
-  - 端子: `{in, out}`。
-- **Logic Line（データフロー）**:
+  - ピン: `action in` / `action out`。
+- **Logic pins（データフロー）**:
   - 役割: 「何を（What）」を司る。情報の参照と変換。
   - 機能: 常に流れるストリーム、または要求に応じた値（Value）の返却。
-  - 端子: `{in, out}`。
+  - ピン: `logic in` / `logic out`。
 
 ## 4. 統一ディレクトリ・アーキテクチャ（apps/contents）
 
@@ -45,9 +45,6 @@ schemas |> nodes |> components |> objects
 apps/contents/
 ├── core/
 │   └── behaviour.ex         # 憲法。全層共通の契約。（役割分担は別途詰める）
-├── lines/                   # 通信のルール。Action / Logic のインターフェース。
-│   ├── action.ex            # {in, out}
-│   └── logic.ex             # {in, out}
 ├── schemas/                 # 設計図。ノード・コンポーネントが扱うデータの型定義。
 │   └── category/
 │       ├── data/            # プリミティブな値の定義
@@ -69,11 +66,14 @@ apps/contents/
 │       └── uncategorized/
 │           └── comment.ex   # VR 空間内のドキュメント化（付箋）
 ├── nodes/                   # 論理のピア（Logic Processors）
+│   ├── pins/                # Action / Logic のピン定義（action in/out, logic in/out）
+│   │   ├── action.ex
+│   │   └── logic.ex
 │   ├── core/
-│   │   └── behaviour.ex     # ノードとしてのインターフェース（Action/Logic の宣言）
+│   │   └── behaviour.ex     # ノードとしてのインターフェース（pins の宣言）
 │   └── category/
 │       ├── actions/         # 実行・副作用に軸を置くノード（Resonite に合わせた分類）
-│       │   └── write.ex     # Action Line でトリガー、Logic Line でデータを書き換え
+│       │   └── write.ex     # Action pin でトリガー、Logic pin でデータを書き換え
 │       └── math/            # 純粋なロジック演算
 │           └── add.ex
 └── lib/contents/            # 既存 Contents（体験）。従来通り配置
@@ -89,17 +89,17 @@ apps/contents/
 | パス                          | 役割                                                                                                |
 | --------------------------- | ------------------------------------------------------------------------------------------------- |
 | `core/behaviour.ex`         | 憲法。全層が従う基本契約。役割分担は「Behaviour の流れ」参照。                                                              |
-| `lines/`                    | Action / Logic の端子 `{in, out}` を定義。システム全体で共有される通信のルール。                                            |
+| `nodes/pins/`               | Action / Logic のピン（action in/out, logic in/out）を定義。ノード間の通信のルール。                                            |
 | `schemas/`                  | 設計図。データの形を定義。`category` でドメイン別に分類し、VR 空間での型の可視性を高める。                                              |
 | `schemas/category/spatial/` | 空間に関わる型。Resonite の Components に合わせた配置。transform, vector3 など。                                      |
 | `objects/`                  | 空間上の実体。ECS の Entity 相当。GenServer で動作。                                                             |
 | `components/`               | 状態を保持する細胞。ノードを束ねて特定の機能を提供。GenServer で動作。                                                          |
-| `nodes/`                    | 論理の原子。Action / Logic Lines に基づく処理。GenServer で動作。`category/actions/` は Resonite の Actions に合わせた分類。 |
+| `nodes/`                    | 論理の原子。Action / Logic pins に基づく処理。プロセス化しない。`category/actions/` は Resonite の Actions に合わせた分類。 |
 
 
 ### プロセスモデル（GenServer）
 
-Objects / Components / Nodes の 3 層は、当面すべて GenServer として実装する。一貫したモデルで実装を進め、負荷を計測したうえで、必要に応じて軽量な方式へ切り替える。
+Objects / Components は GenServer として実装。Nodes はプロセス化せず、Component 内の Executor が関数として呼び出す。一貫したモデルで実装を進め、負荷を計測したうえで、必要に応じて調整する。
 
 #### 層ごとの GenServer 適用可否
 
@@ -210,7 +210,7 @@ flowchart TB
 | Behaviour                        | 役割                                                                            |
 | -------------------------------- | ----------------------------------------------------------------------------- |
 | **core/behaviour.ex（憲法）**        | 全層共通の土台。GenServer の init/terminate、プロセス識別子、共通の型・コールバックの雛形。各層が「従う」前提の契約。       |
-| **nodes/core/behaviour.ex**      | Node 固有の契約。Action/Logic Lines の `{in, out}` 宣言、handle_pulse、handle_sample など。 |
+| **nodes/core/behaviour.ex**      | Node 固有の契約。Action/Logic pins（action in/out, logic in/out）の宣言、handle_pulse、handle_sample など。 |
 | **components/core/behaviour.ex** | Component 固有の契約。状態保持、ノード束ね、on_ready / on_process などライフサイクル。                   |
 | **objects/core/behaviour.ex**    | Object 固有の契約。空間上の実体としての init、handle_cast（空間イベント）、子の管理など。                      |
 
@@ -220,14 +220,14 @@ flowchart TB
 
 ## 5. 設計のゴール：能動と受動の融合
 
-ノードを「Action 型」か「Logic 型」かで分けるのではなく、**「どのような能力（Line）を備えているか」**で定義します。
+ノードを「Action 型」か「Logic 型」かで分けるのではなく、**「どのようなピン（pin）を備えているか」**で定義します。
 
 > 例：write.ex ノードの解釈  
-> 「Action Line からパルスを受け取った瞬間に動き出し、Logic Line からデータを吸い上げ（Sample）、対象を書き換える。終われば Action Line へパルスを返す。」
+> 「action in pin からパルスを受け取った瞬間に動き出し、logic in pin からデータを吸い上げ（Sample）、対象を書き換える。終われば action out pin へパルスを返す。」
 
 ## 6. VR 体験における開発指針
 
-- **直感的な線**: Action（時間）は「光る脈動」として、Logic（情報）は「静かな導管」として視覚化する。
+- **直感的な接続**: Action pins（時間）は「光る脈動」として、Logic pins（情報）は「静かな導管」として視覚化する。
 - **対称性の保持**: 階層が違っても、インターフェースが同じであれば、ユーザーは一度覚えたルールでシステム全体を構築できる。
 - **型の厳格さ**: schemas がカテゴリー化されていることで、VR 空間で「今、何を触っているのか」を型レベルでユーザーが意識できるようにする。
 
