@@ -16,7 +16,7 @@
 |:---|:---|
 | **存在の階層（Five Pillars）** | Contents → Objects → Components → Nodes → Schemas |
 | **依存の方向** | schemas を基盤として、nodes → components → objects へ一方向に積み上げ |
-| **二つの血流** | Action Line（実行フロー / 時間の制御）、Logic Line（データフロー / 情報の参照） |
+| **二種類のピン** | Action pins（実行フロー / 時間の制御）、Logic pins（データフロー / 情報の参照） |
 | **プロセスモデル** | Object / Component は GenServer。Node はプロセスにせず、Executor が関数として呼び出す |
 
 ### 1.2 実装の積み上げ順
@@ -24,7 +24,7 @@
 依存関係に従い、下位層から順に構築する。
 
 ```
-schemas → lines → core/behaviour → nodes → components → objects
+schemas → core/behaviour → nodes → components → objects
 ```
 
 ---
@@ -35,9 +35,6 @@ schemas → lines → core/behaviour → nodes → components → objects
 apps/contents/
 ├── core/
 │   └── behaviour.ex         # 憲法。全層共通の契約
-├── lines/                   # 通信のルール（Action / Logic インターフェース）
-│   ├── action.ex
-│   └── logic.ex
 ├── schemas/                 # 設計図。データ型定義
 │   └── category/
 │       ├── data/
@@ -51,7 +48,10 @@ apps/contents/
 │   │   └── behaviour.ex
 │   └── category/
 │       └── uncategorized/
-├── nodes/
+├── nodes/                   # 論理のピア（Logic Processors）
+│   ├── pins/                # Action / Logic ピン定義
+│   │   ├── action.ex
+│   │   └── logic.ex
 │   ├── core/
 │   │   └── behaviour.ex
 │   └── category/
@@ -103,47 +103,17 @@ Resonite の Components に合わせた配置。
 
 ---
 
-### Phase 2: lines（Action / Logic インターフェース）
-
-ノード間・コンポーネント間の通信ルールを定義する。
-
-#### Step 2-1: ディレクトリ作成
-
-```bash
-mkdir -p apps/contents/lib/contents/lines
-```
-
-#### Step 2-2: Action Line の定義
-
-**ファイル:** `apps/contents/lib/contents/lines/action.ex`
-
-- 端子: `{in, out}`
-- 役割: 「いつ（When）」を司る。パルスによる実行権限の委譲
-- 機能: 順次処理、並列処理、Sync（同期）
-- `@callback` または `@spec` でパルス受信・送信のインターフェースを定義
-
-#### Step 2-3: Logic Line の定義
-
-**ファイル:** `apps/contents/lib/contents/lines/logic.ex`
-
-- 端子: `{in, out}`
-- 役割: 「何を（What）」を司る。情報の参照と変換
-- 機能: ストリーム、または要求に応じた Value の返却
-- `@callback` または `@spec` で Sample / Value のインターフェースを定義
-
----
-
-### Phase 3: core/behaviour（憲法）
+### Phase 2: core/behaviour（憲法）
 
 全層が従う共通の土台を定義する。
 
-#### Step 3-1: ディレクトリ作成
+#### Step 2-1: ディレクトリ作成
 
 ```bash
 mkdir -p apps/contents/lib/contents/core
 ```
 
-#### Step 3-2: 憲法の実装
+#### Step 2-2: 憲法の実装
 
 **ファイル:** `apps/contents/lib/contents/core/behaviour.ex`
 
@@ -159,19 +129,38 @@ mkdir -p apps/contents/lib/contents/core
 
 ---
 
-### Phase 4: nodes 層
+### Phase 3: nodes 層
 
-論理の原子。Action / Logic Lines に基づく処理を行う。
+論理の原子。Action / Logic pins に基づく処理を行う。
 
-#### Step 4-1: ディレクトリ作成
+#### Step 3-1: ディレクトリ作成
 
 ```bash
+mkdir -p apps/contents/lib/contents/nodes/pins
 mkdir -p apps/contents/lib/contents/nodes/core
 mkdir -p apps/contents/lib/contents/nodes/category/actions
 mkdir -p apps/contents/lib/contents/nodes/category/math
 ```
 
-#### Step 4-2: Node Behaviour の作成
+#### Step 3-2: nodes/pins（Action / Logic ピン定義）
+
+ノード間の通信ルールを定義する。
+
+**ファイル:** `apps/contents/lib/contents/nodes/pins/action.ex`
+
+- ピン: `action in` / `action out`
+- 役割: 「いつ（When）」を司る。パルスによる実行権限の委譲
+- 機能: 順次処理、並列処理、Sync（同期）
+- `@callback` または `@spec` でパルス受信・送信のインターフェースを定義
+
+**ファイル:** `apps/contents/lib/contents/nodes/pins/logic.ex`
+
+- ピン: `logic in` / `logic out`
+- 役割: 「何を（What）」を司る。情報の参照と変換
+- 機能: ストリーム、または要求に応じた Value の返却
+- `@callback` または `@spec` で Sample / Value のインターフェースを定義
+
+#### Step 3-3: Node Behaviour の作成
 
 **ファイル:** `apps/contents/lib/contents/nodes/core/behaviour.ex`
 
@@ -179,39 +168,39 @@ mkdir -p apps/contents/lib/contents/nodes/category/math
 
 | 責務 | 内容 |
 |:---|:---|
-| Action/Logic Lines | `{in, out}` の宣言 |
+| Action/Logic pins | action in/out, logic in/out の宣言 |
 | コールバック | `handle_pulse`、`handle_sample` など |
 | プロセス | Node は GenServer 化しない。Component 内の Executor がグラフをトラバースし、コールバックを直接呼び出す |
 
-#### Step 4-3: ノード実装例（actions/write）
+#### Step 3-4: ノード実装例（actions/write）
 
 **ファイル:** `apps/contents/lib/contents/nodes/category/actions/write.ex`
 
-- Action Line でパルスを受け取ったとき動作
-- Logic Line からデータ（Sample）を吸い上げ、対象を書き換え
-- 終了後、Action Line へパルスを返す
+- action in pin でパルスを受け取ったとき動作
+- logic in pin からデータ（Sample）を吸い上げ、対象を書き換え
+- 終了後、action out pin へパルスを返す
 
-#### Step 4-4: ノード実装例（math/add）
+#### Step 3-5: ノード実装例（math/add）
 
 **ファイル:** `apps/contents/lib/contents/nodes/category/math/add.ex`
 
 - 純粋なロジック演算
-- Logic Line のみ（または Action 非依存）で動作
+- logic pins のみ（または action 非依存）で動作
 
 ---
 
-### Phase 5: components 層
+### Phase 4: components 層
 
 状態のピア。ノードを束ねて特定の機能を提供する。
 
-#### Step 5-1: ディレクトリ作成
+#### Step 4-1: ディレクトリ作成
 
 ```bash
 mkdir -p apps/contents/lib/contents/components/core
 mkdir -p apps/contents/lib/contents/components/category/uncategorized
 ```
 
-#### Step 5-2: Component Behaviour の作成
+#### Step 4-2: Component Behaviour の作成
 
 **ファイル:** `apps/contents/lib/contents/components/core/behaviour.ex`
 
@@ -224,7 +213,7 @@ mkdir -p apps/contents/lib/contents/components/category/uncategorized
 | ライフサイクル | `on_ready`、`on_process` など |
 | GenServer 規約 | `Contents.Core.Behaviour` の制約に従う |
 
-#### Step 5-3: コンポーネント実装例（uncategorized/comment）
+#### Step 4-3: コンポーネント実装例（uncategorized/comment）
 
 **ファイル:** `apps/contents/lib/contents/components/category/uncategorized/comment.ex`
 
@@ -232,17 +221,17 @@ mkdir -p apps/contents/lib/contents/components/category/uncategorized
 
 ---
 
-### Phase 6: objects 層
+### Phase 5: objects 層
 
 空間のピア（Entities）。ECS の Entity 相当。
 
-#### Step 6-1: ディレクトリ作成
+#### Step 5-1: ディレクトリ作成
 
 ```bash
 mkdir -p apps/contents/lib/contents/objects/core
 ```
 
-#### Step 6-2: Object Behaviour の作成
+#### Step 5-2: Object Behaviour の作成
 
 **ファイル:** `apps/contents/lib/contents/objects/core/behaviour.ex`
 
@@ -271,9 +260,9 @@ schemas |> components |> objects
 schemas |> nodes |> components |> objects
 ```
 
-- nodes は schemas と lines にのみ依存
-- components は schemas、lines、nodes に依存
-- objects は schemas、lines、nodes、components に依存
+- nodes は schemas にのみ依存
+- components は schemas、nodes に依存
+- objects は schemas、nodes、components に依存
 - 逆方向の依存（上位 → 下位以外）がないこと
 
 ---
@@ -320,27 +309,24 @@ flowchart TB
 - [ ] `apps/contents/lib/contents/schemas/category/spatial/vector3.ex`
 - [ ] `apps/contents/lib/contents/schemas/category/users/local_user.ex`
 
-### Phase 2: lines
-
-- [ ] `apps/contents/lib/contents/lines/action.ex`
-- [ ] `apps/contents/lib/contents/lines/logic.ex`
-
-### Phase 3: core
+### Phase 2: core
 
 - [ ] `apps/contents/lib/contents/core/behaviour.ex`
 
-### Phase 4: nodes
+### Phase 3: nodes
 
+- [ ] `apps/contents/lib/contents/nodes/pins/action.ex`
+- [ ] `apps/contents/lib/contents/nodes/pins/logic.ex`
 - [ ] `apps/contents/lib/contents/nodes/core/behaviour.ex`
 - [ ] `apps/contents/lib/contents/nodes/category/actions/write.ex`
 - [ ] `apps/contents/lib/contents/nodes/category/math/add.ex`
 
-### Phase 5: components
+### Phase 4: components
 
 - [ ] `apps/contents/lib/contents/components/core/behaviour.ex`
 - [ ] `apps/contents/lib/contents/components/category/uncategorized/comment.ex`
 
-### Phase 6: objects
+### Phase 5: objects
 
 - [ ] `apps/contents/lib/contents/objects/core/behaviour.ex`
 
