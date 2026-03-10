@@ -64,6 +64,7 @@
 |:---|:---|:---|
 | P5-2 MessagePack バイナリ形式 | push_render_frame の MessagePack 化による転送効率化 | [p5-2-messagepack-execution-plan.md](p5-2-messagepack-execution-plan.md) |
 | クライアント・サーバー分離 | render + input を別 exe 化、Elixir/Rust 状態・定義の切り分け | [client-server-separation-procedure.md](../plan/client-server-separation-procedure.md) |
+| fix_contents: Elixir–Rust 境界 | 新アーキテクチャ（Node/Component/Object）における NIF・shared・レンダーとの境界が未定義。既存 `on_nif_sync` 相当の役割をどこで担うか、Node/Component の状態がいつ Rust に渡るかを文書化する | [fix_contents.md](../architecture/fix_contents.md) |
 
 ---
 

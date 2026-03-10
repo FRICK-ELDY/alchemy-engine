@@ -2,7 +2,7 @@
 
 # Blueprint
 
-## 1. 存在の階層構造（The Four Pillars）
+## 1. 存在の階層構造（The five Pillars）
 
 すべてのデジタル体験は、以下の層の連鎖（パイプライン）で構成されます。
 
@@ -100,6 +100,29 @@ apps/contents/
 ### プロセスモデル（GenServer）
 
 Objects / Components / Nodes の 3 層は、当面すべて GenServer として実装する。一貫したモデルで実装を進め、負荷を計測したうえで、必要に応じて軽量な方式へ切り替える。
+
+#### 層ごとの GenServer 適用可否
+
+| 層 | GenServer | 理由 |
+|:---|:---|:---|
+| **Content（体験）** | 既存のまま | GameEvents 等が担う。ルーム単位で 1 プロセス。 |
+| **Object** | する | 空間実体・子管理・イベント受信に適している。 |
+| **Component** | する | 状態保持とノード束ねの主体。 |
+| **Node（状態なし）** | しない | 関数として Executor が呼び出す。 |
+| **Node（状態あり）** | しない | Agent を検討。GenServer は使わない。 |
+
+**コンテンツ全体**を 1 つの GenServer にすることは推奨しない。Content はオーケストレータであり、実体は Object / Component ツリー。
+
+#### 実装パターン
+
+- **パターン A**: ノードをプロセスにしない。Component 内の Executor がグラフをトラバースし、`handle_pulse` / `handle_sample` を直接呼び出す（Bevy の System に類似）。ノード数に比例してプロセスが増えない。
+- **パターン B**: 状態ありノードのみ Agent を検討。状態なしノードは関数として実行。
+- **パターン C**: 当面は実装を進め、負荷計測後にパターン A または B へ移行を検討する。
+
+#### 推奨方針
+
+- **短期**: Object / Component は GenServer。Node はプロセスにせず、Executor が関数として呼び出す。
+- **中期**: 負荷計測を行い、必要に応じてパターン調整。
 
 ### Behaviour の流れ（現状と提案）
 
