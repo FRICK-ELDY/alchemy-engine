@@ -33,13 +33,17 @@ schemas → core/behaviour → nodes → components → objects
 
 ```
 apps/contents/
+├── lib/
+│   ├── schemas/             # 設計図。データ型定義
+│   │   └── category/
+│   │       ├── primitives/  # スカラー・ベクトル・行列・色など
+│   │       ├── text/        # 文字列・文字
+│   │       ├── temporal/    # 日時・時間幅
+│   │       ├── spatial/     # 空間に関わる型（Transform など）
+│   │       └── users/
+│   └── contents/            # 既存 Contents（移行対象、本手順書外）
 ├── core/
-│   └── behaviour.ex         # 憲法。全層共通の契約
-├── schemas/                 # 設計図。データ型定義
-│   └── category/
-│       ├── data/
-│       ├── spatial/
-│       └── users/
+│   └── behaviour.ex
 ├── objects/
 │   └── core/
 │       └── behaviour.ex
@@ -57,7 +61,6 @@ apps/contents/
 │   └── category/
 │       ├── actions/
 │       └── math/
-└── lib/contents/            # 既存 Contents（移行対象、本手順書外）
 ```
 
 ---
@@ -71,35 +74,69 @@ schemas は全層の基盤。最初に配置を定義し、カテゴリ別に型
 #### Step 1-1: ディレクトリ作成
 
 ```bash
-mkdir -p apps/contents/lib/contents/schemas/category/data
-mkdir -p apps/contents/lib/contents/schemas/category/spatial
-mkdir -p apps/contents/lib/contents/schemas/category/users
+mkdir -p apps/contents/lib/schemas/category/primitives
+mkdir -p apps/contents/lib/schemas/category/text
+mkdir -p apps/contents/lib/schemas/category/temporal
+mkdir -p apps/contents/lib/schemas/category/spatial
+mkdir -p apps/contents/lib/schemas/category/users
 ```
 
-#### Step 1-2: data カテゴリ（プリミティブ型）の作成
+#### Step 1-2: primitives カテゴリの作成
+
+スカラー・ベクトル・行列・色など。float3 / quaternion もここに含む（spatial で多用するが、包括的な型定義として primitives に配置する）。
+
+**規約: 型ファミリごとに 1 ファイルにまとめる。** 1 ファイル内に複数の `@type` を定義する。負荷は気にする必要はなく、関連型を一箇所にまとめることで保守性が上がる。
+
+例:
+- `primitives/bool.ex` → `@type t`, `@type t2`, `@type t3`, `@type t4`
+- `primitives/float.ex` → `@type t`, `@type t2`, `@type t3`, `@type t4`, `@type t2x2`, `@type t3x3`, `@type t4x4`, `@type quaternion`
+
+| ファイル | モジュール | 定義する型 |
+|:---|:---|:---|
+| `primitives/bool.ex` | `Schemas.Category.Primitives.Bool` | t, t2, t3, t4 |
+| `primitives/byte.ex` | `Schemas.Category.Primitives.Byte` | t, t2, t3, t4 |
+| `primitives/ushort.ex` | `Schemas.Category.Primitives.UShort` | t, t2, t3, t4 |
+| `primitives/uint.ex` | `Schemas.Category.Primitives.UInt` | t, t2, t3, t4 |
+| `primitives/ulong.ex` | `Schemas.Category.Primitives.ULong` | t, t2, t3, t4 |
+| `primitives/sbyte.ex` | `Schemas.Category.Primitives.SByte` | t, t2, t3, t4 |
+| `primitives/short.ex` | `Schemas.Category.Primitives.Short` | t, t2, t3, t4 |
+| `primitives/int.ex` | `Schemas.Category.Primitives.Int` | t, t2, t3, t4 |
+| `primitives/long.ex` | `Schemas.Category.Primitives.Long` | t, t2, t3, t4 |
+| `primitives/float.ex` | `Schemas.Category.Primitives.Float` | t, t2, t3, t4, t2x2, t3x3, t4x4, quaternion |
+| `primitives/double.ex` | `Schemas.Category.Primitives.Double` | t, t2, t3, t4, t2x2, t3x3, t4x4, quaternion |
+| `primitives/decimal.ex` | `Schemas.Category.Primitives.Decimal` | t |
+| `primitives/color.ex` | `Schemas.Category.Primitives.Color` | t, t32 |
+
+各ファイルは `@type` と `@moduledoc` を定義する。
+
+#### Step 1-3: text カテゴリの作成
 
 | ファイル | モジュール | 役割 |
 |:---|:---|:---|
-| `schemas/category/data/string.ex` | `Contents.Schemas.Category.Data.String` | 文字列型 |
-| `schemas/category/data/boolean.ex` | `Contents.Schemas.Category.Data.Boolean` | 真偽値 |
-| `schemas/category/data/int.ex` | `Contents.Schemas.Category.Data.Int` | 整数型 |
+| `schemas/category/text/string.ex` | `Schemas.Category.Text.String` | 文字列型 |
+| `schemas/category/text/char.ex` | `Schemas.Category.Text.Char` | 文字型 |
 
-各ファイルは `@type t` と `@moduledoc` を定義。
-
-#### Step 1-3: spatial カテゴリの作成
+#### Step 1-4: temporal カテゴリの作成
 
 | ファイル | モジュール | 役割 |
 |:---|:---|:---|
-| `schemas/category/spatial/transform.ex` | `Contents.Schemas.Category.Spatial.Transform` | 変換行列・位置・回転・スケール |
-| `schemas/category/spatial/vector3.ex` | `Contents.Schemas.Category.Spatial.Vector3` | 3次元ベクトル |
+| `schemas/category/temporal/date_time.ex` | `Schemas.Category.Temporal.DateTime` | 日時 |
+| `schemas/category/temporal/time_span.ex` | `Schemas.Category.Temporal.TimeSpan` | 時間幅 |
 
-Resonite の Components に合わせた配置。
-
-#### Step 1-4: users カテゴリの作成
+#### Step 1-5: spatial カテゴリの作成
 
 | ファイル | モジュール | 役割 |
 |:---|:---|:---|
-| `schemas/category/users/local_user.ex` | `Contents.Schemas.Category.Users.LocalUser` | 操作者というコンテキストの型 |
+| `schemas/category/spatial/transform.ex` | `Schemas.Category.Spatial.Transform` | 変換行列・位置・回転・スケール |
+| `schemas/category/spatial/vector3.ex` | `Schemas.Category.Spatial.Vector3` | 3次元ベクトル |
+
+Resonite の Components に合わせた配置。primitives の float3 / quaternion を参照する。
+
+#### Step 1-6: users カテゴリの作成
+
+| ファイル | モジュール | 役割 |
+|:---|:---|:---|
+| `schemas/category/users/local_user.ex` | `Schemas.Category.Users.LocalUser` | 操作者というコンテキストの型 |
 
 ---
 
@@ -302,12 +339,26 @@ flowchart TB
 
 ### Phase 1: schemas
 
-- [ ] `apps/contents/lib/contents/schemas/category/data/string.ex`
-- [ ] `apps/contents/lib/contents/schemas/category/data/boolean.ex`
-- [ ] `apps/contents/lib/contents/schemas/category/data/int.ex`
-- [ ] `apps/contents/lib/contents/schemas/category/spatial/transform.ex`
-- [ ] `apps/contents/lib/contents/schemas/category/spatial/vector3.ex`
-- [ ] `apps/contents/lib/contents/schemas/category/users/local_user.ex`
+- [ ] `apps/contents/lib/schemas/category/primitives/bool.ex`
+- [ ] `apps/contents/lib/schemas/category/primitives/byte.ex`
+- [ ] `apps/contents/lib/schemas/category/primitives/ushort.ex`
+- [ ] `apps/contents/lib/schemas/category/primitives/uint.ex`
+- [ ] `apps/contents/lib/schemas/category/primitives/ulong.ex`
+- [ ] `apps/contents/lib/schemas/category/primitives/sbyte.ex`
+- [ ] `apps/contents/lib/schemas/category/primitives/short.ex`
+- [ ] `apps/contents/lib/schemas/category/primitives/int.ex`
+- [ ] `apps/contents/lib/schemas/category/primitives/long.ex`
+- [ ] `apps/contents/lib/schemas/category/primitives/float.ex`
+- [ ] `apps/contents/lib/schemas/category/primitives/double.ex`
+- [ ] `apps/contents/lib/schemas/category/primitives/decimal.ex`
+- [ ] `apps/contents/lib/schemas/category/primitives/color.ex`
+- [ ] `apps/contents/lib/schemas/category/text/string.ex`
+- [ ] `apps/contents/lib/schemas/category/text/char.ex`
+- [ ] `apps/contents/lib/schemas/category/temporal/date_time.ex`
+- [ ] `apps/contents/lib/schemas/category/temporal/time_span.ex`
+- [ ] `apps/contents/lib/schemas/category/spatial/transform.ex`
+- [ ] `apps/contents/lib/schemas/category/spatial/vector3.ex`
+- [ ] `apps/contents/lib/schemas/category/users/local_user.ex`
 
 ### Phase 2: core
 
