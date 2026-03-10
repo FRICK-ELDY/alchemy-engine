@@ -1,4 +1,4 @@
-defmodule Schemas.Category.Primitives.Double do
+defmodule Schemas.Category.Value.Double do
   @moduledoc """
   64 ビット浮動小数型（倍精度）。スカラー、2〜4 要素ベクトル、2x2〜4x4 行列、クォータニオン。
 

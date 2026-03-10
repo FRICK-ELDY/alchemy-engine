@@ -1,4 +1,4 @@
-defmodule Schemas.Category.Primitives.UInt do
+defmodule Schemas.Category.Value.UInt do
   @moduledoc """
   符号なし 32 ビット整数型。スカラーおよび 2〜4 要素のベクトル。
   """
