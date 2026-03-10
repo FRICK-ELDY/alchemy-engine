@@ -14,13 +14,16 @@
 
 ## 2. 依存関係（Dependency Direction）
 
-下位層への一方向依存を維持します。
+データ変換（schemas）がプログラムの基礎。基盤から上位へ一方向に依存を積み上げます。
 
 ```
-objects |> schemas
-objects |> components |> schemas
-objects |> nodes |> schemas
-objects |> components |> nodes |> schemas
+schemas
+schemas |> nodes
+schemas |> components
+schemas |> objects
+schemas |> nodes |> objects
+schemas |> components |> objects
+schemas |> nodes |> components |> objects
 ```
 
 ## 3. 二つの血流（Action & Logic Lines）
@@ -84,7 +87,7 @@ apps/contents/
 
 | パス | 役割 |
 |------|------|
-| `core/behaviour.ex` | 憲法。全層が従う基本契約。`core/` と各層の `behaviour.ex` の役割分担は別途詰める。 |
+| `core/behaviour.ex` | 憲法。全層が従う基本契約。役割分担は「Behaviour の流れ」参照。 |
 | `lines/` | Action / Logic の端子 `{in, out}` を定義。システム全体で共有される通信のルール。 |
 | `schemas/` | 設計図。データの形を定義。`category` でドメイン別に分類し、VR 空間での型の可視性を高める。 |
 | `schemas/category/spatial/` | 空間に関わる型。Resonite の Components に合わせた配置。transform, vector3 など。 |
@@ -95,6 +98,94 @@ apps/contents/
 ### プロセスモデル（GenServer）
 
 Objects / Components / Nodes の 3 層は、当面すべて GenServer として実装する。一貫したモデルで実装を進め、負荷を計測したうえで、必要に応じて軽量な方式へ切り替える。
+
+### Behaviour の流れ（現状と提案）
+
+**現状**：Behaviour が `apps/core` と `apps/contents` に分散し、層ごとに独立した契約が存在する。
+
+```mermaid
+flowchart TB
+    subgraph core["apps/core"]
+        CB[Core.ContentBehaviour]
+        CMP[Core.Component]
+    end
+
+    subgraph contents["apps/contents"]
+        SB[Contents.SceneBehaviour]
+    end
+
+    subgraph impl_content["Content 実装"]
+        T[Telemetry]
+        FT[FormulaTest]
+        VS[VampireSurvivor]
+    end
+
+    subgraph impl_comp["Component 実装"]
+        LUC[LocalUserComponent]
+        RC[RenderComponent]
+        SC[SpawnComponent]
+    end
+
+    subgraph impl_scene["Scene 実装"]
+        P[Playing]
+        GO[GameOver]
+    end
+
+    CB --> T
+    CB --> FT
+    CB --> VS
+
+    CMP --> LUC
+    CMP --> RC
+    CMP --> SC
+
+    SB --> P
+    SB --> GO
+```
+
+- `Core.ContentBehaviour`：コンテンツモジュールの契約
+- `Core.Component`：コンポーネントの契約
+- `Contents.SceneBehaviour`：シーンの契約
+- 共通の「憲法」はなく、Object / Node の Behaviour は未定義
+
+**提案**：`apps/contents` 配下に配置を統一し、`core/behaviour.ex`（憲法）を頂点に、各層の Behaviour が共通の土台に乗る構成。実装の積み上げ順は Node → Component → Object。
+
+```mermaid
+flowchart TB
+    subgraph constitution["憲法層"]
+        CORE[core/behaviour.ex<br>Contents.Core.Behaviour]
+    end
+
+    subgraph layer_behaviours["各層の Behaviour"]
+        NOD_B[nodes/core/behaviour.ex<br>Node 規約]
+        CMP_B[components/core/behaviour.ex<br>Component 規約]
+        OBJ_B[objects/core/behaviour.ex<br>Object 規約]
+    end
+
+    subgraph implementations["実装モジュール"]
+        NOD_IMPL[Node 実装]
+        CMP_IMPL[Component 実装]
+        OBJ_IMPL[Object 実装]
+    end
+
+    CORE -.->|"従う"| NOD_B
+    CORE -.->|"従う"| CMP_B
+    CORE -.->|"従う"| OBJ_B
+
+    NOD_B --> NOD_IMPL
+    CMP_B --> CMP_IMPL
+    OBJ_B --> OBJ_IMPL
+```
+
+| Behaviour | 役割 |
+|-----------|------|
+| **core/behaviour.ex（憲法）** | 全層共通の土台。GenServer の init/terminate、プロセス識別子、共通の型・コールバックの雛形。各層が「従う」前提の契約。 |
+| **nodes/core/behaviour.ex** | Node 固有の契約。Action/Logic Lines の `{in, out}` 宣言、handle_pulse、handle_sample など。 |
+| **components/core/behaviour.ex** | Component 固有の契約。状態保持、ノード束ね、on_ready / on_process などライフサイクル。 |
+| **objects/core/behaviour.ex** | Object 固有の契約。空間上の実体としての init、handle_cast（空間イベント）、子の管理など。 |
+
+- **点線（-.->）**：core/behaviour は「従うべき原則」。継承や `@behaviour` による直接指定はせず、設計上の制約として扱う選択も可。
+- **実線（-->）**：各層の実装モジュールは、対応する層の behaviour を `@behaviour` で指定する。
 
 ## 5. 設計のゴール：能動と受動の融合
 
