@@ -1,4 +1,4 @@
-defmodule Schemas.Category.Primitives.Color do
+defmodule Schemas.Category.Value.Color do
   @moduledoc """
   色型。拡張（RGBA 等）および 32 ビット詰め表現。
   """

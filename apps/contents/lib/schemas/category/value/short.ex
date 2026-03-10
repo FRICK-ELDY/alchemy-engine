@@ -1,4 +1,4 @@
-defmodule Schemas.Category.Primitives.Short do
+defmodule Schemas.Category.Value.Short do
   @moduledoc """
   符号付き 16 ビット整数型（-32768..32767）。スカラーおよび 2〜4 要素のベクトル。
   """
