@@ -52,8 +52,7 @@ apps/contents/
 │       │   ├── boolean.ex
 │       │   └── int.ex
 │       ├── spatial/         # 空間に関わる型（Resonite に合わせた配置）
-│       │   ├── transform.ex # 変換行列・位置・回転・スケール
-│       │   └── vector3.ex   # 3次元ベクトル
+│       │   └── transform.ex # 変換行列・位置・回転・スケール（vector3 は primitives の Float.t3）
 │       └── users/
 │           └── local_user.ex  # 操作者というコンテキスト
 ├── objects/                 # 空間のピア（Entities）
@@ -91,7 +90,7 @@ apps/contents/
 | `core/behaviour.ex`         | 憲法。全層が従う基本契約。役割分担は「Behaviour の流れ」参照。                                                              |
 | `nodes/pins/`               | Action / Logic のピン（action in/out, logic in/out）を定義。ノード間の通信のルール。                                            |
 | `schemas/`                  | 設計図。データの形を定義。`category` でドメイン別に分類し、VR 空間での型の可視性を高める。                                              |
-| `schemas/category/spatial/` | 空間に関わる型。Resonite の Components に合わせた配置。transform, vector3 など。                                      |
+| `schemas/category/spatial/` | 空間に関わる型。Resonite の Components に合わせた配置。transform など。3 次元ベクトルは primitives の Float.t3。 |
 | `objects/`                  | 空間上の実体。ECS の Entity 相当。GenServer で動作。                                                             |
 | `components/`               | 状態を保持する細胞。ノードを束ねて特定の機能を提供。GenServer で動作。                                                          |
 | `nodes/`                    | 論理の原子。Action / Logic pins に基づく処理。プロセス化しない。`category/actions/` は Resonite の Actions に合わせた分類。 |

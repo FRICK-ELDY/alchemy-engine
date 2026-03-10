@@ -128,9 +128,8 @@ mkdir -p apps/contents/lib/schemas/category/users
 | ファイル | モジュール | 役割 |
 |:---|:---|:---|
 | `schemas/category/spatial/transform.ex` | `Schemas.Category.Spatial.Transform` | 変換行列・位置・回転・スケール |
-| `schemas/category/spatial/vector3.ex` | `Schemas.Category.Spatial.Vector3` | 3次元ベクトル |
 
-Resonite の Components に合わせた配置。primitives の float3 / quaternion を参照する。
+3 次元ベクトルは primitives の `Float.t3` を利用する。Resonite の Components に合わせた配置。
 
 #### Step 1-6: users カテゴリの作成
 
@@ -357,7 +356,6 @@ flowchart TB
 - [ ] `apps/contents/lib/schemas/category/temporal/date_time.ex`
 - [ ] `apps/contents/lib/schemas/category/temporal/time_span.ex`
 - [ ] `apps/contents/lib/schemas/category/spatial/transform.ex`
-- [ ] `apps/contents/lib/schemas/category/spatial/vector3.ex`
 - [ ] `apps/contents/lib/schemas/category/users/local_user.ex`
 
 ### Phase 2: core
