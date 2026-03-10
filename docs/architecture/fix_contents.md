@@ -85,15 +85,17 @@ apps/contents/
 
 ### 構成のコメント
 
-| パス | 役割 |
-|------|------|
-| `core/behaviour.ex` | 憲法。全層が従う基本契約。役割分担は「Behaviour の流れ」参照。 |
-| `lines/` | Action / Logic の端子 `{in, out}` を定義。システム全体で共有される通信のルール。 |
-| `schemas/` | 設計図。データの形を定義。`category` でドメイン別に分類し、VR 空間での型の可視性を高める。 |
-| `schemas/category/spatial/` | 空間に関わる型。Resonite の Components に合わせた配置。transform, vector3 など。 |
-| `objects/` | 空間上の実体。ECS の Entity 相当。GenServer で動作。 |
-| `components/` | 状態を保持する細胞。ノードを束ねて特定の機能を提供。GenServer で動作。 |
-| `nodes/` | 論理の原子。Action / Logic Lines に基づく処理。GenServer で動作。`category/actions/` は Resonite の Actions に合わせた分類。 |
+
+| パス                          | 役割                                                                                                |
+| --------------------------- | ------------------------------------------------------------------------------------------------- |
+| `core/behaviour.ex`         | 憲法。全層が従う基本契約。役割分担は「Behaviour の流れ」参照。                                                              |
+| `lines/`                    | Action / Logic の端子 `{in, out}` を定義。システム全体で共有される通信のルール。                                            |
+| `schemas/`                  | 設計図。データの形を定義。`category` でドメイン別に分類し、VR 空間での型の可視性を高める。                                              |
+| `schemas/category/spatial/` | 空間に関わる型。Resonite の Components に合わせた配置。transform, vector3 など。                                      |
+| `objects/`                  | 空間上の実体。ECS の Entity 相当。GenServer で動作。                                                             |
+| `components/`               | 状態を保持する細胞。ノードを束ねて特定の機能を提供。GenServer で動作。                                                          |
+| `nodes/`                    | 論理の原子。Action / Logic Lines に基づく処理。GenServer で動作。`category/actions/` は Resonite の Actions に合わせた分類。 |
+
 
 ### プロセスモデル（GenServer）
 
@@ -143,6 +145,8 @@ flowchart TB
     SB --> GO
 ```
 
+
+
 - `Core.ContentBehaviour`：コンテンツモジュールの契約
 - `Core.Component`：コンポーネントの契約
 - `Contents.SceneBehaviour`：シーンの契約
@@ -177,12 +181,16 @@ flowchart TB
     OBJ_B --> OBJ_IMPL
 ```
 
-| Behaviour | 役割 |
-|-----------|------|
-| **core/behaviour.ex（憲法）** | 全層共通の土台。GenServer の init/terminate、プロセス識別子、共通の型・コールバックの雛形。各層が「従う」前提の契約。 |
-| **nodes/core/behaviour.ex** | Node 固有の契約。Action/Logic Lines の `{in, out}` 宣言、handle_pulse、handle_sample など。 |
-| **components/core/behaviour.ex** | Component 固有の契約。状態保持、ノード束ね、on_ready / on_process などライフサイクル。 |
-| **objects/core/behaviour.ex** | Object 固有の契約。空間上の実体としての init、handle_cast（空間イベント）、子の管理など。 |
+
+
+
+| Behaviour                        | 役割                                                                            |
+| -------------------------------- | ----------------------------------------------------------------------------- |
+| **core/behaviour.ex（憲法）**        | 全層共通の土台。GenServer の init/terminate、プロセス識別子、共通の型・コールバックの雛形。各層が「従う」前提の契約。       |
+| **nodes/core/behaviour.ex**      | Node 固有の契約。Action/Logic Lines の `{in, out}` 宣言、handle_pulse、handle_sample など。 |
+| **components/core/behaviour.ex** | Component 固有の契約。状態保持、ノード束ね、on_ready / on_process などライフサイクル。                   |
+| **objects/core/behaviour.ex**    | Object 固有の契約。空間上の実体としての init、handle_cast（空間イベント）、子の管理など。                      |
+
 
 - **点線（-.->）**：core/behaviour は「従うべき原則」。継承や `@behaviour` による直接指定はせず、設計上の制約として扱う選択も可。
 - **実線（-->）**：各層の実装モジュールは、対応する層の behaviour を `@behaviour` で指定する。
