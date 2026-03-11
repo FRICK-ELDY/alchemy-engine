@@ -59,6 +59,9 @@ apps/contents/
 │   ├── core/
 │   │   └── behaviour.ex
 │   └── category/
+│       ├── core/
+│       │   └── input/
+│       │       └── call.ex   # 同期/非同期のアクション
 │       ├── actions/
 │       └── math/
 ```
@@ -106,6 +109,11 @@ mkdir -p apps/contents/lib/schemas/category/users
 | `value/decimal.ex` | `Schemas.Category.Value.Decimal` | t |
 | `value/color.ex` | `Schemas.Category.Value.Color` | t, t32 |
 
+**注記:**
+- 整数型: `integer()` は bignum で unbounded。常設サーバーでは意味のある範囲（例: UInt, ULong の範囲型）を用いること。
+- Float: Double は統合済み。Elixir の `float()` は 64 ビット。Resonite 等の 32 ビット空間との境界で cast する想定。
+- Decimal: `Decimal.t()` を参照。`{:decimal, "~> 2.0"}` を contents の deps に追加すること。
+
 各ファイルは `@type` と `@moduledoc` を定義する。
 
 #### Step 1-3: text カテゴリの作成
@@ -120,15 +128,16 @@ mkdir -p apps/contents/lib/schemas/category/users
 | ファイル | モジュール | 役割 |
 |:---|:---|:---|
 | `schemas/category/time/date_time.ex` | `Schemas.Category.Time.DateTime` | 日時 |
-| `schemas/category/time/time_span.ex` | `Schemas.Category.Time.TimeSpan` | 時間幅 |
+| `schemas/category/time/time_span.ex` | `Schemas.Category.Time.TimeSpan` | 時間幅（マイクロ秒、ULong.t() の範囲） |
 
 #### Step 1-5: space カテゴリの作成
 
 | ファイル | モジュール | 役割 |
 |:---|:---|:---|
-| `schemas/category/space/transform.ex` | `Schemas.Category.Space.Transform` | 変換行列・位置・回転・スケール |
+| `schemas/category/space/transform.ex` | `Schemas.Category.Space.Transform` | 変換（position, rotation, scale） |
 
-3 次元ベクトルは value の `Float.t3` を利用する。Resonite の Components に合わせた配置。
+- `position`: Value.Float.t3、`rotation`: Value.Float.quaternion、`scale`: Value.Float.t3
+- 3 次元ベクトルは value の `Float.t3` を利用する。Resonite の Components に合わせた配置。
 
 #### Step 1-6: users カテゴリの作成
 
@@ -173,6 +182,7 @@ mkdir -p apps/contents/lib/contents/core
 ```bash
 mkdir -p apps/contents/lib/nodes/pins
 mkdir -p apps/contents/lib/nodes/core
+mkdir -p apps/contents/lib/nodes/category/core/input
 mkdir -p apps/contents/lib/nodes/category/actions
 mkdir -p apps/contents/lib/nodes/category/math
 ```
@@ -207,7 +217,14 @@ mkdir -p apps/contents/lib/nodes/category/math
 | コールバック | `handle_pulse`、`handle_sample` など |
 | プロセス | Node は GenServer 化しない。Component 内の Executor がグラフをトラバースし、コールバックを直接呼び出す |
 
-#### Step 3-4: ノード実装例（actions/write）
+#### Step 3-4: ノード実装例（core/input/call）
+
+**ファイル:** `apps/contents/lib/nodes/category/core/input/call.ex`
+
+- 同期/非同期のアクション
+- Target の ref にパルスを送るのみ
+
+#### Step 3-5: ノード実装例（actions/write）
 
 **ファイル:** `apps/contents/lib/nodes/category/actions/write.ex`
 
@@ -215,7 +232,7 @@ mkdir -p apps/contents/lib/nodes/category/math
 - logic in pin からデータ（Sample）を吸い上げ、対象を書き換え
 - 終了後、action out pin へパルスを返す
 
-#### Step 3-5: ノード実装例（math/add）
+#### Step 3-6: ノード実装例（math/add）
 
 **ファイル:** `apps/contents/lib/nodes/category/math/add.ex`
 
@@ -365,6 +382,7 @@ flowchart TB
 - [ ] `apps/contents/lib/nodes/pins/action.ex`
 - [ ] `apps/contents/lib/nodes/pins/logic.ex`
 - [ ] `apps/contents/lib/nodes/core/behaviour.ex`
+- [ ] `apps/contents/lib/nodes/category/core/input/call.ex`
 - [ ] `apps/contents/lib/nodes/category/actions/write.ex`
 - [ ] `apps/contents/lib/nodes/category/math/add.ex`
 
