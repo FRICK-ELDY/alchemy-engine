@@ -31,9 +31,24 @@ schemas → core/behaviour → nodes → components → objects
 
 ## 2. 目標構成（apps/contents）
 
+### 2.1 lib/ のディレクトリ構成と方針
+
+`apps/contents/lib/` 直下には、**core / schemas / nodes / components / objects / world** を同階層で配置する。
+
+- **core, schemas, nodes, components, objects** … アーキテクチャの骨格（仕組み・型・定義）
+- **world** … 実際のコンテンツ（沢山入る）
+
+world はコンテンツで埋め尽くされるため、骨格と同階層に分けておく。これにより、骨格とコンテンツを明確に区別する。
+
+**注記:** `lib/contents/` は既存コードのため、本手順書では触らない。
+
+### 2.2 ディレクトリツリー
+
 ```
 apps/contents/
 ├── lib/
+│   ├── contents/            # 既存 Contents（移行対象、本手順書外・触らない）
+│   ├── core/                # behaviour 等
 │   ├── schemas/             # 設計図。データ型定義
 │   │   └── category/
 │   │       ├── value/       # スカラー・ベクトル・行列・色など
@@ -41,29 +56,20 @@ apps/contents/
 │   │       ├── time/        # 日時・時間幅
 │   │       ├── space/       # 空間に関わる型（Transform など）
 │   │       └── users/
-│   └── contents/            # 既存 Contents（移行対象、本手順書外）
-├── core/
-│   └── behaviour.ex
-├── objects/
-│   └── core/
-│       └── behaviour.ex
-├── components/
-│   ├── core/
-│   │   └── behaviour.ex
-│   └── category/
-│       └── uncategorized/
-├── nodes/                   # 論理のピア（Logic Processors）
-│   ├── pins/                # Action / Logic ピン定義
-│   │   ├── action.ex
-│   │   └── logic.ex
-│   ├── core/
-│   │   └── behaviour.ex
-│   └── category/
-│       ├── core/
-│       │   └── input/
-│       │       └── call.ex   # 同期/非同期のアクション
-│       ├── actions/
-│       └── math/
+│   ├── nodes/               # 論理のピア（Logic Processors）
+│   │   ├── pins/            # Action / Logic ピン定義
+│   │   ├── core/
+│   │   └── category/
+│   │       ├── core/input/  # call, value, display
+│   │       ├── actions/
+│   │       ├── operators/   # add, sub, mul, div, equals, boolean, bool_vectors
+│   │       └── math/        # sign, cos, tan 等
+│   ├── components/
+│   │   ├── core/
+│   │   └── category/
+│   ├── objects/
+│   │   └── core/
+│   └── world/               # 実際のコンテンツ（沢山入る）
 ```
 
 ---
@@ -154,12 +160,12 @@ mkdir -p apps/contents/lib/schemas/category/users
 #### Step 2-1: ディレクトリ作成
 
 ```bash
-mkdir -p apps/contents/lib/contents/core
+mkdir -p apps/contents/lib/core
 ```
 
 #### Step 2-2: 憲法の実装
 
-**ファイル:** `apps/contents/lib/contents/core/behaviour.ex`
+**ファイル:** `apps/contents/lib/core/behaviour.ex`
 
 モジュール: `Contents.Core.Behaviour`
 
@@ -184,6 +190,9 @@ mkdir -p apps/contents/lib/nodes/pins
 mkdir -p apps/contents/lib/nodes/core
 mkdir -p apps/contents/lib/nodes/category/core/input
 mkdir -p apps/contents/lib/nodes/category/actions
+mkdir -p apps/contents/lib/nodes/category/operators/bool_vectors
+mkdir -p apps/contents/lib/nodes/category/operators/boolean
+mkdir -p apps/contents/lib/nodes/category/operators
 mkdir -p apps/contents/lib/nodes/category/math
 ```
 
@@ -217,12 +226,15 @@ mkdir -p apps/contents/lib/nodes/category/math
 | コールバック | `handle_pulse`、`handle_sample` など |
 | プロセス | Node は GenServer 化しない。Component 内の Executor がグラフをトラバースし、コールバックを直接呼び出す |
 
-#### Step 3-4: ノード実装例（core/input/call）
+#### Step 3-4: ノード実装例（core/input）
 
-**ファイル:** `apps/contents/lib/nodes/category/core/input/call.ex`
+まずはデータ型から検証していく方針で、以下のノードを実装する。
 
-- 同期/非同期のアクション
-- Target の ref にパルスを送るのみ
+| ファイル | 役割 |
+|:---|:---|
+| `core/input/call.ex` | 同期/非同期のアクション。Target の ref にパルスを送る |
+| `core/input/value.ex` | 定数値の入力 |
+| `core/input/display.ex` | 値を表示するための出力 |
 
 #### Step 3-5: ノード実装例（actions/write）
 
@@ -232,12 +244,47 @@ mkdir -p apps/contents/lib/nodes/category/math
 - logic in pin からデータ（Sample）を吸い上げ、対象を書き換え
 - 終了後、action out pin へパルスを返す
 
-#### Step 3-6: ノード実装例（math/add）
+#### Step 3-6: ノード実装例（operators）
 
-**ファイル:** `apps/contents/lib/nodes/category/math/add.ex`
+算術・比較演算子。純粋なロジック演算。logic pins のみ（action 非依存）で動作。
 
-- 純粋なロジック演算
-- logic pins のみ（または action 非依存）で動作
+| ファイル | 役割 |
+|:---|:---|
+| `operators/add.ex` | 加算 |
+| `operators/sub.ex` | 減算 |
+| `operators/mul.ex` | 乗算 |
+| `operators/div.ex` | 除算 |
+| `operators/equals.ex` | 比較（greater, less 等） |
+
+#### Step 3-7: ノード実装例（operators/boolean）
+
+論理演算子。
+
+| ファイル | 役割 |
+|:---|:---|
+| `operators/boolean/and.ex` | 論理積 |
+| `operators/boolean/or.ex` | 論理和 |
+| `operators/boolean/xor.ex` | 排他的論理和 |
+| `operators/boolean/nand.ex` | 論理積の否定 |
+| `operators/boolean/nor.ex` | 論理和の否定 |
+| `operators/boolean/xnor.ex` | 排他的論理和の否定 |
+| `operators/boolean/shift.ex` | シフト（left, right） |
+| `operators/boolean/rotate.ex` | ローテート（left, right） |
+
+#### Step 3-8: ノード実装例（operators/bool_vectors）
+
+bool ベクトルに対する集約演算。
+
+| ファイル | 役割 |
+|:---|:---|
+| `operators/bool_vectors/all.ex` | 全要素が true か |
+| `operators/bool_vectors/any.ex` | いずれかの要素が true か |
+| `operators/bool_vectors/none.ex` | 全要素が false か |
+| `operators/bool_vectors/xor_elements.ex` | 要素間の XOR 集約 |
+
+#### Step 3-9: ノード実装例（math）
+
+数学関数。sign, cos, tan 等を配置予定。本 Phase ではディレクトリのみ作成し、実装は後続とする。
 
 ---
 
@@ -248,13 +295,13 @@ mkdir -p apps/contents/lib/nodes/category/math
 #### Step 4-1: ディレクトリ作成
 
 ```bash
-mkdir -p apps/contents/lib/contents/components/core
-mkdir -p apps/contents/lib/contents/components/category/uncategorized
+mkdir -p apps/contents/lib/components/core
+mkdir -p apps/contents/lib/components/category/uncategorized
 ```
 
 #### Step 4-2: Component Behaviour の作成
 
-**ファイル:** `apps/contents/lib/contents/components/core/behaviour.ex`
+**ファイル:** `apps/contents/lib/components/core/behaviour.ex`
 
 モジュール: `Contents.Components.Core.Behaviour`
 
@@ -267,7 +314,7 @@ mkdir -p apps/contents/lib/contents/components/category/uncategorized
 
 #### Step 4-3: コンポーネント実装例（uncategorized/comment）
 
-**ファイル:** `apps/contents/lib/contents/components/category/uncategorized/comment.ex`
+**ファイル:** `apps/contents/lib/components/category/uncategorized/comment.ex`
 
 - VR 空間内のドキュメント化（付箋）用コンポーネント
 
@@ -280,12 +327,12 @@ mkdir -p apps/contents/lib/contents/components/category/uncategorized
 #### Step 5-1: ディレクトリ作成
 
 ```bash
-mkdir -p apps/contents/lib/contents/objects/core
+mkdir -p apps/contents/lib/objects/core
 ```
 
 #### Step 5-2: Object Behaviour の作成
 
-**ファイル:** `apps/contents/lib/contents/objects/core/behaviour.ex`
+**ファイル:** `apps/contents/lib/objects/core/behaviour.ex`
 
 モジュール: `Contents.Objects.Core.Behaviour`
 
@@ -375,7 +422,7 @@ flowchart TB
 
 ### Phase 2: core
 
-- [ ] `apps/contents/lib/contents/core/behaviour.ex`
+- [ ] `apps/contents/lib/core/behaviour.ex`
 
 ### Phase 3: nodes
 
@@ -383,17 +430,35 @@ flowchart TB
 - [ ] `apps/contents/lib/nodes/pins/logic.ex`
 - [ ] `apps/contents/lib/nodes/core/behaviour.ex`
 - [ ] `apps/contents/lib/nodes/category/core/input/call.ex`
+- [ ] `apps/contents/lib/nodes/category/core/input/value.ex`
+- [ ] `apps/contents/lib/nodes/category/core/input/display.ex`
 - [ ] `apps/contents/lib/nodes/category/actions/write.ex`
-- [ ] `apps/contents/lib/nodes/category/math/add.ex`
+- [ ] `apps/contents/lib/nodes/category/operators/bool_vectors/all.ex`
+- [ ] `apps/contents/lib/nodes/category/operators/bool_vectors/any.ex`
+- [ ] `apps/contents/lib/nodes/category/operators/bool_vectors/none.ex`
+- [ ] `apps/contents/lib/nodes/category/operators/bool_vectors/xor_elements.ex`
+- [ ] `apps/contents/lib/nodes/category/operators/boolean/and.ex`
+- [ ] `apps/contents/lib/nodes/category/operators/boolean/nand.ex`
+- [ ] `apps/contents/lib/nodes/category/operators/boolean/nor.ex`
+- [ ] `apps/contents/lib/nodes/category/operators/boolean/or.ex`
+- [ ] `apps/contents/lib/nodes/category/operators/boolean/xnor.ex`
+- [ ] `apps/contents/lib/nodes/category/operators/boolean/xor.ex`
+- [ ] `apps/contents/lib/nodes/category/operators/boolean/shift.ex`
+- [ ] `apps/contents/lib/nodes/category/operators/boolean/rotate.ex`
+- [ ] `apps/contents/lib/nodes/category/operators/add.ex`
+- [ ] `apps/contents/lib/nodes/category/operators/sub.ex`
+- [ ] `apps/contents/lib/nodes/category/operators/mul.ex`
+- [ ] `apps/contents/lib/nodes/category/operators/div.ex`
+- [ ] `apps/contents/lib/nodes/category/operators/equals.ex`
 
 ### Phase 4: components
 
-- [ ] `apps/contents/lib/contents/components/core/behaviour.ex`
-- [ ] `apps/contents/lib/contents/components/category/uncategorized/comment.ex`
+- [ ] `apps/contents/lib/components/core/behaviour.ex`
+- [ ] `apps/contents/lib/components/category/uncategorized/comment.ex`
 
 ### Phase 5: objects
 
-- [ ] `apps/contents/lib/contents/objects/core/behaviour.ex`
+- [ ] `apps/contents/lib/objects/core/behaviour.ex`
 
 ---
 
