@@ -103,7 +103,6 @@ mkdir -p apps/contents/lib/schemas/category/users
 | `value/int.ex` | `Schemas.Category.Value.Int` | t, t2, t3, t4 |
 | `value/long.ex` | `Schemas.Category.Value.Long` | t, t2, t3, t4 |
 | `value/float.ex` | `Schemas.Category.Value.Float` | t, t2, t3, t4, t2x2, t3x3, t4x4, quaternion |
-| `value/double.ex` | `Schemas.Category.Value.Double` | t, t2, t3, t4, t2x2, t3x3, t4x4, quaternion |
 | `value/decimal.ex` | `Schemas.Category.Value.Decimal` | t |
 | `value/color.ex` | `Schemas.Category.Value.Color` | t, t32 |
 
@@ -348,7 +347,6 @@ flowchart TB
 - [ ] `apps/contents/lib/schemas/category/value/int.ex`
 - [ ] `apps/contents/lib/schemas/category/value/long.ex`
 - [ ] `apps/contents/lib/schemas/category/value/float.ex`
-- [ ] `apps/contents/lib/schemas/category/value/double.ex`
 - [ ] `apps/contents/lib/schemas/category/value/decimal.ex`
 - [ ] `apps/contents/lib/schemas/category/value/color.ex`
 - [ ] `apps/contents/lib/schemas/category/text/string.ex`
