@@ -1,6 +1,9 @@
 defmodule Contents.Nodes.Category.Operators.Equals do
   @moduledoc """
   比較ノード（equals, greater, less 等）。
+
+  `op` は `:eq`, `:ne`, `:gt`, `:ge`, `:lt`, `:le` を期待する。
+  想定外の `op` の場合は `:eq` 相当（`a == b`）でフォールバックする。
   """
   @behaviour Contents.Nodes.Core.Behaviour
 

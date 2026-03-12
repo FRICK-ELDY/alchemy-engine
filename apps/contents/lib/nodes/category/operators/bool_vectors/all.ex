@@ -1,6 +1,7 @@
 defmodule Contents.Nodes.Category.Operators.BoolVectors.All do
   @moduledoc """
   全要素が true かどうかを返す。
+  要素は truthy/falsy として扱う（`nil` と `false` は falsy、それ以外は truthy）。
   """
   @behaviour Contents.Nodes.Core.Behaviour
 
