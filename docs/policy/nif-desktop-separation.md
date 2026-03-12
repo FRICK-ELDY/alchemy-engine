@@ -31,4 +31,4 @@
 ## 4. 関連
 
 - [improvement-plan.md](../plan/improvement-plan.md)（I-P render_interpolation, I-Q VR xr フィーチャー）
-- [zenoh-frame-serialization](./zenoh-frame-serialization.md)
+- [zenoh-frame-serialization](../policy-as-code/why_adopted/zenoh-frame-serialization.md)

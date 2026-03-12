@@ -23,5 +23,5 @@
 
 ## 3. 関連
 
-- [zenoh-frame-serialization](./zenoh-frame-serialization.md)
+- [zenoh-frame-serialization](../policy-as-code/why_adopted/zenoh-frame-serialization.md)
 - [render-interpolation](./render-interpolation.md)

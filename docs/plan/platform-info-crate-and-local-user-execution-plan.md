@@ -326,7 +326,7 @@ NIF モード（Elixir と同一プロセス、Zenoh 未使用）の場合、cli
 ## 10. 関連ドキュメント
 
 - [env-and-serialization-migration-plan](./env-and-serialization-migration-plan.md) — native/client 作成・client_info・client_* 依存整理（§5）
-- [zenoh-frame-serialization](../policy/zenoh-frame-serialization.md) — Erlang term 形式採用
+- [zenoh-frame-serialization](../policy-as-code/why_adopted/zenoh-frame-serialization.md) — Erlang term 形式採用
 - [zenoh-protocol-spec](../architecture/zenoh-protocol-spec.md) — トピック `contents/room` への移行
 
 ---
