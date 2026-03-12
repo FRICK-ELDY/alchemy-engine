@@ -253,7 +253,7 @@ mkdir -p apps/contents/lib/nodes/category/math
 | ----------------------- | --------------------------------- |
 | `core/input/call.ex`    | 同期/非同期のアクション。Target の ref にパルスを送る |
 | `core/input/value.ex`   | 定数値の入力                            |
-| `core/input/display.ex` | 値を表示するための出力（入力 value をそのまま表示）       |
+| `core/input/display.ex` | 入力された value をそのまま表示する出力            |
 
 
 #### Step 3-5: ノード実装例（actions/write）
@@ -285,12 +285,14 @@ mkdir -p apps/contents/lib/nodes/category/math
 
 | ファイル                          | 役割                 |
 | ----------------------------- | ------------------ |
-| `operators/boolean/and.ex`  | 論理積                |
-| `operators/boolean/or.ex`   | 論理和                |
-| `operators/boolean/xor.ex`  | 排他的論理和             |
-| `operators/boolean/nand.ex` | 論理積の否定             |
-| `operators/boolean/nor.ex`  | 論理和の否定             |
-| `operators/boolean/xnor.ex` | 排他的論理和の否定          |
+| `operators/boolean/and.ex`    | 論理積                |
+| `operators/boolean/or.ex`     | 論理和                |
+| `operators/boolean/xor.ex`    | 排他的論理和             |
+| `operators/boolean/nand.ex`   | 論理積の否定             |
+| `operators/boolean/nor.ex`    | 論理和の否定             |
+| `operators/boolean/xnor.ex`   | 排他的論理和の否定          |
+| `operators/boolean/shift.ex`  | シフト（left, right）   |
+| `operators/boolean/rotate.ex` | ローテート（left, right） |
 
 
 #### Step 3-8: ノード実装例（operators/bool_vectors）
@@ -321,6 +323,9 @@ bool ベクトルに対する集約演算。
 ```bash
 mkdir -p apps/contents/lib/components/core
 mkdir -p apps/contents/lib/components/category/uncategorized
+mkdir -p apps/contents/lib/components/category/ui/graphics
+mkdir -p apps/contents/lib/components/category/ui/interaction
+mkdir -p apps/contents/lib/components/category/ui/layout
 ```
 
 #### Step 4-2: Component Behaviour の作成
@@ -343,6 +348,24 @@ mkdir -p apps/contents/lib/components/category/uncategorized
 **ファイル:** `apps/contents/lib/components/category/uncategorized/comment.ex`
 
 - VR 空間内のドキュメント化（付箋）用コンポーネント
+
+#### Step 4-4: コンポーネント実装例（ui）
+
+UI 関連コンポーネント。
+
+
+| ファイル                                      | 役割                   |
+| ----------------------------------------- | -------------------- |
+| `components/category/ui/canvas.ex`         | キャンバス               |
+| `components/category/ui/rect_transform.ex` | 矩形変換                |
+| `components/category/ui/graphics/text.ex`  | テキスト描画             |
+| `components/category/ui/interaction/button.ex` | ボタン操作             |
+| `components/category/ui/layout/contents_size_fitter.ex` | コンテンツサイズフィッター |
+| `components/category/ui/layout/grid_layout.ex` | グリッドレイアウト         |
+| `components/category/ui/layout/horizontal_layout.ex` | 水平レイアウト      |
+| `components/category/ui/layout/layout_element.ex` | レイアウト要素       |
+| `components/category/ui/layout/vertical_layout.ex` | 垂直レイアウト      |
+
 
 ---
 
@@ -369,6 +392,20 @@ mkdir -p apps/contents/lib/objects/core
 | `handle_cast` | 空間イベントの処理                        |
 | 子の管理          | コンポーネント・子 Object の管理             |
 | GenServer 規約  | `Contents.Core.Behaviour` の制約に従う |
+
+
+#### Step 5-3: オブジェクト core の実装
+
+オブジェクトの共通構造と操作を提供する。
+
+
+| ファイル                                    | 役割                                                                 |
+| --------------------------------------- | ------------------------------------------------------------------ |
+| `objects/core/struct.ex`                | オブジェクトの構造体（name, parent, tag, active, persistent, transform） |
+| `objects/core/duplicate.ex`             | オブジェクトの複製                                                    |
+| `objects/core/destroy.ex`               | オブジェクトの破棄                                                    |
+| `objects/core/create_empty_child.ex`    | 空の子オブジェクトの作成                                                |
+| `objects/core/create_empty_parent.ex`   | 空の親オブジェクトの作成                                                |
 
 
 ---
@@ -467,7 +504,9 @@ flowchart TB
 - `apps/contents/lib/nodes/category/core/input/display.ex`
 - `apps/contents/lib/nodes/category/actions/write.ex`
 - `apps/contents/lib/nodes/category/flow/if.ex`
-- `apps/contents/lib/nodes/category/time/stopwatch.ex`
+- `apps/contents/lib/nodes/category/time/now.ex` # utc, local
+- `apps/contents/lib/nodes/category/time/stopwatch.ex` 
+- `apps/contents/lib/nodes/category/utility/multiplex.ex` #impulse,value
 - `apps/contents/lib/nodes/category/operators/bool_vectors/all.ex`
 - `apps/contents/lib/nodes/category/operators/bool_vectors/any.ex`
 - `apps/contents/lib/nodes/category/operators/bool_vectors/none.ex`
@@ -478,6 +517,8 @@ flowchart TB
 - `apps/contents/lib/nodes/category/operators/boolean/or.ex`
 - `apps/contents/lib/nodes/category/operators/boolean/xnor.ex`
 - `apps/contents/lib/nodes/category/operators/boolean/xor.ex`
+- `apps/contents/lib/nodes/category/operators/boolean/shift.ex`
+- `apps/contents/lib/nodes/category/operators/boolean/rotate.ex`
 - `apps/contents/lib/nodes/category/operators/add.ex`
 - `apps/contents/lib/nodes/category/operators/sub.ex`
 - `apps/contents/lib/nodes/category/operators/mul.ex`
@@ -488,10 +529,24 @@ flowchart TB
 
 - `apps/contents/lib/components/core/behaviour.ex`
 - `apps/contents/lib/components/category/uncategorized/comment.ex`
+- `apps/contents/lib/components/category/ui/canvas.ex`
+- `apps/contents/lib/components/category/ui/rect_transform.ex`
+- `apps/contents/lib/components/category/ui/graphics/text.ex`
+- `apps/contents/lib/components/category/ui/interaction/button.ex`
+- `apps/contents/lib/components/category/ui/layout/contents_size_fitter.ex`
+- `apps/contents/lib/components/category/ui/layout/grid_layout.ex`
+- `apps/contents/lib/components/category/ui/layout/horizontal_layout.ex`
+- `apps/contents/lib/components/category/ui/layout/layout_element.ex`
+- `apps/contents/lib/components/category/ui/layout/vertical_layout.ex`
 
 ### Phase 5: objects
 
 - `apps/contents/lib/objects/core/behaviour.ex`
+- `apps/contents/lib/objects/core/struct.ex` # name, parent, tag, active, persistent, transform
+- `apps/contents/lib/objects/core/duplicate.ex`
+- `apps/contents/lib/objects/core/destroy.ex`
+- `apps/contents/lib/objects/core/create_empty_child.ex`
+- `apps/contents/lib/objects/core/create_empty_parent.ex`
 
 ---
 

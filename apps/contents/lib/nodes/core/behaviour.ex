@@ -9,8 +9,10 @@ defmodule Contents.Nodes.Core.Behaviour do
   - **プロセス**: Node は GenServer 化しない。Component 内の Executor がグラフをトラバースし、コールバックを直接呼び出す。
   """
 
-  @callback handle_pulse(pulse :: term(), context :: map()) :: :ok | {:ok, term()} | {:error, term()}
-  @callback handle_sample(inputs :: map(), context :: map()) :: term() | {:ok, term()} | {:error, term()}
+  @callback handle_pulse(pulse :: term(), context :: map()) ::
+              :ok | {:ok, term()} | {:error, term()}
+  @callback handle_sample(inputs :: map(), context :: map()) ::
+              term() | {:ok, term()} | {:error, term()}
 
   @optional_callbacks handle_pulse: 2, handle_sample: 2
 end
