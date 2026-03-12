@@ -61,7 +61,7 @@ Network.ZenohBridge.publish_frame(room_id, binary)
 
 ### 3.3 データ構造
 
-トップレベル構造は [messagepack-schema.md](../architecture/messagepack-schema.md) の設計を踏襲する。キーをアトムに変更し、タプル・マップをそのまま用いる。
+トップレベル構造は [messagepack-schema.md](../../architecture/messagepack-schema.md) の設計を踏襲する。キーをアトムに変更し、タプル・マップをそのまま用いる。
 
 | 項目 | MessagePack 時 | Erlang term 時 |
 |:---|:---|:---|
@@ -75,13 +75,13 @@ Network.ZenohBridge.publish_frame(room_id, binary)
 
 1. `Content.MessagePackEncoder` を `Content.FrameEncoder` 等にリネームし、`term_to_binary` を用いる実装に変更
 2. クライアント側 `msgpack_decode` を `bert` デコードに置き換え
-3. [messagepack-schema.md](../architecture/messagepack-schema.md) を `erlang-term-schema.md` 等に拡張し、term 形式のスキーマを文書化
+3. [messagepack-schema.md](../../architecture/messagepack-schema.md) を `erlang-term-schema.md` 等に拡張し、term 形式のスキーマを文書化
 4. 既存の MessagePack 参照を更新
 
 ---
 
 ## 5. 関連ドキュメント
 
-- [improvement-plan.md](../plan/improvement-plan.md)（I-P render_interpolation によるフレーム拡張）
-- [zenoh-protocol-spec.md](../architecture/zenoh-protocol-spec.md)
-- [messagepack-schema.md](../architecture/messagepack-schema.md)（現行スキーマ・構造の参照）
+- [improvement-plan.md](../../plan/improvement-plan.md)（I-P render_interpolation によるフレーム拡張）
+- [zenoh-protocol-spec.md](../../architecture/zenoh-protocol-spec.md)
+- [messagepack-schema.md](../../architecture/messagepack-schema.md)（現行スキーマ・構造の参照）
