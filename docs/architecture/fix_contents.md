@@ -26,20 +26,33 @@ structs |> components |> objects
 structs |> nodes |> components |> objects
 ```
 
-## 3. 二種類のピン（Action & Logic Pins）
+## 3. ノードプログラミングの三要素（Node, Port, Link）
 
-ノードプログラミングを「時間の制御」と「データの参照」に分離し、それらを自由に組み合わせます。各ノードは **pin**（接続点）を持ち、これらを接続して処理を構築します。
+ノードグラフアーキテクチャの基盤となる三つの概念です。
 
-- **Action pins（実行フロー）**:
+| 要素 | 役割 |
+|:---|:---|
+| **Node（ノード）** | 計算の原子単位。入力 → 処理 → 出力を行う。数学的には `outputs = f(inputs)` に対応する。 |
+| **Port（ポート）** | ノードの入出力端子。データや制御の出入口。他のノードと接続するための窓口。 |
+| **Link（リンク）** | ノード間の接続。一つの port の出力を別の port の入力へ繋ぐ。データ/制御の受け渡しを明示的にモデル化する。 |
+
+- **Port** はグラフ理論・データフローで一般的な用語。入出力の型検査・シリアライズ・Executor のトラバースは、すべて Port と Link の構造に依存する。
+- **Link** を明示的な概念として持つことで、グラフの保存・復元、型チェック、実行順序の決定が明確になる。
+
+## 4. 二種類のポート（Action & Logic Ports）
+
+ノードプログラミングを「時間の制御」と「データの参照」に分離し、それらを自由に組み合わせます。各ノードは **Port**（ポート）を持ち、**Link**（リンク）で接続して処理を構築します。
+
+- **Action ports（実行フロー）**:
   - 役割: 「いつ（When）」を司る。パルス（信号）による実行権限の委譲。
   - 機能: 順次処理、並列処理、および複数の時間を束ねる Sync（同期）。
-  - ピン: `action in` / `action out`。
-- **Logic pins（データフロー）**:
+  - ポート: `action in` / `action out`。
+- **Logic ports（データフロー）**:
   - 役割: 「何を（What）」を司る。情報の参照と変換。
   - 機能: 常に流れるストリーム、または要求に応じた値（Value）の返却。
-  - ピン: `logic in` / `logic out`。
+  - ポート: `logic in` / `logic out`。
 
-## 4. 統一ディレクトリ・アーキテクチャ（apps/contents）
+## 5. 統一ディレクトリ・アーキテクチャ（apps/contents）
 
 ```
 apps/contents/
@@ -63,14 +76,14 @@ apps/contents/
 │       └── uncategorized/
 │           └── comment.ex   # VR 空間内のドキュメント化（付箋）
 ├── nodes/                   # 論理のピア（Logic Processors）
-│   ├── pins/                # Action / Logic のピン定義（action in/out, logic in/out）
+│   ├── ports/               # Action / Logic のポート定義（action in/out, logic in/out）
 │   │   ├── action.ex
 │   │   └── logic.ex
 │   ├── core/
-│   │   └── behaviour.ex     # ノードとしてのインターフェース（pins の宣言）
+│   │   └── behaviour.ex     # ノードとしてのインターフェース（ports の宣言）
 │   └── category/
 │       ├── actions/         # 実行・副作用に軸を置くノード（Resonite に合わせた分類）
-│       │   └── write.ex     # Action pin でトリガー、Logic pin でデータを書き換え
+│       │   └── write.ex     # Action port でトリガー、Logic port でデータを書き換え
 │       └── math/            # 純粋なロジック演算
 │           └── add.ex
 └── lib/contents/            # 既存 Contents（体験）。従来通り配置
@@ -86,12 +99,12 @@ apps/contents/
 | パス                          | 役割                                                                                                |
 | --------------------------- | ------------------------------------------------------------------------------------------------- |
 | `core/behaviour.ex`         | 憲法。全層が従う基本契約。役割分担は「Behaviour の流れ」参照。                                                              |
-| `nodes/pins/`               | Action / Logic のピン（action in/out, logic in/out）を定義。ノード間の通信のルール。                                            |
+| `nodes/ports/`              | Action / Logic のポート（action in/out, logic in/out）を定義。ノード間の Link による通信のルール。                              |
 | `structs/`                  | データの形を定義。`defstruct` / `@type`。`category` でドメイン別に分類し、VR 空間での型の可視性を高める。                                 |
 | `structs/category/space/`   | 空間に関わる型。Resonite の Components に合わせた配置。transform など。3 次元ベクトルは value の Float.t3。 |
 | `objects/`                  | 空間上の実体。ECS の Entity 相当。GenServer で動作。                                                             |
 | `components/`               | 状態を保持する細胞。ノードを束ねて特定の機能を提供。GenServer で動作。                                                          |
-| `nodes/`                    | 論理の原子。Action / Logic pins に基づく処理。プロセス化しない。`category/actions/` は Resonite の Actions に合わせた分類。 |
+| `nodes/`                    | 論理の原子。Action / Logic ports に基づく処理。Port と Link で接続。プロセス化しない。`category/actions/` は Resonite の Actions に合わせた分類。 |
 
 
 ### プロセスモデル（GenServer）
@@ -207,7 +220,7 @@ flowchart TB
 | Behaviour                        | 役割                                                                            |
 | -------------------------------- | ----------------------------------------------------------------------------- |
 | **core/behaviour.ex（憲法）**        | 全層共通の土台。GenServer の init/terminate、プロセス識別子、共通の型・コールバックの雛形。各層が「従う」前提の契約。       |
-| **nodes/core/behaviour.ex**      | Node 固有の契約。Action/Logic pins（action in/out, logic in/out）の宣言、handle_pulse、handle_sample など。 |
+| **nodes/core/behaviour.ex**      | Node 固有の契約。Action/Logic ports（action in/out, logic in/out）の宣言、handle_pulse、handle_sample など。Port 間の Link による接続規則。 |
 | **components/core/behaviour.ex** | Component 固有の契約。状態保持、ノード束ね、on_ready / on_process などライフサイクル。                   |
 | **objects/core/behaviour.ex**    | Object 固有の契約。空間上の実体としての init、handle_cast（空間イベント）、子の管理など。                      |
 
@@ -215,16 +228,16 @@ flowchart TB
 - **点線（-.->）**：core/behaviour は「従うべき原則」。継承や `@behaviour` による直接指定はせず、設計上の制約として扱う選択も可。
 - **実線（-->）**：各層の実装モジュールは、対応する層の behaviour を `@behaviour` で指定する。
 
-## 5. 設計のゴール：能動と受動の融合
+## 6. 設計のゴール：能動と受動の融合
 
-ノードを「Action 型」か「Logic 型」かで分けるのではなく、**「どのようなピン（pin）を備えているか」**で定義します。
+ノードを「Action 型」か「Logic 型」かで分けるのではなく、**「どのような Port（ポート）を備えているか」**で定義します。
 
 > 例：write.ex ノードの解釈  
-> 「action in pin からパルスを受け取った瞬間に動き出し、logic in pin からデータを吸い上げ（Sample）、対象を書き換える。終われば action out pin へパルスを返す。」
+> 「action in port から Link 経由でパルスを受け取った瞬間に動き出し、logic in port からデータを吸い上げ（Sample）、対象を書き換える。終われば action out port へ Link でパルスを返す。」
 
-## 6. VR 体験における開発指針
+## 7. VR 体験における開発指針
 
-- **直感的な接続**: Action pins（時間）は「光る脈動」として、Logic pins（情報）は「静かな導管」として視覚化する。
+- **直感的な接続**: Action ports（時間）は「光る脈動」として、Logic ports（情報）は「静かな導管」として視覚化する。Link はそれらを繋ぐ線として描画する。
 - **対称性の保持**: 階層が違っても、インターフェースが同じであれば、ユーザーは一度覚えたルールでシステム全体を構築できる。
 - **型の厳格さ**: structs がカテゴリー化されていることで、VR 空間で「今、何を触っているのか」を型レベルでユーザーが意識できるようにする。
 

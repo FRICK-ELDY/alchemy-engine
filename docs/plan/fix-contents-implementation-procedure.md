@@ -16,7 +16,7 @@
 |:---|:---|
 | **存在の階層（Five Pillars）** | Contents → Objects → Components → Nodes → Structs |
 | **依存の方向** | structs を基盤として、nodes → components → objects へ一方向に積み上げ |
-| **二種類のピン** | Action pins（実行フロー / 時間の制御）、Logic pins（データフロー / 情報の参照） |
+| **三要素** | Node（計算の原子）、Port（入出力端子）、Link（接続）。Action/Logic の二種類の Port で実行フローとデータフローを分離 |
 | **プロセスモデル** | Object / Component は GenServer。Node はプロセスにせず、Executor が関数として呼び出す |
 
 ### 1.2 実装の積み上げ順
@@ -57,7 +57,7 @@ apps/contents/
 │   │       ├── space/       # 空間に関わる型（Transform など）
 │   │       └── users/
 │   ├── nodes/               # 論理のピア（Logic Processors）
-│   │   ├── pins/            # Action / Logic ピン定義
+│   │   ├── ports/           # Action / Logic ポート定義（Link が接続する）
 │   │   ├── core/
 │   │   └── category/
 │   │       ├── core/input/  # call, value, display
@@ -181,12 +181,12 @@ mkdir -p apps/contents/lib/core
 
 ### Phase 3: nodes 層
 
-論理の原子。Action / Logic pins に基づく処理を行う。
+論理の原子。Node / Port / Link の三要素に基づく。Action / Logic ports による処理を行う。
 
 #### Step 3-1: ディレクトリ作成
 
 ```bash
-mkdir -p apps/contents/lib/nodes/pins
+mkdir -p apps/contents/lib/nodes/ports
 mkdir -p apps/contents/lib/nodes/core
 mkdir -p apps/contents/lib/nodes/category/core/input
 mkdir -p apps/contents/lib/nodes/category/actions
@@ -196,20 +196,20 @@ mkdir -p apps/contents/lib/nodes/category/operators
 mkdir -p apps/contents/lib/nodes/category/math
 ```
 
-#### Step 3-2: nodes/pins（Action / Logic ピン定義）
+#### Step 3-2: nodes/ports（Action / Logic ポート定義）
 
-ノード間の通信ルールを定義する。
+ノード間の Link（接続）のルールを定義する。Port は Link によって接続され、データ/制御を受け渡す。
 
-**ファイル:** `apps/contents/lib/nodes/pins/action.ex`
+**ファイル:** `apps/contents/lib/nodes/ports/action.ex`
 
-- ピン: `action in` / `action out`
+- ポート: `action in` / `action out`
 - 役割: 「いつ（When）」を司る。パルスによる実行権限の委譲
 - 機能: 順次処理、並列処理、Sync（同期）
 - `@callback` または `@spec` でパルス受信・送信のインターフェースを定義
 
-**ファイル:** `apps/contents/lib/nodes/pins/logic.ex`
+**ファイル:** `apps/contents/lib/nodes/ports/logic.ex`
 
-- ピン: `logic in` / `logic out`
+- ポート: `logic in` / `logic out`
 - 役割: 「何を（What）」を司る。情報の参照と変換
 - 機能: ストリーム、または要求に応じた Value の返却
 - `@callback` または `@spec` で Sample / Value のインターフェースを定義
@@ -222,7 +222,7 @@ mkdir -p apps/contents/lib/nodes/category/math
 
 | 責務 | 内容 |
 |:---|:---|
-| Action/Logic pins | action in/out, logic in/out の宣言 |
+| Action/Logic ports | action in/out, logic in/out の宣言。Link による接続先の参照 |
 | コールバック | `handle_pulse`、`handle_sample` など |
 | プロセス | Node は GenServer 化しない。Component 内の Executor がグラフをトラバースし、コールバックを直接呼び出す |
 
@@ -240,13 +240,13 @@ mkdir -p apps/contents/lib/nodes/category/math
 
 **ファイル:** `apps/contents/lib/nodes/category/actions/write.ex`
 
-- action in pin でパルスを受け取ったとき動作
-- logic in pin からデータ（Sample）を吸い上げ、対象を書き換え
-- 終了後、action out pin へパルスを返す
+- action in port に Link でパルスを受け取ったとき動作
+- logic in port から Link 経由でデータ（Sample）を吸い上げ、対象を書き換え
+- 終了後、action out port へ Link でパルスを返す
 
 #### Step 3-6: ノード実装例（operators）
 
-算術・比較演算子。純粋なロジック演算。logic pins のみ（action 非依存）で動作。
+算術・比較演算子。純粋なロジック演算。logic ports のみ（action 非依存）で動作。
 
 | ファイル | 役割 |
 |:---|:---|
@@ -426,8 +426,8 @@ flowchart TB
 
 ### Phase 3: nodes
 
-- [ ] `apps/contents/lib/nodes/pins/action.ex`
-- [ ] `apps/contents/lib/nodes/pins/logic.ex`
+- [ ] `apps/contents/lib/nodes/ports/action.ex`
+- [ ] `apps/contents/lib/nodes/ports/logic.ex`
 - [ ] `apps/contents/lib/nodes/core/behaviour.ex`
 - [ ] `apps/contents/lib/nodes/category/core/input/call.ex`
 - [ ] `apps/contents/lib/nodes/category/core/input/value.ex`
@@ -493,6 +493,6 @@ flowchart TB
 
 ## 9. 参考: VR 体験における開発指針（fix_contents.md より）
 
-- **直感的な線**: Action は「光る脈動」、Logic は「静かな導管」として視覚化
+- **直感的な線**: Action ports は「光る脈動」、Logic ports は「静かな導管」として視覚化。Link はそれらを繋ぐ線
 - **対称性の保持**: 層が違ってもインターフェースが同じなら、一度覚えたルールで全体を構築可能
 - **型の厳格さ**: structs のカテゴリー化により、VR 空間で「何を触っているか」を型レベルで意識可能に
