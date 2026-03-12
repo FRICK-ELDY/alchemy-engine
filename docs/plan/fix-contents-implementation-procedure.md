@@ -12,12 +12,14 @@
 
 ### 1.1 設計の背景
 
-| 項目 | 内容 |
-|:---|:---|
-| **存在の階層（Five Pillars）** | Contents → Objects → Components → Nodes → Structs |
-| **依存の方向** | structs を基盤として、nodes → components → objects へ一方向に積み上げ |
-| **三要素** | Node（計算の原子）、Port（入出力端子）、Link（接続）。Action/Logic の二種類の Port で実行フローとデータフローを分離 |
-| **プロセスモデル** | Object / Component は GenServer。Node はプロセスにせず、Executor が関数として呼び出す |
+
+| 項目                      | 内容                                                                        |
+| ----------------------- | ------------------------------------------------------------------------- |
+| **存在の階層（Five Pillars）** | Contents → Objects → Components → Nodes → Structs                         |
+| **依存の方向**               | structs を基盤として、nodes → components → objects へ一方向に積み上げ                     |
+| **三要素**                 | Node（計算の原子）、Port（入出力端子）、Link（接続）。Action/Logic の二種類の Port で実行フローとデータフローを分離 |
+| **プロセスモデル**             | Object / Component は GenServer。Node はプロセスにせず、Executor が関数として呼び出す          |
+
 
 ### 1.2 実装の積み上げ順
 
@@ -97,25 +99,29 @@ mkdir -p apps/contents/lib/structs/category/users
 **規約: 型ファミリごとに 1 ファイルにまとめる。** 1 ファイル内に複数の `@type` を定義する。負荷は気にする必要はなく、関連型を一箇所にまとめることで保守性が上がる。
 
 例:
+
 - `value/bool.ex` → `@type t`, `@type t2`, `@type t3`, `@type t4`
 - `value/float.ex` → `@type t`, `@type t2`, `@type t3`, `@type t4`, `@type t2x2`, `@type t3x3`, `@type t4x4`, `@type quaternion`
 
-| ファイル | モジュール | 定義する型 |
-|:---|:---|:---|
-| `value/bool.ex` | `Structs.Category.Value.Bool` | t, t2, t3, t4 |
-| `value/byte.ex` | `Structs.Category.Value.Byte` | t, t2, t3, t4 |
-| `value/ushort.ex` | `Structs.Category.Value.UShort` | t, t2, t3, t4 |
-| `value/uint.ex` | `Structs.Category.Value.UInt` | t, t2, t3, t4 |
-| `value/ulong.ex` | `Structs.Category.Value.ULong` | t, t2, t3, t4 |
-| `value/sbyte.ex` | `Structs.Category.Value.SByte` | t, t2, t3, t4 |
-| `value/short.ex` | `Structs.Category.Value.Short` | t, t2, t3, t4 |
-| `value/int.ex` | `Structs.Category.Value.Int` | t, t2, t3, t4 |
-| `value/long.ex` | `Structs.Category.Value.Long` | t, t2, t3, t4 |
-| `value/float.ex` | `Structs.Category.Value.Float` | t, t2, t3, t4, t2x2, t3x3, t4x4, quaternion |
-| `value/decimal.ex` | `Structs.Category.Value.Decimal` | t |
-| `value/color.ex` | `Structs.Category.Value.Color` | t, t32 |
+
+| ファイル               | モジュール                            | 定義する型                                       |
+| ------------------ | -------------------------------- | ------------------------------------------- |
+| `value/bool.ex`    | `Structs.Category.Value.Bool`    | t, t2, t3, t4                               |
+| `value/byte.ex`    | `Structs.Category.Value.Byte`    | t, t2, t3, t4                               |
+| `value/ushort.ex`  | `Structs.Category.Value.UShort`  | t, t2, t3, t4                               |
+| `value/uint.ex`    | `Structs.Category.Value.UInt`    | t, t2, t3, t4                               |
+| `value/ulong.ex`   | `Structs.Category.Value.ULong`   | t, t2, t3, t4                               |
+| `value/sbyte.ex`   | `Structs.Category.Value.SByte`   | t, t2, t3, t4                               |
+| `value/short.ex`   | `Structs.Category.Value.Short`   | t, t2, t3, t4                               |
+| `value/int.ex`     | `Structs.Category.Value.Int`     | t, t2, t3, t4                               |
+| `value/long.ex`    | `Structs.Category.Value.Long`    | t, t2, t3, t4                               |
+| `value/float.ex`   | `Structs.Category.Value.Float`   | t, t2, t3, t4, t2x2, t3x3, t4x4, quaternion |
+| `value/decimal.ex` | `Structs.Category.Value.Decimal` | t                                           |
+| `value/color.ex`   | `Structs.Category.Value.Color`   | t, t32                                      |
+
 
 **注記:**
+
 - 整数型: `integer()` は bignum で unbounded。常設サーバーでは意味のある範囲（例: UInt, ULong の範囲型）を用いること。
 - Float: Double は統合済み。Elixir の `float()` は 64 ビット。Resonite 等の 32 ビット空間との境界で cast する想定。
 - Decimal: `Decimal.t()` を参照。`{:decimal, "~> 2.0"}` を contents の deps に追加すること。
@@ -124,32 +130,40 @@ mkdir -p apps/contents/lib/structs/category/users
 
 #### Step 1-3: text カテゴリの作成
 
-| ファイル | モジュール | 役割 |
-|:---|:---|:---|
+
+| ファイル                              | モジュール                          | 役割   |
+| --------------------------------- | ------------------------------ | ---- |
 | `structs/category/text/string.ex` | `Structs.Category.Text.String` | 文字列型 |
-| `structs/category/text/char.ex` | `Structs.Category.Text.Char` | 文字型 |
+| `structs/category/text/char.ex`   | `Structs.Category.Text.Char`   | 文字型  |
+
 
 #### Step 1-4: time カテゴリの作成
 
-| ファイル | モジュール | 役割 |
-|:---|:---|:---|
-| `structs/category/time/date_time.ex` | `Structs.Category.Time.DateTime` | 日時 |
+
+| ファイル                                 | モジュール                            | 役割                       |
+| ------------------------------------ | -------------------------------- | ------------------------ |
+| `structs/category/time/date_time.ex` | `Structs.Category.Time.DateTime` | 日時                       |
 | `structs/category/time/time_span.ex` | `Structs.Category.Time.TimeSpan` | 時間幅（マイクロ秒、ULong.t() の範囲） |
+
 
 #### Step 1-5: space カテゴリの作成
 
-| ファイル | モジュール | 役割 |
-|:---|:---|:---|
+
+| ファイル                                  | モジュール                              | 役割                            |
+| ------------------------------------- | ---------------------------------- | ----------------------------- |
 | `structs/category/space/transform.ex` | `Structs.Category.Space.Transform` | 変換（position, rotation, scale） |
+
 
 - `position`: Value.Float.t3、`rotation`: Value.Float.quaternion、`scale`: Value.Float.t3
 - 3 次元ベクトルは value の `Float.t3` を利用する。Resonite の Components に合わせた配置。
 
 #### Step 1-6: users カテゴリの作成
 
-| ファイル | モジュール | 役割 |
-|:---|:---|:---|
+
+| ファイル                                   | モジュール                              | 役割             |
+| -------------------------------------- | ---------------------------------- | -------------- |
 | `structs/category/users/local_user.ex` | `Structs.Category.Users.LocalUser` | 操作者というコンテキストの型 |
+
 
 ---
 
@@ -169,11 +183,13 @@ mkdir -p apps/contents/lib/core
 
 モジュール: `Contents.Core.Behaviour`
 
-| 責務 | 内容 |
-|:---|:---|
+
+| 責務            | 内容                                                        |
+| ------------- | --------------------------------------------------------- |
 | GenServer の基盤 | `init` / `terminate` の雛形（Object / Component 向け。Node は適用外） |
-| プロセス識別子 | 共通の識別規則 |
-| 共通型・コールバック | 各層が継承または参照する雛形 |
+| プロセス識別子       | 共通の識別規則                                                   |
+| 共通型・コールバック    | 各層が継承または参照する雛形                                            |
+
 
 **設計上の注意**: `@behaviour` による直接指定はせず、設計上の制約（従うべき原則）として扱う選択も可。
 
@@ -220,21 +236,25 @@ mkdir -p apps/contents/lib/nodes/category/math
 
 モジュール: `Contents.Nodes.Core.Behaviour`
 
-| 責務 | 内容 |
-|:---|:---|
-| Action/Logic ports | action in/out, logic in/out の宣言。Link による接続先の参照 |
-| コールバック | `handle_pulse`、`handle_sample` など |
-| プロセス | Node は GenServer 化しない。Component 内の Executor がグラフをトラバースし、コールバックを直接呼び出す |
+
+| 責務                 | 内容                                                                    |
+| ------------------ | --------------------------------------------------------------------- |
+| Action/Logic ports | action in/out, logic in/out の宣言。Link による接続先の参照                        |
+| コールバック             | `handle_pulse`、`handle_sample` など                                     |
+| プロセス               | Node は GenServer 化しない。Component 内の Executor がグラフをトラバースし、コールバックを直接呼び出す |
+
 
 #### Step 3-4: ノード実装例（core/input）
 
 まずはデータ型から検証していく方針で、以下のノードを実装する。
 
-| ファイル | 役割 |
-|:---|:---|
-| `core/input/call.ex` | 同期/非同期のアクション。Target の ref にパルスを送る |
-| `core/input/value.ex` | 定数値の入力 |
-| `core/input/display.ex` | 値を表示するための出力 |
+
+| ファイル                    | 役割                                |
+| ----------------------- | --------------------------------- |
+| `core/input/call.ex`    | 同期/非同期のアクション。Target の ref にパルスを送る |
+| `core/input/value.ex`   | 定数値の入力                            |
+| `core/input/display.ex` | 値を表示するための出力（入力 value をそのまま表示）       |
+
 
 #### Step 3-5: ノード実装例（actions/write）
 
@@ -248,39 +268,43 @@ mkdir -p apps/contents/lib/nodes/category/math
 
 算術・比較演算子。純粋なロジック演算。logic ports のみ（action 非依存）で動作。
 
-| ファイル | 役割 |
-|:---|:---|
-| `operators/add.ex` | 加算 |
-| `operators/sub.ex` | 減算 |
-| `operators/mul.ex` | 乗算 |
-| `operators/div.ex` | 除算 |
+
+| ファイル                  | 役割                  |
+| --------------------- | ------------------- |
+| `operators/add.ex`    | 加算                  |
+| `operators/sub.ex`    | 減算                  |
+| `operators/mul.ex`    | 乗算                  |
+| `operators/div.ex`    | 除算                  |
 | `operators/equals.ex` | 比較（greater, less 等） |
+
 
 #### Step 3-7: ノード実装例（operators/boolean）
 
 論理演算子。
 
-| ファイル | 役割 |
-|:---|:---|
-| `operators/boolean/and.ex` | 論理積 |
-| `operators/boolean/or.ex` | 論理和 |
-| `operators/boolean/xor.ex` | 排他的論理和 |
-| `operators/boolean/nand.ex` | 論理積の否定 |
-| `operators/boolean/nor.ex` | 論理和の否定 |
-| `operators/boolean/xnor.ex` | 排他的論理和の否定 |
-| `operators/boolean/shift.ex` | シフト（left, right） |
-| `operators/boolean/rotate.ex` | ローテート（left, right） |
+
+| ファイル                          | 役割                 |
+| ----------------------------- | ------------------ |
+| `operators/boolean/and.ex`  | 論理積                |
+| `operators/boolean/or.ex`   | 論理和                |
+| `operators/boolean/xor.ex`  | 排他的論理和             |
+| `operators/boolean/nand.ex` | 論理積の否定             |
+| `operators/boolean/nor.ex`  | 論理和の否定             |
+| `operators/boolean/xnor.ex` | 排他的論理和の否定          |
+
 
 #### Step 3-8: ノード実装例（operators/bool_vectors）
 
 bool ベクトルに対する集約演算。
 
-| ファイル | 役割 |
-|:---|:---|
-| `operators/bool_vectors/all.ex` | 全要素が true か |
-| `operators/bool_vectors/any.ex` | いずれかの要素が true か |
-| `operators/bool_vectors/none.ex` | 全要素が false か |
-| `operators/bool_vectors/xor_elements.ex` | 要素間の XOR 集約 |
+
+| ファイル                                     | 役割              |
+| ---------------------------------------- | --------------- |
+| `operators/bool_vectors/all.ex`          | 全要素が true か     |
+| `operators/bool_vectors/any.ex`          | いずれかの要素が true か |
+| `operators/bool_vectors/none.ex`         | 全要素が false か    |
+| `operators/bool_vectors/xor_elements.ex` | 要素間の XOR 集約     |
+
 
 #### Step 3-9: ノード実装例（math）
 
@@ -305,12 +329,14 @@ mkdir -p apps/contents/lib/components/category/uncategorized
 
 モジュール: `Contents.Components.Core.Behaviour`
 
-| 責務 | 内容 |
-|:---|:---|
-| 状態保持 | コンポーネント固有の状態 |
-| ノード束ね | 複数ノードを束ねるインターフェース |
-| ライフサイクル | `on_ready`、`on_process` など |
+
+| 責務           | 内容                               |
+| ------------ | -------------------------------- |
+| 状態保持         | コンポーネント固有の状態                     |
+| ノード束ね        | 複数ノードを束ねるインターフェース                |
+| ライフサイクル      | `on_ready`、`on_process` など       |
 | GenServer 規約 | `Contents.Core.Behaviour` の制約に従う |
+
 
 #### Step 4-3: コンポーネント実装例（uncategorized/comment）
 
@@ -336,12 +362,14 @@ mkdir -p apps/contents/lib/objects/core
 
 モジュール: `Contents.Objects.Core.Behaviour`
 
-| 責務 | 内容 |
-|:---|:---|
-| 空間上の実体 | init、空間イベント対応 |
-| `handle_cast` | 空間イベントの処理 |
-| 子の管理 | コンポーネント・子 Object の管理 |
-| GenServer 規約 | `Contents.Core.Behaviour` の制約に従う |
+
+| 責務            | 内容                               |
+| ------------- | -------------------------------- |
+| 空間上の実体        | init、空間イベント対応                    |
+| `handle_cast` | 空間イベントの処理                        |
+| 子の管理          | コンポーネント・子 Object の管理             |
+| GenServer 規約  | `Contents.Core.Behaviour` の制約に従う |
+
 
 ---
 
@@ -395,86 +423,89 @@ flowchart TB
     OBJ_B --> OBJ_IMPL
 ```
 
+
+
 ---
 
 ## 6. 変更・新規作成ファイル一覧（チェックリスト）
 
 ### Phase 1: structs
 
-- [ ] `apps/contents/lib/structs/category/value/bool.ex`
-- [ ] `apps/contents/lib/structs/category/value/byte.ex`
-- [ ] `apps/contents/lib/structs/category/value/ushort.ex`
-- [ ] `apps/contents/lib/structs/category/value/uint.ex`
-- [ ] `apps/contents/lib/structs/category/value/ulong.ex`
-- [ ] `apps/contents/lib/structs/category/value/sbyte.ex`
-- [ ] `apps/contents/lib/structs/category/value/short.ex`
-- [ ] `apps/contents/lib/structs/category/value/int.ex`
-- [ ] `apps/contents/lib/structs/category/value/long.ex`
-- [ ] `apps/contents/lib/structs/category/value/float.ex`
-- [ ] `apps/contents/lib/structs/category/value/decimal.ex`
-- [ ] `apps/contents/lib/structs/category/value/color.ex`
-- [ ] `apps/contents/lib/structs/category/text/string.ex`
-- [ ] `apps/contents/lib/structs/category/text/char.ex`
-- [ ] `apps/contents/lib/structs/category/time/date_time.ex`
-- [ ] `apps/contents/lib/structs/category/time/time_span.ex`
-- [ ] `apps/contents/lib/structs/category/space/transform.ex`
-- [ ] `apps/contents/lib/structs/category/users/local_user.ex`
+- `apps/contents/lib/structs/category/value/bool.ex`
+- `apps/contents/lib/structs/category/value/byte.ex`
+- `apps/contents/lib/structs/category/value/ushort.ex`
+- `apps/contents/lib/structs/category/value/uint.ex`
+- `apps/contents/lib/structs/category/value/ulong.ex`
+- `apps/contents/lib/structs/category/value/sbyte.ex`
+- `apps/contents/lib/structs/category/value/short.ex`
+- `apps/contents/lib/structs/category/value/int.ex`
+- `apps/contents/lib/structs/category/value/long.ex`
+- `apps/contents/lib/structs/category/value/float.ex`
+- `apps/contents/lib/structs/category/value/decimal.ex`
+- `apps/contents/lib/structs/category/value/color.ex`
+- `apps/contents/lib/structs/category/text/string.ex`
+- `apps/contents/lib/structs/category/text/char.ex`
+- `apps/contents/lib/structs/category/time/date_time.ex`
+- `apps/contents/lib/structs/category/time/time_span.ex`
+- `apps/contents/lib/structs/category/space/transform.ex`
+- `apps/contents/lib/structs/category/users/local_user.ex`
+- `apps/contents/lib/structs/category/utility/guid.ex`
 
 ### Phase 2: core
 
-- [ ] `apps/contents/lib/core/behaviour.ex`
+- `apps/contents/lib/core/behaviour.ex`
 
 ### Phase 3: nodes
 
-- [ ] `apps/contents/lib/nodes/ports/action.ex`
-- [ ] `apps/contents/lib/nodes/ports/logic.ex`
-- [ ] `apps/contents/lib/nodes/core/behaviour.ex`
-- [ ] `apps/contents/lib/nodes/category/core/input/call.ex`
-- [ ] `apps/contents/lib/nodes/category/core/input/value.ex`
-- [ ] `apps/contents/lib/nodes/category/core/input/display.ex`
-- [ ] `apps/contents/lib/nodes/category/actions/write.ex`
-- [ ] `apps/contents/lib/nodes/category/operators/bool_vectors/all.ex`
-- [ ] `apps/contents/lib/nodes/category/operators/bool_vectors/any.ex`
-- [ ] `apps/contents/lib/nodes/category/operators/bool_vectors/none.ex`
-- [ ] `apps/contents/lib/nodes/category/operators/bool_vectors/xor_elements.ex`
-- [ ] `apps/contents/lib/nodes/category/operators/boolean/and.ex`
-- [ ] `apps/contents/lib/nodes/category/operators/boolean/nand.ex`
-- [ ] `apps/contents/lib/nodes/category/operators/boolean/nor.ex`
-- [ ] `apps/contents/lib/nodes/category/operators/boolean/or.ex`
-- [ ] `apps/contents/lib/nodes/category/operators/boolean/xnor.ex`
-- [ ] `apps/contents/lib/nodes/category/operators/boolean/xor.ex`
-- [ ] `apps/contents/lib/nodes/category/operators/boolean/shift.ex`
-- [ ] `apps/contents/lib/nodes/category/operators/boolean/rotate.ex`
-- [ ] `apps/contents/lib/nodes/category/operators/add.ex`
-- [ ] `apps/contents/lib/nodes/category/operators/sub.ex`
-- [ ] `apps/contents/lib/nodes/category/operators/mul.ex`
-- [ ] `apps/contents/lib/nodes/category/operators/div.ex`
-- [ ] `apps/contents/lib/nodes/category/operators/equals.ex`
+- `apps/contents/lib/nodes/ports/action.ex`
+- `apps/contents/lib/nodes/ports/logic.ex`
+- `apps/contents/lib/nodes/core/behaviour.ex`
+- `apps/contents/lib/nodes/category/core/link.ex`
+- `apps/contents/lib/nodes/category/core/port.ex`
+- `apps/contents/lib/nodes/category/core/input/call.ex`
+- `apps/contents/lib/nodes/category/core/input/value.ex`
+- `apps/contents/lib/nodes/category/core/input/display.ex`
+- `apps/contents/lib/nodes/category/actions/write.ex`
+- `apps/contents/lib/nodes/category/flow/if.ex`
+- `apps/contents/lib/nodes/category/time/stopwatch.ex`
+- `apps/contents/lib/nodes/category/operators/bool_vectors/all.ex`
+- `apps/contents/lib/nodes/category/operators/bool_vectors/any.ex`
+- `apps/contents/lib/nodes/category/operators/bool_vectors/none.ex`
+- `apps/contents/lib/nodes/category/operators/bool_vectors/xor_elements.ex`
+- `apps/contents/lib/nodes/category/operators/boolean/and.ex`
+- `apps/contents/lib/nodes/category/operators/boolean/nand.ex`
+- `apps/contents/lib/nodes/category/operators/boolean/nor.ex`
+- `apps/contents/lib/nodes/category/operators/boolean/or.ex`
+- `apps/contents/lib/nodes/category/operators/boolean/xnor.ex`
+- `apps/contents/lib/nodes/category/operators/boolean/xor.ex`
+- `apps/contents/lib/nodes/category/operators/add.ex`
+- `apps/contents/lib/nodes/category/operators/sub.ex`
+- `apps/contents/lib/nodes/category/operators/mul.ex`
+- `apps/contents/lib/nodes/category/operators/div.ex`
+- `apps/contents/lib/nodes/category/operators/equals.ex`
 
 ### Phase 4: components
 
-- [ ] `apps/contents/lib/components/core/behaviour.ex`
-- [ ] `apps/contents/lib/components/category/uncategorized/comment.ex`
+- `apps/contents/lib/components/core/behaviour.ex`
+- `apps/contents/lib/components/category/uncategorized/comment.ex`
 
 ### Phase 5: objects
 
-- [ ] `apps/contents/lib/objects/core/behaviour.ex`
+- `apps/contents/lib/objects/core/behaviour.ex`
 
 ---
 
 ## 7. 検証手順
 
 1. **コンパイル**
-   ```bash
+  ```bash
    mix compile --warnings-as-errors
-   ```
-
+  ```
 2. **型・依存の整合性**
-   - `mix xref graph` 等で循環依存がないことを確認
-
+  - `mix xref graph` 等で循環依存がないことを確認
 3. **動作確認**
-   - 既存 Contents（lib/contents/）が引き続き動作することを確認
-   - （移行後）新アーキテクチャで構築したノード・コンポーネント・オブジェクトの単体動作確認
+  - 既存 Contents（lib/contents/）が引き続き動作することを確認
+  - （移行後）新アーキテクチャで構築したノード・コンポーネント・オブジェクトの単体動作確認
 
 ---
 
@@ -496,3 +527,4 @@ flowchart TB
 - **直感的な線**: Action ports は「光る脈動」、Logic ports は「静かな導管」として視覚化。Link はそれらを繋ぐ線
 - **対称性の保持**: 層が違ってもインターフェースが同じなら、一度覚えたルールで全体を構築可能
 - **型の厳格さ**: structs のカテゴリー化により、VR 空間で「何を触っているか」を型レベルで意識可能に
+
