@@ -4,7 +4,7 @@ defmodule Structs.Category.Space.Transform do
 
   ## 構造
 
-      %{
+      %Structs.Category.Space.Transform{
         position: Value.Float.t3(),    # 位置 (x, y, z)
         rotation: Value.Float.quaternion(),  # 回転 (x, y, z, w)
         scale: Value.Float.t3()        # スケール (x, y, z)
@@ -12,11 +12,15 @@ defmodule Structs.Category.Space.Transform do
   """
   alias Structs.Category.Value.Float, as: ValueFloat
 
-  @type t :: %{
-          required(:position) => ValueFloat.t3(),
-          required(:rotation) => ValueFloat.quaternion(),
-          required(:scale) => ValueFloat.t3()
+  @type t :: %__MODULE__{
+          position: ValueFloat.t3(),
+          rotation: ValueFloat.quaternion(),
+          scale: ValueFloat.t3()
         }
+
+  defstruct position: {0.0, 0.0, 0.0},
+            rotation: {0.0, 0.0, 0.0, 1.0},
+            scale: {1.0, 1.0, 1.0}
 
   @doc """
   デフォルトの Transform を生成する。
@@ -25,10 +29,6 @@ defmodule Structs.Category.Space.Transform do
   """
   @spec new() :: t()
   def new do
-    %{
-      position: {0.0, 0.0, 0.0},
-      rotation: {0.0, 0.0, 0.0, 1.0},
-      scale: {1.0, 1.0, 1.0}
-    }
+    %__MODULE__{}
   end
 end
