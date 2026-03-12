@@ -1,4 +1,4 @@
-defmodule Schemas.Category.Text.Char do
+defmodule Structs.Category.Text.Char do
   @moduledoc """
   文字型。Unicode コードポイントまたは grapheme。
   """

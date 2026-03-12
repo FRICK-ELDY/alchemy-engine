@@ -1,4 +1,4 @@
-defmodule Schemas.Category.Value.Bool do
+defmodule Structs.Category.Value.Bool do
   @moduledoc """
   真偽値型。スカラーおよび 2〜4 要素のベクトル。
   """

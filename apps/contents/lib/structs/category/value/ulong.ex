@@ -1,4 +1,4 @@
-defmodule Schemas.Category.Value.ULong do
+defmodule Structs.Category.Value.ULong do
   @moduledoc """
   符号なし 64 ビット整数型。スカラーおよび 2〜4 要素のベクトル。
   """

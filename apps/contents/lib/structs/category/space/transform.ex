@@ -1,4 +1,4 @@
-defmodule Schemas.Category.Space.Transform do
+defmodule Structs.Category.Space.Transform do
   @moduledoc """
   変換型。位置・回転・スケールを表す。
 
@@ -10,7 +10,7 @@ defmodule Schemas.Category.Space.Transform do
         scale: Value.Float.t3()        # スケール (x, y, z)
       }
   """
-  alias Schemas.Category.Value.Float, as: ValueFloat
+  alias Structs.Category.Value.Float, as: ValueFloat
 
   @type t :: %{
           required(:position) => ValueFloat.t3(),

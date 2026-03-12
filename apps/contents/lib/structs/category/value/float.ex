@@ -1,4 +1,4 @@
-defmodule Schemas.Category.Value.Float do
+defmodule Structs.Category.Value.Float do
   @moduledoc """
   浮動小数型。スカラー、2〜4 要素ベクトル、2x2〜4x4 行列、クォータニオン。
 

@@ -1,4 +1,4 @@
-defmodule Schemas.Category.Value.Int do
+defmodule Structs.Category.Value.Int do
   @moduledoc """
   符号付き 32 ビット整数型。スカラーおよび 2〜4 要素のベクトル。
   """

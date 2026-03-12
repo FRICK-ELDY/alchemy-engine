@@ -1,4 +1,4 @@
-defmodule Schemas.Category.Value.SByte do
+defmodule Structs.Category.Value.SByte do
   @moduledoc """
   符号付き 8 ビット整数型（-128..127）。スカラーおよび 2〜4 要素のベクトル。
   """

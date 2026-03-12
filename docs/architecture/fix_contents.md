@@ -10,20 +10,20 @@
 - **Objects（空間のピア）**: 空間に存在する実体（Entities）。GenServer として動作。
 - **Components（状態のピア）**: ノードを束ねて特定の「機能」を持たせた細胞。状態を保持する。GenServer として動作。
 - **Nodes（論理のピア）**: Action と Logic が交差する処理の原子。Logic Processors。プロセス化しない。
-- **Schemas（設計図）**: 世界に存在する物質そのものの定義。ノード・コンポーネントが扱うデータの型。
+- **Structs（データの形）**: 世界に存在する物質そのものの定義。ノード・コンポーネントが扱うデータの型。`defstruct` / `@type` で定義。
 
 ## 2. 依存関係（Dependency Direction）
 
-データ変換（schemas）がプログラムの基礎。基盤から上位へ一方向に依存を積み上げます。
+データ定義（structs）がプログラムの基礎。基盤から上位へ一方向に依存を積み上げます。
 
 ```
-schemas
-schemas |> nodes
-schemas |> components
-schemas |> objects
-schemas |> nodes |> objects
-schemas |> components |> objects
-schemas |> nodes |> components |> objects
+structs
+structs |> nodes
+structs |> components
+structs |> objects
+structs |> nodes |> objects
+structs |> components |> objects
+structs |> nodes |> components |> objects
 ```
 
 ## 3. 二種類のピン（Action & Logic Pins）
@@ -45,14 +45,12 @@ schemas |> nodes |> components |> objects
 apps/contents/
 ├── core/
 │   └── behaviour.ex         # 憲法。全層共通の契約。（役割分担は別途詰める）
-├── schemas/                 # 設計図。ノード・コンポーネントが扱うデータの型定義。
+├── structs/                 # データの形。defstruct / @type による型定義。
 │   └── category/
-│       ├── data/            # プリミティブな値の定義
-│       │   ├── string.ex
-│       │   ├── boolean.ex
-│       │   └── int.ex
-│       ├── spatial/         # 空間に関わる型（Resonite に合わせた配置）
-│       │   └── transform.ex # 変換行列・位置・回転・スケール（vector3 は primitives の Float.t3）
+│       ├── value/           # スカラー・ベクトル・行列・色など
+│       ├── text/            # 文字列・文字
+│       ├── time/            # 日時・時間幅
+│       ├── space/           # 空間に関わる型（Transform など）
 │       └── users/
 │           └── local_user.ex  # 操作者というコンテキスト
 ├── objects/                 # 空間のピア（Entities）
@@ -89,8 +87,8 @@ apps/contents/
 | --------------------------- | ------------------------------------------------------------------------------------------------- |
 | `core/behaviour.ex`         | 憲法。全層が従う基本契約。役割分担は「Behaviour の流れ」参照。                                                              |
 | `nodes/pins/`               | Action / Logic のピン（action in/out, logic in/out）を定義。ノード間の通信のルール。                                            |
-| `schemas/`                  | 設計図。データの形を定義。`category` でドメイン別に分類し、VR 空間での型の可視性を高める。                                              |
-| `schemas/category/spatial/` | 空間に関わる型。Resonite の Components に合わせた配置。transform など。3 次元ベクトルは primitives の Float.t3。 |
+| `structs/`                  | データの形を定義。`defstruct` / `@type`。`category` でドメイン別に分類し、VR 空間での型の可視性を高める。                                 |
+| `structs/category/space/`   | 空間に関わる型。Resonite の Components に合わせた配置。transform など。3 次元ベクトルは value の Float.t3。 |
 | `objects/`                  | 空間上の実体。ECS の Entity 相当。GenServer で動作。                                                             |
 | `components/`               | 状態を保持する細胞。ノードを束ねて特定の機能を提供。GenServer で動作。                                                          |
 | `nodes/`                    | 論理の原子。Action / Logic pins に基づく処理。プロセス化しない。`category/actions/` は Resonite の Actions に合わせた分類。 |
@@ -228,7 +226,7 @@ flowchart TB
 
 - **直感的な接続**: Action pins（時間）は「光る脈動」として、Logic pins（情報）は「静かな導管」として視覚化する。
 - **対称性の保持**: 階層が違っても、インターフェースが同じであれば、ユーザーは一度覚えたルールでシステム全体を構築できる。
-- **型の厳格さ**: schemas がカテゴリー化されていることで、VR 空間で「今、何を触っているのか」を型レベルでユーザーが意識できるようにする。
+- **型の厳格さ**: structs がカテゴリー化されていることで、VR 空間で「今、何を触っているのか」を型レベルでユーザーが意識できるようにする。
 
 ---
 
