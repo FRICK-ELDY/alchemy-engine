@@ -10,7 +10,7 @@ defmodule Structs.Category.Value.Float do
   @type t3 :: {t(), t(), t()}
   @type t4 :: {t(), t(), t(), t()}
   @type t2x2 :: {{t(), t()}, {t(), t()}}
-  @type t3x3 :: {{t(), t()}, {t(), t()}, {t(), t()}}
+  @type t3x3 :: {{t(), t(), t()}, {t(), t(), t()}, {t(), t(), t()}}
   @type t4x4 :: {{t(), t(), t(), t()}, {t(), t(), t(), t()}, {t(), t(), t(), t()}, {t(), t(), t(), t()}}
   @type quaternion :: {t(), t(), t(), t()}
 end
