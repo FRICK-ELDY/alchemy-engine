@@ -253,7 +253,7 @@ mkdir -p apps/contents/lib/nodes/category/math
 | ----------------------- | --------------------------------- |
 | `core/input/call.ex`    | 同期/非同期のアクション。Target の ref にパルスを送る |
 | `core/input/value.ex`   | 定数値の入力                            |
-| `core/input/display.ex` | 値を表示するための出力                       |
+| `core/input/display.ex` | 入力された value をそのまま表示する出力            |
 
 
 #### Step 3-5: ノード実装例（actions/write）
