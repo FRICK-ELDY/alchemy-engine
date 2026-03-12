@@ -1,6 +1,6 @@
-defmodule Schemas.Space.TransformTest do
+defmodule Structs.Space.TransformTest do
   use ExUnit.Case, async: true
-  alias Schemas.Category.Space.Transform
+  alias Structs.Category.Space.Transform
 
   describe "new/0" do
     test "returns default transform structure" do

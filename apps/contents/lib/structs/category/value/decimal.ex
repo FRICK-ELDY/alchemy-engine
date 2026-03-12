@@ -1,4 +1,4 @@
-defmodule Schemas.Category.Value.Decimal do
+defmodule Structs.Category.Value.Decimal do
   @moduledoc """
   十進高精度小数型。`Decimal` ライブラリの型を参照。
   """

@@ -14,8 +14,8 @@
 
 | 項目 | 内容 |
 |:---|:---|
-| **存在の階層（Five Pillars）** | Contents → Objects → Components → Nodes → Schemas |
-| **依存の方向** | schemas を基盤として、nodes → components → objects へ一方向に積み上げ |
+| **存在の階層（Five Pillars）** | Contents → Objects → Components → Nodes → Structs |
+| **依存の方向** | structs を基盤として、nodes → components → objects へ一方向に積み上げ |
 | **二種類のピン** | Action pins（実行フロー / 時間の制御）、Logic pins（データフロー / 情報の参照） |
 | **プロセスモデル** | Object / Component は GenServer。Node はプロセスにせず、Executor が関数として呼び出す |
 
@@ -24,7 +24,7 @@
 依存関係に従い、下位層から順に構築する。
 
 ```
-schemas → core/behaviour → nodes → components → objects
+structs → core/behaviour → nodes → components → objects
 ```
 
 ---
@@ -33,9 +33,9 @@ schemas → core/behaviour → nodes → components → objects
 
 ### 2.1 lib/ のディレクトリ構成と方針
 
-`apps/contents/lib/` 直下には、**core / schemas / nodes / components / objects / world** を同階層で配置する。
+`apps/contents/lib/` 直下には、**core / structs / nodes / components / objects / world** を同階層で配置する。
 
-- **core, schemas, nodes, components, objects** … アーキテクチャの骨格（仕組み・型・定義）
+- **core, structs, nodes, components, objects** … アーキテクチャの骨格（仕組み・型・定義）
 - **world** … 実際のコンテンツ（沢山入る）
 
 world はコンテンツで埋め尽くされるため、骨格と同階層に分けておく。これにより、骨格とコンテンツを明確に区別する。
@@ -49,7 +49,7 @@ apps/contents/
 ├── lib/
 │   ├── contents/            # 既存 Contents（移行対象、本手順書外・触らない）
 │   ├── core/                # behaviour 等
-│   ├── schemas/             # 設計図。データ型定義
+│   ├── structs/             # データの形。defstruct / @type による型定義
 │   │   └── category/
 │   │       ├── value/       # スカラー・ベクトル・行列・色など
 │   │       ├── text/        # 文字列・文字
@@ -76,18 +76,18 @@ apps/contents/
 
 ## 3. 実施手順
 
-### Phase 1: schemas の土台構築
+### Phase 1: structs の土台構築
 
-schemas は全層の基盤。最初に配置を定義し、カテゴリ別に型を追加する。
+structs は全層の基盤。最初に配置を定義し、カテゴリ別に型を追加する。各 Struct は `defstruct` と `@type` で定義する（複合型）。プリミティブ・タプルは `@type` のみ。
 
 #### Step 1-1: ディレクトリ作成
 
 ```bash
-mkdir -p apps/contents/lib/schemas/category/value
-mkdir -p apps/contents/lib/schemas/category/text
-mkdir -p apps/contents/lib/schemas/category/time
-mkdir -p apps/contents/lib/schemas/category/space
-mkdir -p apps/contents/lib/schemas/category/users
+mkdir -p apps/contents/lib/structs/category/value
+mkdir -p apps/contents/lib/structs/category/text
+mkdir -p apps/contents/lib/structs/category/time
+mkdir -p apps/contents/lib/structs/category/space
+mkdir -p apps/contents/lib/structs/category/users
 ```
 
 #### Step 1-2: value カテゴリの作成
@@ -102,18 +102,18 @@ mkdir -p apps/contents/lib/schemas/category/users
 
 | ファイル | モジュール | 定義する型 |
 |:---|:---|:---|
-| `value/bool.ex` | `Schemas.Category.Value.Bool` | t, t2, t3, t4 |
-| `value/byte.ex` | `Schemas.Category.Value.Byte` | t, t2, t3, t4 |
-| `value/ushort.ex` | `Schemas.Category.Value.UShort` | t, t2, t3, t4 |
-| `value/uint.ex` | `Schemas.Category.Value.UInt` | t, t2, t3, t4 |
-| `value/ulong.ex` | `Schemas.Category.Value.ULong` | t, t2, t3, t4 |
-| `value/sbyte.ex` | `Schemas.Category.Value.SByte` | t, t2, t3, t4 |
-| `value/short.ex` | `Schemas.Category.Value.Short` | t, t2, t3, t4 |
-| `value/int.ex` | `Schemas.Category.Value.Int` | t, t2, t3, t4 |
-| `value/long.ex` | `Schemas.Category.Value.Long` | t, t2, t3, t4 |
-| `value/float.ex` | `Schemas.Category.Value.Float` | t, t2, t3, t4, t2x2, t3x3, t4x4, quaternion |
-| `value/decimal.ex` | `Schemas.Category.Value.Decimal` | t |
-| `value/color.ex` | `Schemas.Category.Value.Color` | t, t32 |
+| `value/bool.ex` | `Structs.Category.Value.Bool` | t, t2, t3, t4 |
+| `value/byte.ex` | `Structs.Category.Value.Byte` | t, t2, t3, t4 |
+| `value/ushort.ex` | `Structs.Category.Value.UShort` | t, t2, t3, t4 |
+| `value/uint.ex` | `Structs.Category.Value.UInt` | t, t2, t3, t4 |
+| `value/ulong.ex` | `Structs.Category.Value.ULong` | t, t2, t3, t4 |
+| `value/sbyte.ex` | `Structs.Category.Value.SByte` | t, t2, t3, t4 |
+| `value/short.ex` | `Structs.Category.Value.Short` | t, t2, t3, t4 |
+| `value/int.ex` | `Structs.Category.Value.Int` | t, t2, t3, t4 |
+| `value/long.ex` | `Structs.Category.Value.Long` | t, t2, t3, t4 |
+| `value/float.ex` | `Structs.Category.Value.Float` | t, t2, t3, t4, t2x2, t3x3, t4x4, quaternion |
+| `value/decimal.ex` | `Structs.Category.Value.Decimal` | t |
+| `value/color.ex` | `Structs.Category.Value.Color` | t, t32 |
 
 **注記:**
 - 整数型: `integer()` は bignum で unbounded。常設サーバーでは意味のある範囲（例: UInt, ULong の範囲型）を用いること。
@@ -126,21 +126,21 @@ mkdir -p apps/contents/lib/schemas/category/users
 
 | ファイル | モジュール | 役割 |
 |:---|:---|:---|
-| `schemas/category/text/string.ex` | `Schemas.Category.Text.String` | 文字列型 |
-| `schemas/category/text/char.ex` | `Schemas.Category.Text.Char` | 文字型 |
+| `structs/category/text/string.ex` | `Structs.Category.Text.String` | 文字列型 |
+| `structs/category/text/char.ex` | `Structs.Category.Text.Char` | 文字型 |
 
 #### Step 1-4: time カテゴリの作成
 
 | ファイル | モジュール | 役割 |
 |:---|:---|:---|
-| `schemas/category/time/date_time.ex` | `Schemas.Category.Time.DateTime` | 日時 |
-| `schemas/category/time/time_span.ex` | `Schemas.Category.Time.TimeSpan` | 時間幅（マイクロ秒、ULong.t() の範囲） |
+| `structs/category/time/date_time.ex` | `Structs.Category.Time.DateTime` | 日時 |
+| `structs/category/time/time_span.ex` | `Structs.Category.Time.TimeSpan` | 時間幅（マイクロ秒、ULong.t() の範囲） |
 
 #### Step 1-5: space カテゴリの作成
 
 | ファイル | モジュール | 役割 |
 |:---|:---|:---|
-| `schemas/category/space/transform.ex` | `Schemas.Category.Space.Transform` | 変換（position, rotation, scale） |
+| `structs/category/space/transform.ex` | `Structs.Category.Space.Transform` | 変換（position, rotation, scale） |
 
 - `position`: Value.Float.t3、`rotation`: Value.Float.quaternion、`scale`: Value.Float.t3
 - 3 次元ベクトルは value の `Float.t3` を利用する。Resonite の Components に合わせた配置。
@@ -149,7 +149,7 @@ mkdir -p apps/contents/lib/schemas/category/users
 
 | ファイル | モジュール | 役割 |
 |:---|:---|:---|
-| `schemas/category/users/local_user.ex` | `Schemas.Category.Users.LocalUser` | 操作者というコンテキストの型 |
+| `structs/category/users/local_user.ex` | `Structs.Category.Users.LocalUser` | 操作者というコンテキストの型 |
 
 ---
 
@@ -350,18 +350,18 @@ mkdir -p apps/contents/lib/objects/core
 実装後、以下の依存方向が守られていることを確認する。
 
 ```
-schemas
-schemas |> nodes
-schemas |> components
-schemas |> objects
-schemas |> nodes |> objects
-schemas |> components |> objects
-schemas |> nodes |> components |> objects
+structs
+structs |> nodes
+structs |> components
+structs |> objects
+structs |> nodes |> objects
+structs |> components |> objects
+structs |> nodes |> components |> objects
 ```
 
-- nodes は schemas にのみ依存
-- components は schemas、nodes に依存
-- objects は schemas、nodes、components に依存
+- nodes は structs にのみ依存
+- components は structs、nodes に依存
+- objects は structs、nodes、components に依存
 - 逆方向の依存（上位 → 下位以外）がないこと
 
 ---
@@ -399,26 +399,26 @@ flowchart TB
 
 ## 6. 変更・新規作成ファイル一覧（チェックリスト）
 
-### Phase 1: schemas
+### Phase 1: structs
 
-- [ ] `apps/contents/lib/schemas/category/value/bool.ex`
-- [ ] `apps/contents/lib/schemas/category/value/byte.ex`
-- [ ] `apps/contents/lib/schemas/category/value/ushort.ex`
-- [ ] `apps/contents/lib/schemas/category/value/uint.ex`
-- [ ] `apps/contents/lib/schemas/category/value/ulong.ex`
-- [ ] `apps/contents/lib/schemas/category/value/sbyte.ex`
-- [ ] `apps/contents/lib/schemas/category/value/short.ex`
-- [ ] `apps/contents/lib/schemas/category/value/int.ex`
-- [ ] `apps/contents/lib/schemas/category/value/long.ex`
-- [ ] `apps/contents/lib/schemas/category/value/float.ex`
-- [ ] `apps/contents/lib/schemas/category/value/decimal.ex`
-- [ ] `apps/contents/lib/schemas/category/value/color.ex`
-- [ ] `apps/contents/lib/schemas/category/text/string.ex`
-- [ ] `apps/contents/lib/schemas/category/text/char.ex`
-- [ ] `apps/contents/lib/schemas/category/time/date_time.ex`
-- [ ] `apps/contents/lib/schemas/category/time/time_span.ex`
-- [ ] `apps/contents/lib/schemas/category/space/transform.ex`
-- [ ] `apps/contents/lib/schemas/category/users/local_user.ex`
+- [ ] `apps/contents/lib/structs/category/value/bool.ex`
+- [ ] `apps/contents/lib/structs/category/value/byte.ex`
+- [ ] `apps/contents/lib/structs/category/value/ushort.ex`
+- [ ] `apps/contents/lib/structs/category/value/uint.ex`
+- [ ] `apps/contents/lib/structs/category/value/ulong.ex`
+- [ ] `apps/contents/lib/structs/category/value/sbyte.ex`
+- [ ] `apps/contents/lib/structs/category/value/short.ex`
+- [ ] `apps/contents/lib/structs/category/value/int.ex`
+- [ ] `apps/contents/lib/structs/category/value/long.ex`
+- [ ] `apps/contents/lib/structs/category/value/float.ex`
+- [ ] `apps/contents/lib/structs/category/value/decimal.ex`
+- [ ] `apps/contents/lib/structs/category/value/color.ex`
+- [ ] `apps/contents/lib/structs/category/text/string.ex`
+- [ ] `apps/contents/lib/structs/category/text/char.ex`
+- [ ] `apps/contents/lib/structs/category/time/date_time.ex`
+- [ ] `apps/contents/lib/structs/category/time/time_span.ex`
+- [ ] `apps/contents/lib/structs/category/space/transform.ex`
+- [ ] `apps/contents/lib/structs/category/users/local_user.ex`
 
 ### Phase 2: core
 
@@ -495,4 +495,4 @@ flowchart TB
 
 - **直感的な線**: Action は「光る脈動」、Logic は「静かな導管」として視覚化
 - **対称性の保持**: 層が違ってもインターフェースが同じなら、一度覚えたルールで全体を構築可能
-- **型の厳格さ**: schemas のカテゴリー化により、VR 空間で「何を触っているか」を型レベルで意識可能に
+- **型の厳格さ**: structs のカテゴリー化により、VR 空間で「何を触っているか」を型レベルで意識可能に

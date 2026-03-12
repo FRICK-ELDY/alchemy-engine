@@ -1,4 +1,4 @@
-defmodule Schemas.Category.Value.UShort do
+defmodule Structs.Category.Value.UShort do
   @moduledoc """
   符号なし 16 ビット整数型（0..65535）。スカラーおよび 2〜4 要素のベクトル。
   """

@@ -1,4 +1,4 @@
-defmodule Schemas.Category.Time.DateTime do
+defmodule Structs.Category.Time.DateTime do
   @moduledoc """
   日時型。絶対時刻を表す。
   """

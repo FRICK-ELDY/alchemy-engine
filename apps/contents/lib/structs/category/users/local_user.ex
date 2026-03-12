@@ -1,4 +1,4 @@
-defmodule Schemas.Category.Users.LocalUser do
+defmodule Structs.Category.Users.LocalUser do
   @moduledoc """
   操作者というコンテキストの型。
   """

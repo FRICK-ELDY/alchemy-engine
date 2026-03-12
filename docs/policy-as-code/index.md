@@ -15,6 +15,7 @@
 | [nif.md](./nif.md) | NIF | ブロック・シリアライズ・呼び出し頻度 |
 | [nif_rust_thread.md](./nif_rust_thread.md) | NIF × Rust スレッド | 責務分担・Dirty NIF・委譲 |
 | [rust_client.md](./rust_client.md) | Rust クライアント | 描画・入力・DSP・予測補間・Zenoh 通信 |
+| [contents/object.md](./contents/object.md) | Contents | 層の責務（Structs / Node / Component / Object） |
 | [gaps/scale-and-gaps.md](./gaps/scale-and-gaps.md) | gaps | 大規模分散 VRSNS へのスケール・未整備事項 |
 
 ---

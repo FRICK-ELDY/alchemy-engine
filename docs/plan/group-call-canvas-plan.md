@@ -15,7 +15,7 @@
 | **ネットワーク上の人一覧表示** | 同一 LAN 上で稼働中の Alchemy インスタンス（または同一ルーム参加者）をリスト表示 |
 | **通話ボタン** | ボタン押下で、選択した相手またはルーム参加者との音声通話を開始・終了 |
 | **Canvas UI** | HUD またはワールド空間に、参加者リストと通話コントロールを配置 |
-| **新ビヘイビア** | fix_contents の schemas / nodes / components / objects 体系に準拠したコンテンツとして構築 |
+| **新ビヘイビア** | fix_contents の structs / nodes / components / objects 体系に準拠したコンテンツとして構築 |
 
 ### 1.2 スコープ
 
@@ -32,7 +32,7 @@
 ```
 apps/contents/
 ├── lib/
-│   ├── schemas/category/
+│   ├── structs/category/
 │   │   └── users/
 │   │       └── network_peer.ex      # 追加: ネットワーク上のピア型
 │   └── contents/
