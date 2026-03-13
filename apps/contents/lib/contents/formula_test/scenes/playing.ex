@@ -55,12 +55,14 @@ defmodule Content.FormulaTest.Scenes.Playing do
 
   defp test_add_inputs do
     # Value(1) -> a, Value(2) -> b, Add(a, b) -> result
+    # player_x, player_y は元 FormulaGraph の入力名。1+2 の加算を検証
     a = ValueNode.handle_sample(%{}, %{value: 1.0})
     b = ValueNode.handle_sample(%{}, %{value: 2.0})
     result = AddNode.handle_sample(%{a: a, b: b}, %{})
 
     case result do
-      ival when is_number(ival) and ival == 3.0 -> {:ok, "player_x + player_y (1+2)", 3.0}
+      ival when is_number(ival) and ival == 3.0 ->
+        {:ok, "player_x + player_y (1+2)", 3.0}
       ival when is_number(ival) -> {:ok, "player_x + player_y", inspect([ival])}
       {:error, reason} -> {:error, "player_x + player_y", "#{inspect(reason)}"}
     end
@@ -87,8 +89,9 @@ defmodule Content.FormulaTest.Scenes.Playing do
 
     case result do
       true -> {:ok, "lt(1.0, 2.0)", true}
-      false -> {:ok, "lt(1.0, 2.0)", inspect([false])}
-      other -> {:ok, "lt(1.0, 2.0)", inspect(other)}
+      false -> {:error, "lt(1.0, 2.0)", "expected true, got false"}
+      {:error, reason} -> {:error, "lt(1.0, 2.0)", inspect(reason)}
+      other -> {:error, "lt(1.0, 2.0)", "unexpected result: #{inspect(other)}"}
     end
   end
 

@@ -2,14 +2,14 @@ defmodule Content.FormulaTest do
   @moduledoc """
   Formula エンジン検証コンテンツ。
 
-  Elixir で式を定義（FormulaGraph）→ Rust で計算（NIF VM）→ Elixir で結果を受け取る
-  フローを起動時に検証し、結果を画面に表示する。
+  起動時に Contents.Nodes を用いて式を実行し、ノードアーキテクチャの動作を検証する。
+  結果を HUD に表示する。
 
   ## 検証項目
-  - 入力演算: player_x + player_y
+  - 入力演算: player_x + player_y (1+2)
   - 定数演算: 10 + 3
   - 比較ノード: lt(a, b)
-  - Store: read_store / write_store
+  - Store シミュレート: 0+1（read_store/write_store は未実装のため加算で代用）
   - 複数出力: x+y, x-y
 
   ## 起動方法

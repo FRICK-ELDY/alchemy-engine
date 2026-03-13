@@ -12,6 +12,13 @@ defmodule Content.FormulaTest.RenderComponent do
   @color_text {0.9, 0.95, 1.0, 1.0}
   @color_bg {0.05, 0.08, 0.12, 0.92}
 
+  # グリッド頂点は固定のためキャッシュ。毎フレームの再生成を避ける
+  @grid_vertices Content.MeshDef.grid_plane(
+                   size: 20.0,
+                   divisions: 20,
+                   color: {0.25, 0.25, 0.3, 1.0}
+                 )[:vertices]
+
   @impl Core.Component
   def on_nif_sync(context) do
     content = Core.Config.current()
@@ -51,19 +58,11 @@ defmodule Content.FormulaTest.RenderComponent do
   defp build_commands do
     {sky_top_r, sky_top_g, sky_top_b, sky_top_a} = {0.2, 0.4, 0.6, 1.0}
     {sky_bot_r, sky_bot_g, sky_bot_b, sky_bot_a} = {0.5, 0.7, 0.95, 1.0}
-    {grid_r, grid_g, grid_b, grid_a} = {0.25, 0.25, 0.3, 1.0}
-
-    grid_vertices =
-      Content.MeshDef.grid_plane(
-        size: 20.0,
-        divisions: 20,
-        color: {grid_r, grid_g, grid_b, grid_a}
-      )[:vertices]
 
     [
       {:skybox, {sky_top_r, sky_top_g, sky_top_b, sky_top_a},
        {sky_bot_r, sky_bot_g, sky_bot_b, sky_bot_a}},
-      {:grid_plane_verts, grid_vertices}
+      {:grid_plane_verts, @grid_vertices}
     ]
   end
 
