@@ -2,8 +2,8 @@ defmodule Content.FormulaTest.RenderComponent do
   @moduledoc """
   FormulaTest の描画コンポーネント。
 
-  起動時に実行した FormulaGraph の検証結果を HUD に表示する。
-  Elixir→Rust→Elixir フローが成功していれば全件 OK と表示される。
+  起動時に Contents.Nodes で実行した検証結果を HUD に表示する。
+  全パターンが OK ならばノードアーキテクチャの動作検証が成功。
   """
   @behaviour Core.Component
 

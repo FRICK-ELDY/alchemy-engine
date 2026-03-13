@@ -74,7 +74,7 @@
 
 ---
 
-### Phase 1: FormulaTest
+### Phase 1: FormulaTest ✅ 完了（2026-03-12）
 
 **目的**: FormulaGraph を Contents.Nodes に置き換え、ノードアーキテクチャの移行パターンを確立する。
 
