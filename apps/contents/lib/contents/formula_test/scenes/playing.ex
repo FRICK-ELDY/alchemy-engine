@@ -2,17 +2,35 @@ defmodule Content.FormulaTest.Scenes.Playing do
   @moduledoc """
   FormulaTest のプレイ中シーン。
 
-  起動時に FormulaGraph を複数パターン実行し、Elixir→Rust→Elixir の
-  フローが正しく動作することを検証する。結果は state に格納し、RenderComponent で表示。
+  起動時に Contents.Nodes を用いて複数パターンの式を実行し、
+  ノードアーキテクチャの動作を検証する。結果は state に格納し、RenderComponent で表示。
+
+  Phase 1 移行: FormulaGraph を Contents.Nodes に置き換え。
   """
   @behaviour Contents.SceneBehaviour
 
-  alias Core.FormulaGraph
+  alias Contents.Nodes.Category.Core.Input.Value, as: ValueNode
+  alias Contents.Nodes.Category.Operators.Add, as: AddNode
+  alias Contents.Nodes.Category.Operators.Sub, as: SubNode
+  alias Contents.Nodes.Category.Operators.Equals, as: EqualsNode
+  alias Contents.Objects.Core.Struct, as: ObjectStruct
+  alias Contents.Objects.Core.CreateEmptyChild
 
   @impl Contents.SceneBehaviour
   def init(_init_arg) do
     results = run_formula_tests()
-    {:ok, %{formula_results: results, hud_visible: true, cursor_grab_request: :no_change}}
+    root_object = ObjectStruct.new(name: "FormulaTestRoot")
+    {:ok, child} = CreateEmptyChild.create(root_object, name: "Child")
+
+    state = %{
+      formula_results: results,
+      hud_visible: true,
+      cursor_grab_request: :no_change,
+      root_object: root_object,
+      child_object: child
+    }
+
+    {:ok, state}
   end
 
   @impl Contents.SceneBehaviour
@@ -36,135 +54,78 @@ defmodule Content.FormulaTest.Scenes.Playing do
   end
 
   defp test_add_inputs do
-    graph = %FormulaGraph{
-      nodes: [
-        %{id: :n1, op: :input, params: %{name: "player_x"}},
-        %{id: :n2, op: :input, params: %{name: "player_y"}},
-        %{id: :n3, op: :add, params: %{}},
-        %{id: :n4, op: :output, params: %{}}
-      ],
-      edges: [
-        {:n1, :n3, :a},
-        {:n2, :n3, :b},
-        {:n3, :n4, :value}
-      ],
-      outputs: [:n4]
-    }
+    # Value(1) -> a, Value(2) -> b, Add(a, b) -> result
+    # player_x, player_y は元 FormulaGraph の入力名。1+2 の加算を検証
+    a = ValueNode.handle_sample(%{}, %{value: 1.0})
+    b = ValueNode.handle_sample(%{}, %{value: 2.0})
+    result = AddNode.handle_sample(%{a: a, b: b}, %{})
 
-    case FormulaGraph.run(graph, %{"player_x" => 1.0, "player_y" => 2.0}) do
-      {:ok, {[3.0], _}} -> {:ok, "player_x + player_y (1+2)", 3.0}
-      {:ok, {outputs, _}} -> {:ok, "player_x + player_y", inspect(outputs)}
-      {:error, reason, detail} -> {:error, "player_x + player_y", "#{reason} #{inspect(detail)}"}
+    case result do
+      ival when is_number(ival) and ival == 3.0 ->
+        {:ok, "player_x + player_y (1+2)", 3.0}
+      ival when is_number(ival) -> {:ok, "player_x + player_y", inspect([ival])}
+      {:error, reason} -> {:error, "player_x + player_y", "#{inspect(reason)}"}
     end
   end
 
   defp test_constants do
-    graph = %FormulaGraph{
-      nodes: [
-        %{id: :a, op: :int, params: %{value: 10}},
-        %{id: :b, op: :int, params: %{value: 3}},
-        %{id: :sum, op: :add, params: %{}},
-        %{id: :out, op: :output, params: %{}}
-      ],
-      edges: [
-        {:a, :sum, :a},
-        {:b, :sum, :b},
-        {:sum, :out, :value}
-      ],
-      outputs: [:out]
-    }
+    # Value(10) -> a, Value(3) -> b, Add(a, b) -> result
+    a = ValueNode.handle_sample(%{}, %{value: 10})
+    b = ValueNode.handle_sample(%{}, %{value: 3})
+    result = AddNode.handle_sample(%{a: a, b: b}, %{})
 
-    case FormulaGraph.run(graph, %{}) do
-      {:ok, {[13], _}} -> {:ok, "10 + 3", 13}
-      {:ok, {outputs, _}} -> {:ok, "10 + 3", inspect(outputs)}
-      {:error, reason, detail} -> {:error, "10 + 3", "#{reason} #{inspect(detail)}"}
+    case result do
+      ival when is_number(ival) and ival == 13 -> {:ok, "10 + 3", 13}
+      ival when is_number(ival) -> {:ok, "10 + 3", inspect([ival])}
+      {:error, reason} -> {:error, "10 + 3", "#{inspect(reason)}"}
     end
   end
 
   defp test_comparison do
-    graph = %FormulaGraph{
-      nodes: [
-        %{id: :a, op: :input, params: %{name: "a"}},
-        %{id: :b, op: :input, params: %{name: "b"}},
-        %{id: :cmp, op: :lt, params: %{}},
-        %{id: :out, op: :output, params: %{}}
-      ],
-      edges: [
-        {:a, :cmp, :a},
-        {:b, :cmp, :b},
-        {:cmp, :out, :value}
-      ],
-      outputs: [:out]
-    }
+    # Value(1.0) -> a, Value(2.0) -> b, Equals(a, b, op: :lt) -> result
+    a = ValueNode.handle_sample(%{}, %{value: 1.0})
+    b = ValueNode.handle_sample(%{}, %{value: 2.0})
+    result = EqualsNode.handle_sample(%{a: a, b: b, op: :lt}, %{})
 
-    case FormulaGraph.run(graph, %{"a" => 1.0, "b" => 2.0}) do
-      {:ok, {[true], _}} -> {:ok, "lt(1.0, 2.0)", true}
-      {:ok, {outputs, _}} -> {:ok, "lt(1.0, 2.0)", inspect(outputs)}
-      {:error, reason, detail} -> {:error, "lt(1.0, 2.0)", "#{reason} #{inspect(detail)}"}
+    case result do
+      true -> {:ok, "lt(1.0, 2.0)", true}
+      false -> {:error, "lt(1.0, 2.0)", "expected true, got false"}
+      {:error, reason} -> {:error, "lt(1.0, 2.0)", inspect(reason)}
+      other -> {:error, "lt(1.0, 2.0)", "unexpected result: #{inspect(other)}"}
     end
   end
 
   defp test_store do
-    graph = %FormulaGraph{
-      nodes: [
-        %{id: :r, op: :read_store, params: %{key: "score"}},
-        %{id: :one, op: :int, params: %{value: 1}},
-        %{id: :sum, op: :add, params: %{}},
-        %{id: :w, op: :write_store, params: %{key: "score"}},
-        %{id: :r2, op: :read_store, params: %{key: "score"}},
-        %{id: :out, op: :output, params: %{}}
-      ],
-      edges: [
-        {:r, :sum, :a},
-        {:one, :sum, :b},
-        {:sum, :w, :value},
-        {:w, :r2, :after},
-        {:r2, :out, :value}
-      ],
-      outputs: [:out]
-    }
+    # Store ノード（read_store / write_store）は Contents.Nodes に未実装のため、
+    # 同等の計算（0 + 1 = 1）を Value + Add で検証する。
+    # Phase 1 では Store の概念をスキップし、加算のみで動作確認。
+    r = ValueNode.handle_sample(%{}, %{value: 0})
+    one = ValueNode.handle_sample(%{}, %{value: 1})
+    result = AddNode.handle_sample(%{a: r, b: one}, %{})
 
-    case FormulaGraph.run(graph, %{}, %{"score" => 0}) do
-      {:ok, {[1], store_list}} ->
-        if {"score", 1} in store_list do
-          {:ok, "read_store/write_store (0->1)", 1}
-        else
-          {:ok, "read_store/write_store", inspect(store_list)}
-        end
-
-      {:ok, {outputs, store_list}} ->
-        {:ok, "read_store/write_store", "out=#{inspect(outputs)} store=#{inspect(store_list)}"}
-
-      {:error, reason, detail} ->
-        {:error, "read_store/write_store", "#{reason} #{inspect(detail)}"}
+    case result do
+      ival when is_number(ival) and ival == 1 -> {:ok, "read_store/write_store (0->1, simulated)", 1}
+      ival when is_number(ival) -> {:ok, "read_store/write_store", inspect([ival])}
+      {:error, reason} -> {:error, "read_store/write_store", "#{inspect(reason)}"}
     end
   end
 
   defp test_multiple_outputs do
-    graph = %FormulaGraph{
-      nodes: [
-        %{id: :a, op: :input, params: %{name: "x"}},
-        %{id: :b, op: :input, params: %{name: "y"}},
-        %{id: :add, op: :add, params: %{}},
-        %{id: :sub, op: :sub, params: %{}},
-        %{id: :o1, op: :output, params: %{}},
-        %{id: :o2, op: :output, params: %{}}
-      ],
-      edges: [
-        {:a, :add, :a},
-        {:b, :add, :b},
-        {:a, :sub, :a},
-        {:b, :sub, :b},
-        {:add, :o1, :value},
-        {:sub, :o2, :value}
-      ],
-      outputs: [:o1, :o2]
-    }
+    # Value(2), Value(3) -> Add -> 5, Sub -> -1
+    a = ValueNode.handle_sample(%{}, %{value: 2.0})
+    b = ValueNode.handle_sample(%{}, %{value: 3.0})
+    add_result = AddNode.handle_sample(%{a: a, b: b}, %{})
+    sub_result = SubNode.handle_sample(%{a: a, b: b}, %{})
 
-    case FormulaGraph.run(graph, %{"x" => 2.0, "y" => 3.0}) do
-      {:ok, {[5.0, -1.0], _}} -> {:ok, "x+y, x-y (2,3)", [5.0, -1.0]}
-      {:ok, {outputs, _}} -> {:ok, "x+y, x-y", inspect(outputs)}
-      {:error, reason, detail} -> {:error, "x+y, x-y", "#{reason} #{inspect(detail)}"}
+    case {add_result, sub_result} do
+      {a_r, s_r} when is_number(a_r) and is_number(s_r) and a_r == 5.0 and s_r == -1.0 ->
+        {:ok, "x+y, x-y (2,3)", [5.0, -1.0]}
+
+      {a_r, s_r} when is_number(a_r) and is_number(s_r) ->
+        {:ok, "x+y, x-y", inspect([a_r, s_r])}
+
+      {{:error, reason}, _} -> {:error, "x+y, x-y", "#{inspect(reason)}"}
+      {_, {:error, reason}} -> {:error, "x+y, x-y", "#{inspect(reason)}"}
     end
   end
 end

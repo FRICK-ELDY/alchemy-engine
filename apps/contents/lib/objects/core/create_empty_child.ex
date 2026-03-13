@@ -16,7 +16,7 @@ defmodule Contents.Objects.Core.CreateEmptyChild do
   def create(%Struct{} = _parent, opts \\ []) do
     name = Keyword.get(opts, :name, "Child")
     # TODO: 空間エンジンとの統合後に親子関係を設定
-    child = %Struct{name: name, parent: nil}
+    child = Struct.new(name: name, parent: nil)
     {:ok, child}
   end
 end
