@@ -1,7 +1,7 @@
 # Scene 概念の追加プラン
 
 > 作成日: 2026-03-12  
-> 参照: [fix_contents.md](../architecture/fix_contents.md), [formula-test-phase1-architecture.md](../architecture/formula-test-phase1-architecture.md)  
+> 参照: [fix_contents.md](../../architecture/fix_contents.md), [formula-test-phase1-architecture.md](../../architecture/formula-test-phase1-architecture.md)  
 > 目的: Scene を第一級の概念としてアーキテクチャに追加し、時間軸（Scene）と空間軸（Object）を明確に分離する。
 >
 > **背景**: Resonite/VRChat には Object ツリーのみ存在する。AlchemyEngine は Scene（時間軸）を追加することで体験の「段階」を明示的に扱う差別化を行う。
@@ -178,8 +178,8 @@ Contents
 
 ## 8. 参照
 
-- [fix_contents.md](../architecture/fix_contents.md)
-- [formula-test-phase1-architecture.md](../architecture/formula-test-phase1-architecture.md)
+- [fix_contents.md](../../architecture/fix_contents.md)
+- [formula-test-phase1-architecture.md](../../architecture/formula-test-phase1-architecture.md)
 - [contents-migration-plan.md](./contents-migration-plan.md)
 - [Contents.SceneStack](../../apps/contents/lib/contents/scene_stack.ex)
 - [Contents.SceneBehaviour](../../apps/contents/lib/contents/scene_behaviour.ex)

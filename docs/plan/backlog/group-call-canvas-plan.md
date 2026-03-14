@@ -298,8 +298,8 @@ flowchart LR
 
 ## 7. 参照ドキュメント
 
-- [fix-contents-implementation-procedure.md](./fix-contents-implementation-procedure.md) — 新ビヘイビア構築手順
-- [fix_contents.md](../architecture/fix_contents.md) — アーキテクチャ設計
+- [fix-contents-implementation-procedure.md](../current/fix-contents-implementation-procedure.md) — 新ビヘイビア構築手順
+- [fix_contents.md](../../architecture/fix_contents.md) — アーキテクチャ設計
 - [canvas-test-design.md](../task/canvas-test-design.md) — Canvas UI 設計の参考
 - [upper-layer-infrastructure-plan.md](./upper-layer-infrastructure-plan.md) — ディスカバリ設計
-- [client-server-separation-procedure.md](./client-server-separation-procedure.md) — ネットワーク構成
+- [client-server-separation-procedure.md](../current/client-server-separation-procedure.md) — ネットワーク構成

@@ -1,7 +1,7 @@
 # fix_contents アーキテクチャ 実施手順書
 
 > 作成日: 2026-03-10  
-> 参照: [docs/architecture/fix_contents.md](../architecture/fix_contents.md)  
+> 参照: [docs/architecture/fix_contents.md](../../architecture/fix_contents.md)  
 > 目的: コンテンツを最小単位まで分解し、VR 空間で直感的な論理構築を可能にする統一ディレクトリ・アーキテクチャを構築する。
 >
 > **注記**: 現行コードの移行作業は本手順書の対象外。別途実施する。

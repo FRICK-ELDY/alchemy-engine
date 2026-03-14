@@ -302,7 +302,7 @@ flowchart TB
 「Elixir が定義、Rust が実行」の原則に反する。現行の設計（Elixir が DrawCommand を組み立て、
 Rust が decode して描画する）を維持する。
 
-参照: [contents-defines-rust-executes.md](../plan/contents-defines-rust-executes.md) セクション 5
+参照: [contents-defines-rust-executes.md](../plan/backlog/contents-defines-rust-executes.md) セクション 5
 
 ---
 

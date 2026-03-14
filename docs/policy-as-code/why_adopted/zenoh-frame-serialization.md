@@ -82,6 +82,6 @@ Network.ZenohBridge.publish_frame(room_id, binary)
 
 ## 5. 関連ドキュメント
 
-- [improvement-plan.md](../../plan/improvement-plan.md)（I-P render_interpolation によるフレーム拡張）
+- [improvement-plan.md](../../plan/reference/improvement-plan.md)（I-P render_interpolation によるフレーム拡張）
 - [zenoh-protocol-spec.md](../../architecture/zenoh-protocol-spec.md)
 - [messagepack-schema.md](../../architecture/messagepack-schema.md)（現行スキーマ・構造の参照）

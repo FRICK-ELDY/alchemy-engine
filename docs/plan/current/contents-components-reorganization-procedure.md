@@ -164,8 +164,8 @@ mkdir -p apps/contents/lib/contents/components/nodes/users
 
 | ファイル | 更新内容 |
 |:---|:---|
-| `docs/plan/platform-info-crate-and-local-user-execution-plan.md` | モジュール名を新表記に |
-| `docs/plan/improvement-plan.md` | モジュール名を新表記に |
+| `docs/plan/completed/platform-info-crate-and-local-user-execution-plan.md` | モジュール名を新表記に |
+| `docs/plan/reference/improvement-plan.md` | モジュール名を新表記に |
 | `docs/architecture/elixir/contents.md` | コンポーネント一覧を新構成に |
 | `docs/architecture/overview.md` | component_list の説明を新モジュール名に |
 

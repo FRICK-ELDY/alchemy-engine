@@ -206,7 +206,7 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 
 | 項目 | 形式 | 説明 |
 |:---|:---|:---|
-| commands | MessagePack | Elixir の RenderComponent が生成する DrawCommand リスト。トップレベル構造は [messagepack-schema.md](../architecture/messagepack-schema.md) を参照 |
+| commands | MessagePack | Elixir の RenderComponent が生成する DrawCommand リスト。トップレベル構造は [messagepack-schema.md](../../architecture/messagepack-schema.md) を参照 |
 | camera | MessagePack | Camera2D / Camera3D のパラメータ。同上 |
 | ui | MessagePack | UI キャンバス。同上 |
 | mesh_definitions | MessagePack | メッシュ定義リスト。同上 |
@@ -324,16 +324,16 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 
 **課題**: client_desktop 終了後も zenohd は残り続ける。ユーザーが気づかず PC リソースを消費する。
 
-**対応**: → [improvement-plan.md I-G](./improvement-plan.md#i-g-ランチャーlauncherの課題) に統合。Discord 風トレイランチャーで zenohd / HL-Server / Client を一括管理。
+**対応**: → [improvement-plan.md I-G](../reference/improvement-plan.md#i-g-ランチャーlauncherの課題) に統合。Discord 風トレイランチャーで zenohd / HL-Server / Client を一括管理。
 
 ---
 
 ## 8. 関連ドキュメント
 
-- [zenoh-protocol-spec.md](../architecture/zenoh-protocol-spec.md) — Zenoh プロトコル仕様（フェーズ 1）
+- [zenoh-protocol-spec.md](../../architecture/zenoh-protocol-spec.md) — Zenoh プロトコル仕様（フェーズ 1）
 - [Zenohex](https://github.com/biyooon-ex/zenohex) — Elixir API for Zenoh
-- [contents-defines-rust-executes.md](./contents-defines-rust-executes.md) — 定義 vs 実行の分離方針
-- [draw-command-spec.md](../architecture/draw-command-spec.md) — DrawCommand スキーマ
-- [messagepack-schema.md](../architecture/messagepack-schema.md) — バイナリ形式
-- [contents-to-physics-bottlenecks.md](../architecture/contents-to-physics-bottlenecks.md) — データフロー・ボトルネック
+- [contents-defines-rust-executes.md](../backlog/contents-defines-rust-executes.md) — 定義 vs 実行の分離方針
+- [draw-command-spec.md](../../architecture/draw-command-spec.md) — DrawCommand スキーマ
+- [messagepack-schema.md](../../architecture/messagepack-schema.md) — バイナリ形式
+- [contents-to-physics-bottlenecks.md](../../architecture/contents-to-physics-bottlenecks.md) — データフロー・ボトルネック
 - [implementation.mdc](../../.cursor/rules/implementation.mdc) — 層間インターフェース設計
