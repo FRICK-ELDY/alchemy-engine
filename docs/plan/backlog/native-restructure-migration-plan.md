@@ -1,7 +1,7 @@
 # native 構成移行実施プラン
 
-> 基準: [fix_rust_architecture.md](../architecture/fix_rust_architecture.md) L12-85  
-> 更新対象: [overview.md](../architecture/overview.md) L182-193 及び関連記述
+> 基準: [fix_rust_architecture.md](../../architecture/fix_rust_architecture.md) L12-85  
+> 更新対象: [overview.md](../../architecture/overview.md) L182-193 及び関連記述
 
 ---
 
@@ -161,7 +161,7 @@ flowchart TB
 **参照**
 
 - 本ドキュメント §2 依存関係（目標）の Mermaid 図
-- [fix_rust_architecture.md](../architecture/fix_rust_architecture.md) §2 network (The Pipe)
+- [fix_rust_architecture.md](../../architecture/fix_rust_architecture.md) §2 network (The Pipe)
 
 ---
 

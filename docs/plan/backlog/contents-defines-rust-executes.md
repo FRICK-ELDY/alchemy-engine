@@ -1,8 +1,8 @@
 # Contents 定義 / Rust 実行 — 方針とリファクタリング計画
 
 > 作成日: 2026-03-07  
-> 出典: NIF 層の関数型/データ指向混在の議論、[contents-to-physics-bottlenecks.md](../architecture/contents-to-physics-bottlenecks.md)  
-> 参照: [implementation.mdc](../../.cursor/rules/implementation.mdc)、[improvement-plan.md](./improvement-plan.md)
+> 出典: NIF 層の関数型/データ指向混在の議論、[contents-to-physics-bottlenecks.md](../../architecture/contents-to-physics-bottlenecks.md)  
+> 参照: [implementation.mdc](../../../.cursor/rules/implementation.mdc)、[improvement-plan.md](../reference/improvement-plan.md)
 
 ---
 
@@ -51,7 +51,7 @@ contents-to-physics-bottlenecks の改善案と連携。P5-1（`set_frame_inject
 
 
 **工数目安**: 5〜12 日  
-**参照**: [contents-to-physics-bottlenecks.md](../architecture/contents-to-physics-bottlenecks.md) セクション 6、[p5-transfer-optimization-design.md](../architecture/p5-transfer-optimization-design.md)
+**参照**: [contents-to-physics-bottlenecks.md](../../architecture/contents-to-physics-bottlenecks.md) セクション 6、[p5-transfer-optimization-design.md](../../architecture/p5-transfer-optimization-design.md)
 
 ---
 
@@ -65,7 +65,7 @@ contents-to-physics-bottlenecks の改善案と連携。P5-1（`set_frame_inject
 | **リアルタイム編集 → プレビュー**     | コンテンツ内エディタで WGSL 編集 → Apply → コンパイル結果を即確認する UX                                                  |
 | **アセット化・他コンテンツでの再利用**    | ShaderAsset スキーマ設計、名前での参照・ロード機構                                                                 |
 | **Phase 1〜2 の実装**        | 既存アーキタイプの body 差し替え → 新アーキタイプ定義可能にする                                                            |
-| **Path Traversal 対策の実装** | [shader-path-traversal-design.md](../architecture/shader-path-traversal-design.md) Phase 1〜2 参照 |
+| **Path Traversal 対策の実装** | [shader-path-traversal-design.md](../../architecture/shader-path-traversal-design.md) Phase 1〜2 参照 |
 
 
 ### 3.2 転送・その他
@@ -93,15 +93,15 @@ contents-to-physics-bottlenecks の改善案と連携。P5-1（`set_frame_inject
 
 ## 5. 関連ドキュメント
 
-- [implementation.mdc](../../.cursor/rules/implementation.mdc) — 保証の原則・層間インターフェース
-- [shader-path-traversal-design.md](../architecture/shader-path-traversal-design.md) — P4-S Path Traversal 対策設計
-- [contents-to-physics-bottlenecks.md](../architecture/contents-to-physics-bottlenecks.md) — ボトルネック・改善案
-- [improvement-plan.md](./improvement-plan.md) — 全体改善計画
-- [Rust: desktop_render](../architecture/rust/desktop/render.md) — 描画パイプライン現状
-- [Rust: nif](../architecture/rust/nif.md) — NIF インターフェース
-- [formula-hardcode-inventory.md](../architecture/formula-hardcode-inventory.md) — P1-1 ハードコード一覧
-- [formula-migration-evaluation.md](../architecture/formula-migration-evaluation.md) — P1-2 武器式 Formula 移行評価
-- [formula-vm-bytecode.md](../architecture/formula-vm-bytecode.md) — P1-3 Formula VM バイトコード仕様
-- [draw-command-spec.md](../architecture/draw-command-spec.md) — P2-1 DrawCommand タグ・フィールド仕様（SSoT）
-- [shader-elixir-interface.md](../architecture/shader-elixir-interface.md) — P4-2〜5 シェーダー Elixir インターフェース・アセット構成
+- [implementation.mdc](../../../.cursor/rules/implementation.mdc) — 保証の原則・層間インターフェース
+- [shader-path-traversal-design.md](../../architecture/shader-path-traversal-design.md) — P4-S Path Traversal 対策設計
+- [contents-to-physics-bottlenecks.md](../../architecture/contents-to-physics-bottlenecks.md) — ボトルネック・改善案
+- [improvement-plan.md](../reference/improvement-plan.md) — 全体改善計画
+- [Rust: desktop_render](../../architecture/rust/desktop/render.md) — 描画パイプライン現状
+- [Rust: nif](../../architecture/rust/nif.md) — NIF インターフェース
+- [formula-hardcode-inventory.md](../../architecture/formula-hardcode-inventory.md) — P1-1 ハードコード一覧
+- [formula-migration-evaluation.md](../../architecture/formula-migration-evaluation.md) — P1-2 武器式 Formula 移行評価
+- [formula-vm-bytecode.md](../../architecture/formula-vm-bytecode.md) — P1-3 Formula VM バイトコード仕様
+- [draw-command-spec.md](../../architecture/draw-command-spec.md) — P2-1 DrawCommand タグ・フィールド仕様（SSoT）
+- [shader-elixir-interface.md](../../architecture/shader-elixir-interface.md) — P4-2〜5 シェーダー Elixir インターフェース・アセット構成
 

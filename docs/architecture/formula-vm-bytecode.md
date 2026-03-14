@@ -1,7 +1,7 @@
 # Formula VM バイトコード仕様（P1-3）
 
 > 作成日: 2026-03-07  
-> 出典: [contents-defines-rust-executes.md](../plan/contents-defines-rust-executes.md) P1-3  
+> 出典: [contents-defines-rust-executes.md](../plan/backlog/contents-defines-rust-executes.md) P1-3  
 > 目的: Elixir が生成するバイトコード定義の形式を仕様として文書化する
 
 ---
@@ -247,4 +247,4 @@ Store からキーで値を読み、レジスタへ。
 
 - [formula-hardcode-inventory.md](./formula-hardcode-inventory.md) — ハードコード一覧（P1-1）
 - [formula-migration-evaluation.md](./formula-migration-evaluation.md) — 武器式の Formula 移行評価（P1-2）
-- [contents-defines-rust-executes.md](../plan/contents-defines-rust-executes.md) — 方針・リファクタリング計画
+- [contents-defines-rust-executes.md](../plan/backlog/contents-defines-rust-executes.md) — 方針・リファクタリング計画

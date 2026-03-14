@@ -391,7 +391,7 @@ CI / テスト向け。`[features] headless = []` で有効化。winit ウィン
 
 ## シェーダー定義一覧（P4-1）
 
-> 出典: [contents-defines-rust-executes.md](../../plan/contents-defines-rust-executes.md) P4-1  
+> 出典: [contents-defines-rust-executes.md](../../plan/backlog/contents-defines-rust-executes.md) P4-1  
 > 目的: 現行シェーダー（sprite.wgsl, mesh.wgsl）の uniform・バインド・頂点レイアウトを SSoT として文書化。
 
 ### sprite.wgsl
@@ -483,4 +483,4 @@ CI / テスト向け。`[features] headless = []` で有効化。winit ウィン
 - [nif](../nif.md)
 - [mesh-definitions.md](../../mesh-definitions.md) — メッシュ頂点型
 - [shader-elixir-interface.md](../../shader-elixir-interface.md)
-- [contents-defines-rust-executes.md](../../plan/contents-defines-rust-executes.md)
+- [contents-defines-rust-executes.md](../../plan/backlog/contents-defines-rust-executes.md)

@@ -1,7 +1,7 @@
 # 既存ネットワークプロトコル仕様
 
 > 作成日: 2026-03-07  
-> 出典: [client-server-separation-procedure.md](../plan/client-server-separation-procedure.md) フェーズ 0.2  
+> 出典: [client-server-separation-procedure.md](../plan/current/client-server-separation-procedure.md) フェーズ 0.2  
 > 目的: 現状の Network.Channel と Network.UDP のプロトコル形式を文書化する
 
 ---
@@ -110,5 +110,5 @@ Zenoh 経由のフレーム配信（フェーズ 1 以降）では、MessagePack
 
 - [Network.Channel](../../apps/network/lib/network/channel.ex)
 - [Network.UDP.Protocol](../../apps/network/lib/network/udp/protocol.ex)
-- [client-server-separation-procedure.md](../plan/client-server-separation-procedure.md)
+- [client-server-separation-procedure.md](../plan/current/client-server-separation-procedure.md)
 - [messagepack-schema.md](messagepack-schema.md)

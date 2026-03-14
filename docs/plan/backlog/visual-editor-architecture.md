@@ -239,5 +239,5 @@ alchemy-engine/
 
 ## 関連ドキュメント
 
-- [アーキテクチャ概要](./architecture/overview.md)
-- [Rust レイヤー](./architecture/rust/)（nif / physics / render / audio / input_openxr）
+- [アーキテクチャ概要](../../architecture/overview.md)
+- [Rust レイヤー](../../architecture/rust/)（nif / physics / render / audio / input_openxr）

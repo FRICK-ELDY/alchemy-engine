@@ -59,4 +59,4 @@ Structs → Node → Component → Object
 
 ---
 
-*このポリシーは [fix_contents.md](../../architecture/fix_contents.md) および [fix-contents-implementation-procedure.md](../../plan/fix-contents-implementation-procedure.md) と整合する。*
+*このポリシーは [fix_contents.md](../../architecture/fix_contents.md) および [fix-contents-implementation-procedure.md](../../plan/current/fix-contents-implementation-procedure.md) と整合する。*

@@ -1,7 +1,7 @@
 # 既存コンテンツ移行プラン
 
 > 作成日: 2026-03-12  
-> 参照: [docs/architecture/fix_contents.md](../architecture/fix_contents.md), [fix-contents-implementation-procedure.md](./fix-contents-implementation-procedure.md)  
+> 参照: [docs/architecture/fix_contents.md](../../architecture/fix_contents.md), [fix-contents-implementation-procedure.md](./fix-contents-implementation-procedure.md)  
 > 目的: `lib/contents/` 配下の既存コンテンツを、新アーキテクチャ（structs / nodes / components / objects）へ順次移行する。
 >
 > **方針**: 移行後も `Core.ContentBehaviour` の契約を維持し、既存エンジン（GameEvents, SceneStack）から透過的に動作する。内部実装のみを新アーキテクチャに置き換える。
@@ -309,5 +309,5 @@
 
 ## 6. 参照
 
-- [fix_contents.md](../architecture/fix_contents.md) — アーキテクチャ概要
+- [fix_contents.md](../../architecture/fix_contents.md) — アーキテクチャ概要
 - [fix-contents-implementation-procedure.md](./fix-contents-implementation-procedure.md) — 骨格実装手順

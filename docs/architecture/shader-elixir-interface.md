@@ -1,7 +1,7 @@
 # シェーダー Elixir インターフェース（P4-2, P4-3）
 
 > 作成日: 2026-03-07  
-> 出典: [contents-defines-rust-executes.md](../plan/contents-defines-rust-executes.md) P4-2, P4-3  
+> 出典: [contents-defines-rust-executes.md](../plan/backlog/contents-defines-rust-executes.md) P4-2, P4-3  
 > 目的: Elixir から WGSL を渡すインターフェースとコンテンツアセット構成を定義する
 
 ---
@@ -121,6 +121,6 @@ assets/
 
 ## 6. 関連ドキュメント
 
-- [contents-defines-rust-executes.md](../plan/contents-defines-rust-executes.md) — P4 計画
+- [contents-defines-rust-executes.md](../plan/backlog/contents-defines-rust-executes.md) — P4 計画
 - [desktop/render.md](rust/desktop/render.md) — シェーダー契約（uniform・バインド・頂点レイアウト）
-- [asset-storage-classification.md](../plan/asset-storage-classification.md) — アセット配置の分類
+- [asset-storage-classification.md](../plan/backlog/asset-storage-classification.md) — アセット配置の分類

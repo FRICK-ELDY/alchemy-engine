@@ -614,4 +614,4 @@ graph TB
 - [**ビジョンと設計思想**](../vision.md) ← エンジン・ワールド・ルール・ゲームの定義
 - **Elixir レイヤー**: [server](./elixir/server.md) / [core](./elixir/core.md) / [contents](./elixir/contents.md)（ゲームコンテンツ一覧・設計パターン含む）/ [network](./elixir/network.md)
 - **Rust レイヤー**: [nif](./rust/nif.md)（physics 内包）/ [desktop_client](./rust/desktop_client.md)（app / VRAlchemy）/ [desktop 詳細](./rust/desktop/)（[input](./rust/desktop/input.md) = window / [render](./rust/desktop/render.md) = render / [input_openxr](./rust/desktop/input_openxr.md)）/ [nif/physics](./rust/nif/physics.md) / [audio](./rust/nif/audio.md) / [launcher](./rust/launcher.md)
-- [改善計画](../plan/improvement-plan.md) ← 既知の弱点と改善方針
+- [改善計画](../plan/reference/improvement-plan.md) ← 既知の弱点と改善方針

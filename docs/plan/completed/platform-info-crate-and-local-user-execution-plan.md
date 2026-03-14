@@ -10,7 +10,7 @@
 
 | 項目         | 内容                                                                          |
 | ---------- | --------------------------------------------------------------------------- |
-| **配置**      | `native/client` クレート内の `info` モジュール（`native/client/src/info.rs`）（[env-and-serialization-migration-plan](./env-and-serialization-migration-plan.md) §5 参照） |
+| **配置**      | `native/client` クレート内の `info` モジュール（`native/client/src/info.rs`）（[env-and-serialization-migration-plan](../current/env-and-serialization-migration-plan.md) §5 参照） |
 | **通信方式**   | Zenoh + Erlang term 形式（`:erlang.term_to_binary` / `:erlang.binary_to_term`） |
 | **トピック**   | `contents/room/{room_id}/client/info`（クライアント → サーバー）                    |
 | **取得先**    | `Contents.LocalUserComponent.get_client_info/1`                                |
@@ -49,7 +49,7 @@ flowchart LR
 
 ## 3. フェーズ 1: native/client 内に info モジュール作成 ✅ 完了
 
-※ `native/client` の作成は [env-and-serialization-migration-plan](./env-and-serialization-migration-plan.md) §5 に従う。
+※ `native/client` の作成は [env-and-serialization-migration-plan](../current/env-and-serialization-migration-plan.md) §5 に従う。
 
 - **実施日**: 2026-03-09
 
@@ -116,7 +116,7 @@ cargo build -p client
 client = { path = "../client" }
 ```
 
-※ `native/client` は [env-and-serialization-migration-plan](./env-and-serialization-migration-plan.md) §5 に従い作成。`client_desktop` は `client` に依存する。
+※ `native/client` は [env-and-serialization-migration-plan](../current/env-and-serialization-migration-plan.md) §5 に従い作成。`client_desktop` は `client` に依存する。
 
 Erlang term 形式で送るため、env-and-serialization-migration-plan に従い `bert` クレートを使用。未移行の場合は MessagePack で暫定対応可。
 
@@ -313,7 +313,7 @@ NIF モード（Elixir と同一プロセス、Zenoh 未使用）の場合、cli
 
 | 順序  | フェーズ               | 内容                                                                              | 状態 |
 | --- | ------------------ | ------------------------------------------------------------------------------- | --- |
-| 1   | native/client 作成     | `client` クレート作成、`info` モジュール（`src/info.rs`）追加（[env-and-serialization-migration-plan](./env-and-serialization-migration-plan.md) §5 参照） | ✅ 完了 |
+| 1   | native/client 作成     | `client` クレート作成、`info` モジュール（`src/info.rs`）追加（[env-and-serialization-migration-plan](../current/env-and-serialization-migration-plan.md) §5 参照） | ✅ 完了 |
 | 2   | client_desktop     | `client` 依存追加、`publish_client_info` 実装、起動時に publish                                              | ✅ 完了 |
 | 3   | ZenohBridge        | `contents/room/*/client/info` 購読、`handle_client_info` で `:client_info` ETS に保存 | ✅ 完了 |
 | 4   | LocalUserComponent | `get_client_info/1` 追加（`:client_info` から読み取り）                                  | ✅ 完了 |
@@ -325,9 +325,9 @@ NIF モード（Elixir と同一プロセス、Zenoh 未使用）の場合、cli
 
 ## 10. 関連ドキュメント
 
-- [env-and-serialization-migration-plan](./env-and-serialization-migration-plan.md) — native/client 作成・client_info・client_* 依存整理（§5）
-- [zenoh-frame-serialization](../policy-as-code/why_adopted/zenoh-frame-serialization.md) — Erlang term 形式採用
-- [zenoh-protocol-spec](../architecture/zenoh-protocol-spec.md) — トピック `contents/room` への移行
+- [env-and-serialization-migration-plan](../current/env-and-serialization-migration-plan.md) — native/client 作成・client_info・client_* 依存整理（§5）
+- [zenoh-frame-serialization](../../policy-as-code/why_adopted/zenoh-frame-serialization.md) — Erlang term 形式採用
+- [zenoh-protocol-spec](../../architecture/zenoh-protocol-spec.md) — トピック `contents/room` への移行
 
 ---
 

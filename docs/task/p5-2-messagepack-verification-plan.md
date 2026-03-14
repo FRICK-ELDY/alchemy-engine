@@ -2,7 +2,7 @@
 
 > 作成日: 2026-03-07  
 > 出典: [p5-2-messagepack-execution-plan.md](p5-2-messagepack-execution-plan.md) タスク 11  
-> 参照: [contents-defines-rust-executes.md](../plan/contents-defines-rust-executes.md) 保証の原則
+> 参照: [contents-defines-rust-executes.md](../plan/backlog/contents-defines-rust-executes.md) 保証の原則
 
 ---
 
@@ -161,5 +161,5 @@
 |:---|:---|
 | [p5-2-messagepack-execution-plan.md](p5-2-messagepack-execution-plan.md) | 実行計画・残タスク |
 | [messagepack-schema.md](../architecture/messagepack-schema.md) | スキーマ定義 |
-| [contents-defines-rust-executes.md](../plan/contents-defines-rust-executes.md) | 保証の原則 |
+| [contents-defines-rust-executes.md](../plan/backlog/contents-defines-rust-executes.md) | 保証の原則 |
 | [ci.md](../warranty/ci.md) | CI による品質保証 |

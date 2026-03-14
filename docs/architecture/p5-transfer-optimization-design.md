@@ -1,7 +1,7 @@
 # P5 転送効率化 — 設計ドキュメント
 
 > 作成日: 2026-03-07  
-> 出典: [contents-defines-rust-executes.md](../plan/contents-defines-rust-executes.md) P5、[contents-to-physics-bottlenecks.md](contents-to-physics-bottlenecks.md) セクション 6
+> 出典: [contents-defines-rust-executes.md](../plan/backlog/contents-defines-rust-executes.md) P5、[contents-to-physics-bottlenecks.md](contents-to-physics-bottlenecks.md) セクション 6
 
 ---
 

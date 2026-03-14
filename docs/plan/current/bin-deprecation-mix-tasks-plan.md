@@ -39,19 +39,19 @@
 以下は概念説明（「デスクトップクライアント exe」の別名として）として `client_desktop` を使っている場合がある。`app` または「デスクトップクライアント」に統一するか、文脈に応じて判断。
 
 
-| カテゴリ      | ファイル例                                                                                       | 方針                                 |
-| --------- | ------------------------------------------------------------------------------------------- | ---------------------------------- |
-| コマンド・パス   | [development.md](../../development.md), [docs/cross-compile.md](../cross-compile.md)        | `cargo run -p app` / `app.exe` に統一 |
-| アーキテクチャ説明 | [docs/architecture/overview.md](../architecture/overview.md), [docs/architecture/rust/](..) | 「app（デスクトップクライアント exe）」等に統一可能      |
-| 計画・手順     | [docs/plan/improvement-plan.md](improvement-plan.md) 等                                      | 実コマンド・パスは `app` に統一                |
+| カテゴリ      | ファイル例                                                                                          | 方針                                 |
+| --------- | ---------------------------------------------------------------------------------------------- | ---------------------------------- |
+| コマンド・パス   | [development.md](../../../development.md), [docs/cross-compile.md](../../cross-compile.md)           | `cargo run -p app` / `app.exe` に統一 |
+| アーキテクチャ説明 | [docs/architecture/overview.md](../../architecture/overview.md), [docs/architecture/rust/](../../architecture/rust/) | 「app（デスクトップクライアント exe）」等に統一可能      |
+| 計画・手順     | [docs/plan/reference/improvement-plan.md](../reference/improvement-plan.md) 等                  | 実コマンド・パスは `app` に統一                |
 
 
 **ランチャー**: [native/tools/launcher/src/main.rs](../../native/tools/launcher/src/main.rs) は既に `exe_name("app")` と `-p app` を使用しており修正不要。
 
 ### 2.3 削除不要（概念・過去参照）
 
-- [docs/plan/env-and-serialization-migration-plan.md](env-and-serialization-migration-plan.md) 等の過去プラン内の `client_desktop` 表記は履歴として残す
-- [docs/architecture/rust/desktop_client.md](../architecture/rust/desktop_client.md) は「client_desktop」をクライアントの概念名として使っている場合、ファイル名・内容を「app / デスクトップクライアント」に合わせて更新を検討
+- [docs/plan/current/env-and-serialization-migration-plan.md](env-and-serialization-migration-plan.md) 等の過去プラン内の `client_desktop` 表記は履歴として残す
+- [docs/architecture/rust/desktop_client.md](../../architecture/rust/desktop_client.md) は「client_desktop」をクライアントの概念名として使っている場合、ファイル名・内容を「app / デスクトップクライアント」に合わせて更新を検討
 
 ---
 
