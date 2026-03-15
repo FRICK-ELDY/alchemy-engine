@@ -110,5 +110,5 @@ Zenoh 経由のフレーム配信（フェーズ 1 以降）では、MessagePack
 
 - [Network.Channel](../../apps/network/lib/network/channel.ex)
 - [Network.UDP.Protocol](../../apps/network/lib/network/udp/protocol.ex)
-- [client-server-separation-procedure.md](../plan/completed/client-server-separation-procedure.md)
+- [client-server-separation-procedure.md](../plan/completed/client-server-separation-procedure.md)（未実施項目は [client-server-separation-future.md](../plan/reference/client-server-separation-future.md)）
 - [messagepack-schema.md](messagepack-schema.md)
