@@ -74,18 +74,10 @@ defmodule Content.VampireSurvivor.BossComponent do
       state
       |> Map.update(:score, score_delta, &(&1 + score_delta))
       |> Map.update(:kill_count, 1, &(&1 + 1))
-      |> maybe_accumulate_exp(content, exp)
-      |> maybe_apply_boss_defeated(content)
+      |> Content.VampireSurvivor.Helpers.maybe_accumulate_exp(content, exp)
+      |> Content.VampireSurvivor.Helpers.maybe_apply_boss_defeated(content)
 
     new_state
-  end
-
-  defp maybe_accumulate_exp(state, content, exp) do
-    if function_exported?(content, :accumulate_exp, 2), do: content.accumulate_exp(state, exp), else: state
-  end
-
-  defp maybe_apply_boss_defeated(state, content) do
-    if function_exported?(content, :apply_boss_defeated, 1), do: content.apply_boss_defeated(state), else: state
   end
 
   # ── on_nif_sync: 毎フレームスナップショット注入（P5-1: frame_injection にマージ）──

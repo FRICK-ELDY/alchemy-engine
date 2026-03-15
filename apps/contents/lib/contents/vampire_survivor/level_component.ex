@@ -325,15 +325,11 @@ defmodule Content.VampireSurvivor.LevelComponent do
         state
         |> Map.update(:score, score_delta, &(&1 + score_delta))
         |> Map.update(:kill_count, 1, &(&1 + 1))
-        |> maybe_accumulate_exp(content, exp)
+        |> Content.VampireSurvivor.Helpers.maybe_accumulate_exp(content, exp)
       end)
     end
 
     score_delta
-  end
-
-  defp maybe_accumulate_exp(state, content, exp) do
-    if function_exported?(content, :accumulate_exp, 2), do: content.accumulate_exp(state, exp), else: state
   end
 
   defp spawn_item_drop(world_ref, _enemy_kind, x, y, exp) do
