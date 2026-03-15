@@ -76,7 +76,7 @@ flowchart TB
 
 | モジュール | 役割 | パス |
 |------------|------|------|
-| `Content.FormulaTest.Scenes.Playing` | メインシーン。Nodes を実行し Object を構築。root_object（着地点）を state に保持 | `contents/formula_test/scenes/playing.ex` |
+| `Contents.Scenes.FormulaTest.Playing` | メインシーン。Nodes を実行し Object を構築。root_object（着地点）を state に保持 | `scenes/formula_test/playing.ex` |
 
 ### 3.3 Objects 層
 

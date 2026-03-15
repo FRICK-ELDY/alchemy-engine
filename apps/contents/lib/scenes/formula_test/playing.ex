@@ -1,4 +1,4 @@
-defmodule Content.FormulaTest.Scenes.Playing do
+defmodule Contents.Scenes.FormulaTest.Playing do
   @moduledoc """
   FormulaTest のプレイ中シーン。
 
@@ -6,6 +6,7 @@ defmodule Content.FormulaTest.Scenes.Playing do
   ノードアーキテクチャの動作を検証する。結果は state に格納し、RenderComponent で表示。
 
   Phase 1 移行: FormulaGraph を Contents.Nodes に置き換え。
+  配置: apps/contents/lib/scenes（新方式）。
   """
   @behaviour Contents.SceneBehaviour
 
@@ -20,6 +21,8 @@ defmodule Content.FormulaTest.Scenes.Playing do
   def init(_init_arg) do
     results = run_formula_tests()
     root_object = ObjectStruct.new(name: "FormulaTestRoot")
+
+    # CreateEmptyChild が {:error, _} を返した場合はパターンマッチで init が失敗する。必要に応じて case で分岐しメッセージや代替処理を明示すると堅牢になる。
     {:ok, child} = CreateEmptyChild.create(root_object, name: "Child")
 
     state = %{
@@ -63,8 +66,12 @@ defmodule Content.FormulaTest.Scenes.Playing do
     case result do
       ival when is_number(ival) and ival == 3.0 ->
         {:ok, "player_x + player_y (1+2)", 3.0}
-      ival when is_number(ival) -> {:ok, "player_x + player_y", inspect([ival])}
-      {:error, reason} -> {:error, "player_x + player_y", "#{inspect(reason)}"}
+
+      ival when is_number(ival) ->
+        {:ok, "player_x + player_y", inspect([ival])}
+
+      {:error, reason} ->
+        {:error, "player_x + player_y", "#{inspect(reason)}"}
     end
   end
 
@@ -104,9 +111,14 @@ defmodule Content.FormulaTest.Scenes.Playing do
     result = AddNode.handle_sample(%{a: r, b: one}, %{})
 
     case result do
-      ival when is_number(ival) and ival == 1 -> {:ok, "read_store/write_store (0->1, simulated)", 1}
-      ival when is_number(ival) -> {:ok, "read_store/write_store", inspect([ival])}
-      {:error, reason} -> {:error, "read_store/write_store", "#{inspect(reason)}"}
+      ival when is_number(ival) and ival == 1 ->
+        {:ok, "read_store/write_store (0->1, simulated)", 1}
+
+      ival when is_number(ival) ->
+        {:ok, "read_store/write_store", inspect([ival])}
+
+      {:error, reason} ->
+        {:error, "read_store/write_store", "#{inspect(reason)}"}
     end
   end
 
@@ -124,8 +136,11 @@ defmodule Content.FormulaTest.Scenes.Playing do
       {a_r, s_r} when is_number(a_r) and is_number(s_r) ->
         {:ok, "x+y, x-y", inspect([a_r, s_r])}
 
-      {{:error, reason}, _} -> {:error, "x+y, x-y", "#{inspect(reason)}"}
-      {_, {:error, reason}} -> {:error, "x+y, x-y", "#{inspect(reason)}"}
+      {{:error, reason}, _} ->
+        {:error, "x+y, x-y", "#{inspect(reason)}"}
+
+      {_, {:error, reason}} ->
+        {:error, "x+y, x-y", "#{inspect(reason)}"}
     end
   end
 end

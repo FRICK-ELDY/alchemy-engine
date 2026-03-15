@@ -47,15 +47,18 @@ defmodule Content.FormulaTest do
   def playing_scene, do: :playing
   def game_over_scene, do: :playing
 
+  # 次フェーズで Contents.Scenes ファサード経由に置き換える予定（Contents.Scenes.init(:formula_test_playing, init_arg) 等）。
+  # Ref: docs/plan/current/contents-scenes-facade-implementation-plan.md
   def scene_init(:playing, init_arg) do
-    Content.FormulaTest.Scenes.Playing.init(init_arg)
+    Contents.Scenes.FormulaTest.Playing.init(init_arg)
   end
 
   def scene_update(:playing, context, state) do
-    Content.FormulaTest.Scenes.Playing.update(context, state)
+    Contents.Scenes.FormulaTest.Playing.update(context, state)
   end
 
-  def scene_render_type(:playing), do: :playing
+  # シーンの render_type に委譲（二重定義を避け、シーン側で変更したときに追従する）。ファサード化後は Contents.Scenes.render_type(:formula_test_playing) に置き換え予定。
+  def scene_render_type(:playing), do: Contents.Scenes.FormulaTest.Playing.render_type()
 
   def title, do: "Formula Test"
   def version, do: "0.1.0"
