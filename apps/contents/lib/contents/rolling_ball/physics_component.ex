@@ -13,7 +13,7 @@ defmodule Content.RollingBall.PhysicsComponent do
     runner = content.flow_runner(:main)
 
     if runner do
-      Contents.SceneStack.update_by_scene_type(
+      Contents.Scenes.Stack.update_by_scene_type(
         runner,
         content.playing_scene(),
         fn state -> Map.put(state, :move_input, {dx, dy}) end
@@ -28,7 +28,7 @@ defmodule Content.RollingBall.PhysicsComponent do
     runner = content.flow_runner(:main)
 
     if runner do
-      Contents.SceneStack.update_by_scene_type(
+      Contents.Scenes.Stack.update_by_scene_type(
         runner,
         content.game_over_scene(),
         fn state -> Map.put(state, :retry, true) end
@@ -43,7 +43,7 @@ defmodule Content.RollingBall.PhysicsComponent do
     runner = content.flow_runner(:main)
 
     if runner do
-      Contents.SceneStack.update_by_scene_type(
+      Contents.Scenes.Stack.update_by_scene_type(
         runner,
         :stage_clear,
         fn state -> Map.put(state, :next, true) end
@@ -58,7 +58,7 @@ defmodule Content.RollingBall.PhysicsComponent do
     runner = content.flow_runner(:main)
 
     if runner do
-      Contents.SceneStack.update_by_scene_type(
+      Contents.Scenes.Stack.update_by_scene_type(
         runner,
         :title,
         fn state -> Map.put(state, :start, true) end
@@ -73,7 +73,7 @@ defmodule Content.RollingBall.PhysicsComponent do
     runner = content.flow_runner(:main)
 
     if runner do
-      Contents.SceneStack.update_by_scene_type(
+      Contents.Scenes.Stack.update_by_scene_type(
         runner,
         :ending,
         fn state -> Map.put(state, :back_to_title, true) end

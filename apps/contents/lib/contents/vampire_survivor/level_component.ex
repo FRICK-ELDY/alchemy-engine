@@ -55,7 +55,7 @@ defmodule Content.VampireSurvivor.LevelComponent do
     invincible_until_ms = context.now + @invincible_ms
 
     if runner do
-      Contents.SceneStack.update_by_scene_type(
+      Contents.Scenes.Stack.update_by_scene_type(
         runner,
         content.playing_scene(),
         &apply_player_damage(&1, damage, invincible_until_ms)
@@ -73,7 +73,7 @@ defmodule Content.VampireSurvivor.LevelComponent do
     if runner do
       heal = value
 
-      Contents.SceneStack.update_by_scene_type(runner, content.playing_scene(), fn state ->
+      Contents.Scenes.Stack.update_by_scene_type(runner, content.playing_scene(), fn state ->
         max_hp = Map.get(state, :player_max_hp, 100.0)
         current_hp = Map.get(state, :player_hp, 100.0)
         new_hp = min(max_hp, current_hp + heal)
@@ -95,7 +95,7 @@ defmodule Content.VampireSurvivor.LevelComponent do
     weapon_name = kind_id_to_weapon_name(kind_id, content)
 
     if runner && weapon_name do
-      Contents.SceneStack.update_by_scene_type(runner, content.playing_scene(), fn state ->
+      Contents.Scenes.Stack.update_by_scene_type(runner, content.playing_scene(), fn state ->
         cooldowns = Map.get(state, :weapon_cooldowns, %{})
         Map.put(state, :weapon_cooldowns, Map.put(cooldowns, weapon_name, cooldown))
       end)
@@ -120,7 +120,7 @@ defmodule Content.VampireSurvivor.LevelComponent do
     runner = content.flow_runner(:main)
 
     playing_state =
-      (runner && Contents.SceneStack.get_scene_state(runner, content.playing_scene())) || %{}
+      (runner && Contents.Scenes.Stack.get_scene_state(runner, content.playing_scene())) || %{}
 
     inj = Process.get(:frame_injection, %{})
     inj = merge_player_snapshot(inj, playing_state, context)
@@ -158,12 +158,12 @@ defmodule Content.VampireSurvivor.LevelComponent do
     runner = content.flow_runner(:main)
 
     playing_state =
-      (runner && Contents.SceneStack.get_scene_state(runner, content.playing_scene())) || %{}
+      (runner && Contents.Scenes.Stack.get_scene_state(runner, content.playing_scene())) || %{}
 
     if Map.get(playing_state, :level_up_pending, false) and runner do
       Logger.info("[LEVEL UP] Skipped from renderer UI")
 
-      Contents.SceneStack.update_by_scene_type(
+      Contents.Scenes.Stack.update_by_scene_type(
         runner,
         content.playing_scene(),
         &content.apply_level_up_skipped/1
@@ -180,7 +180,7 @@ defmodule Content.VampireSurvivor.LevelComponent do
     runner = content.flow_runner(:main)
 
     playing_state =
-      (runner && Contents.SceneStack.get_scene_state(runner, content.playing_scene())) || %{}
+      (runner && Contents.Scenes.Stack.get_scene_state(runner, content.playing_scene())) || %{}
 
     if Map.get(playing_state, :level_up_pending, false) and runner do
       weapon_levels = Map.get(playing_state, :weapon_levels, %{})
@@ -190,14 +190,14 @@ defmodule Content.VampireSurvivor.LevelComponent do
         :apply ->
           Logger.info("[LEVEL UP] Weapon selected from renderer: #{inspect(weapon)}")
 
-          Contents.SceneStack.update_by_scene_type(
+          Contents.Scenes.Stack.update_by_scene_type(
             runner,
             content.playing_scene(),
             &content.apply_weapon_selected(&1, weapon)
           )
 
         :skip ->
-          Contents.SceneStack.update_by_scene_type(
+          Contents.Scenes.Stack.update_by_scene_type(
             runner,
             content.playing_scene(),
             &content.apply_level_up_skipped/1
@@ -219,7 +219,7 @@ defmodule Content.VampireSurvivor.LevelComponent do
         %{choices: [first | _]} ->
           Logger.info("[LEVEL UP] Auto-selected: #{inspect(first)} -> resuming")
 
-          Contents.SceneStack.update_by_scene_type(
+          Contents.Scenes.Stack.update_by_scene_type(
             runner,
             content.playing_scene(),
             &content.apply_weapon_selected(&1, first)
@@ -228,7 +228,7 @@ defmodule Content.VampireSurvivor.LevelComponent do
         _ ->
           Logger.info("[LEVEL UP] Auto-skipped (no choices) -> resuming")
 
-          Contents.SceneStack.update_by_scene_type(
+          Contents.Scenes.Stack.update_by_scene_type(
             runner,
             content.playing_scene(),
             &content.apply_level_up_skipped/1
@@ -321,7 +321,7 @@ defmodule Content.VampireSurvivor.LevelComponent do
     # シーンが見つからない場合（Playing シーン以外での敵撃破等）は
     # update_by_scene_type が何もしないため、score_delta のみ返して NIF ポップアップに使う
     if runner do
-      Contents.SceneStack.update_by_scene_type(runner, content.playing_scene(), fn state ->
+      Contents.Scenes.Stack.update_by_scene_type(runner, content.playing_scene(), fn state ->
         state
         |> Map.update(:score, score_delta, &(&1 + score_delta))
         |> Map.update(:kill_count, 1, &(&1 + 1))
@@ -388,8 +388,8 @@ defmodule Content.VampireSurvivor.LevelComponent do
     if function_exported?(content, :level_up_scene, 0) and runner do
       level_up_scene = content.level_up_scene()
 
-      case Contents.SceneStack.current(runner) do
-        {:ok, %{module: ^level_up_scene}} ->
+      case Contents.Scenes.Stack.current(runner) do
+        {:ok, %{scene_type: ^level_up_scene}} ->
           context.pop_scene.()
 
         _ ->

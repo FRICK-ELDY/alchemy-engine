@@ -285,7 +285,7 @@ sequenceDiagram
     participant R as Rust 60Hz ループ
     participant GE as GameEvents GenServer
     participant COMP as Component 群
-    participant SS as Contents.SceneStack
+    participant SS as Contents.Scenes.Stack
     participant S as Scene.update()
 
     loop 毎フレーム（60Hz）
@@ -581,7 +581,7 @@ flowchart LR
 graph TB
     subgraph BEAM["Elixir BEAM VM"]
         GEV[Contents.Events.Game\nGenServer]
-        SS[Contents.SceneStack\nGenServer]
+        SS[Contents.Scenes.Stack\nGenServer]
         EVB[EventBus\nGenServer]
         STS[Stats\nGenServer]
     end

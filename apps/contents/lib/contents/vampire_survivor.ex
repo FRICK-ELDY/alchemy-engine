@@ -26,7 +26,7 @@ defmodule Content.VampireSurvivor do
 
   def render_type, do: :playing
 
-  def flow_runner(_room_id), do: Process.whereis(Contents.SceneStack)
+  def flow_runner(_room_id), do: Process.whereis(Contents.Scenes.Stack)
 
   def event_handler(room_id) do
     case Core.RoomRegistry.get_loop(room_id) do

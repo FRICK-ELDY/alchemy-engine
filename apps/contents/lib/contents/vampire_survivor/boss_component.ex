@@ -33,7 +33,7 @@ defmodule Content.VampireSurvivor.BossComponent do
     if runner do
       playing_scene = content.playing_scene()
 
-      Contents.SceneStack.update_by_scene_type(
+      Contents.Scenes.Stack.update_by_scene_type(
         runner,
         playing_scene,
         &apply_boss_damage(&1, damage, context)
@@ -88,7 +88,7 @@ defmodule Content.VampireSurvivor.BossComponent do
     runner = content.flow_runner(:main)
 
     playing_state =
-      (runner && Contents.SceneStack.get_scene_state(runner, content.playing_scene())) || %{}
+      (runner && Contents.Scenes.Stack.get_scene_state(runner, content.playing_scene())) || %{}
 
     snapshot = build_snapshot(playing_state, context)
     inj = Process.get(:frame_injection, %{})
@@ -122,7 +122,7 @@ defmodule Content.VampireSurvivor.BossComponent do
 
     playing_state =
       (runner &&
-         Contents.SceneStack.get_scene_state(runner, content.playing_scene())) ||
+         Contents.Scenes.Stack.get_scene_state(runner, content.playing_scene())) ||
         %{}
 
     kind_id = Map.get(playing_state, :boss_kind_id)
@@ -145,7 +145,7 @@ defmodule Content.VampireSurvivor.BossComponent do
     runner = content.flow_runner(:main)
 
     if runner do
-      Contents.SceneStack.update_by_scene_type(
+      Contents.Scenes.Stack.update_by_scene_type(
         runner,
         content.playing_scene(),
         &clear_boss_dash_state/1
@@ -203,7 +203,7 @@ defmodule Content.VampireSurvivor.BossComponent do
     mv = {final_vx || vx, final_vy || vy}
 
     if runner do
-      Contents.SceneStack.update_by_scene_type(
+      Contents.Scenes.Stack.update_by_scene_type(
         runner,
         playing_scene,
         &apply_boss_position_update(&1, mv, dt, new_state)

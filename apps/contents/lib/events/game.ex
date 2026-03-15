@@ -423,7 +423,7 @@ defmodule Contents.Events.Game do
 
     if runner && function_exported?(content, :weapon_levels_to_save_format, 1) do
       playing_state =
-        Contents.SceneStack.get_scene_state(runner, content.playing_scene()) || %{}
+        Contents.Scenes.Stack.get_scene_state(runner, content.playing_scene()) || %{}
 
       weapon_levels = Map.get(playing_state, :weapon_levels, %{})
       content.weapon_levels_to_save_format(weapon_levels)

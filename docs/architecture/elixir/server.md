@@ -31,7 +31,7 @@ graph TD
     APP[Server.Application]
     REG[Registry<br/>Core.RoomRegistry]
     FS[Core.FormulaStore.LocalBackend]
-    SS[Contents.SceneStack]
+    SS[Contents.Scenes.Stack]
     IH[Core.InputHandler]
     EB[Core.EventBus]
     RS[Core.RoomSupervisor]
