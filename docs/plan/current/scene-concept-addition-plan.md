@@ -70,15 +70,15 @@ Contents（体験）
 ### 2.3 変更・追加する部分
 
 - アーキテクチャドキュメント（fix_contents.md）に Scene を明示
-- Scene の state 構造の規約（**root_object は新規・将来コンテンツで必須**）
+- Scene の state 構造の規約（**root_object は新規・将来コンテンツで必須**。ルートの選択はコンテンツ製作者に委ねる）
 - scenes 層の Behaviour / ガイドライン追加
 
 ### 2.4 実施方針（決定事項）
 
 | 項目 | 決定内容 |
 |------|----------|
-| **SceneBehaviour との関係** | 拡張。既存 `Contents.SceneBehaviour` は新 `Contents.Scenes.Core.Behaviour` を継承する |
-| **root_object** | 必須化。新規・将来コンテンツでは state に `root_object` を持つことを必須とする |
+| **SceneBehaviour との関係** | 拡張。既存 `Contents.SceneBehaviour` は新 `Contents.Scenes.Core.Behaviour` を拡張する |
+| **root_object** | 必須化。ユーザーが Scene に降り立つ際の「着地点」となる Object が必要なため必須。**どの Object をルートにするかはコンテンツ製作者が選択する** |
 | **scenes/core の配置** | `apps/contents/lib/scenes/core/` を新設する |
 | **既存コンテンツ** | 移行対象外。参照用として残し、新規・将来コンテンツのみ新規約に従う。現コンテンツはほとんど動作確認用のため、旧コンテンツは参照程度とする |
 
@@ -106,7 +106,7 @@ Contents（体験）
 
 | タスク | 内容 |
 |--------|------|
-| state 構造の規約 | Scene state は `%{root_object: Object.t(), ...}` を持つことを**必須**とする旨を文書化。新規・将来コンテンツで適用 |
+| state 構造の規約 | Scene state は `%{root_object: Object.t(), ...}` を持つことを**必須**とする旨を文書化。どの Object をルートにするかはコンテンツ製作者が選択。新規・将来コンテンツで適用 |
 | 既存コンテンツ | 移行対象外。旧コンテンツは参照用として残し、root_object なしでも許容。新規・将来コンテンツのみ新規約に従う |
 | migration-plan 更新 | contents-migration-plan に「Scene の root_object を持つ」を新規コンテンツの共通パターン（必須）として追記 |
 
@@ -144,7 +144,7 @@ apps/contents/lib/
 ### Scene が持つもの
 
 - 現在の遷移状態（スタック上で top かどうかは SceneStack が管理）
-- Object ツリーのルート参照（`root_object`）
+- Object ツリーのルート参照（`root_object`）。ユーザーが Scene に降り立つ着地点。どの Object をルートにするかはコンテンツ製作者が選択
 - 時間依存の state（カウントダウン、経過時間、遷移条件に使うフラグ等）
 - 遷移判定ロジック（update 内で `{:transition, ...}` を返す）
 
