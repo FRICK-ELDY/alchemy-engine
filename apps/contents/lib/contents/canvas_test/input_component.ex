@@ -25,9 +25,9 @@ defmodule Content.CanvasTest.InputComponent do
     runner = content.flow_runner(:main)
 
     if runner do
-      Contents.SceneStack.update_by_module(
+      Contents.SceneStack.update_by_scene_type(
         runner,
-        Content.CanvasTest.Scenes.Playing,
+        content.playing_scene(),
         fn state -> Map.put(state, :move_input, {dx, dz}) end
       )
     end
@@ -40,9 +40,9 @@ defmodule Content.CanvasTest.InputComponent do
     runner = content.flow_runner(:main)
 
     if runner do
-      Contents.SceneStack.update_by_module(
+      Contents.SceneStack.update_by_scene_type(
         runner,
-        Content.CanvasTest.Scenes.Playing,
+        content.playing_scene(),
         fn state -> Map.put(state, :mouse_delta, {dx, dy}) end
       )
     end
@@ -55,9 +55,9 @@ defmodule Content.CanvasTest.InputComponent do
     runner = content.flow_runner(:main)
 
     if runner do
-      Contents.SceneStack.update_by_module(
+      Contents.SceneStack.update_by_scene_type(
         runner,
-        Content.CanvasTest.Scenes.Playing,
+        content.playing_scene(),
         fn state -> Map.put(state, :sprint, value) end
       )
     end
@@ -70,9 +70,9 @@ defmodule Content.CanvasTest.InputComponent do
     runner = content.flow_runner(:main)
 
     if runner do
-      Contents.SceneStack.update_by_module(
+      Contents.SceneStack.update_by_scene_type(
         runner,
-        Content.CanvasTest.Scenes.Playing,
+        content.playing_scene(),
         &toggle_hud_and_cursor/1
       )
     end

@@ -55,7 +55,7 @@ defmodule Content.VampireSurvivor.LevelComponent do
     invincible_until_ms = context.now + @invincible_ms
 
     if runner do
-      Contents.SceneStack.update_by_module(
+      Contents.SceneStack.update_by_scene_type(
         runner,
         content.playing_scene(),
         &apply_player_damage(&1, damage, invincible_until_ms)
@@ -73,7 +73,7 @@ defmodule Content.VampireSurvivor.LevelComponent do
     if runner do
       heal = value
 
-      Contents.SceneStack.update_by_module(runner, content.playing_scene(), fn state ->
+      Contents.SceneStack.update_by_scene_type(runner, content.playing_scene(), fn state ->
         max_hp = Map.get(state, :player_max_hp, 100.0)
         current_hp = Map.get(state, :player_hp, 100.0)
         new_hp = min(max_hp, current_hp + heal)
@@ -87,7 +87,7 @@ defmodule Content.VampireSurvivor.LevelComponent do
   def on_frame_event({:item_pickup, _item_kind, _value, _, _}, _context), do: :ok
 
   # 同一フレームでスロット数分のイベントが順次 dispatch される。
-  # update_by_module は同期的に実行されるため、各 Map.put は競合せずマージされる。
+  # update_by_scene_type は同期的に実行されるため、各 Map.put は競合せずマージされる。
   def on_frame_event({:weapon_cooldown_updated, kind_id, cooldown_bits, _, _}, _context) do
     cooldown = bits_to_f32(cooldown_bits)
     content = Core.Config.current()
@@ -95,7 +95,7 @@ defmodule Content.VampireSurvivor.LevelComponent do
     weapon_name = kind_id_to_weapon_name(kind_id, content)
 
     if runner && weapon_name do
-      Contents.SceneStack.update_by_module(runner, content.playing_scene(), fn state ->
+      Contents.SceneStack.update_by_scene_type(runner, content.playing_scene(), fn state ->
         cooldowns = Map.get(state, :weapon_cooldowns, %{})
         Map.put(state, :weapon_cooldowns, Map.put(cooldowns, weapon_name, cooldown))
       end)
@@ -163,7 +163,7 @@ defmodule Content.VampireSurvivor.LevelComponent do
     if Map.get(playing_state, :level_up_pending, false) and runner do
       Logger.info("[LEVEL UP] Skipped from renderer UI")
 
-      Contents.SceneStack.update_by_module(
+      Contents.SceneStack.update_by_scene_type(
         runner,
         content.playing_scene(),
         &content.apply_level_up_skipped/1
@@ -190,14 +190,14 @@ defmodule Content.VampireSurvivor.LevelComponent do
         :apply ->
           Logger.info("[LEVEL UP] Weapon selected from renderer: #{inspect(weapon)}")
 
-          Contents.SceneStack.update_by_module(
+          Contents.SceneStack.update_by_scene_type(
             runner,
             content.playing_scene(),
             &content.apply_weapon_selected(&1, weapon)
           )
 
         :skip ->
-          Contents.SceneStack.update_by_module(
+          Contents.SceneStack.update_by_scene_type(
             runner,
             content.playing_scene(),
             &content.apply_level_up_skipped/1
@@ -219,7 +219,7 @@ defmodule Content.VampireSurvivor.LevelComponent do
         %{choices: [first | _]} ->
           Logger.info("[LEVEL UP] Auto-selected: #{inspect(first)} -> resuming")
 
-          Contents.SceneStack.update_by_module(
+          Contents.SceneStack.update_by_scene_type(
             runner,
             content.playing_scene(),
             &content.apply_weapon_selected(&1, first)
@@ -228,7 +228,7 @@ defmodule Content.VampireSurvivor.LevelComponent do
         _ ->
           Logger.info("[LEVEL UP] Auto-skipped (no choices) -> resuming")
 
-          Contents.SceneStack.update_by_module(
+          Contents.SceneStack.update_by_scene_type(
             runner,
             content.playing_scene(),
             &content.apply_level_up_skipped/1
@@ -280,19 +280,18 @@ defmodule Content.VampireSurvivor.LevelComponent do
   defp merge_weapon_slots(inj, content, playing_state) do
     weapon_levels = Map.get(playing_state, :weapon_levels)
     weapon_cooldowns = Map.get(playing_state, :weapon_cooldowns, %{})
-    playing_scene = content.playing_scene()
 
     slots =
       cond do
         weapon_levels == nil ->
           nil
 
-        function_exported?(playing_scene, :weapon_slots_for_nif, 2) ->
-          playing_scene.weapon_slots_for_nif(weapon_levels, weapon_cooldowns)
+        function_exported?(content, :weapon_slots_for_nif, 2) ->
+          content.weapon_slots_for_nif(weapon_levels, weapon_cooldowns)
 
-        function_exported?(playing_scene, :weapon_slots_for_nif, 1) ->
+        function_exported?(content, :weapon_slots_for_nif, 1) ->
           # R-W1/R-W2: 5 要素 (kind_id, level, cooldown_timer, cooldown_sec, precomputed_damage) が必要。
-          playing_scene.weapon_slots_for_nif(weapon_levels)
+          content.weapon_slots_for_nif(weapon_levels)
           |> Enum.map(fn {k, l} -> {k, l, 0.0, 1.0, 0} end)
 
         true ->
@@ -320,17 +319,21 @@ defmodule Content.VampireSurvivor.LevelComponent do
     runner = content.flow_runner(:main)
 
     # シーンが見つからない場合（Playing シーン以外での敵撃破等）は
-    # update_by_module が何もしないため、score_delta のみ返して NIF ポップアップに使う
+    # update_by_scene_type が何もしないため、score_delta のみ返して NIF ポップアップに使う
     if runner do
-      Contents.SceneStack.update_by_module(runner, content.playing_scene(), fn state ->
+      Contents.SceneStack.update_by_scene_type(runner, content.playing_scene(), fn state ->
         state
         |> Map.update(:score, score_delta, &(&1 + score_delta))
         |> Map.update(:kill_count, 1, &(&1 + 1))
-        |> content.playing_scene().accumulate_exp(exp)
+        |> maybe_accumulate_exp(content, exp)
       end)
     end
 
     score_delta
+  end
+
+  defp maybe_accumulate_exp(state, content, exp) do
+    if function_exported?(content, :accumulate_exp, 2), do: content.accumulate_exp(state, exp), else: state
   end
 
   defp spawn_item_drop(world_ref, _enemy_kind, x, y, exp) do

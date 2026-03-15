@@ -44,9 +44,10 @@ defmodule Content.VampireSurvivor.Scenes.BossAlert do
     runner = Core.Config.current().flow_runner(:main)
 
     if runner do
-      Contents.SceneStack.update_by_module(
+      content = Core.Config.current()
+      Contents.SceneStack.update_by_scene_type(
         runner,
-        Playing,
+        content.playing_scene(),
         &Playing.apply_boss_spawn_full(&1, kind_id, px, py, @map_width, @map_height)
       )
     end

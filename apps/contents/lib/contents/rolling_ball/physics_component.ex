@@ -13,9 +13,9 @@ defmodule Content.RollingBall.PhysicsComponent do
     runner = content.flow_runner(:main)
 
     if runner do
-      Contents.SceneStack.update_by_module(
+      Contents.SceneStack.update_by_scene_type(
         runner,
-        Content.RollingBall.Scenes.Playing,
+        content.playing_scene(),
         fn state -> Map.put(state, :move_input, {dx, dy}) end
       )
     end
@@ -28,9 +28,9 @@ defmodule Content.RollingBall.PhysicsComponent do
     runner = content.flow_runner(:main)
 
     if runner do
-      Contents.SceneStack.update_by_module(
+      Contents.SceneStack.update_by_scene_type(
         runner,
-        Content.RollingBall.Scenes.GameOver,
+        content.game_over_scene(),
         fn state -> Map.put(state, :retry, true) end
       )
     end
@@ -43,9 +43,9 @@ defmodule Content.RollingBall.PhysicsComponent do
     runner = content.flow_runner(:main)
 
     if runner do
-      Contents.SceneStack.update_by_module(
+      Contents.SceneStack.update_by_scene_type(
         runner,
-        Content.RollingBall.Scenes.StageClear,
+        :stage_clear,
         fn state -> Map.put(state, :next, true) end
       )
     end
@@ -58,9 +58,9 @@ defmodule Content.RollingBall.PhysicsComponent do
     runner = content.flow_runner(:main)
 
     if runner do
-      Contents.SceneStack.update_by_module(
+      Contents.SceneStack.update_by_scene_type(
         runner,
-        Content.RollingBall.Scenes.Title,
+        :title,
         fn state -> Map.put(state, :start, true) end
       )
     end
@@ -73,9 +73,9 @@ defmodule Content.RollingBall.PhysicsComponent do
     runner = content.flow_runner(:main)
 
     if runner do
-      Contents.SceneStack.update_by_module(
+      Contents.SceneStack.update_by_scene_type(
         runner,
-        Content.RollingBall.Scenes.Ending,
+        :ending,
         fn state -> Map.put(state, :back_to_title, true) end
       )
     end

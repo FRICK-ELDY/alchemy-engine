@@ -16,9 +16,9 @@ defmodule Content.SimpleBox3D.InputComponent do
     runner = content.flow_runner(:main)
 
     if runner do
-      Contents.SceneStack.update_by_module(
+      Contents.SceneStack.update_by_scene_type(
         runner,
-        Content.SimpleBox3D.Scenes.Playing,
+        content.playing_scene(),
         fn state -> Map.put(state, :move_input, {dx, dy}) end
       )
     end
@@ -31,9 +31,9 @@ defmodule Content.SimpleBox3D.InputComponent do
     runner = content.flow_runner(:main)
 
     if runner do
-      Contents.SceneStack.update_by_module(
+      Contents.SceneStack.update_by_scene_type(
         runner,
-        Content.SimpleBox3D.Scenes.GameOver,
+        content.game_over_scene(),
         fn state -> Map.put(state, :retry, true) end
       )
     end
