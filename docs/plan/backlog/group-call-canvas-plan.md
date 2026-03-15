@@ -298,7 +298,7 @@ flowchart LR
 
 ## 7. 参照ドキュメント
 
-- [fix-contents-implementation-procedure.md](../current/fix-contents-implementation-procedure.md) — 新ビヘイビア構築手順
+- [fix-contents-implementation-procedure.md](../completed/fix-contents-implementation-procedure.md) — 新ビヘイビア構築手順
 - [fix_contents.md](../../architecture/fix_contents.md) — アーキテクチャ設計
 - [canvas-test-design.md](../task/canvas-test-design.md) — Canvas UI 設計の参考
 - [upper-layer-infrastructure-plan.md](./upper-layer-infrastructure-plan.md) — ディスカバリ設計
