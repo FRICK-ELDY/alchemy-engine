@@ -1,6 +1,7 @@
 # Scene 概念の追加プラン
 
 > 作成日: 2026-03-12  
+> 更新日: 2026-03-15（実施方針・維持方針の決定事項を追記）  
 > 参照: [fix_contents.md](../../architecture/fix_contents.md), [formula-test-phase1-architecture.md](../../architecture/formula-test-phase1-architecture.md)  
 > 目的: Scene を第一級の概念としてアーキテクチャに追加し、時間軸（Scene）と空間軸（Object）を明確に分離する。
 >
@@ -53,20 +54,33 @@ Contents（体験）
 | モジュール | 役割 | 本プランでの扱い |
 |------------|------|------------------|
 | `Contents.SceneStack` | シーンのスタック管理（push/pop/replace） | そのまま利用。Scene 概念のインフラとして位置づけ |
-| `Contents.SceneBehaviour` | init, update, render_type の契約 | 拡張。state に `root_object` を持つことを推奨 |
+| `Contents.SceneBehaviour` | init, update, render_type の契約 | 拡張。新規・将来コンテンツでは state に `root_object` を持つことを必須とする |
 | 各コンテンツの `Scenes.Playing` 等 | シーン実装 | Scene として扱う。state に Object ツリーのルートを持つ |
 
-### 2.2 変更不要な部分
+### 2.2 維持方針と抽象化の余地
 
-- SceneStack の API（push, pop, replace, update_current 等）
-- GameEvents と SceneStack の連携
-- Core.ContentBehaviour の initial_scenes, playing_scene, game_over_scene
+以下は破壊的変更を避けるが、**抽象化の進化の余地はある**。新設にあわせて API や仕組みが変わっていく可能性がある。
+
+| 対象 | 方針 |
+|------|------|
+| SceneStack の API | 現状の push, pop, replace, update_current 等を尊重。抽象化に伴う変更の余地あり |
+| GameEvents と SceneStack の連携 | 連携は維持。イベントの種類や伝搬の形が変わる余地あり |
+| initial_scenes / playing_scene / game_over_scene | 仕組みは維持。**コンテンツ製作者がシーンを追加・削除できることが設計の前提**。現行の 3 種固定ではなく、柔軟に定義できる形へ進化させる余地あり |
 
 ### 2.3 変更・追加する部分
 
 - アーキテクチャドキュメント（fix_contents.md）に Scene を明示
-- Scene の state 構造の規約（root_object 必須化は任意、推奨とする）
+- Scene の state 構造の規約（**root_object は新規・将来コンテンツで必須**）
 - scenes 層の Behaviour / ガイドライン追加
+
+### 2.4 実施方針（決定事項）
+
+| 項目 | 決定内容 |
+|------|----------|
+| **SceneBehaviour との関係** | 拡張。既存 `Contents.SceneBehaviour` は新 `Contents.Scenes.Core.Behaviour` を継承する |
+| **root_object** | 必須化。新規・将来コンテンツでは state に `root_object` を持つことを必須とする |
+| **scenes/core の配置** | `apps/contents/lib/scenes/core/` を新設する |
+| **既存コンテンツ** | 移行対象外。参照用として残し、新規・将来コンテンツのみ新規約に従う。現コンテンツはほとんど動作確認用のため、旧コンテンツは参照程度とする |
 
 ---
 
@@ -84,17 +98,17 @@ Contents（体験）
 
 | タスク | 内容 |
 |--------|------|
-| ディレクトリ作成 | `apps/contents/lib/scenes/core/` |
-| Scene Behaviour | `Contents.Scenes.Core.Behaviour` を定義。init, update, render_type に加え、`root_object` の推奨を doc で記載 |
-| 既存 SceneBehaviour との関係 | `Contents.SceneBehaviour` を `Contents.Scenes.Core.Behaviour` のエイリアスまたは拡張とするか検討。互換性を保ちつつ統合 |
+| ディレクトリ作成 | `apps/contents/lib/scenes/core/` を新設 |
+| Scene Behaviour | `Contents.Scenes.Core.Behaviour` を定義。init, update, render_type に加え、`root_object` 必須を doc で記載 |
+| 既存 SceneBehaviour との関係 | `Contents.SceneBehaviour` は `Contents.Scenes.Core.Behaviour` を**拡張**する。既存コードとの互換性を保ちつつ統合 |
 
 ### Phase 3: Scene state の規約策定
 
 | タスク | 内容 |
 |--------|------|
-| state 構造の推奨 | Scene state は `%{root_object: Object.t(), ...}` を持つことを推奨する旨を文書化 |
-| 既存コンテンツ | FormulaTest 等は既に root_object を保持。他コンテンツは移行時に対応 |
-|  migration-plan 更新 | contents-migration-plan に「Scene の root_object を持つ」を共通パターンとして追記 |
+| state 構造の規約 | Scene state は `%{root_object: Object.t(), ...}` を持つことを**必須**とする旨を文書化。新規・将来コンテンツで適用 |
+| 既存コンテンツ | 移行対象外。旧コンテンツは参照用として残し、root_object なしでも許容。新規・将来コンテンツのみ新規約に従う |
+| migration-plan 更新 | contents-migration-plan に「Scene の root_object を持つ」を新規コンテンツの共通パターン（必須）として追記 |
 
 ### Phase 4: 将来拡張の検討（本プランでは実施しない）
 
