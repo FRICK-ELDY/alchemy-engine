@@ -30,7 +30,7 @@
 
 | 戻り値 | 意味 |
 |:---|:---|
-| `""` | 共通 LocalAssets を参照（VRTest, SimpleBox3D, BulletHell3D, CanvasTest, RollingBall など） |
+| `""` | 共通 LocalAssets を参照（SimpleBox3D, BulletHell3D, CanvasTest, RollingBall など） |
 | `"vampire_survivor"` | 当該ゲーム固有の LocalAssets サブディレクトリを参照 |
 | `"asteroid_arena"` | 同上 |
 

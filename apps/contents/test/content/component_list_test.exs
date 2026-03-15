@@ -16,7 +16,7 @@ defmodule Contents.ComponentListTest do
     test "local_user_input_module 実装コンテンツはそのモジュールを返す" do
       # content を明示的に渡して設定に依存しない単体テストにする
       # Code.ensure_loaded で beam から正しいモジュールをロードする
-      # （VRTest 起動時は VampireSurvivor が未ロードのため function_exported? が false になる）
+      # 設定に依存しないよう content を明示。ensure_loaded で function_exported? が正しく働くようにする
       content = Content.VampireSurvivor
       Code.ensure_loaded(content)
       expected = Content.VampireSurvivor.LocalUserComponent

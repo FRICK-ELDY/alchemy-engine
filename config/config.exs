@@ -50,7 +50,6 @@ config :network, :zenoh_connect, "tcp/localhost:7447"
 # Content.AsteroidArena   — 小惑星シューター（武器・ボスなし）
 # Content.SimpleBox3D     — シンプルな3Dゲーム（Phase R-6 動作検証用）
 # Content.BulletHell3D    — 3D 弾幕避けゲーム
-# Content.VRTest          — VR 動作検証（Phase A: マウスで見回し）
 # Content.FormulaTest     — Formula エンジン検証（Elixir→Rust→Elixir）
 config :server, :current, Content.FormulaTest
 config :server, :map, :plain

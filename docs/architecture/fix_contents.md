@@ -166,7 +166,6 @@ flowchart TB
     end
 
     subgraph impl_content["Content 実装"]
-        T[Telemetry]
         FT[FormulaTest]
         VS[VampireSurvivor]
     end
@@ -182,7 +181,6 @@ flowchart TB
         GO[GameOver]
     end
 
-    CB --> T
     CB --> FT
     CB --> VS
 
