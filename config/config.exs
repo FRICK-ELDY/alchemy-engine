@@ -53,7 +53,7 @@ config :network, :zenoh_connect, "tcp/localhost:7447"
 # Content.FormulaTest     — Formula エンジン検証（Elixir→Rust→Elixir）
 config :server, :current, Content.FormulaTest
 config :server, :map, :plain
-config :server, :game_events_module, Contents.GameEvents
+config :server, :game_events_module, Contents.Events.Game
 
 # セーブデータの HMAC 署名鍵（デフォルト値）。
 # 本番ビルド時は環境変数 SAVE_HMAC_SECRET で上書きすることを推奨する（config/runtime.exs）。

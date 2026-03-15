@@ -38,7 +38,7 @@ Elixir を選んだ最大の根拠である「OTP による耐障害性」「軽
 
 - **NIF 安全性**: NIF がパニックすると BEAM VM ごと落ちる。`NifResult<T>` への統一、Elixir 側での NIF エラー回復ロジックが未整備
 - **複数ルーム**: `RoomSupervisor` は複数ルーム想定だが、実際には `:main` 1 つのみ。複数ルーム同時稼働の検証が不足
-- **Network**: `Network.Local`・`Network.Distributed`・`Network.Channel`・`Network.UDP` は実装済み。分散ノード間フェイルオーバー、`Contents.GameEvents` から Network へのブロードキャスト統合が残課題
+- **Network**: `Network.Local`・`Network.Distributed`・`Network.Channel`・`Network.UDP` は実装済み。分散ノード間フェイルオーバー、`Contents.Events.Game` から Network へのブロードキャスト統合が残課題
 
 **改善方針**
 
@@ -196,7 +196,7 @@ LocalUserComponent への移行は完了済み（Contents.LocalUserComponent、C
 
 **問題**
 
-`Contents.GameEvents.Diagnostics.do_log_and_cache/3` が `playing_state` の `:enemies` / `:bullets` キーを直接参照している。Rust ECS を使わないコンテンツ向けの補完コードだが、エンジン層がコンテンツ固有の知識を持つ構造になっている。
+`Contents.Events.Game.Diagnostics.do_log_and_cache/3` が `playing_state` の `:enemies` / `:bullets` キーを直接参照している。Rust ECS を使わないコンテンツ向けの補完コードだが、エンジン層がコンテンツ固有の知識を持つ構造になっている。
 
 **方針**
 

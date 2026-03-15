@@ -1,6 +1,6 @@
-defmodule Contents.GameEvents do
+defmodule Contents.Events.Game do
   @moduledoc """
-  Rust からの frame_events を受信し、コンポーネントへ委譲する GenServer。
+  Rust からの frame_events を受信し、コンポーネントへ委譲する GenServer（イベントハンドラ。旧名 GameEvents）。
 
   Rust 側が高精度 60 Hz でゲームループを駆動し、
   Elixir は `{:frame_events, events}` を受信してイベント駆動でシーン制御を行う。
@@ -15,7 +15,7 @@ defmodule Contents.GameEvents do
   use GenServer
   require Logger
 
-  alias Contents.GameEvents.Diagnostics
+  alias Contents.Events.Game.Diagnostics
 
   @tick_ms 16
 
@@ -82,7 +82,7 @@ defmodule Contents.GameEvents do
       result = component.on_ready(world_ref)
 
       if result != :ok do
-        Logger.error("[GameEvents] #{inspect(component)}.on_ready/1 failed: #{inspect(result)}")
+        Logger.error("[Events.Game] #{inspect(component)}.on_ready/1 failed: #{inspect(result)}")
       end
     end
   end
@@ -348,7 +348,7 @@ defmodule Contents.GameEvents do
     # 初回数フレームでログ（フレーム受信の確認用）
     if state.frame_count < 3 do
       Logger.info(
-        "[GameEvents] frame_events received frame_count=#{state.frame_count} room=#{state.room_id}"
+        "[Events.Game] frame_events received frame_count=#{state.frame_count} room=#{state.room_id}"
       )
     end
 
@@ -423,7 +423,7 @@ defmodule Contents.GameEvents do
 
     if runner && function_exported?(content, :weapon_levels_to_save_format, 1) do
       playing_state =
-        Contents.SceneStack.get_scene_state(runner, content.playing_scene()) || %{}
+        Contents.Scenes.Stack.get_scene_state(runner, content.playing_scene()) || %{}
 
       weapon_levels = Map.get(playing_state, :weapon_levels, %{})
       content.weapon_levels_to_save_format(weapon_levels)
@@ -486,13 +486,13 @@ defmodule Contents.GameEvents do
 
   defp handle_frame_events_main_dispatch(nil, %{state: state, now: now}) do
     if state.frame_count < 5,
-      do: Logger.warning("[GameEvents] runner=nil (flow_runner unavailable)")
+      do: Logger.warning("[Events.Game] runner=nil (flow_runner unavailable)")
 
     {:noreply, %{state | last_tick: now, frame_count: state.frame_count + 1}}
   end
 
   defp handle_frame_events_main_dispatch(:empty, %{state: state, now: now}) do
-    if state.frame_count < 5, do: Logger.warning("[GameEvents] scene stack empty")
+    if state.frame_count < 5, do: Logger.warning("[Events.Game] scene stack empty")
     {:noreply, %{state | last_tick: now, frame_count: state.frame_count + 1}}
   end
 
@@ -516,7 +516,8 @@ defmodule Contents.GameEvents do
     {new_scene_state, _opts} = extract_state_and_opts(result)
     GenServer.call(runner, {:update_current, fn _ -> new_scene_state end})
 
-    state = process_transition(result, state, now, content, runner)
+    # process_transition は state を変更せず返すのみ。副作用（GenServer.call による push/replace/pop）のみ行う。
+    _state = process_transition(result, state, now, content, runner)
 
     unless throttled? do
       apply_frame_side_effects(state, scene_type, events, context, opts)

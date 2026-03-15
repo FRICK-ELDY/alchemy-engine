@@ -13,7 +13,7 @@ defmodule Content.FormulaTest.InputComponent do
     runner = content.flow_runner(:main)
 
     if runner do
-      Contents.SceneStack.update_by_scene_type(
+      Contents.Scenes.Stack.update_by_scene_type(
         runner,
         content.playing_scene(),
         &toggle_hud/1

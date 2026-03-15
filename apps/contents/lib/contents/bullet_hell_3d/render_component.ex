@@ -47,17 +47,18 @@ defmodule Content.BulletHell3D.RenderComponent do
     content = Core.Config.current()
     runner = content.flow_runner(:main)
 
+    # Stack.current は %{scene_type: atom(), state: term()} を返す。scene_type で現在シーンを識別する。
     current_scene =
-      case runner && Contents.SceneStack.current(runner) do
-        {:ok, %{module: mod}} -> mod
+      case runner && Contents.Scenes.Stack.current(runner) do
+        {:ok, %{scene_type: st}} -> st
         _ -> content.playing_scene()
       end
 
     playing_state =
-      (runner && Contents.SceneStack.get_scene_state(runner, content.playing_scene())) || %{}
+      (runner && Contents.Scenes.Stack.get_scene_state(runner, content.playing_scene())) || %{}
 
     game_over_state =
-      (runner && Contents.SceneStack.get_scene_state(runner, content.game_over_scene())) || %{}
+      (runner && Contents.Scenes.Stack.get_scene_state(runner, content.game_over_scene())) || %{}
 
     commands = build_commands(playing_state)
     camera = build_camera()

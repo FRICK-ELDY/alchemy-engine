@@ -51,9 +51,9 @@ graph LR
 
 ---
 
-## `Contents.SceneStack` — シーンスタック管理 GenServer
+## `Contents.Scenes.Stack` — シーンスタック管理 GenServer
 
-シーンスタックを管理する GenServer。`apps/contents/lib/contents/scene_stack.ex` に定義。起動時に `content_module.initial_scenes()` からスタックを初期化します。`Server.Application` で `{Contents.SceneStack, [content_module: content]}` として起動。
+シーンスタックを管理する GenServer。`apps/contents/lib/scenes/stack.ex` に定義。起動時に `content_module.initial_scenes()` からスタックを初期化します。`Server.Application` で `{Contents.Scenes.Stack, [content_module: content]}` として起動。
 
 | 関数 | 説明 |
 |:---|:---|
@@ -61,14 +61,14 @@ graph LR
 | `pop_scene/0` | 最上位シーンを取り出す |
 | `replace_scene/2` | 最上位シーンを置き換える |
 | `update_current/1` | 現在シーンの状態を更新 |
-| `update_by_module/2` | スタック内の特定シーンの状態を更新 |
-| `get_scene_state/1` | スタック内の特定シーンの状態を取得 |
+| `update_by_scene_type/3` | スタック内の特定シーン種別の状態を更新 |
+| `get_scene_state/2` | スタック内の特定シーン種別の状態を取得 |
 
 ---
 
-## `Contents.GameEvents` — メインゲームループ GenServer
+## `Contents.Events.Game` — メインゲームループ GenServer
 
-Rust の 60Hz ゲームループから `{:frame_events, events}` を受信し、コンポーネントへ委譲する。contents 層に配置され、エンジン自体はゲームロジックを知らず、ディスパッチのみを担う。
+Rust の 60Hz ゲームループから `{:frame_events, events}` を受信し、コンポーネントへ委譲する。contents 層に配置され、エンジン自体はゲームロジックを知らず、ディスパッチのみを担う。**イベント配送先**はこのモジュール（旧名 GameEvents）。Core.EventBus の `{:game_events, events}` や Zenoh の入力配送先もここを指す。他ドキュメント・コメントで「GameEvents」とある場合は本モジュールの旧名である。
 
 **GenServer state:**
 

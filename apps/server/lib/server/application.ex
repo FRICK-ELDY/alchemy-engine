@@ -18,7 +18,7 @@ defmodule Server.Application do
     children = [
       {Registry, [keys: :unique, name: Core.RoomRegistry]},
       Core.FormulaStore.LocalBackend,
-      {Contents.SceneStack, [content_module: content]},
+      {Contents.Scenes.Stack, [content_module: content]},
       Core.EventBus,
       Core.RoomSupervisor,
       Core.StressMonitor,

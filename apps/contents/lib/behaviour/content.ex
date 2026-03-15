@@ -11,8 +11,8 @@ defmodule Contents.Behaviour.Content do
 
   ## 設計原則
 
-  エンジンはコンテンツを知らない。`GameEvents` はこのビヘイビアを通じて
-  コンテンツと通信し、`function_exported?/3` による分岐を排除する。
+  エンジンはコンテンツを知らない。イベントハンドラ（`Contents.Events.Game`。旧名 GameEvents）は
+  このビヘイビアを通じてコンテンツと通信し、`function_exported?/3` による分岐を排除する。
   """
 
   @type scene_module :: module()
@@ -34,10 +34,10 @@ defmodule Contents.Behaviour.Content do
   @callback components() :: [module()]
 
   @doc """
-  そのルームのシーンスタック（またはフロー管理）の pid を返す。
+  そのルームのシーンスタック（`Contents.Scenes.Stack`）の pid を返す。
 
-  `Process.whereis/1` 使用時は pid() | nil となりうる。
-  nil は SceneManager 未登録等の起動前状態を表し、
+  `Process.whereis(Contents.Scenes.Stack)` 使用時は pid() | nil となりうる。
+  nil はシーンスタック未起動等の起動前状態を表し、
   Phase 3 以降で呼び出し元が nil を適切に扱う必要がある。
   room_id は将来のマルチルーム対応で使用する予定。
   """
@@ -67,10 +67,10 @@ defmodule Contents.Behaviour.Content do
   @callback scene_render_type(scene_type()) :: atom()
 
   @doc """
-  そのルームのイベントハンドラ（GameEvents）の pid を返す。
+  そのルームのイベントハンドラ（`Contents.Events.Game`。旧名 GameEvents）の pid を返す。
 
   InputHandler・Network 等がイベント送信先を取得する際に使用する。
-  nil は GameEvents 未起動状態を表す。
+  nil はイベントハンドラ未起動状態を表す。
   """
   @callback event_handler(room_id :: term()) :: pid() | nil
 
@@ -113,9 +113,9 @@ defmodule Contents.Behaviour.Content do
   @callback pause_on_push?(scene_type()) :: boolean()
 
   @doc """
-  ルーム用の SceneStack の Superviser.child_spec/0 を返す。
+  ルーム用のシーンスタック（`Contents.Scenes.Stack`）の Superviser.child_spec/0 を返す。
 
-  ルーム起動時に content が自分の SceneStack を起動する際に使用する。
+  ルーム起動時に content が自分のシーンスタックを起動する際に使用する。
   room_id はマルチルーム対応用（単一ルーム時は任意の値でよい）。
   """
   @callback scene_stack_spec(room_id :: term()) :: Supervisor.child_spec()

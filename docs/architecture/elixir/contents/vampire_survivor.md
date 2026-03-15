@@ -144,7 +144,7 @@ end
 
 ```mermaid
 graph TD
-    SS[Contents.SceneStack]
+    SS[Contents.Scenes.Stack]
     PL[Playing]
     LU[LevelUp]
     BA[BossAlert]

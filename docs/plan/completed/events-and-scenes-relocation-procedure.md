@@ -1,6 +1,7 @@
 # Events / Scenes 配置移行 実施手順書
 
 > 作成日: 2026-03-15  
+> **実施済み**: Phase 1（GameEvents → Contents.Events.Game）・Phase 2（SceneStack → Contents.Scenes.Stack）完了。  
 > 目的: コンテンツ全体に関わる「イベント配送」と「シーンスタック」を `contents/` 配下から上位の `events/` と `scenes/` に移動し、責務の所在を明確にする。  
 > 結果として「Elixir と Event の紐づけは events が担う」「シーン管理は scenes が担う」と分かりやすくなる。
 
@@ -139,4 +140,3 @@
 - **Phase 1 と Phase 2 の順序**: 先に GameEvents → Events.Game を実施し、その後 SceneStack → Scenes.Stack を実施することを推奨する。同時に実施してもよいが、参照が多く分離した方が差分確認が容易である。
 - **alias の扱い**: `Contents.Scenes.Stack` を `alias Contents.Scenes.Stack, as: SceneStack` とすると、既存の `SceneStack.current(runner)` 等の呼び出しをそのまま残せる。`as:` を付けずに `Stack` とする場合は、呼び出しをすべて `Stack.xxx` に変更する必要がある。**実施前にどちらとするか検討すること**（一貫性・可読性・変更量のバランスを考慮する）。
 - **他プランとの整合**: `scene-type-as-atom-implementation-procedure.md` 等で「Contents.SceneStack」「Contents.GameEvents」と記載している箇所があれば、本手順完了後に「Contents.Scenes.Stack」「Contents.Events.Game」に読み替えるか、手順書内を更新する。
-

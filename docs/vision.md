@@ -240,7 +240,7 @@ Hub     ← コンテンツの一覧・選択・参加
 | `GameEngine.RuleBehaviour` | Rule 定義インターフェース | `GameEngine.Component` に統合予定 |
 | `GameEngine.Config` | `current_world` / `current_rule` の設定解決 | `:current` キー一本に変更予定 |
 | `Contents.SceneBehaviour` | シーンインターフェース | contents 層に配置（移行済み） |
-| `Contents.GameEvents` | contents 層 | イベントディスパッチ・コンポーネントライフサイクル呼び出し（移行済み） |
+| `Contents.Events.Game` | contents 層 | イベントディスパッチ・コンポーネントライフサイクル呼び出し（移行済み） |
 | `GameContent.VampireSurvivorWorld` | WorldBehaviour の実装 | コンポーネントに分解予定 |
 | `GameContent.VampireSurvivorRule` | RuleBehaviour の実装 | コンポーネントに分解予定 |
 | `GameContent.EntityParams` | エンティティパラメータテーブル | コンポーネントの `on_ready` に移動予定 |

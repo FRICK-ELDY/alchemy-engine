@@ -15,7 +15,7 @@ defmodule Content.BulletHell3D.InputComponent do
     runner = content.flow_runner(:main)
 
     if runner do
-      Contents.SceneStack.update_by_scene_type(
+      Contents.Scenes.Stack.update_by_scene_type(
         runner,
         content.playing_scene(),
         fn state -> Map.put(state, :move_input, {dx, dy}) end
@@ -30,7 +30,7 @@ defmodule Content.BulletHell3D.InputComponent do
     runner = content.flow_runner(:main)
 
     if runner do
-      Contents.SceneStack.update_by_scene_type(
+      Contents.Scenes.Stack.update_by_scene_type(
         runner,
         content.game_over_scene(),
         fn state -> Map.put(state, :retry, true) end

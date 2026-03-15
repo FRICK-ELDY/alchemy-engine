@@ -82,7 +82,7 @@
 
 **Phoenix Channel 互換**: `"input"` イベントの `%{"dx" => dx, "dy" => dy}` と同一。
 
-**サーバー側受け手**: `Contents.GameEvents` に `{:move_input, dx, dy}` として送信。既存の `handle_info({:move_input, dx, dy}, state)` で処理。
+**サーバー側受け手**: `Contents.Events.Game` に `{:move_input, dx, dy}` として送信。既存の `handle_info({:move_input, dx, dy}, state)` で処理。
 
 ### 3.2 action（`game/room/{room_id}/input/action`）
 
@@ -97,7 +97,7 @@
 
 **Phoenix Channel 互換**: `"action"` イベントの `%{"name" => name, ...}` と同一。`name` が必須である点も同じ。
 
-**サーバー側受け手**: `Contents.GameEvents` に `{:ui_action, name}` として送信。`payload` は現行 GameEvents では未使用。将来的に `{:ui_action, name, payload}` へ拡張可能。
+**サーバー側受け手**: `Contents.Events.Game` に `{:ui_action, name}` として送信。`payload` は現行 GameEvents では未使用。将来的に `{:ui_action, name, payload}` へ拡張可能。
 
 **既存 action 例**: `select_weapon`, `__save_`_, `__load__`, `__load_confirm__`, `__load_cancel__`, `__skip__`
 

@@ -25,7 +25,7 @@ defmodule Content.FormulaTest.RenderComponent do
     runner = content.flow_runner(:main)
 
     playing_state =
-      (runner && Contents.SceneStack.get_scene_state(runner, content.playing_scene())) || %{}
+      (runner && Contents.Scenes.Stack.get_scene_state(runner, content.playing_scene())) || %{}
 
     commands = build_commands()
     camera = build_camera()
@@ -37,7 +37,7 @@ defmodule Content.FormulaTest.RenderComponent do
     Contents.FrameBroadcaster.put(context.room_id, frame_binary)
 
     if cursor_grab != :no_change and runner do
-      Contents.SceneStack.update_by_scene_type(
+      Contents.Scenes.Stack.update_by_scene_type(
         runner,
         content.playing_scene(),
         &clear_cursor_grab_if_matching(&1, cursor_grab)

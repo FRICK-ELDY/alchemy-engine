@@ -38,7 +38,7 @@ defmodule Content.CanvasTest.RenderComponent do
     runner = content.flow_runner(:main)
 
     playing_state =
-      (runner && Contents.SceneStack.get_scene_state(runner, content.playing_scene())) || %{}
+      (runner && Contents.Scenes.Stack.get_scene_state(runner, content.playing_scene())) || %{}
 
     commands = build_commands()
     camera = build_camera(playing_state)
@@ -57,7 +57,7 @@ defmodule Content.CanvasTest.RenderComponent do
     # この場合でも次の Escape 押下で再送されるため、実害は1フレームの遅延に留まる。
     # 完全なアトミック性が必要な場合はシーケンス番号の導入を検討すること。
     if cursor_grab != :no_change and runner do
-      Contents.SceneStack.update_by_scene_type(
+      Contents.Scenes.Stack.update_by_scene_type(
         runner,
         content.playing_scene(),
         &apply_cursor_grab_request(&1, cursor_grab)

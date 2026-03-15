@@ -2,7 +2,7 @@
 
 ## 概要
 
-`core` はゲームの Single Source of Truth を担うコアエンジンです。公開 API・NIF ラッパー・ContentBehaviour / Component インターフェース・ルーム管理・イベント配信・セーブ/ロードなどを提供します。シーン管理の実体は [contents](./contents.md) 層の `Contents.SceneStack` / `Contents.GameEvents` が担当します。
+`core` はゲームの Single Source of Truth を担うコアエンジンです。公開 API・NIF ラッパー・ContentBehaviour / Component インターフェース・ルーム管理・イベント配信・セーブ/ロードなどを提供します。シーン管理の実体は [contents](./contents.md) 層の `Contents.Scenes.Stack` / `Contents.Events.Game` が担当します。
 
 ---
 
@@ -82,7 +82,7 @@ NIF 関数は 3 カテゴリに分類されます：
 @callback context_defaults()  :: map()
 ```
 
-**オプショナル: `scene_stack_spec/1`** — ルーム用 SceneStack の `child_spec`。マルチルーム時などに使用。
+**オプショナル: `scene_stack_spec/1`** — ルーム用シーンスタック（`Contents.Scenes.Stack`）の `child_spec`。マルチルーム時などに使用。
 
 **オプショナルコールバック（武器・ボスの概念を持つコンテンツのみ）:**
 
@@ -150,7 +150,7 @@ Core.Config.components()  # current().components() を呼び出す
 | `stop_room/1` | ルームを停止 |
 | `list_rooms/0` | 実行中ルーム一覧 |
 
-起動時に `:main` ルームを自動開始します。`config :server, :game_events_module` で起動する GameEvents モジュール（デフォルト `Contents.GameEvents`）を指定する。
+起動時に `:main` ルームを自動開始します。`config :server, :game_events_module` で起動する GameEvents モジュール（デフォルト `Contents.Events.Game`）を指定する。
 
 ---
 

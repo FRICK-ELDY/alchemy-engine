@@ -36,7 +36,7 @@ Contents（体験）
 
 | 項目 | 内容 |
 |------|------|
-| **遷移状態** | スタック上で top かどうかは SceneStack が管理。Scene は自身の state を保持 |
+| **遷移状態** | スタック上で top かどうかは Contents.Scenes.Stack が管理。Scene は自身の state を保持 |
 | **root_object** | Object ツリーのルート参照。ユーザーが Scene に降り立つ着地点。どの Object をルートにするかはコンテンツ製作者が選択。新規・将来コンテンツでは必須 |
 | **時間依存の state** | カウントダウン、経過時間、遷移条件に使うフラグ等 |
 | **遷移判定ロジック** | update 内で `{:transition, ...}` を返す |
@@ -107,7 +107,7 @@ Contents
 
 | モジュール | 本設計での扱い |
 |------------|----------------|
-| `Contents.SceneStack` | Scene 概念のインフラ。push/pop/replace を提供 |
+| `Contents.Scenes.Stack` | Scene 概念のインフラ。push/pop/replace を提供 |
 | `Contents.SceneBehaviour` | 既存の Scene 契約。`Contents.Behaviour.Scenes` を use |
 | 各コンテンツの `Scenes.Playing` 等 | Scene として扱う。state に root_object（着地点）を持つ（新規コンテンツでは必須） |
 

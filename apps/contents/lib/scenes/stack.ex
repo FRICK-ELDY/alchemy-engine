@@ -1,4 +1,4 @@
-defmodule Contents.SceneStack do
+defmodule Contents.Scenes.Stack do
   @moduledoc """
   シーンスタックを管理する GenServer。
 
@@ -15,10 +15,10 @@ defmodule Contents.SceneStack do
   ## 例
 
       # 単一ルーム（content_module 指定）
-      Contents.SceneStack.start_link(content_module: Content.VampireSurvivor)
+      Contents.Scenes.Stack.start_link(content_module: Content.VampireSurvivor)
 
       # マルチルーム準備（room_id 指定）
-      Contents.SceneStack.start_link(
+      Contents.Scenes.Stack.start_link(
         content_module: Content.VampireSurvivor,
         room_id: "room-1"
       )
@@ -63,6 +63,7 @@ defmodule Contents.SceneStack do
     GenServer.call(server, {:get_scene_state, scene_type})
   end
 
+  # initial_scenes の各 spec で scene_init を呼ぶ。scene_init が {:ok, _} 以外を返すか raise すると init 全体が失敗する。
   @impl true
   def init(opts) do
     content_module = Keyword.fetch!(opts, :content_module)
@@ -129,6 +130,10 @@ defmodule Contents.SceneStack do
     {:reply, :ok, %{state | stack: [scene]}}
   end
 
+  def handle_call({:update_current, _fun}, _from, %{stack: []} = state) do
+    {:reply, {:error, :empty}, state}
+  end
+
   def handle_call({:update_current, fun}, _from, %{stack: [top | rest]} = state) do
     new_state = fun.(top.state)
     new_top = %{top | state: new_state}
@@ -172,8 +177,7 @@ defmodule Contents.SceneStack do
   end
 
   defp default_server do
-    # Phase 1: 単一 SceneStack は __MODULE__ で登録。
-    # マルチルーム時は呼び出し元が {__MODULE__, room_id} を明示的に渡す。
+    # 単一 Stack は __MODULE__ で登録。マルチルーム時は呼び出し元が {__MODULE__, room_id} を明示的に渡す。
     __MODULE__
   end
 end

@@ -2,7 +2,7 @@ defmodule Content.RollingBall.RenderComponent do
   alias Content.MessagePackEncoder
   alias Content.RollingBall.MeshDef
   alias Contents.FrameBroadcaster
-  alias Contents.SceneStack
+  alias Contents.Scenes.Stack, as: SceneStack
 
   @moduledoc """
   毎フレーム3D DrawCommand リストを組み立てて FrameBroadcaster.put で Zenoh へ配信するコンポーネント。
@@ -42,9 +42,10 @@ defmodule Content.RollingBall.RenderComponent do
     content = Core.Config.current()
     runner = content.flow_runner(:main)
 
+    # Stack.current は %{scene_type: atom(), state: term()} を返す。scene_type で現在シーンを識別する。
     current_scene =
       case runner && SceneStack.current(runner) do
-        {:ok, %{module: mod}} -> mod
+        {:ok, %{scene_type: st}} -> st
         _ -> content.playing_scene()
       end
 
@@ -72,10 +73,7 @@ defmodule Content.RollingBall.RenderComponent do
       {:skybox, {sky_top_r, sky_top_g, sky_top_b, sky_top_a},
        {sky_bot_r, sky_bot_g, sky_bot_b, sky_bot_a}}
 
-    title_scenes = [
-      Content.RollingBall.Scenes.Title,
-      Content.RollingBall.Scenes.Ending
-    ]
+    title_scenes = [:title, :ending]
 
     if current_scene in title_scenes do
       [skybox_cmd]
@@ -161,13 +159,13 @@ defmodule Content.RollingBall.RenderComponent do
 
     nodes =
       cond do
-        current_scene == Content.RollingBall.Scenes.Title ->
+        current_scene == :title ->
           [build_title_panel()]
 
-        current_scene == Content.RollingBall.Scenes.StageClear ->
+        current_scene == :stage_clear ->
           [build_stage_clear_panel(stage)]
 
-        current_scene == Content.RollingBall.Scenes.Ending ->
+        current_scene == :ending ->
           [build_ending_panel()]
 
         current_scene == content.game_over_scene() ->

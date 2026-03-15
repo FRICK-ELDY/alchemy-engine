@@ -285,7 +285,7 @@ sequenceDiagram
     participant R as Rust 60Hz ループ
     participant GE as GameEvents GenServer
     participant COMP as Component 群
-    participant SS as Contents.SceneStack
+    participant SS as Contents.Scenes.Stack
     participant S as Scene.update()
 
     loop 毎フレーム（60Hz）
@@ -310,7 +310,7 @@ graph LR
     CFG["config.exs\n:current コンテンツモジュール"]
     CB["ContentBehaviour\ncomponents / initial_scenes\nentity_registry 等"]
     COMP["Component ビヘイビア\non_ready / on_frame_event\non_nif_sync 等（全オプショナル）"]
-    GE["Contents.GameEvents\n（contents 層）"]
+    GE["Contents.Events.Game\n（contents 層）"]
     VS["VampireSurvivor\n+ SpawnComponent\n+ LevelComponent\n+ BossComponent"]
     AA["AsteroidArena\n+ SpawnComponent\n+ SplitComponent"]
 
@@ -376,7 +376,7 @@ flowchart TD
     BOSS[ボス物理]
     DFE[drain_frame_events]
     SEND["send {:frame_events, [...]}"]
-    GEV[Elixir Contents.GameEvents プロセス]
+    GEV[Elixir Contents.Events.Game プロセス]
 
     LOOP --> PS
     PS --> PM --> OB --> AI --> SEP --> COL --> WEP --> PAR --> ITEM --> BUL --> BOSS
@@ -387,7 +387,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    GEV[Contents.GameEvents GenServer\nhandle_info :frame_events]
+    GEV[Contents.Events.Game GenServer\nhandle_info :frame_events]
     EK[EnemyKilled]
     PD[PlayerDamaged]
     SE[SpecialEntitySpawned\nSpecialEntityDamaged\nSpecialEntityDefeated]
@@ -454,7 +454,7 @@ flowchart TD
     OUA["GameWorld.on_ui_action(action)\nMutex pending_action"]
     Q[on_ui_action キュー]
     SEND["Elixir プロセスに send\nRedrawRequested 末尾で取り出し"]
-    GEV["Contents.GameEvents.handle_info\n{:ui_action, action}"]
+    GEV["Contents.Events.Game.handle_info\n{:ui_action, action}"]
     W1["Component.on_event/2\n:select_weapon_1/2/3 等"]
     W2["SaveManager.save_session()\n:__save__"]
     W3["SaveManager.load_session()\n→ NifBridge.load_save_snapshot()\n:__load__"]
@@ -580,8 +580,8 @@ flowchart LR
 ```mermaid
 graph TB
     subgraph BEAM["Elixir BEAM VM"]
-        GEV[Contents.GameEvents\nGenServer]
-        SS[Contents.SceneStack\nGenServer]
+        GEV[Contents.Events.Game\nGenServer]
+        SS[Contents.Scenes.Stack\nGenServer]
         EVB[EventBus\nGenServer]
         STS[Stats\nGenServer]
     end
