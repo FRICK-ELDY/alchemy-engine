@@ -25,6 +25,6 @@ defmodule Contents.Behaviour do
 
   @type process_id :: term()
   @type world_ref :: reference()
-  @type context :: map()
+  @type context :: %{optional(atom()) => any()}
   @type event :: tuple()
 end
