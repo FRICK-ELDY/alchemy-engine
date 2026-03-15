@@ -40,7 +40,7 @@ flowchart TB
     Client -->|"Zenoh: action<br/>Reliable"| Server
 ```
 
-> クライアント・サーバー分離の詳細と実装手順は [client-server-separation-procedure.md](./docs/plan/client-server-separation-procedure.md) を参照。
+> クライアント・サーバー分離の詳細と実装手順は [client-server-separation-procedure.md](./docs/plan/completed/client-server-separation-procedure.md) を参照。未実施項目は [client-server-separation-future.md](./docs/plan/reference/client-server-separation-future.md)。
 
 ## ハイライト
 
