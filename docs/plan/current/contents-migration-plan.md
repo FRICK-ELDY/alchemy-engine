@@ -50,7 +50,7 @@
 
 1. **Scene の root_object（新規コンテンツで必須）**: Scene の state に `root_object`（Object ツリーのルート、ユーザーが Scene に降り立つ着地点）を**必須**で持つ。どの Object をルートにするかはコンテンツ製作者が選択。既存コンテンツは移行対象外のため root_object なしでも許容。参照: [scene-and-object.md](../../architecture/scene-and-object.md)
 2. **Object 階層の導入**: シーン state に「空間の実体」を `Contents.Objects.Core.Struct` で表現
-3. **Component の二重化解消**: `Core.Component`（エンジン用）と `Contents.Components.Core.Behaviour`（新アーキテクチャ）の役割を整理
+3. **Component の二重化解消**: `Core.Component`（エンジン用）と `Contents.Behaviour.Components`（新アーキテクチャ）の役割を整理
   - 当面: 既存 `Core.Component` を維持しつつ、内部で新 Object/Node を参照
   - 将来: 新 Component がノードを束ね、エンジン用の薄いアダプタが Core.Component を実装
 4. **Node の活用**: 計算・論理部分を `Contents.Nodes` に移行（該当する場合）
@@ -58,7 +58,7 @@
 
 ### 2.2 移行時の制約
 
-- 既存の `Core.ContentBehaviour` コールバックは変更しない
+- 既存の `Contents.Behaviour.Content` コールバックは変更しない
 - `Core.Component` の `on_nif_sync`, `on_event` 等はエンジンが呼ぶため、シグネチャを維持
 - 移行中は既存テスト・手動動作確認でリグレッションを防ぐ
 

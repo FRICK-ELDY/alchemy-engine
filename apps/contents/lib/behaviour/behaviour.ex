@@ -13,6 +13,14 @@ defmodule Contents.Behaviour do
 
   各層の契約は Contents.Behaviour.Scenes, .Objects, .Nodes, .Components, .Content で定義する。
   `@behaviour` による直接指定は本モジュールには行わず、設計上の「従うべき原則」として扱う。
+
+  ## 旧モジュール名（削除済み）
+
+  - 憲法: `Contents.Core.Behaviour`（旧 `core/behaviour.ex`）
+  - Scene: `Contents.Scenes.Core.Behaviour`（旧 `scenes/core/behaviour.ex`）
+  - Object: `Contents.Objects.Core.Behaviour`（旧 `objects/core/behaviour.ex`）
+  - Node: `Contents.Nodes.Core.Behaviour`（旧 `nodes/core/behaviour.ex`）
+  - Component: `Contents.Components.Core.Behaviour`（旧 `components/core/behaviour.ex`）
   """
 
   @type process_id :: term()

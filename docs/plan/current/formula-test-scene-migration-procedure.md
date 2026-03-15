@@ -31,7 +31,7 @@
 |------|------|
 | **移行元** | `Content.FormulaTest.Scenes.Playing`（`apps/contents/lib/contents/formula_test/scenes/playing.ex`） |
 | **移行先** | `Contents.Scenes.FormulaTest.Playing`（`apps/contents/lib/scenes/formula_test/playing.ex`） |
-| **Behaviour** | `Contents.SceneBehaviour` のまま（`Contents.Scenes.Core.Behaviour` を use した契約を維持） |
+| **Behaviour** | `Contents.SceneBehaviour` のまま（`Contents.Behaviour.Scenes` を use した契約を維持） |
 | **変更範囲** | ファイル配置・モジュール名・参照箇所の更新。ロジック（Nodes 実行・state 構造）は変更しない |
 
 ### 1.3 目標ディレクトリ構造（移行後）

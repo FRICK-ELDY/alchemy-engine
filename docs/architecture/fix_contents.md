@@ -7,7 +7,7 @@
 すべてのデジタル体験は、以下の層の連鎖（パイプライン）で構成されます。**時間軸（Scene）** と **空間軸（Object）** を分離することで、体験の「段階」を明示的に扱います。
 
 - **Contents（体験）**: ユーザーが知覚する最終的な物語や空間。既存の `lib/contents/` 配下に配置。
-- **Scenes（時間軸）**: いまどの段階か、次にどこへ遷移するか。Object ツリーのルート参照（root_object：ユーザーが Scene に降り立つ着地点）、遷移管理を担う。`Contents.SceneBehaviour` / `Contents.Scenes.Core.Behaviour` を実装。
+- **Scenes（時間軸）**: いまどの段階か、次にどこへ遷移するか。Object ツリーのルート参照（root_object：ユーザーが Scene に降り立つ着地点）、遷移管理を担う。`Contents.SceneBehaviour`（`Contents.Behaviour.Scenes` を use）を実装。
 - **Objects（空間軸）**: 空間に存在する実体（Entities）。Transform、親子関係、Component のアタッチ。GenServer として動作。
 - **Components（状態のピア）**: ノードを束ねて特定の「機能」を持たせた細胞。状態を保持する。GenServer として動作。
 - **Nodes（論理のピア）**: Action と Logic が交差する処理の原子。Logic Processors。プロセス化しない。
@@ -68,8 +68,7 @@ scenes |> contents
 
 ```
 apps/contents/
-├── core/
-│   └── behaviour.ex         # 憲法。全層共通の契約。（役割分担は別途詰める）
+├── behaviour/               # 契約の名前空間。Contents.Behaviour, .Content, .Scenes, .Objects, .Nodes, .Components
 ├── structs/                 # データの形。defstruct / @type による型定義。
 │   └── category/
 │       ├── value/           # スカラー・ベクトル・行列・色など
@@ -78,24 +77,16 @@ apps/contents/
 │       ├── space/           # 空間に関わる型（Transform など）
 │       └── users/
 │           └── local_user.ex  # 操作者というコンテキスト
-├── scenes/                  # 時間軸。遷移管理・Object ツリーのルート参照（Phase 2 で骨格追加）
-│   └── core/
-│       └── behaviour.ex     # Contents.Scenes.Core.Behaviour（Scene の契約）
-├── objects/                 # 空間軸（Entities）
-│   └── core/
-│       └── behaviour.ex     # Object としてのインターフェース（GenServer 規約）
-├── components/              # 状態のピア（State Holders）。GenServer で動作。
-│   ├── core/
-│   │   └── behaviour.ex     # 全コンポーネント共通のライフサイクル規約（GenServer 規約）
+├── scenes/                  # 時間軸。遷移管理・Object ツリーのルート参照。契約は behaviour/scenes.ex（Contents.Behaviour.Scenes）
+├── objects/                 # 空間軸（Entities）。契約は behaviour/objects.ex（Contents.Behaviour.Objects）
+├── components/              # 状態のピア（State Holders）。GenServer で動作。契約は behaviour/components.ex（Contents.Behaviour.Components）
 │   └── category/
 │       └── uncategorized/
 │           └── comment.ex   # VR 空間内のドキュメント化（付箋）
-├── nodes/                   # 論理のピア（Logic Processors）
+├── nodes/                   # 論理のピア（Logic Processors）。契約は behaviour/nodes.ex（Contents.Behaviour.Nodes）
 │   ├── ports/               # Action / Logic のポート定義（action in/out, logic in/out）
 │   │   ├── action.ex
 │   │   └── logic.ex
-│   ├── core/
-│   │   └── behaviour.ex     # ノードとしてのインターフェース（ports の宣言）
 │   └── category/
 │       ├── actions/         # 実行・副作用に軸を置くノード（Resonite に合わせた分類）
 │       │   └── write.ex     # Action port でトリガー、Logic port でデータを書き換え
@@ -113,14 +104,14 @@ apps/contents/
 
 | パス                          | 役割                                                                                                |
 | --------------------------- | ------------------------------------------------------------------------------------------------- |
-| `core/behaviour.ex`         | 憲法。全層が従う基本契約。役割分担は「Behaviour の流れ」参照。                                                              |
+| `behaviour/`                | 契約の名前空間。Contents.Behaviour（憲法）、.Content, .Scenes, .Objects, .Nodes, .Components。役割分担は「Behaviour の流れ」参照。 |
 | `nodes/ports/`              | Action / Logic のポート（action in/out, logic in/out）を定義。ノード間の Link による通信のルール。                              |
 | `structs/`                  | データの形を定義。`defstruct` / `@type`。`category` でドメイン別に分類し、VR 空間での型の可視性を高める。                                 |
 | `structs/category/space/`   | 空間に関わる型。Resonite の Components に合わせた配置。transform など。3 次元ベクトルは value の Float.t3。 |
-| `scenes/`                   | 時間軸。遷移管理、Object ツリーのルート参照。`Contents.Scenes.Core.Behaviour` を定義。                                         |
-| `objects/`                  | 空間上の実体。ECS の Entity 相当。GenServer で動作。                                                             |
-| `components/`               | 状態を保持する細胞。ノードを束ねて特定の機能を提供。GenServer で動作。                                                          |
-| `nodes/`                    | 論理の原子。Action / Logic ports に基づく処理。Port と Link で接続。プロセス化しない。`category/actions/` は Resonite の Actions に合わせた分類。 |
+| `scenes/`                   | 時間軸。遷移管理、Object ツリーのルート参照。契約は `Contents.Behaviour.Scenes`。                                         |
+| `objects/`                  | 空間上の実体。ECS の Entity 相当。GenServer で動作。契約は `Contents.Behaviour.Objects`。                                                             |
+| `components/`               | 状態を保持する細胞。ノードを束ねて特定の機能を提供。GenServer で動作。契約は `Contents.Behaviour.Components`。                                                          |
+| `nodes/`                    | 論理の原子。Action / Logic ports に基づく処理。Port と Link で接続。プロセス化しない。契約は `Contents.Behaviour.Nodes`。`category/actions/` は Resonite の Actions に合わせた分類。 |
 
 
 ### プロセスモデル（GenServer）
@@ -194,24 +185,24 @@ flowchart TB
 
 
 
-- `Core.ContentBehaviour`：コンテンツモジュールの契約
-- `Core.Component`：コンポーネントの契約
-- `Contents.SceneBehaviour`：シーンの契約
-- 共通の「憲法」はなく、Object / Node の Behaviour は未定義
+- コンテンツ契約：`Contents.Behaviour.Content`（contents で定義）。core は実行時に content モジュールを参照。
+- `Core.Component`：コンポーネントの契約（エンジン↔コンポーネント）
+- `Contents.SceneBehaviour`：シーンの契約（`Contents.Behaviour.Scenes` を use）
+- 憲法・各層の契約は `Contents.Behaviour` 名前空間に集約済み
 
 **提案**：`apps/contents` 配下に配置を統一し、`core/behaviour.ex`（憲法）を頂点に、各層の Behaviour が共通の土台に乗る構成。実装の積み上げ順は Node → Component → Object。
 
 ```mermaid
 flowchart TB
     subgraph constitution["憲法層"]
-        CORE[core/behaviour.ex<br>Contents.Core.Behaviour]
+        CORE[behaviour/behaviour.ex<br>Contents.Behaviour]
     end
 
     subgraph layer_behaviours["各層の Behaviour"]
-        SCN_B[scenes/core/behaviour.ex<br>Scene 規約]
-        NOD_B[nodes/core/behaviour.ex<br>Node 規約]
-        CMP_B[components/core/behaviour.ex<br>Component 規約]
-        OBJ_B[objects/core/behaviour.ex<br>Object 規約]
+        SCN_B[behaviour/scenes.ex<br>Contents.Behaviour.Scenes]
+        NOD_B[behaviour/nodes.ex<br>Contents.Behaviour.Nodes]
+        CMP_B[behaviour/components.ex<br>Contents.Behaviour.Components]
+        OBJ_B[behaviour/objects.ex<br>Contents.Behaviour.Objects]
     end
 
     subgraph implementations["実装モジュール"]
