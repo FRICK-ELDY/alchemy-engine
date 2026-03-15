@@ -98,6 +98,7 @@ defmodule Content.VampireSurvivor do
   defp scene_module_to_type(Content.VampireSurvivor.Scenes.GameOver), do: :game_over
   defp scene_module_to_type(Content.VampireSurvivor.Scenes.LevelUp), do: :level_up
   defp scene_module_to_type(Content.VampireSurvivor.Scenes.BossAlert), do: :boss_alert
+  defp scene_module_to_type(mod), do: raise("unknown scene module: #{inspect(mod)}")
 
   # ── メタ情報 ──────────────────────────────────────────────────────
 

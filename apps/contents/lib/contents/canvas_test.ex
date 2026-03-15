@@ -40,18 +40,27 @@ defmodule Content.CanvasTest do
   end
 
   def initial_scenes do
-    [%{module: Content.CanvasTest.Scenes.Playing, init_arg: %{}}]
+    [%{scene_type: :playing, init_arg: %{}}]
   end
 
   def physics_scenes do
     []
   end
 
-  def playing_scene, do: Content.CanvasTest.Scenes.Playing
+  def playing_scene, do: :playing
 
   # CanvasTest にゲームオーバーの概念はないため、ContentBehaviour の契約を満たす目的で
   # playing_scene と同じシーンを返す。
-  def game_over_scene, do: Content.CanvasTest.Scenes.Playing
+  def game_over_scene, do: :playing
+
+  def scene_init(:playing, init_arg), do: Content.CanvasTest.Scenes.Playing.init(init_arg)
+  # game_over_scene は :playing を返すため通常 :game_over で replace されないが、
+  # replace_scene(server, :game_over, %{}) が呼ばれた場合に備え同一実装を用意する。
+  def scene_init(:game_over, init_arg), do: Content.CanvasTest.Scenes.Playing.init(init_arg)
+  def scene_update(:playing, context, state), do: Content.CanvasTest.Scenes.Playing.update(context, state)
+  def scene_update(:game_over, context, state), do: Content.CanvasTest.Scenes.Playing.update(context, state)
+  def scene_render_type(:playing), do: :playing
+  def scene_render_type(:game_over), do: :playing
 
   # ── メタ情報 ──────────────────────────────────────────────────────
 

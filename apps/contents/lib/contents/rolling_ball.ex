@@ -45,15 +45,76 @@ defmodule Content.RollingBall do
   end
 
   def initial_scenes do
-    [%{module: Content.RollingBall.Scenes.Title, init_arg: %{}}]
+    [%{scene_type: :title, init_arg: %{}}]
   end
 
   def physics_scenes do
-    [Content.RollingBall.Scenes.Playing]
+    [:playing]
   end
 
-  def playing_scene, do: Content.RollingBall.Scenes.Playing
-  def game_over_scene, do: Content.RollingBall.Scenes.GameOver
+  def playing_scene, do: :playing
+  def game_over_scene, do: :game_over
+
+  def scene_init(:title, init_arg), do: Content.RollingBall.Scenes.Title.init(init_arg)
+  def scene_init(:playing, init_arg), do: Content.RollingBall.Scenes.Playing.init(init_arg)
+  def scene_init(:stage_clear, init_arg), do: Content.RollingBall.Scenes.StageClear.init(init_arg)
+  def scene_init(:game_over, init_arg), do: Content.RollingBall.Scenes.GameOver.init(init_arg)
+  def scene_init(:ending, init_arg), do: Content.RollingBall.Scenes.Ending.init(init_arg)
+
+  def scene_update(:title, context, state) do
+    Content.RollingBall.Scenes.Title.update(context, state)
+    |> map_transition_module_to_scene_type()
+  end
+
+  def scene_update(:playing, context, state) do
+    Content.RollingBall.Scenes.Playing.update(context, state)
+    |> map_transition_module_to_scene_type()
+  end
+
+  def scene_update(:stage_clear, context, state) do
+    Content.RollingBall.Scenes.StageClear.update(context, state)
+    |> map_transition_module_to_scene_type()
+  end
+
+  def scene_update(:game_over, context, state) do
+    Content.RollingBall.Scenes.GameOver.update(context, state)
+    |> map_transition_module_to_scene_type()
+  end
+
+  def scene_update(:ending, context, state) do
+    Content.RollingBall.Scenes.Ending.update(context, state)
+    |> map_transition_module_to_scene_type()
+  end
+
+  def scene_render_type(:title), do: :playing
+  def scene_render_type(:playing), do: :playing
+  def scene_render_type(:stage_clear), do: :playing
+  def scene_render_type(:game_over), do: :game_over
+  def scene_render_type(:ending), do: :playing
+
+  defp map_transition_module_to_scene_type({:continue, state}), do: {:continue, state}
+  defp map_transition_module_to_scene_type({:continue, state, opts}), do: {:continue, state, opts || %{}}
+  defp map_transition_module_to_scene_type({:transition, :pop, state}), do: {:transition, :pop, state}
+  defp map_transition_module_to_scene_type({:transition, :pop, state, opts}), do: {:transition, :pop, state, opts || %{}}
+  defp map_transition_module_to_scene_type({:transition, {:push, mod, arg}, state}) do
+    {:transition, {:push, scene_module_to_type(mod), arg}, state}
+  end
+  defp map_transition_module_to_scene_type({:transition, {:push, mod, arg}, state, opts}) do
+    {:transition, {:push, scene_module_to_type(mod), arg}, state, opts || %{}}
+  end
+  defp map_transition_module_to_scene_type({:transition, {:replace, mod, arg}, state}) do
+    {:transition, {:replace, scene_module_to_type(mod), arg}, state}
+  end
+  defp map_transition_module_to_scene_type({:transition, {:replace, mod, arg}, state, opts}) do
+    {:transition, {:replace, scene_module_to_type(mod), arg}, state, opts || %{}}
+  end
+
+  defp scene_module_to_type(Content.RollingBall.Scenes.Title), do: :title
+  defp scene_module_to_type(Content.RollingBall.Scenes.Playing), do: :playing
+  defp scene_module_to_type(Content.RollingBall.Scenes.StageClear), do: :stage_clear
+  defp scene_module_to_type(Content.RollingBall.Scenes.GameOver), do: :game_over
+  defp scene_module_to_type(Content.RollingBall.Scenes.Ending), do: :ending
+  defp scene_module_to_type(mod), do: raise("unknown scene module: #{inspect(mod)}")
 
   # ── メタ情報 ──────────────────────────────────────────────────────
 

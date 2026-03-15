@@ -32,15 +32,49 @@ defmodule Content.AsteroidArena do
   end
 
   def initial_scenes do
-    [%{module: Content.AsteroidArena.Scenes.Playing, init_arg: %{}}]
+    [%{scene_type: :playing, init_arg: %{}}]
   end
 
   def physics_scenes do
-    [Content.AsteroidArena.Scenes.Playing]
+    [:playing]
   end
 
-  def playing_scene, do: Content.AsteroidArena.Scenes.Playing
-  def game_over_scene, do: Content.AsteroidArena.Scenes.GameOver
+  def playing_scene, do: :playing
+  def game_over_scene, do: :game_over
+
+  def scene_init(:playing, init_arg), do: Content.AsteroidArena.Scenes.Playing.init(init_arg)
+  def scene_init(:game_over, init_arg), do: Content.AsteroidArena.Scenes.GameOver.init(init_arg)
+
+  def scene_update(:playing, context, state) do
+    Content.AsteroidArena.Scenes.Playing.update(context, state)
+    |> map_transition_module_to_scene_type()
+  end
+
+  def scene_update(:game_over, context, state), do: Content.AsteroidArena.Scenes.GameOver.update(context, state)
+
+  def scene_render_type(:playing), do: :playing
+  def scene_render_type(:game_over), do: :game_over
+
+  defp map_transition_module_to_scene_type({:continue, state}), do: {:continue, state}
+  defp map_transition_module_to_scene_type({:continue, state, opts}), do: {:continue, state, opts || %{}}
+  defp map_transition_module_to_scene_type({:transition, :pop, state}), do: {:transition, :pop, state}
+  defp map_transition_module_to_scene_type({:transition, :pop, state, opts}), do: {:transition, :pop, state, opts || %{}}
+  defp map_transition_module_to_scene_type({:transition, {:push, mod, arg}, state}) do
+    {:transition, {:push, scene_module_to_type(mod), arg}, state}
+  end
+  defp map_transition_module_to_scene_type({:transition, {:push, mod, arg}, state, opts}) do
+    {:transition, {:push, scene_module_to_type(mod), arg}, state, opts || %{}}
+  end
+  defp map_transition_module_to_scene_type({:transition, {:replace, mod, arg}, state}) do
+    {:transition, {:replace, scene_module_to_type(mod), arg}, state}
+  end
+  defp map_transition_module_to_scene_type({:transition, {:replace, mod, arg}, state, opts}) do
+    {:transition, {:replace, scene_module_to_type(mod), arg}, state, opts || %{}}
+  end
+
+  defp scene_module_to_type(Content.AsteroidArena.Scenes.Playing), do: :playing
+  defp scene_module_to_type(Content.AsteroidArena.Scenes.GameOver), do: :game_over
+  defp scene_module_to_type(mod), do: raise("unknown scene module: #{inspect(mod)}")
 
   # ── メタ情報 ──────────────────────────────────────────────────────
 
