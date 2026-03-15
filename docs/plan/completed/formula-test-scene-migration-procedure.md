@@ -1,7 +1,7 @@
 # FormulaTest Playing シーン 新方式移行 実施手順書
 
 > 作成日: 2026-03-15  
-> 参照: [contents-migration-plan.md](./contents-migration-plan.md) Phase 1, [scene-and-object.md](../../architecture/scene-and-object.md), [scene-abstraction-and-engines.md](./scene-abstraction-and-engines.md)  
+> 参照: [contents-migration-plan.md](../current/contents-migration-plan.md) Phase 1, [scene-and-object.md](../../architecture/scene-and-object.md), [scene-abstraction-and-engines.md](../current/scene-abstraction-and-engines.md)  
 > 目的: `Content.FormulaTest.Scenes.Playing` を `apps/contents/lib/scenes` 配下の新方式（`Contents.Scenes.FormulaTest.Playing`）へ移行し、Phase 1 のシーン配置方針に合わせる。
 
 ---
@@ -13,7 +13,7 @@
 - **本手順の結果**: シーンは「**1コンテンツ1シーン種別 = 1モジュール**」（例: `Contents.Scenes.FormulaTest.Playing`）。SceneStack は従来どおり「シーンモジュール」をキーに init/update/render_type を呼ぶ。
 - **案Bで実現したい形**: シーンは**種別（atom）**（`:playing`, `:title` 等）のみ。**実装はコンテンツ**が担い、`ContentBehaviour` に `scene_init(type, arg)` / `scene_update(type, ctx, state)` / `scene_render_type(type)` を追加。SceneStack は「(content, scene_type)」をキーに `content.scene_*(:playing, ...)` を呼ぶ。`Contents.Scenes.Playing` は概念（ラベル）としてのみ存在し、`Content.VampireSurvivor` が「:playing をこう実装する」を持つ。
 
-案Bを採用する場合は、本手順の実施有無に関係なく、別途 **ContentBehaviour の拡張** と **SceneStack の変更** が必要です。案B向けの移行手順は [scene-type-as-atom-implementation-procedure.md](./scene-type-as-atom-implementation-procedure.md) を参照してください。本手順は「シーンを scenes 配下に集約する」現方式の整理であり、案B実施時には「既存のシーンモジュールをコンテンツの scene_* 実装へ委譲するラッパ」に変えるか、最初から案Bで FormulaTest を実装するかのどちらかになります。
+案Bを採用する場合は、本手順の実施有無に関係なく、別途 **ContentBehaviour の拡張** と **SceneStack の変更** が必要です。案B向けの移行手順は [scene-type-as-atom-implementation-procedure.md](../current/scene-type-as-atom-implementation-procedure.md) を参照してください。本手順は「シーンを scenes 配下に集約する」現方式の整理であり、案B実施時には「既存のシーンモジュールをコンテンツの scene_* 実装へ委譲するラッパ」に変えるか、最初から案Bで FormulaTest を実装するかのどちらかになります。
 
 ---
 
@@ -171,8 +171,8 @@ mix compile --warnings-as-errors
 
 ## 5. 参照
 
-- [contents-migration-plan.md](./contents-migration-plan.md) — Phase 1 概要
+- [contents-migration-plan.md](../current/contents-migration-plan.md) — Phase 1 概要
 - [scene-and-object.md](../../architecture/scene-and-object.md) — Scene の責務と root_object
-- [scene-abstraction-and-engines.md](./scene-abstraction-and-engines.md) — 案B（シーン種別＝atom）の設計と他エンジン比較
+- [scene-abstraction-and-engines.md](../current/scene-abstraction-and-engines.md) — 案B（シーン種別＝atom）の設計と他エンジン比較
 - [Contents.SceneBehaviour](../../../apps/contents/lib/contents/scene_behaviour.ex) — シーン契約（Scenes.Core.Behaviour を use）
-- [fix-contents-implementation-procedure.md](../completed/fix-contents-implementation-procedure.md) — 骨格実装手順
+- [fix-contents-implementation-procedure.md](./fix-contents-implementation-procedure.md) — 骨格実装手順
