@@ -2,12 +2,13 @@ defmodule Contents.SceneStack do
   @moduledoc """
   シーンスタックを管理する GenServer。
 
-  シーンは `%{module: module(), state: term()}` で表現し、
-  push / pop によりスタックで管理する。
+  シーンは `%{scene_type: scene_type(), state: term()}` で表現し、
+  push / pop によりスタックで管理する。初期化・更新は content の
+  `scene_init/2`, `scene_update/3`, `scene_render_type/1` で行う。
 
   ## オプション
 
-  - `:content_module` (必須) - シーン構成を提供するコンテンツモジュール（`initial_scenes/0`, `render_type/0` を実装）
+  - `:content_module` (必須) - シーン構成を提供するコンテンツモジュール（`initial_scenes/0`, `scene_*` を実装）
   - `:room_id` (オプション) - マルチルーム対応用。指定時は `{__MODULE__, room_id}` で名前登録される
   - `:name` (オプション) - GenServer の登録名。`room_id` 未指定時のみ使用。省略時は `__MODULE__`
 
@@ -38,28 +39,28 @@ defmodule Contents.SceneStack do
     GenServer.call(server, :render_type)
   end
 
-  def push_scene(server \\ default_server(), module, init_arg \\ %{}) do
-    GenServer.call(server, {:push, module, init_arg})
+  def push_scene(server \\ default_server(), scene_type, init_arg \\ %{}) do
+    GenServer.call(server, {:push, scene_type, init_arg})
   end
 
   def pop_scene(server \\ default_server()) do
     GenServer.call(server, :pop)
   end
 
-  def replace_scene(server \\ default_server(), module, init_arg \\ %{}) do
-    GenServer.call(server, {:replace, module, init_arg})
+  def replace_scene(server \\ default_server(), scene_type, init_arg \\ %{}) do
+    GenServer.call(server, {:replace, scene_type, init_arg})
   end
 
   def update_current(server \\ default_server(), fun) when is_function(fun, 1) do
     GenServer.call(server, {:update_current, fun})
   end
 
-  def update_by_module(server \\ default_server(), module, fun) when is_function(fun, 1) do
-    GenServer.call(server, {:update_by_module, module, fun})
+  def update_by_scene_type(server \\ default_server(), scene_type, fun) when is_function(fun, 1) do
+    GenServer.call(server, {:update_by_scene_type, scene_type, fun})
   end
 
-  def get_scene_state(server \\ default_server(), module) do
-    GenServer.call(server, {:get_scene_state, module})
+  def get_scene_state(server \\ default_server(), scene_type) do
+    GenServer.call(server, {:get_scene_state, scene_type})
   end
 
   @impl true
@@ -69,14 +70,14 @@ defmodule Contents.SceneStack do
 
     stack =
       Enum.reduce(specs, [], fn spec, acc ->
-        {:ok, scene} = init_scene(spec.module, spec.init_arg)
+        {:ok, scene} = init_scene(content_module, spec.scene_type, spec.init_arg)
         [scene | acc]
       end)
 
     default_render_type =
       case stack do
-        [top | _] -> top.module.render_type()
-        [] -> content_module.render_type()
+        [top | _] -> content_module.scene_render_type(top.scene_type)
+        [] -> content_module.scene_render_type(Keyword.get(opts, :default_scene_type, :playing))
       end
 
     state = %{
@@ -97,16 +98,16 @@ defmodule Contents.SceneStack do
     {:reply, {:ok, top}, state}
   end
 
-  def handle_call(:render_type, _from, %{stack: [], content_module: content} = state) do
-    {:reply, content.render_type(), state}
+  def handle_call(:render_type, _from, %{stack: [], default_render_type: rt} = state) do
+    {:reply, rt, state}
   end
 
-  def handle_call(:render_type, _from, %{stack: [%{module: mod} | _]} = state) do
-    {:reply, mod.render_type(), state}
+  def handle_call(:render_type, _from, %{stack: [top | _], content_module: content} = state) do
+    {:reply, content.scene_render_type(top.scene_type), state}
   end
 
-  def handle_call({:push, module, init_arg}, _from, %{stack: stack} = state) do
-    {:ok, scene} = init_scene(module, init_arg)
+  def handle_call({:push, scene_type, init_arg}, _from, %{stack: stack, content_module: content} = state) do
+    {:ok, scene} = init_scene(content, scene_type, init_arg)
     {:reply, :ok, %{state | stack: [scene | stack]}}
   end
 
@@ -118,13 +119,13 @@ defmodule Contents.SceneStack do
     {:reply, :ok, %{state | stack: rest}}
   end
 
-  def handle_call({:replace, module, init_arg}, _from, %{stack: [_ | rest]} = state) do
-    {:ok, scene} = init_scene(module, init_arg)
+  def handle_call({:replace, scene_type, init_arg}, _from, %{stack: [_ | rest], content_module: content} = state) do
+    {:ok, scene} = init_scene(content, scene_type, init_arg)
     {:reply, :ok, %{state | stack: [scene | rest]}}
   end
 
-  def handle_call({:replace, module, init_arg}, _from, %{stack: []} = state) do
-    {:ok, scene} = init_scene(module, init_arg)
+  def handle_call({:replace, scene_type, init_arg}, _from, %{stack: [], content_module: content} = state) do
+    {:ok, scene} = init_scene(content, scene_type, init_arg)
     {:reply, :ok, %{state | stack: [scene]}}
   end
 
@@ -134,8 +135,8 @@ defmodule Contents.SceneStack do
     {:reply, :ok, %{state | stack: [new_top | rest]}}
   end
 
-  def handle_call({:update_by_module, module, fun}, _from, %{stack: stack} = state) do
-    case Enum.find_index(stack, &(&1.module == module)) do
+  def handle_call({:update_by_scene_type, scene_type, fun}, _from, %{stack: stack} = state) do
+    case Enum.find_index(stack, &(&1.scene_type == scene_type)) do
       nil ->
         {:reply, :ok, state}
 
@@ -147,9 +148,9 @@ defmodule Contents.SceneStack do
     end
   end
 
-  def handle_call({:get_scene_state, module}, _from, %{stack: stack} = state) do
+  def handle_call({:get_scene_state, scene_type}, _from, %{stack: stack} = state) do
     scene_state =
-      case Enum.find(stack, fn scene -> scene.module == module end) do
+      case Enum.find(stack, fn scene -> scene.scene_type == scene_type end) do
         %{state: s} -> s
         nil -> %{}
       end
@@ -157,9 +158,9 @@ defmodule Contents.SceneStack do
     {:reply, scene_state, state}
   end
 
-  defp init_scene(module, init_arg) do
-    {:ok, scene_state} = module.init(init_arg)
-    {:ok, %{module: module, state: scene_state}}
+  defp init_scene(content, scene_type, init_arg) do
+    {:ok, scene_state} = content.scene_init(scene_type, init_arg)
+    {:ok, %{scene_type: scene_type, state: scene_state}}
   end
 
   defp resolve_name(opts) do

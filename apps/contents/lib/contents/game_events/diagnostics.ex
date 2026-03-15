@@ -6,10 +6,10 @@ defmodule Contents.GameEvents.Diagnostics do
   @tick_ms 16
 
   @doc "replace 遷移時の init_arg を構築する（ゲームオーバー時のスコア・ハイスコア付与）"
-  def build_replace_init_arg(mod, init_arg, elapsed, content, runner) do
+  def build_replace_init_arg(scene_type, init_arg, elapsed, content, runner) do
     game_over_scene = content.game_over_scene()
 
-    if mod == game_over_scene do
+    if scene_type == game_over_scene do
       playing_state = get_playing_scene_state(content, runner)
       score = Map.get(playing_state, :score, 0)
 
@@ -27,7 +27,7 @@ defmodule Contents.GameEvents.Diagnostics do
   end
 
   @doc "60フレームごとにフレームキャッシュ更新・ログ・スナップショット検証を行う"
-  def maybe_log_and_cache(state, _mod, elapsed, content, runner) do
+  def maybe_log_and_cache(state, _scene_type, elapsed, content, runner) do
     if state.room_id == :main and rem(state.frame_count, 60) == 0 do
       do_log_and_cache(state, elapsed, content, runner)
     end
@@ -41,9 +41,9 @@ defmodule Contents.GameEvents.Diagnostics do
     elapsed_s = elapsed / 1000.0
 
     # 呼び出し元（handle_frame_events_main の {:ok, ...} 経路）では runner は常に non-nil。
-    # 防御的に nil 分岐を残し、万が一の場合に content.render_type() で代替する。
+    # 防御的に nil 分岐を残し、万が一の場合に content.scene_render_type(playing_scene) で代替する。
     render_type =
-      if runner, do: GenServer.call(runner, :render_type), else: content.render_type()
+      if runner, do: GenServer.call(runner, :render_type), else: content.scene_render_type(content.playing_scene())
 
     hud_data = {player_hp, player_max_hp, score, elapsed_s}
 
@@ -139,6 +139,8 @@ defmodule Contents.GameEvents.Diagnostics do
     e -> Logger.debug("[SSOT CHECK] snapshot check failed: #{inspect(e)}")
   end
 
+  # Phase 5: runner (SceneStack) は get_scene_state(server, scene_type) を受け付ける。
+  # content.playing_scene() は scene_type (例: :playing) を返すため、そのままでよい。
   defp get_playing_scene_state(content, runner) do
     if runner do
       GenServer.call(runner, {:get_scene_state, content.playing_scene()}) || %{}

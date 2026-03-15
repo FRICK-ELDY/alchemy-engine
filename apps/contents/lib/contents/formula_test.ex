@@ -37,15 +37,25 @@ defmodule Content.FormulaTest do
   end
 
   def initial_scenes do
-    [%{module: Content.FormulaTest.Scenes.Playing, init_arg: %{}}]
+    [%{scene_type: :playing, init_arg: %{}}]
   end
 
   def physics_scenes do
     []
   end
 
-  def playing_scene, do: Content.FormulaTest.Scenes.Playing
-  def game_over_scene, do: Content.FormulaTest.Scenes.Playing
+  def playing_scene, do: :playing
+  def game_over_scene, do: :playing
+
+  def scene_init(:playing, init_arg) do
+    Content.FormulaTest.Scenes.Playing.init(init_arg)
+  end
+
+  def scene_update(:playing, context, state) do
+    Content.FormulaTest.Scenes.Playing.update(context, state)
+  end
+
+  def scene_render_type(:playing), do: :playing
 
   def title, do: "Formula Test"
   def version, do: "0.1.0"

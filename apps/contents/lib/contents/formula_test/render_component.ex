@@ -37,9 +37,9 @@ defmodule Content.FormulaTest.RenderComponent do
     Contents.FrameBroadcaster.put(context.room_id, frame_binary)
 
     if cursor_grab != :no_change and runner do
-      Contents.SceneStack.update_by_module(
+      Contents.SceneStack.update_by_scene_type(
         runner,
-        Content.FormulaTest.Scenes.Playing,
+        content.playing_scene(),
         &clear_cursor_grab_if_matching(&1, cursor_grab)
       )
     end

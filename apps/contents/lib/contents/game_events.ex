@@ -127,8 +127,10 @@ defmodule Contents.GameEvents do
 
           runner ->
             initial_state = build_loaded_scene_state(content, loaded_state)
-            physics_scene = content.physics_scenes() |> List.first()
-            GenServer.call(runner, {:replace, physics_scene, initial_state})
+            # Phase 5: physics_scenes() は [scene_type()]。空の場合は playing_scene() で replace。
+            # initial_state を init_arg として content.scene_init(scene_type, init_arg) に渡す。
+            scene_type_to_restore = content.physics_scenes() |> List.first() || content.playing_scene()
+            GenServer.call(runner, {:replace, scene_type_to_restore, initial_state})
             {:reply, :ok, state}
         end
 
@@ -398,8 +400,10 @@ defmodule Contents.GameEvents do
 
           runner ->
             initial_state = build_loaded_scene_state(content, loaded_state)
-            physics_scene = content.physics_scenes() |> List.first()
-            GenServer.call(runner, {:replace, physics_scene, initial_state})
+            # Phase 5: physics_scenes() は [scene_type()]。空の場合は playing_scene() で replace。
+            # initial_state を init_arg として content.scene_init(scene_type, init_arg) に渡す。
+            scene_type_to_restore = content.physics_scenes() |> List.first() || content.playing_scene()
+            GenServer.call(runner, {:replace, scene_type_to_restore, initial_state})
             state
         end
 
@@ -493,7 +497,7 @@ defmodule Contents.GameEvents do
   end
 
   defp handle_frame_events_main_dispatch(
-         {:ok, %{module: mod, state: scene_state}},
+         {:ok, %{scene_type: scene_type, state: scene_state}},
          %{
            events: events,
            state: state,
@@ -508,27 +512,27 @@ defmodule Contents.GameEvents do
 
     Enum.each(events, &dispatch_frame_event_to_components(&1, context))
 
-    result = mod.update(context, scene_state)
+    result = content.scene_update(scene_type, context, scene_state)
     {new_scene_state, _opts} = extract_state_and_opts(result)
     GenServer.call(runner, {:update_current, fn _ -> new_scene_state end})
 
     state = process_transition(result, state, now, content, runner)
 
     unless throttled? do
-      apply_frame_side_effects(state, mod, events, context, opts)
+      apply_frame_side_effects(state, scene_type, events, context, opts)
     end
 
     {:noreply, %{state | last_tick: now, frame_count: state.frame_count + 1}}
   end
 
-  defp apply_frame_side_effects(state, mod, events, context, opts) do
+  defp apply_frame_side_effects(state, scene_type, events, context, opts) do
     Process.put(:frame_injection, %{})
 
-    maybe_set_input_and_broadcast(state, mod, opts.physics_scenes, events, context)
+    maybe_set_input_and_broadcast(state, scene_type, opts.physics_scenes, events, context)
     dispatch_nif_sync_to_components(context)
     maybe_publish_zenoh_frame(state)
     apply_frame_injection(state)
-    Diagnostics.maybe_log_and_cache(state, mod, opts.elapsed, opts.content, opts.runner)
+    Diagnostics.maybe_log_and_cache(state, scene_type, opts.elapsed, opts.content, opts.runner)
   end
 
   defp apply_frame_injection(state) do
@@ -587,8 +591,8 @@ defmodule Contents.GameEvents do
     end)
   end
 
-  defp maybe_set_input_and_broadcast(state, mod, physics_scenes, events, context) do
-    if mod in physics_scenes do
+  defp maybe_set_input_and_broadcast(state, scene_type, physics_scenes, events, context) do
+    if scene_type in physics_scenes do
       local_mod =
         Contents.ComponentList.local_user_input_module() || Contents.LocalUserComponent
 
@@ -674,13 +678,13 @@ defmodule Contents.GameEvents do
       elapsed: elapsed,
       frame_count: state.frame_count,
       start_ms: state.start_ms,
-      push_scene: fn mod, init_arg ->
+      push_scene: fn scene_type, init_arg ->
         if runner do
-          if function_exported?(content, :pause_on_push?, 1) and content.pause_on_push?(mod) do
+          if function_exported?(content, :pause_on_push?, 1) and content.pause_on_push?(scene_type) do
             Core.NifBridge.pause_physics(control_ref)
           end
 
-          GenServer.call(runner, {:push, mod, init_arg})
+          GenServer.call(runner, {:push, scene_type, init_arg})
         else
           :ok
         end
@@ -689,8 +693,8 @@ defmodule Contents.GameEvents do
         Core.NifBridge.resume_physics(control_ref)
         if runner, do: GenServer.call(runner, :pop), else: :ok
       end,
-      replace_scene: fn mod, init_arg ->
-        if runner, do: GenServer.call(runner, {:replace, mod, init_arg}), else: :ok
+      replace_scene: fn scene_type, init_arg ->
+        if runner, do: GenServer.call(runner, {:replace, scene_type, init_arg}), else: :ok
       end
     }
 
@@ -721,20 +725,20 @@ defmodule Contents.GameEvents do
     state
   end
 
-  defp process_transition({:transition, {:push, mod, init_arg}, _}, state, _now, content, runner) do
+  defp process_transition({:transition, {:push, scene_type, init_arg}, _}, state, _now, content, runner) do
     should_pause =
-      function_exported?(content, :pause_on_push?, 1) and content.pause_on_push?(mod)
+      function_exported?(content, :pause_on_push?, 1) and content.pause_on_push?(scene_type)
 
     if should_pause do
       Core.NifBridge.pause_physics(state.control_ref)
     end
 
-    GenServer.call(runner, {:push, mod, init_arg})
+    GenServer.call(runner, {:push, scene_type, init_arg})
     state
   end
 
   defp process_transition(
-         {:transition, {:replace, mod, init_arg}, _},
+         {:transition, {:replace, scene_type, init_arg}, _},
          state,
          now,
          content,
@@ -744,14 +748,14 @@ defmodule Contents.GameEvents do
 
     init_arg =
       Diagnostics.build_replace_init_arg(
-        mod,
+        scene_type,
         init_arg,
         elapsed,
         content,
         runner
       )
 
-    GenServer.call(runner, {:replace, mod, init_arg})
+    GenServer.call(runner, {:replace, scene_type, init_arg})
     state
   end
 

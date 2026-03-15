@@ -57,9 +57,9 @@ defmodule Content.CanvasTest.RenderComponent do
     # この場合でも次の Escape 押下で再送されるため、実害は1フレームの遅延に留まる。
     # 完全なアトミック性が必要な場合はシーケンス番号の導入を検討すること。
     if cursor_grab != :no_change and runner do
-      Contents.SceneStack.update_by_module(
+      Contents.SceneStack.update_by_scene_type(
         runner,
-        Content.CanvasTest.Scenes.Playing,
+        content.playing_scene(),
         &apply_cursor_grab_request(&1, cursor_grab)
       )
     end

@@ -33,7 +33,7 @@ defmodule Content.VampireSurvivor.BossComponent do
     if runner do
       playing_scene = content.playing_scene()
 
-      Contents.SceneStack.update_by_module(
+      Contents.SceneStack.update_by_scene_type(
         runner,
         playing_scene,
         &apply_boss_damage(&1, damage, context)
@@ -69,13 +69,13 @@ defmodule Content.VampireSurvivor.BossComponent do
     drop_boss_gems(context.world_ref, x, y, exp)
     Process.delete({__MODULE__, :boss_phase_timer})
 
-    # パイプラインの戻り値が SceneStack.update_by_module の新 state として使われる
+    # パイプラインの戻り値が SceneStack.update_by_scene_type の新 state として使われる
     new_state =
       state
       |> Map.update(:score, score_delta, &(&1 + score_delta))
       |> Map.update(:kill_count, 1, &(&1 + 1))
-      |> content.playing_scene().accumulate_exp(exp)
-      |> content.playing_scene().apply_boss_defeated()
+      |> Content.VampireSurvivor.Helpers.maybe_accumulate_exp(content, exp)
+      |> Content.VampireSurvivor.Helpers.maybe_apply_boss_defeated(content)
 
     new_state
   end
@@ -122,7 +122,7 @@ defmodule Content.VampireSurvivor.BossComponent do
 
     playing_state =
       (runner &&
-         Contents.SceneStack.get_scene_state(runner, Content.VampireSurvivor.Scenes.Playing)) ||
+         Contents.SceneStack.get_scene_state(runner, content.playing_scene())) ||
         %{}
 
     kind_id = Map.get(playing_state, :boss_kind_id)
@@ -145,7 +145,7 @@ defmodule Content.VampireSurvivor.BossComponent do
     runner = content.flow_runner(:main)
 
     if runner do
-      Contents.SceneStack.update_by_module(
+      Contents.SceneStack.update_by_scene_type(
         runner,
         content.playing_scene(),
         &clear_boss_dash_state/1
@@ -203,7 +203,7 @@ defmodule Content.VampireSurvivor.BossComponent do
     mv = {final_vx || vx, final_vy || vy}
 
     if runner do
-      Contents.SceneStack.update_by_module(
+      Contents.SceneStack.update_by_scene_type(
         runner,
         playing_scene,
         &apply_boss_position_update(&1, mv, dt, new_state)
