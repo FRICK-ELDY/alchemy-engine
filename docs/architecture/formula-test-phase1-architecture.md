@@ -1,32 +1,37 @@
 # FormulaTest Phase 1 アーキテクチャ
 
 > 作成日: 2026-03-12  
+> 更新日: 2026-03-15（Scene の位置づけを明示）  
 > 対象: Phase 1 移行後の FormulaTest が通る全アーキテクチャを記載する。  
-> 参照: [fix_contents.md](./fix_contents.md)
+> 参照: [fix_contents.md](./fix_contents.md), [scene-and-object.md](./scene-and-object.md)
 
 ---
 
 ## 1. 概要
 
-FormulaTest は、新アーキテクチャ（structs / nodes / components / objects）の動作を検証するコンテンツである。Phase 1 移行後、以下を用いて 5 パターンの式計算を行い、結果を HUD に表示する。
+FormulaTest は、新アーキテクチャ（structs / nodes / components / objects / **scenes**）の動作を検証するコンテンツである。Phase 1 移行後、以下を用いて 5 パターンの式計算を行い、結果を HUD に表示する。
 
 - **Structs**: データ型（Transform 等）
 - **Nodes**: Value, Add, Sub, Equals（handle_sample による Logic フロー）
 - **Objects**: Struct, CreateEmptyChild（空間階層）
-- **Contents**: Content モジュール、Scene、Core.Component（エンジン統合）
+- **Scenes**: Scenes.Playing（時間軸。Object ツリーのルート参照、遷移管理）
+- **Contents**: Content モジュール、Core.Component（エンジン統合）
 
 ---
 
-## 2. Five Pillars と使用モジュール
+## 2. Six Pillars と使用モジュール（Scene 追加）
 
 ```mermaid
 flowchart TB
     subgraph contents["Contents（体験）"]
         C1["Content.FormulaTest"]
+    end
+
+    subgraph scenes["Scenes（時間軸）"]
         C2["Scenes.Playing"]
     end
 
-    subgraph objects["Objects（空間のピア）"]
+    subgraph objects["Objects（空間軸）"]
         O1["Contents.Objects.Core.Struct"]
         O2["CreateEmptyChild"]
     end
@@ -50,7 +55,8 @@ flowchart TB
         S2["Value.Float"]
     end
 
-    contents --> objects
+    contents --> scenes
+    scenes --> objects
     objects --> components
     components --> nodes
     nodes --> structs
@@ -65,16 +71,21 @@ flowchart TB
 | モジュール | 役割 | パス |
 |------------|------|------|
 | `Content.FormulaTest` | コンテンツ定義。Core.ContentBehaviour を実装 | `contents/formula_test.ex` |
-| `Content.FormulaTest.Scenes.Playing` | メインシーン。Nodes を実行し Object を構築 | `contents/formula_test/scenes/playing.ex` |
 
-### 3.2 Objects 層
+### 3.2 Scenes 層（時間軸）
+
+| モジュール | 役割 | パス |
+|------------|------|------|
+| `Content.FormulaTest.Scenes.Playing` | メインシーン。Nodes を実行し Object を構築。root_object（着地点）を state に保持 | `contents/formula_test/scenes/playing.ex` |
+
+### 3.3 Objects 層
 
 | モジュール | 役割 | パス |
 |------------|------|------|
 | `Contents.Objects.Core.Struct` | オブジェクト構造体（name, parent, tag, active, persistent, transform） | `objects/core/struct.ex` |
 | `Contents.Objects.Core.CreateEmptyChild` | 空の子オブジェクト作成 | `objects/core/create_empty_child.ex` |
 
-### 3.3 Components 層（Core.Component = エンジン用）
+### 3.4 Components 層（Core.Component = エンジン用）
 
 | モジュール | 役割 | パス |
 |------------|------|------|
@@ -83,7 +94,7 @@ flowchart TB
 | `Contents.LocalUserComponent` | キー・マウス入力（ComponentList により注入） | `contents/local_user_component.ex` |
 | `Contents.TelemetryComponent` | 入力状態参照用（ComponentList により注入） | `contents/telemetry_component.ex` |
 
-### 3.4 Nodes 層
+### 3.5 Nodes 層
 
 | モジュール | 役割 | 使用するコールバック | パス |
 |------------|------|----------------------|------|
@@ -92,14 +103,14 @@ flowchart TB
 | `Contents.Nodes.Category.Operators.Sub` | 減算。%{a:, b:} → a - b | handle_sample | `nodes/category/operators/sub.ex` |
 | `Contents.Nodes.Category.Operators.Equals` | 比較。%{a:, b:, op:} → eq/lt/gt 等 | handle_sample | `nodes/category/operators/equals.ex` |
 
-### 3.5 Structs 層
+### 3.6 Structs 層
 
 | モジュール | 役割 | パス |
 |------------|------|------|
 | `Structs.Category.Space.Transform` | 位置・回転・スケール | `structs/category/space/transform.ex` |
 | `Structs.Category.Value.Float` | float, t3, quaternion 等の型定義 | `structs/category/value/float.ex` |
 
-### 3.6 エンジン・インフラ
+### 3.7 エンジン・インフラ
 
 | モジュール | 役割 |
 |------------|------|
@@ -131,8 +142,8 @@ flowchart LR
         O2["CreateEmptyChild"]
     end
 
-    subgraph playing["Scenes.Playing"]
-        P["Playing"]
+    subgraph scenes["Scenes（時間軸）"]
+        P["Scenes.Playing"]
     end
 
     subgraph nodes["Nodes"]
@@ -158,6 +169,8 @@ flowchart LR
     C2 --> P
     P --> C2
 ```
+
+※ Scenes.Playing は Object ツリーのルート（root_object：着地点）を保持。Objects は Scenes に依存しない。
 
 ---
 
@@ -341,7 +354,7 @@ flowchart TB
         CL["ComponentList"]
     end
 
-    subgraph scene["シーン"]
+    subgraph scene["Scenes（時間軸）"]
         UP["Playing.update\n{:continue, state}"]
     end
 

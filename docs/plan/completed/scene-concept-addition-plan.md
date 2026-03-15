@@ -1,7 +1,7 @@
 # Scene 概念の追加プラン
 
 > 作成日: 2026-03-12  
-> 更新日: 2026-03-15（実施方針・維持方針の決定事項を追記）  
+> 更新日: 2026-03-15（実施方針・維持方針の決定事項を追記、Phase 4 を reference へ分離）  
 > 参照: [fix_contents.md](../../architecture/fix_contents.md), [formula-test-phase1-architecture.md](../../architecture/formula-test-phase1-architecture.md)  
 > 目的: Scene を第一級の概念としてアーキテクチャに追加し、時間軸（Scene）と空間軸（Object）を明確に分離する。
 >
@@ -67,18 +67,18 @@ Contents（体験）
 | GameEvents と SceneStack の連携 | 連携は維持。イベントの種類や伝搬の形が変わる余地あり |
 | initial_scenes / playing_scene / game_over_scene | 仕組みは維持。**コンテンツ製作者がシーンを追加・削除できることが設計の前提**。現行の 3 種固定ではなく、柔軟に定義できる形へ進化させる余地あり |
 
-### 2.3 変更・追加する部分
+### 2.3 変更・追加する部分 ✅
 
 - アーキテクチャドキュメント（fix_contents.md）に Scene を明示
-- Scene の state 構造の規約（**root_object は新規・将来コンテンツで必須**）
+- Scene の state 構造の規約（**root_object は新規・将来コンテンツで必須**。ルートの選択はコンテンツ製作者に委ねる）
 - scenes 層の Behaviour / ガイドライン追加
 
 ### 2.4 実施方針（決定事項）
 
 | 項目 | 決定内容 |
 |------|----------|
-| **SceneBehaviour との関係** | 拡張。既存 `Contents.SceneBehaviour` は新 `Contents.Scenes.Core.Behaviour` を継承する |
-| **root_object** | 必須化。新規・将来コンテンツでは state に `root_object` を持つことを必須とする |
+| **SceneBehaviour との関係** | 拡張。既存 `Contents.SceneBehaviour` は新 `Contents.Scenes.Core.Behaviour` を拡張する |
+| **root_object** | 必須化。ユーザーが Scene に降り立つ際の「着地点」となる Object が必要なため必須。**どの Object をルートにするかはコンテンツ製作者が選択する** |
 | **scenes/core の配置** | `apps/contents/lib/scenes/core/` を新設する |
 | **既存コンテンツ** | 移行対象外。参照用として残し、新規・将来コンテンツのみ新規約に従う。現コンテンツはほとんど動作確認用のため、旧コンテンツは参照程度とする |
 
@@ -86,7 +86,7 @@ Contents（体験）
 
 ## 3. 実施手順
 
-### Phase 1: アーキテクチャ文書の更新
+### Phase 1: アーキテクチャ文書の更新 ✅
 
 | タスク | 内容 |
 |--------|------|
@@ -94,7 +94,7 @@ Contents（体験）
 | 新規ドキュメント | `docs/architecture/scene-and-object.md` を作成。Scene と Object の責務、境界、例を記載 |
 | formula-test-phase1-architecture.md | Scene の位置づけを追記（既存図に Scene を明示） |
 
-### Phase 2: scenes 層の骨格追加
+### Phase 2: scenes 層の骨格追加 ✅
 
 | タスク | 内容 |
 |--------|------|
@@ -102,25 +102,21 @@ Contents（体験）
 | Scene Behaviour | `Contents.Scenes.Core.Behaviour` を定義。init, update, render_type に加え、`root_object` 必須を doc で記載 |
 | 既存 SceneBehaviour との関係 | `Contents.SceneBehaviour` は `Contents.Scenes.Core.Behaviour` を**拡張**する。既存コードとの互換性を保ちつつ統合 |
 
-### Phase 3: Scene state の規約策定
+### Phase 3: Scene state の規約策定 ✅
 
 | タスク | 内容 |
 |--------|------|
-| state 構造の規約 | Scene state は `%{root_object: Object.t(), ...}` を持つことを**必須**とする旨を文書化。新規・将来コンテンツで適用 |
+| state 構造の規約 | Scene state は `%{root_object: Object.t(), ...}` を持つことを**必須**とする旨を文書化。どの Object をルートにするかはコンテンツ製作者が選択。新規・将来コンテンツで適用 |
 | 既存コンテンツ | 移行対象外。旧コンテンツは参照用として残し、root_object なしでも許容。新規・将来コンテンツのみ新規約に従う |
 | migration-plan 更新 | contents-migration-plan に「Scene の root_object を持つ」を新規コンテンツの共通パターン（必須）として追記 |
 
-### Phase 4: 将来拡張の検討（本プランでは実施しない）
+### Phase 4: 将来拡張の検討
 
-| 項目 | 内容 |
-|------|------|
-| Scene の VR 可視化 | 時間軸を UI で表現する際の検討 |
-| Scene の定義形式 | デクリプタや YAML で定義するか |
-| 複数 Object ツリー | 1 Scene が複数ルートを持つ構成の要否 |
+→ [scene-concept-phase4-future.md](../reference/scene-concept-phase4-future.md) に分離（本プランでは実施しない）
 
 ---
 
-## 4. ディレクトリ構成（目標）
+## 4. ディレクトリ構成（目標）✅
 
 ```
 apps/contents/lib/
@@ -144,7 +140,7 @@ apps/contents/lib/
 ### Scene が持つもの
 
 - 現在の遷移状態（スタック上で top かどうかは SceneStack が管理）
-- Object ツリーのルート参照（`root_object`）
+- Object ツリーのルート参照（`root_object`）。ユーザーが Scene に降り立つ着地点。どの Object をルートにするかはコンテンツ製作者が選択
 - 時間依存の state（カウントダウン、経過時間、遷移条件に使うフラグ等）
 - 遷移判定ロジック（update 内で `{:transition, ...}` を返す）
 
@@ -182,11 +178,11 @@ Contents
 
 ## 7. 検証
 
-- [ ] fix_contents.md に Scene が追記されている
-- [ ] scene-and-object.md が作成されている
-- [ ] scenes/core/behaviour.ex が存在する（または SceneBehaviour が scenes 概念を doc で参照している）
-- [ ] 既存コンテンツ（FormulaTest 等）が引き続き動作する
-- [ ] mix compile, mix test が通る
+- [x] fix_contents.md に Scene が追記されている ✅
+- [x] scene-and-object.md が作成されている ✅
+- [x] scenes/core/behaviour.ex が存在する（または SceneBehaviour が scenes 概念を doc で参照している）✅
+- [x] 既存コンテンツ（FormulaTest 等）が引き続き動作する ✅
+- [x] mix compile, mix test が通る ✅
 
 ---
 
@@ -194,6 +190,7 @@ Contents
 
 - [fix_contents.md](../../architecture/fix_contents.md)
 - [formula-test-phase1-architecture.md](../../architecture/formula-test-phase1-architecture.md)
-- [contents-migration-plan.md](./contents-migration-plan.md)
+- [contents-migration-plan.md](../current/contents-migration-plan.md)
+- [scene-concept-phase4-future.md](../reference/scene-concept-phase4-future.md) — Phase 4 将来拡張の検討
 - [Contents.SceneStack](../../apps/contents/lib/contents/scene_stack.ex)
 - [Contents.SceneBehaviour](../../apps/contents/lib/contents/scene_behaviour.ex)
