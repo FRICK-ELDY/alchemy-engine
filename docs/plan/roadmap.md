@@ -22,7 +22,7 @@
 
 | 順序 | ドキュメント | フェーズ | 依存 | 状態 |
 |:---:|-------------|----------|------|------|
-| 1 | [fix-contents-implementation-procedure](current/fix-contents-implementation-procedure.md) | Phase 1〜5（structs → nodes → components → objects） | なし | 進行中 |
+| 1 | [fix-contents-implementation-procedure](completed/fix-contents-implementation-procedure.md) | Phase 1〜5（structs → nodes → components → objects） | なし | 完了 |
 | 2 | [contents-migration-plan](current/contents-migration-plan.md) | Phase 1 ✅, 2〜9（既存コンテンツ移行） | 1 の Phase 5 完了後 | Phase 1 完了 |
 | 3 | [contents-components-reorganization-procedure](current/contents-components-reorganization-procedure.md) | Phase 1〜3 | 1 と並行可能 | 未着手 |
 | 4 | [scene-concept-addition-plan](completed/scene-concept-addition-plan.md) | Phase 1〜3 完了、Phase 4 は reference へ | 2 の Phase 3 以降と整合 | 完了 |

@@ -1,7 +1,7 @@
 # Node DSL の見通し
 
 > 作成日: 2026-03-12  
-> 参照: [fix_contents.md](../../architecture/fix_contents.md)、[fix-contents-implementation-procedure.md](../current/fix-contents-implementation-procedure.md)  
+> 参照: [fix_contents.md](../../architecture/fix_contents.md)、[fix-contents-implementation-procedure.md](../completed/fix-contents-implementation-procedure.md)  
 > 目的: Node 層の実装において、将来的に DSL（Domain Specific Language）を導入する意義と検討事項をまとめる。
 
 ---
@@ -111,5 +111,5 @@ Ecto.Schema、Phoenix.Router など、Elixir の DSL はマクロで `quote` / `
 ## 6. 関連ドキュメント
 
 - [fix_contents.md](../../architecture/fix_contents.md) — アーキテクチャの全体像
-- [fix-contents-implementation-procedure.md](../current/fix-contents-implementation-procedure.md) — 実施手順
+- [fix-contents-implementation-procedure.md](../completed/fix-contents-implementation-procedure.md) — 実施手順
 - [contents-defines-rust-executes.md](./contents-defines-rust-executes.md) — 定義層と実行層の責務

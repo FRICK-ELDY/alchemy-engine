@@ -1,10 +1,11 @@
-# fix_contents アーキテクチャ 実施手順書
+# fix_contents アーキテクチャ 実施手順書（実施済み）
 
 > 作成日: 2026-03-10  
+> 完了日: 2026-03-15  
 > 参照: [docs/architecture/fix_contents.md](../../architecture/fix_contents.md)  
 > 目的: コンテンツを最小単位まで分解し、VR 空間で直感的な論理構築を可能にする統一ディレクトリ・アーキテクチャを構築する。
 >
-> **注記**: 現行コードの移行作業は本手順書の対象外。別途実施する。
+> **実施結果**: Phase 1〜5 を完了。未実施項目は [fix-contents-implementation-future.md](../reference/fix-contents-implementation-future.md) を参照。
 
 ---
 
@@ -310,7 +311,7 @@ bool ベクトルに対する集約演算。
 
 #### Step 3-9: ノード実装例（math）
 
-数学関数。sign, cos, tan 等を配置予定。本 Phase ではディレクトリのみ作成し、実装は後続とする。
+数学関数。sign, cos, tan 等を配置予定。本 Phase ではディレクトリのみ作成し、実装は後続とする。→ [fix-contents-implementation-future.md](../reference/fix-contents-implementation-future.md#2-ノード実装math-カテゴリ) 参照。
 
 ---
 
@@ -568,12 +569,7 @@ flowchart TB
 
 本手順書では **新規ディレクトリ・モジュールの構築** に限定する。
 
-以下は別途「現行コード移行手順」として実施する想定:
-
-- `lib/contents/` 内の既存 Contents の参照先変更
-- `apps/core` 配下の `ContentBehaviour` / `Component` との関係整理
-- `Contents.SceneBehaviour` の Object 層との統合
-- 既存 LocalUserComponent 等の components 層への移行（[contents-components-reorganization-procedure.md](./contents-components-reorganization-procedure.md) と整合を取る）
+未実施の移行項目は [fix-contents-implementation-future.md](../reference/fix-contents-implementation-future.md#1-現行コード移行別タスク) を参照。
 
 ---
 

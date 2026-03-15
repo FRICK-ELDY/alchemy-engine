@@ -61,7 +61,6 @@
 
 | ファイル | 概要 |
 |----------|------|
-| [fix-contents-implementation-procedure](current/fix-contents-implementation-procedure.md) | structs / nodes / components / objects 骨格実装 |
 | [contents-migration-plan](current/contents-migration-plan.md) | 既存コンテンツの新アーキテクチャ移行 |
 | [contents-components-reorganization-procedure](current/contents-components-reorganization-procedure.md) | コンポーネント再編 |
 | [bin-deprecation-mix-tasks-plan](current/bin-deprecation-mix-tasks-plan.md) | bin 廃止・mix tasks 化 |
@@ -75,6 +74,7 @@
 
 | ファイル | 概要 |
 |----------|------|
+| [fix-contents-implementation-procedure](completed/fix-contents-implementation-procedure.md) | structs / nodes / components / objects 骨格実装 ✅ |
 | [client-server-separation-procedure](completed/client-server-separation-procedure.md) | クライアント・サーバー分離（フェーズ 0-3 実施済み）✅ |
 | [platform-info-crate-and-local-user-execution-plan](completed/platform-info-crate-and-local-user-execution-plan.md) | client_info 作成〜メニュー表示 ✅ |
 | [scene-concept-addition-plan](completed/scene-concept-addition-plan.md) | シーン概念の追加 ✅ |
@@ -96,6 +96,7 @@
 
 | ファイル | 概要 |
 |----------|------|
+| [fix-contents-implementation-future](reference/fix-contents-implementation-future.md) | fix_contents 未実施項目（現行コード移行・math ノード） |
 | [client-server-separation-future](reference/client-server-separation-future.md) | クライアント・サーバー分離 未実施項目（フェーズ 4-5） |
 | [scene-concept-phase4-future](reference/scene-concept-phase4-future.md) | Scene 概念 将来拡張の検討（Phase 4） |
 | [improvement-plan](reference/improvement-plan.md) | 課題一覧・改善方針 |
