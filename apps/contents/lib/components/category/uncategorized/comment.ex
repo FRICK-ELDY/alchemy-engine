@@ -4,11 +4,11 @@ defmodule Contents.Components.Category.Uncategorized.Comment do
 
   ノートやコメントを空間に配置し、開発・設計時の参照を可能にする。
   """
-  @behaviour Contents.Components.Core.Behaviour
+  @behaviour Contents.Behaviour.Components
 
-  @impl Contents.Components.Core.Behaviour
+  @impl Contents.Behaviour.Components
   def on_ready(state), do: state
 
-  @impl Contents.Components.Core.Behaviour
+  @impl Contents.Behaviour.Components
   def on_process(state, _delta), do: state
 end

@@ -3,8 +3,8 @@ defmodule Contents.Nodes.Category.Core.Input.Display do
   値を表示するための出力ノード。
   入力された value をそのまま表示する。
   """
-  @behaviour Contents.Nodes.Core.Behaviour
+  @behaviour Contents.Behaviour.Nodes
 
-  @impl Contents.Nodes.Core.Behaviour
+  @impl Contents.Behaviour.Nodes
   def handle_sample(inputs, _context), do: inputs
 end

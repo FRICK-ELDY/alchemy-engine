@@ -16,7 +16,7 @@ defmodule Content.FormulaTest do
   config :server, :current, Content.FormulaTest
   """
 
-  @behaviour Core.ContentBehaviour
+  @behaviour Contents.Behaviour.Content
 
   def components do
     [
