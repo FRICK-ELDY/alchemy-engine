@@ -139,6 +139,8 @@ defmodule Contents.GameEvents.Diagnostics do
     e -> Logger.debug("[SSOT CHECK] snapshot check failed: #{inspect(e)}")
   end
 
+  # Phase 5: runner (SceneStack) は get_scene_state(server, scene_type) を受け付ける。
+  # content.playing_scene() は scene_type (例: :playing) を返すため、そのままでよい。
   defp get_playing_scene_state(content, runner) do
     if runner do
       GenServer.call(runner, {:get_scene_state, content.playing_scene()}) || %{}

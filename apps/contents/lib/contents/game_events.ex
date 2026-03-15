@@ -127,8 +127,10 @@ defmodule Contents.GameEvents do
 
           runner ->
             initial_state = build_loaded_scene_state(content, loaded_state)
-            physics_scene = content.physics_scenes() |> List.first()
-            GenServer.call(runner, {:replace, physics_scene, initial_state})
+            # Phase 5: physics_scenes() は [scene_type()]。空の場合は playing_scene() で replace。
+            # initial_state を init_arg として content.scene_init(scene_type, init_arg) に渡す。
+            scene_type_to_restore = content.physics_scenes() |> List.first() || content.playing_scene()
+            GenServer.call(runner, {:replace, scene_type_to_restore, initial_state})
             {:reply, :ok, state}
         end
 
@@ -398,8 +400,10 @@ defmodule Contents.GameEvents do
 
           runner ->
             initial_state = build_loaded_scene_state(content, loaded_state)
-            physics_scene = content.physics_scenes() |> List.first()
-            GenServer.call(runner, {:replace, physics_scene, initial_state})
+            # Phase 5: physics_scenes() は [scene_type()]。空の場合は playing_scene() で replace。
+            # initial_state を init_arg として content.scene_init(scene_type, init_arg) に渡す。
+            scene_type_to_restore = content.physics_scenes() |> List.first() || content.playing_scene()
+            GenServer.call(runner, {:replace, scene_type_to_restore, initial_state})
             state
         end
 
