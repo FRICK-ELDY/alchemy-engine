@@ -2,7 +2,7 @@
 
 ## 概要
 
-`contents` はゲームコンテンツ（VampireSurvivor / AsteroidArena / SimpleBox3D / BulletHell3D / RollingBall / VRTest / CanvasTest / FormulaTest / Telemetry）の実装と、シーン管理・メインゲームループのディスパッチを担当します。エンジン本体（[core](./core.md)）はゲームロジックを知らず、ContentBehaviour で定義されたインターフェースに従ってコンポーネントへ委譲します。描画は Zenoh 専用。RenderComponent が DrawCommand・Camera・UiCanvas を組み立て、`Contents.MessagePackEncoder` で MessagePack にエンコードし、`FrameBroadcaster.put(room_id, frame_binary)` で Zenoh へ publish する。
+`contents` はゲームコンテンツ（VampireSurvivor / AsteroidArena / SimpleBox3D / BulletHell3D / RollingBall / CanvasTest / FormulaTest）の実装と、シーン管理・メインゲームループのディスパッチを担当します。エンジン本体（[core](./core.md)）はゲームロジックを知らず、ContentBehaviour で定義されたインターフェースに従ってコンポーネントへ委譲します。描画は Zenoh 専用。RenderComponent が DrawCommand・Camera・UiCanvas を組み立て、`Contents.MessagePackEncoder` で MessagePack にエンコードし、`FrameBroadcaster.put(room_id, frame_binary)` で Zenoh へ publish する。
 
 使用するコンテンツは `config/config.exs` の `config :server, :current, ...` で指定します（既定値は `Content.VampireSurvivor`）。
 
@@ -125,10 +125,8 @@ stateDiagram-v2
 | `Content.SimpleBox3D` | Phase R-6 動作検証用 3D ゲーム | - |
 | `Content.BulletHell3D` | 3D 弾幕避けゲーム | - |
 | `Content.RollingBall` | 玉転がしゲーム | - |
-| `Content.VRTest` | VR 動作検証（Phase A: マウスで見回し） | - |
 | `Content.CanvasTest` | 描画テスト用（DrawCommand・UiCanvas・CanvasUI 動作検証） | [docs/task/canvas-test-design.md](../../task/canvas-test-design.md) |
 | `Content.FormulaTest` | Formula エンジン検証（Elixir→Rust NIF VM→Elixir フロー、Input / Render コンポーネント） | - |
-| `Content.Telemetry` | 入力状態のリアルタイム表示（キーボード・マウス、デバッグ用） | - |
 
 **補助モジュール**
 

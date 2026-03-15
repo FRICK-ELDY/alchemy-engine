@@ -127,18 +127,22 @@ mkdir -p apps/contents/lib/contents/components/nodes/users
 | get_menu_ui/2 内 | `Contents.LocalUserComponent.get_client_info(room_id)` | `Contents.Components.Nodes.Users.LocalUser.get_client_info(room_id)` |
 | moduledoc の TelemetryComponent | （任意）新モジュール名に合わせる | |
 
-#### Step 2-5: Telemetry.RenderComponent の更新
+#### Step 2-5: Telemetry.RenderComponent の更新（スキップ可）
 
-**ファイル:** `apps/contents/lib/contents/telemetry/render_component.ex`
+> **注**: Content.Telemetry コンテンツは削除済みのため、本 Step は不要。
+
+**ファイル:** ~~`apps/contents/lib/contents/telemetry/render_component.ex`~~（削除済み）
 
 | 箇所 | 変更前 | 変更後 |
 |:---|:---|:---|
 | get_menu_visible / get_menu_ui | `Contents.MenuComponent` | `Contents.Components.Uncategorized.Menu` |
 | moduledoc の MenuComponent | （任意）新モジュール名に合わせる | |
 
-#### Step 2-6: Telemetry content の更新
+#### Step 2-6: Telemetry content の更新（スキップ可）
 
-**ファイル:** `apps/contents/lib/contents/telemetry.ex`
+> **注**: Content.Telemetry コンテンツは削除済みのため、本 Step は不要。
+
+**ファイル:** ~~`apps/contents/lib/contents/telemetry.ex`~~（削除済み）
 
 | 箇所 | 変更前 | 変更後 |
 |:---|:---|:---|
@@ -213,7 +217,7 @@ mkdir -p apps/contents/lib/contents/components/nodes/users
    ```
 
 3. **動作確認**
-   - `config :server, :current` で VampireSurvivor / AsteroidArena / Telemetry のいずれかを選択し起動
+   - `config :server, :current` で VampireSurvivor / AsteroidArena のいずれかを選択し起動
    - メニュー表示・ESC トグル・入力状態表示が問題なく動作することを確認
 
 ---

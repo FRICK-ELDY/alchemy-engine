@@ -147,10 +147,6 @@ alchemy-engine/
 │   │       │   ├── spawn_component.ex, physics_component.ex, render_component.ex
 │   │       │   ├── stage_data.ex
 │   │       │   └── scenes/ title.ex, playing.ex, stage_clear.ex, ending.ex, game_over.ex
-│   │       ├── vr_test.ex                 # Content.VRTest（VR 動作検証）
-│   │       ├── vr_test/
-│   │       │   ├── spawn_component.ex, input_component.ex, render_component.ex
-│   │       │   └── scenes/ playing.ex, game_over.ex
 │   │       ├── canvas_test.ex             # Content.CanvasTest（描画テスト）
 │   │       ├── canvas_test/
 │   │       │   ├── input_component.ex, render_component.ex
@@ -159,10 +155,6 @@ alchemy-engine/
 │   │       ├── formula_test/
 │   │       │   ├── input_component.ex, render_component.ex
 │   │       │   └── scenes/ playing.ex
-│   │       ├── telemetry.ex               # Content.Telemetry（入力状態表示・デバッグ用）
-│   │       └── telemetry/
-│   │           ├── input_component.ex, render_component.ex
-│   │           └── scenes/ playing.ex
 │   │
 │   └── network/                     # 通信レイヤー
 │       ├── mix.exs                  # deps: phoenix ~> 1.8, phoenix_pubsub, plug_cowboy, libcluster

@@ -15,7 +15,7 @@
 - `VampireSurvivor` — ヴァンパイアサバイバークローン
 - `AsteroidArena` — 小惑星シューター
 - `SimpleBox3D`, `BulletHell3D`, `RollingBall` — 動作検証用
-- `VRTest`, `CanvasTest`, `FormulaTest`, `Telemetry` — テスト用
+- `CanvasTest`, `FormulaTest` — テスト用
 
 ## データフロー
 

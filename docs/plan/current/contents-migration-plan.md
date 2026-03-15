@@ -27,17 +27,15 @@
 | 順位  | コンテンツ               | 根拠                                                   |
 | --- | ------------------- | ---------------------------------------------------- |
 | 1   | **FormulaTest**     | ノードグラフと親和性が高い。FormulaGraph → Contents.Nodes の置き換えが自然 |
-| 2   | **Telemetry**       | シンプルな表示。共有 MenuComponent の扱いを検証                      |
-| 3   | **CanvasTest**      | UI 系。Contents.Components.Category.UI との対応を検証         |
-| 4   | **SimpleBox3D**     | 物理・ゲームロジック。Object 階層の適用パターンを確立                       |
-| 5   | **VRTest**          | SimpleBox3D の延長。VR 入力の Object 化                      |
-| 6   | **BulletHell3D**    | コンポーネント数増加。弾・ダメージのノード化                               |
-| 7   | **AsteroidArena**   | NIF（SpawnSystem）との境界を Object 層で整理                    |
-| 8   | **RollingBall**     | 複数シーン・独自物理。シーン遷移の Object 化                           |
-| 9   | **VampireSurvivor** | 最も複雑。武器・ボス・レベルアップの全層移行                               |
+| 2   | **CanvasTest**      | UI 系。Contents.Components.Category.UI との対応を検証         |
+| 3   | **SimpleBox3D**     | 物理・ゲームロジック。Object 階層の適用パターンを確立                       |
+| 4   | **BulletHell3D**    | コンポーネント数増加。弾・ダメージのノード化                               |
+| 5   | **AsteroidArena**   | NIF（SpawnSystem）との境界を Object 層で整理                    |
+| 6   | **RollingBall**     | 複数シーン・独自物理。シーン遷移の Object 化                           |
+| 7   | **VampireSurvivor** | 最も複雑。武器・ボス・レベルアップの全層移行                               |
 
 
-**除外**: `builtin` は `.gitkeep` のみのため対象外。
+**除外**: `builtin` は `.gitkeep` のみのため対象外。**Telemetry** は CanvasTest と役割が重複するため、**VRTest** は現状未動作のため、移行対象から外している。
 
 ### 1.3 前提条件
 
@@ -113,41 +111,16 @@
 
 ---
 
-### Phase 2: Telemetry
-
-**目的**: 入力状態表示コンテンツを Object 階層で構造化する。
-
-#### 2.1 現状
-
-- InputComponent, RenderComponent, MenuComponent（共有）
-- シーン state: pos, yaw, pitch, move_input, mouse_delta, sprint
-
-#### 2.2 移行内容
-
-
-| 対象               | 変更内容                                                                                        |
-| ---------------- | ------------------------------------------------------------------------------------------- |
-| `Scenes.Playing` | カメラ状態（pos, yaw, pitch）を `Structs.Category.Space.Transform` または専用 struct で表現。Root Object を追加 |
-| MenuComponent    | 共有のため、移行対象外。Input/Render のみ新アーキテクチャを参照                                                      |
-
-
-#### 2.3 検証
-
-- キーボード・マウス入力が HUD に表示されること
-- メニュー表示が従来通り動作すること
-
----
-
-### Phase 3: CanvasTest
+### Phase 2: CanvasTest
 
 **目的**: UI 系コンポーネントと新アーキテクチャの対応を検証する。
 
-#### 3.1 現状
+#### 2.1 現状
 
 - InputComponent, RenderComponent
 - ワールド空間の Canvas パネル、HUD Canvas
 
-#### 3.2 移行内容
+#### 2.2 移行内容
 
 
 | 対象                                  | 変更内容                                                                                      |
@@ -156,23 +129,23 @@
 | `Contents.Components.Category.UI.`* | Canvas, RectTransform, Text 等が既にあれば、RenderComponent 内で参照。なければ、Object 階層のみ導入し、描画は既存ロジックを維持 |
 
 
-#### 3.3 検証
+#### 2.3 検証
 
 - HUD の表示/非表示、ワールドパネル、Quit ボタンが従来通り動作すること
 
 ---
 
-### Phase 4: SimpleBox3D
+### Phase 3: SimpleBox3D
 
 **目的**: ゲームロジック（プレイヤー・敵・衝突）を Object / Component で表現する。
 
-#### 4.1 現状
+#### 3.1 現状
 
 - SpawnComponent, InputComponent, RenderComponent
 - physics_scenes 使用（move_input を Rust から取得）
 - シーン: Playing, GameOver
 
-#### 4.2 移行内容
+#### 3.2 移行内容
 
 
 | 対象             | 変更内容                                                                    |
@@ -182,44 +155,21 @@
 | physics_scenes | 既存のまま。move_input は GameEvents 経由で届くため、InputComponent が state を更新する現状を維持 |
 
 
-#### 4.3 検証
+#### 3.3 検証
 
 - プレイヤー移動、敵の追跡、衝突でゲームオーバー、リトライが従来通り動作すること
 
 ---
 
-### Phase 5: VRTest
-
-**目的**: SimpleBox3D の VR 版。VR 入力（head_pose, controller）を Object 階層に組み込む。
-
-#### 5.1 現状
-
-- SimpleBox3D と同様の構成 + VR 入力
-
-#### 5.2 移行内容
-
-
-| 対象          | 変更内容                                                       |
-| ----------- | ---------------------------------------------------------- |
-| カメラ・コントローラー | head_pose, controller_pose を Object の transform に反映する構造を導入 |
-| その他         | SimpleBox3D の移行パターンを流用                                     |
-
-
-#### 5.3 検証
-
-- デスクトップ・VR 両方で従来通り動作すること
-
----
-
-### Phase 6: BulletHell3D
+### Phase 4: BulletHell3D
 
 **目的**: 弾・ダメージのコンポーネントを Object / Node で整理する。
 
-#### 6.1 現状
+#### 4.1 現状
 
 - SpawnComponent, InputComponent, BulletComponent, DamageComponent, RenderComponent
 
-#### 6.2 移行内容
+#### 4.2 移行内容
 
 
 | 対象     | 変更内容                                                      |
@@ -228,22 +178,22 @@
 | ダメージ計算 | 可能であれば Nodes（Equals, 減算等）で表現。複雑なら既存ロジックを維持し、Object 参照のみ追加 |
 
 
-#### 6.3 検証
+#### 4.3 検証
 
 - 弾幕、HP 減少、ゲームオーバーが従来通り動作すること
 
 ---
 
-### Phase 7: AsteroidArena
+### Phase 5: AsteroidArena
 
 **目的**: NIF（SpawnSystem, world_ref）との境界を Object 層で整理する。
 
-#### 7.1 現状
+#### 5.1 現状
 
 - SpawnComponent, SplitComponent
 - SpawnSystem が NIF 経由でエンティティをスポーン
 
-#### 7.2 移行内容
+#### 5.2 移行内容
 
 
 | 対象       | 変更内容                                                  |
@@ -252,23 +202,23 @@
 | 境界       | Object は「Elixir 側の論理的な実体」、NIF は「Rust 側の物理・描画」として責務を分離 |
 
 
-#### 7.3 検証
+#### 5.3 検証
 
 - 小惑星・UFO のスポーン、分裂、プレイヤー死亡が従来通り動作すること
 
 ---
 
-### Phase 8: RollingBall
+### Phase 6: RollingBall
 
 **目的**: 複数シーン・独自物理を Object 階層で構造化する。
 
-#### 8.1 現状
+#### 6.1 現状
 
 - 5 シーン: Title, Playing, StageClear, GameOver, Ending
 - PhysicsComponent（Elixir 側で重力・摩擦・衝突を計算）
 - StageData
 
-#### 8.2 移行内容
+#### 6.2 移行内容
 
 
 | 対象               | 変更内容                                         |
@@ -278,22 +228,22 @@
 | シーン遷移            | 既存の SceneStack を維持。各シーン state に Object 階層を追加 |
 
 
-#### 8.3 検証
+#### 6.3 検証
 
 - 全シーン遷移、ボールの転がり、ゴール・穴落下が従来通り動作すること
 
 ---
 
-### Phase 9: VampireSurvivor
+### Phase 7: VampireSurvivor
 
 **目的**: 最も複雑なコンテンツの全層移行。武器・ボス・レベルアップを Object / Node で表現する。
 
-#### 9.1 現状
+#### 7.1 現状
 
 - 5 コンポーネント、4 シーン
 - LevelSystem, BossSystem, WeaponFormulas, EntityParams
 
-#### 9.2 移行内容
+#### 7.2 移行内容
 
 
 | 対象            | 変更内容                                                    |
@@ -303,7 +253,7 @@
 | レベルアップ・ボスアラート | シーン state に Object 階層を追加                                |
 
 
-#### 9.3 検証
+#### 7.3 検証
 
 - ゲームプレイ、レベルアップ、ボス出現、セーブ/ロードが従来通り動作すること
 
@@ -327,7 +277,7 @@
 | リスク                                       | 対策                                                                                  |
 | ----------------------------------------- | ----------------------------------------------------------------------------------- |
 | Executor 未実装で FormulaTest 移行が進まない         | 手動でノードを呼び出す簡易実装で Phase 1 を完了。Executor は後続で追加                                        |
-| NIF との境界が曖昧                               | Phase 7（AsteroidArena）で Object と NIF の責務を文書化。必要に応じてアダプタ層を導入                         |
+| NIF との境界が曖昧                               | Phase 5（AsteroidArena）で Object と NIF の責務を文書化。必要に応じてアダプタ層を導入                         |
 | 移行中に既存コンテンツが壊れる                           | 各 Phase を小さく区切り、マージ前に動作確認。必要に応じて feature flag で新旧を切り替え                              |
 | Core.Component と Contents.Components の二重化 | 当面は Core.Component を維持。新 Component は「ノード束」として内部で使用し、エンジンには Core.Component の薄いラッパを渡す |
 
