@@ -1,4 +1,4 @@
-defmodule Contents.GameEvents.Diagnostics do
+defmodule Contents.Events.Game.Diagnostics do
   @moduledoc false
 
   require Logger
@@ -41,7 +41,7 @@ defmodule Contents.GameEvents.Diagnostics do
     elapsed_s = elapsed / 1000.0
 
     # 呼び出し元（handle_frame_events_main の {:ok, ...} 経路）では runner は常に non-nil。
-    # 防御的に nil 分岐を残し、万が一の場合に content.scene_render_type(playing_scene) で代替する。
+    # 防御的に nil 分岐を残す。nil 時は content.scene_render_type(playing_scene) で代替（通常は :main かつ 60 フレームごとのみ呼ばれるため、実運用では nil にならない想定）。
     render_type =
       if runner, do: GenServer.call(runner, :render_type), else: content.scene_render_type(content.playing_scene())
 
@@ -106,11 +106,12 @@ defmodule Contents.GameEvents.Diagnostics do
     Enum.map_join(weapon_levels, ", ", fn {w, lv} -> "#{w}:Lv#{lv}" end)
   end
 
+  # boss_hp が負のときは想定外（デバッグ値等）。表示しない。
   defp format_boss_info(playing_state) do
     boss_hp = Map.get(playing_state, :boss_hp)
     boss_max_hp = Map.get(playing_state, :boss_max_hp)
 
-    if boss_hp != nil and boss_max_hp != nil and boss_max_hp > 0 do
+    if boss_hp != nil and boss_max_hp != nil and boss_max_hp > 0 and boss_hp >= 0 do
       " | boss=#{Float.round(boss_hp / boss_max_hp * 100, 1)}%HP"
     else
       ""
@@ -136,7 +137,7 @@ defmodule Contents.GameEvents.Diagnostics do
       )
     end
   rescue
-    e -> Logger.debug("[SSOT CHECK] snapshot check failed: #{inspect(e)}")
+    e -> Logger.warning("[SSOT CHECK] snapshot check failed: #{inspect(e)}")
   end
 
   # Phase 5: runner (SceneStack) は get_scene_state(server, scene_type) を受け付ける。

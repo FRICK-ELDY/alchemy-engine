@@ -45,7 +45,7 @@
   > 対象ファイル: `apps/contents/lib/contents/entity_params.ex`, `apps/contents/lib/contents/vampire_survivor/spawn_component.ex`
 
 - **Diagnostics がコンテンツ固有の知識を持っている** `-2`
-  > `Contents.GameEvents.Diagnostics.do_log_and_cache/3` が `playing_state` の `:enemies` / `:bullets` キーを直接参照。Rust ECS を使わないコンテンツ向けの補完だが、エンジン層がコンテンツ固有の構造を知っている。
+  > `Contents.Events.Game.Diagnostics.do_log_and_cache/3` が `playing_state` の `:enemies` / `:bullets` キーを直接参照。Rust ECS を使わないコンテンツ向けの補完だが、エンジン層がコンテンツ固有の構造を知っている。
   > 対象ファイル: `apps/contents/lib/contents/game_events/diagnostics.ex`（L58-66）
 
 - **LevelComponent のアイテムドロップロジックの重複** `-2`

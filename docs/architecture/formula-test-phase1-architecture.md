@@ -118,7 +118,7 @@ flowchart TB
 | `Core.Component` | エンジンが呼ぶコールバック（on_event, on_nif_sync 等） |
 | `Contents.SceneBehaviour` | シーンの契約（init, update, render_type） |
 | `Contents.SceneStack` | シーンスタック管理 |
-| `Contents.GameEvents` | フレームイベント受信・コンポーネント dispatch |
+| `Contents.Events.Game` | フレームイベント受信・コンポーネント dispatch |
 | `Contents.ComponentList` | コンポーネントリスト解決（LocalUser, Telemetry 注入） |
 | `Core.Config` | 現在のコンテンツ取得（config :server, :current） |
 | `Core.RoomRegistry` | ルーム・イベントハンドラ登録 |

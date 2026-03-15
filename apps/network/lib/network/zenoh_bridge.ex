@@ -5,7 +5,7 @@ defmodule Network.ZenohBridge do
   - フレーム publish: `game/room/{room_id}/frame`
   - movement/action subscribe: `game/room/*/input/movement`, `game/room/*/input/action`
   - client_info subscribe: `contents/room/*/client/info` → `:client_info` ETS に保存
-  - 受信した入力は `Contents.GameEvents` へ `{:move_input, dx, dy}` / `{:ui_action, name}` で配送
+  - 受信した入力は `Contents.Events.Game` へ `{:move_input, dx, dy}` / `{:ui_action, name}` で配送
 
   設定: `config :network, :zenoh_enabled, true` で有効化。
   """
@@ -203,7 +203,7 @@ defmodule Network.ZenohBridge do
         send(pid, {:move_input, dx, dy})
 
       :error ->
-        Logger.debug("[ZenohBridge] No GameEvents for room=#{room_id}, dropping movement")
+        Logger.debug("[ZenohBridge] No event handler for room=#{room_id}, dropping movement")
     end
   end
 
@@ -215,7 +215,7 @@ defmodule Network.ZenohBridge do
         send(pid, {:ui_action, name})
 
       :error ->
-        Logger.debug("[ZenohBridge] No GameEvents for room=#{room_id}, dropping action #{name}")
+        Logger.debug("[ZenohBridge] No event handler for room=#{room_id}, dropping action #{name}")
     end
   end
 

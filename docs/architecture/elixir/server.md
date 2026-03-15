@@ -35,7 +35,7 @@ graph TD
     IH[Core.InputHandler]
     EB[Core.EventBus]
     RS[Core.RoomSupervisor]
-    GEV[Contents.GameEvents<br/>:main ルーム]
+    GEV[Contents.Events.Game<br/>:main ルーム]
     MON[Core.StressMonitor]
     STATS[Core.Stats]
     TEL[Core.Telemetry]
@@ -64,7 +64,7 @@ graph TD
 # Content.BulletHell3D / Content.RollingBall / Content.CanvasTest / Content.FormulaTest
 config :server, :current, Content.VampireSurvivor
 config :server, :map, :plain
-config :server, :game_events_module, Contents.GameEvents
+config :server, :game_events_module, Contents.Events.Game
 ```
 
 ---

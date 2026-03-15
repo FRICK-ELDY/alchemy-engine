@@ -2,7 +2,7 @@
 
 ## 概要
 
-`core` はゲームの Single Source of Truth を担うコアエンジンです。公開 API・NIF ラッパー・ContentBehaviour / Component インターフェース・ルーム管理・イベント配信・セーブ/ロードなどを提供します。シーン管理の実体は [contents](./contents.md) 層の `Contents.SceneStack` / `Contents.GameEvents` が担当します。
+`core` はゲームの Single Source of Truth を担うコアエンジンです。公開 API・NIF ラッパー・ContentBehaviour / Component インターフェース・ルーム管理・イベント配信・セーブ/ロードなどを提供します。シーン管理の実体は [contents](./contents.md) 層の `Contents.SceneStack` / `Contents.Events.Game` が担当します。
 
 ---
 
@@ -150,7 +150,7 @@ Core.Config.components()  # current().components() を呼び出す
 | `stop_room/1` | ルームを停止 |
 | `list_rooms/0` | 実行中ルーム一覧 |
 
-起動時に `:main` ルームを自動開始します。`config :server, :game_events_module` で起動する GameEvents モジュール（デフォルト `Contents.GameEvents`）を指定する。
+起動時に `:main` ルームを自動開始します。`config :server, :game_events_module` で起動する GameEvents モジュール（デフォルト `Contents.Events.Game`）を指定する。
 
 ---
 

@@ -11,8 +11,8 @@ defmodule Contents.Behaviour.Content do
 
   ## 設計原則
 
-  エンジンはコンテンツを知らない。`GameEvents` はこのビヘイビアを通じて
-  コンテンツと通信し、`function_exported?/3` による分岐を排除する。
+  エンジンはコンテンツを知らない。イベントハンドラ（`Contents.Events.Game`。旧名 GameEvents）は
+  このビヘイビアを通じてコンテンツと通信し、`function_exported?/3` による分岐を排除する。
   """
 
   @type scene_module :: module()
@@ -67,10 +67,10 @@ defmodule Contents.Behaviour.Content do
   @callback scene_render_type(scene_type()) :: atom()
 
   @doc """
-  そのルームのイベントハンドラ（GameEvents）の pid を返す。
+  そのルームのイベントハンドラ（`Contents.Events.Game`。旧名 GameEvents）の pid を返す。
 
   InputHandler・Network 等がイベント送信先を取得する際に使用する。
-  nil は GameEvents 未起動状態を表す。
+  nil はイベントハンドラ未起動状態を表す。
   """
   @callback event_handler(room_id :: term()) :: pid() | nil
 

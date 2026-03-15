@@ -66,9 +66,9 @@ graph LR
 
 ---
 
-## `Contents.GameEvents` — メインゲームループ GenServer
+## `Contents.Events.Game` — メインゲームループ GenServer
 
-Rust の 60Hz ゲームループから `{:frame_events, events}` を受信し、コンポーネントへ委譲する。contents 層に配置され、エンジン自体はゲームロジックを知らず、ディスパッチのみを担う。
+Rust の 60Hz ゲームループから `{:frame_events, events}` を受信し、コンポーネントへ委譲する。contents 層に配置され、エンジン自体はゲームロジックを知らず、ディスパッチのみを担う。**イベント配送先**はこのモジュール（旧名 GameEvents）。Core.EventBus の `{:game_events, events}` や Zenoh の入力配送先もここを指す。他ドキュメント・コメントで「GameEvents」とある場合は本モジュールの旧名である。
 
 **GenServer state:**
 
