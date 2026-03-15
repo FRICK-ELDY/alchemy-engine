@@ -26,7 +26,7 @@
 
 | 対象 | 変更内容 |
 |------|----------|
-| **Core.ContentBehaviour** | 新コールバック `scene_init/2`, `scene_update/3`, `scene_render_type/1` 追加。`initial_scenes/0` の仕様変更、`playing_scene/0` / `game_over_scene/0` 等の返却型を `scene_type()` に。`physics_scenes/0` を `[scene_type()]` に（任意）。オプショナル: シーン固有データ用（例: `weapon_slots_for_nif/2`）はコンテンツ直下のオプショナルコールバックとして明文化。 |
+| **Content 契約**（未実施時: `Core.ContentBehaviour`。`contents-behaviour-namespace-implementation-plan` 実施後: `Contents.Behaviour.Content`） | 新コールバック `scene_init/2`, `scene_update/3`, `scene_render_type/1` 追加。`initial_scenes/0` の仕様変更、`playing_scene/0` / `game_over_scene/0` 等の返却型を `scene_type()` に。`physics_scenes/0` を `[scene_type()]` に（任意）。オプショナル: シーン固有データ用（例: `weapon_slots_for_nif/2`）はコンテンツ直下のオプショナルコールバックとして明文化。 |
 | **Contents.SceneStack** | スタックを `%{scene_type, state}` に変更。`init_scene` を `content.scene_init(type, arg)` に。`get_scene_state(server, module)` → `get_scene_state(server, scene_type)`。`update_by_module` → `update_by_scene_type(server, scene_type, fun)`。push/replace の引数を `(scene_type, init_arg)` に。 |
 | **Contents.GameEvents** | `:current` の返却を `%{scene_type: type, state: state}` に合わせる。`mod.update` を `content.scene_update(scene_type, context, state)` に変更。`process_transition` で `{:replace, scene_type, init_arg}` 等を処理。`build_context` の `push_scene` / `replace_scene` を `(scene_type, init_arg)` に。`physics_scenes` が `[scene_type()]` の場合の `mod in physics_scenes` を `scene_type in physics_scenes` に。 |
 | **各 Content モジュール** | `initial_scenes` / `playing_scene` / `game_over_scene` 等を新仕様に。`scene_init` / `scene_update` / `scene_render_type` を実装。既存の `Content.XXX.Scenes.*` モジュールは削除するか、コンテンツの `scene_*` から委譲用に残す。 |
@@ -54,12 +54,16 @@
 
 #### Step 1-1: scene_type の定義
 
-- **場所**: `Core.ContentBehaviour` の `@type` または `Contents.Scenes.Core` に `@type scene_type :: atom()` を追加。  
+- **場所**: Content 契約を定義しているモジュールの `@type` に `@type scene_type :: atom()` を追加。  
+  - 未実施時: `Core.ContentBehaviour`（`apps/core/lib/core/content_behaviour.ex`）。  
+  - `contents-behaviour-namespace-implementation-plan` 実施後: `Contents.Behaviour.Content`（`apps/contents/lib/behaviour/content.ex`）。  
 - 必要なら「推奨シーン種別」を `@doc` で列挙（`:playing`, `:title`, `:game_over`, `:level_up`, `:boss_alert`, `:stage_clear`, `:ending`）。
 
 #### Step 1-2: ContentBehaviour に必須コールバック追加
 
 **ファイル:** `apps/core/lib/core/content_behaviour.ex`
+
+> **注記**: [implementation-order-for-plans.md](./implementation-order-for-plans.md) の推奨どおり、先に `contents-behaviour-namespace-implementation-plan` を実施している場合は、このファイルはすでに `apps/contents/lib/behaviour/content.ex` に移っており、モジュール名は `Contents.Behaviour.Content` です。その場合は **ファイル:** `apps/contents/lib/behaviour/content.ex`（モジュール `Contents.Behaviour.Content`）に以下を追加してください。
 
 - 次のコールバックを追加する。
 
@@ -92,6 +96,7 @@
 
 #### Step 1-3: ContentBehaviour の既存コールバック仕様変更
 
+- **対象ファイル**: Step 1-2 と同様。`contents-behaviour-namespace-implementation-plan` 実施後は `Contents.Behaviour.Content`（`apps/contents/lib/behaviour/content.ex`）。
 - `@callback initial_scenes() :: [%{module: scene_module(), init_arg: map()}]`  
   → `@callback initial_scenes() :: [%{scene_type: scene_type(), init_arg: map()}]`
 - `@callback playing_scene() :: scene_module()`  
@@ -293,4 +298,4 @@ mix compile --warnings-as-errors
 - [formula-test-scene-migration-procedure.md](./formula-test-scene-migration-procedure.md) — 現方式での FormulaTest シーン移行（案B とは別経路）
 - [scene-and-object.md](../../architecture/scene-and-object.md) — Scene の責務と root_object
 - [Contents.SceneStack](../../../apps/contents/lib/contents/scene_stack.ex) — 現行 SceneStack
-- [Core.ContentBehaviour](../../../apps/core/lib/core/content_behaviour.ex) — 現行 ContentBehaviour
+- Content 契約: 未実施時は [Core.ContentBehaviour](../../../apps/core/lib/core/content_behaviour.ex)。[contents-behaviour-namespace-implementation-plan](./contents-behaviour-namespace-implementation-plan.md) 実施後は [Contents.Behaviour.Content](../../../apps/contents/lib/behaviour/content.ex)。
