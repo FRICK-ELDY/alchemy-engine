@@ -1,7 +1,7 @@
 # 案B: シーン種別＝atom・実装＝コンテンツ 実施手順書
 
 > 作成日: 2026-03-15  
-> 参照: [scene-abstraction-and-engines.md](./scene-abstraction-and-engines.md) 案B, [scene-and-object.md](../../architecture/scene-and-object.md), [contents-migration-plan.md](./contents-migration-plan.md)  
+> 参照: [scene-abstraction-and-engines.md](../current/scene-abstraction-and-engines.md) 案B, [scene-and-object.md](../../../architecture/scene-and-object.md), [contents-migration-plan.md](../current/contents-migration-plan.md)  
 > 目的: シーンを「モジュール」ではなく**種別（atom）**で扱い、**コンテンツ**が `scene_init/2` / `scene_update/3` / `scene_render_type/1` で実装する方式に移行する。  
 > 結果として「Contents.Scenes.Playing」は概念（`:playing`）としてのみ存在し、`Content.VampireSurvivor` 等が「:playing をこう実装する」と明確になる。
 
@@ -63,7 +63,7 @@
 
 **ファイル:** `apps/core/lib/core/content_behaviour.ex`
 
-> **注記**: [implementation-order-for-plans.md](./implementation-order-for-plans.md) の推奨どおり、先に `contents-behaviour-namespace-implementation-plan` を実施している場合は、このファイルはすでに `apps/contents/lib/behaviour/content.ex` に移っており、モジュール名は `Contents.Behaviour.Content` です。その場合は **ファイル:** `apps/contents/lib/behaviour/content.ex`（モジュール `Contents.Behaviour.Content`）に以下を追加してください。
+> **注記**: [implementation-order-for-plans.md](../current/implementation-order-for-plans.md) の推奨どおり、先に `contents-behaviour-namespace-implementation-plan` を実施している場合は、このファイルはすでに `apps/contents/lib/behaviour/content.ex` に移っており、モジュール名は `Contents.Behaviour.Content` です。その場合は **ファイル:** `apps/contents/lib/behaviour/content.ex`（モジュール `Contents.Behaviour.Content`）に以下を追加してください。
 
 - 次のコールバックを追加する。
 
@@ -277,11 +277,11 @@ mix compile --warnings-as-errors
 
 ### 3.3 チェックリスト
 
-- [ ] ContentBehaviour に scene_init / scene_update / scene_render_type が定義され、各コンテンツが実装している
-- [ ] SceneStack のスタックが `%{scene_type, state}` になり、push/replace/get_scene_state/update_by_scene_type が scene_type で動作する
-- [ ] GameEvents が content.scene_update(scene_type, ...) を呼び、遷移が scene_type で行われる
-- [ ] 既存のシーンモジュール参照（Content.XXX.Scenes.Playing 等）がコンテンツの scene_type またはコンテンツコールバックに置き換わっている
-- [ ] `mix compile --warnings-as-errors` が通り、代表コンテンツで手動動作確認が完了している
+- [x] ContentBehaviour に scene_init / scene_update / scene_render_type が定義され、各コンテンツが実装している
+- [x] SceneStack のスタックが `%{scene_type, state}` になり、push/replace/get_scene_state/update_by_scene_type が scene_type で動作する
+- [x] GameEvents が content.scene_update(scene_type, ...) を呼び、遷移が scene_type で行われる
+- [x] 既存のシーンモジュール参照（Content.XXX.Scenes.Playing 等）がコンテンツの scene_type またはコンテンツコールバックに置き換わっている
+- [x] `mix compile --warnings-as-errors` が通り、代表コンテンツで手動動作確認が完了している
 
 ---
 
@@ -294,8 +294,8 @@ mix compile --warnings-as-errors
 
 ## 5. 参照
 
-- [scene-abstraction-and-engines.md](./scene-abstraction-and-engines.md) — 案B の説明と他エンジン比較
-- [formula-test-scene-migration-procedure.md](./formula-test-scene-migration-procedure.md) — 現方式での FormulaTest シーン移行（案B とは別経路）
-- [scene-and-object.md](../../architecture/scene-and-object.md) — Scene の責務と root_object
+- [scene-abstraction-and-engines.md](../current/scene-abstraction-and-engines.md) — 案B の説明と他エンジン比較
+- [formula-test-scene-migration-procedure.md](../current/formula-test-scene-migration-procedure.md) — 現方式での FormulaTest シーン移行（案B とは別経路）
+- [scene-and-object.md](../../../architecture/scene-and-object.md) — Scene の責務と root_object
 - [Contents.SceneStack](../../../apps/contents/lib/contents/scene_stack.ex) — 現行 SceneStack
-- Content 契約: 未実施時は [Core.ContentBehaviour](../../../apps/core/lib/core/content_behaviour.ex)。[contents-behaviour-namespace-implementation-plan](../completed/contents-behaviour-namespace-implementation-plan.md) 実施後は [Contents.Behaviour.Content](../../../apps/contents/lib/behaviour/content.ex)。
+- Content 契約: 未実施時は [Core.ContentBehaviour](../../../apps/core/lib/core/content_behaviour.ex)。[contents-behaviour-namespace-implementation-plan](./contents-behaviour-namespace-implementation-plan.md) 実施後は [Contents.Behaviour.Content](../../../apps/contents/lib/behaviour/content.ex)。
