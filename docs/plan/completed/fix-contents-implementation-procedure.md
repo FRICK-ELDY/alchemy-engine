@@ -7,7 +7,7 @@
 >
 > **実施結果**: Phase 1〜5 を完了。未実施項目は [fix-contents-implementation-future.md](../reference/fix-contents-implementation-future.md) を参照。
 >
-> **注記（Behaviour 名前空間）**: Behaviour は現在 `Contents.Behaviour.*`（behaviour/ 配下）に集約済み。本手順書実施時点では層ごとの `core/behaviour.ex`, `scenes/core/behaviour.ex` 等であった。参照: [contents-behaviour-namespace-implementation-plan.md](../current/contents-behaviour-namespace-implementation-plan.md)。
+> **注記（Behaviour 名前空間）**: Behaviour は現在 `Contents.Behaviour.*`（behaviour/ 配下）に集約済み。本手順書実施時点では層ごとの `core/behaviour.ex`, `scenes/core/behaviour.ex` 等であった。参照: [contents-behaviour-namespace-implementation-plan.md](./contents-behaviour-namespace-implementation-plan.md)。
 
 ---
 

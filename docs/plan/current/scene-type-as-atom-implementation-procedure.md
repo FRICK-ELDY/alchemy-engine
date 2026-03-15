@@ -298,4 +298,4 @@ mix compile --warnings-as-errors
 - [formula-test-scene-migration-procedure.md](./formula-test-scene-migration-procedure.md) — 現方式での FormulaTest シーン移行（案B とは別経路）
 - [scene-and-object.md](../../architecture/scene-and-object.md) — Scene の責務と root_object
 - [Contents.SceneStack](../../../apps/contents/lib/contents/scene_stack.ex) — 現行 SceneStack
-- Content 契約: 未実施時は [Core.ContentBehaviour](../../../apps/core/lib/core/content_behaviour.ex)。[contents-behaviour-namespace-implementation-plan](./contents-behaviour-namespace-implementation-plan.md) 実施後は [Contents.Behaviour.Content](../../../apps/contents/lib/behaviour/content.ex)。
+- Content 契約: 未実施時は [Core.ContentBehaviour](../../../apps/core/lib/core/content_behaviour.ex)。[contents-behaviour-namespace-implementation-plan](../completed/contents-behaviour-namespace-implementation-plan.md) 実施後は [Contents.Behaviour.Content](../../../apps/contents/lib/behaviour/content.ex)。
