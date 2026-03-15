@@ -21,6 +21,14 @@ defmodule Contents.Behaviour.Content do
   @type boss_kind :: non_neg_integer()
   @type exp :: non_neg_integer()
 
+  @doc """
+  シーン種別を表す atom。コンテンツは必要な種別のみ実装すればよい。
+
+  推奨シーン種別の例: `:playing`, `:title`, `:game_over`, `:level_up`,
+  `:boss_alert`, `:stage_clear`, `:ending`
+  """
+  @type scene_type :: atom()
+
   # ── 必須コールバック ───────────────────────────────────────────────
 
   @callback components() :: [module()]
@@ -36,6 +44,29 @@ defmodule Contents.Behaviour.Content do
   @callback flow_runner(room_id :: term()) :: pid() | nil
 
   @doc """
+  シーン種別ごとの初期化。返却 state には root_object を含めることを推奨（新規・将来コンテンツ）。
+  """
+  @callback scene_init(scene_type(), init_arg :: term()) :: {:ok, state :: term()}
+
+  @doc """
+  シーン種別ごとの update。戻り値は SceneBehaviour の update と同様（{:continue, state} または {:transition, ...}）。
+  """
+  @callback scene_update(scene_type(), context :: map(), state :: term()) ::
+    {:continue, state :: term()}
+    | {:continue, state :: term(), opts :: map()}
+    | {:transition, :pop, state :: term()}
+    | {:transition, :pop, state :: term(), opts :: map()}
+    | {:transition, {:push, scene_type(), init_arg :: term()}, state :: term()}
+    | {:transition, {:push, scene_type(), init_arg :: term()}, state :: term(), opts :: map()}
+    | {:transition, {:replace, scene_type(), init_arg :: term()}, state :: term()}
+    | {:transition, {:replace, scene_type(), init_arg :: term()}, state :: term(), opts :: map()}
+
+  @doc """
+  シーン種別ごとの描画種別（例: :playing, :title）。
+  """
+  @callback scene_render_type(scene_type()) :: atom()
+
+  @doc """
   そのルームのイベントハンドラ（GameEvents）の pid を返す。
 
   InputHandler・Network 等がイベント送信先を取得する際に使用する。
@@ -43,10 +74,10 @@ defmodule Contents.Behaviour.Content do
   """
   @callback event_handler(room_id :: term()) :: pid() | nil
 
-  @callback initial_scenes() :: [%{module: scene_module(), init_arg: map()}]
-  @callback physics_scenes() :: [scene_module()]
-  @callback playing_scene() :: scene_module()
-  @callback game_over_scene() :: scene_module()
+  @callback initial_scenes() :: [%{scene_type: scene_type(), init_arg: map()}]
+  @callback physics_scenes() :: [scene_type()]
+  @callback playing_scene() :: scene_type()
+  @callback game_over_scene() :: scene_type()
   @callback entity_registry() :: map()
   @callback enemy_exp_reward(kind_id :: non_neg_integer()) :: exp()
   @callback score_from_exp(exp()) :: non_neg_integer()
@@ -55,11 +86,11 @@ defmodule Contents.Behaviour.Content do
 
   # ── オプショナルコールバック（武器・ボスの概念を持つコンテンツのみ）──
 
-  @doc "レベルアップシーンモジュールを返す（武器選択 UI を持つコンテンツのみ実装）"
-  @callback level_up_scene() :: scene_module()
+  @doc "レベルアップシーン種別を返す（武器選択 UI を持つコンテンツのみ実装）"
+  @callback level_up_scene() :: scene_type()
 
-  @doc "ボスアラートシーンモジュールを返す（ボスの概念を持つコンテンツのみ実装）"
-  @callback boss_alert_scene() :: scene_module()
+  @doc "ボスアラートシーン種別を返す（ボスの概念を持つコンテンツのみ実装）"
+  @callback boss_alert_scene() :: scene_type()
 
   @doc "ボス撃破時の EXP 報酬を返す（ボスの概念を持つコンテンツのみ実装）"
   @callback boss_exp_reward(boss_kind()) :: exp()
@@ -79,7 +110,7 @@ defmodule Contents.Behaviour.Content do
   デフォルト実装（`false` を返す）を提供するため、
   ボス/レベルアップシーンで一時停止が必要なコンテンツのみ実装する。
   """
-  @callback pause_on_push?(scene_module()) :: boolean()
+  @callback pause_on_push?(scene_type()) :: boolean()
 
   @doc """
   ルーム用の SceneStack の Superviser.child_spec/0 を返す。
