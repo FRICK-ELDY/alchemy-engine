@@ -1,6 +1,10 @@
-defmodule Core.ContentBehaviour do
+defmodule Contents.Behaviour.Content do
   @moduledoc """
   コンテンツモジュールが実装すべきビヘイビア。
+
+  契約の定義は Contents が保持する。core はコンパイル時には contents に依存せず、
+  実行時に `Core.Config.current/0` で得た content モジュール（本 Behaviour を実装したモジュール）を
+  参照し、その関数（initial_scenes/0, playing_scene/0 等）を呼び出す。
 
   必須コールバックはすべてのコンテンツで実装が必要。
   オプショナルコールバックは武器・ボスの概念を持つコンテンツのみ実装する。

@@ -3,9 +3,9 @@ defmodule Contents.Nodes.Category.Operators.BoolVectors.None do
   全要素が false かどうかを返す。
   要素は truthy/falsy として扱う（`nil` と `false` は falsy、それ以外は truthy）。
   """
-  @behaviour Contents.Nodes.Core.Behaviour
+  @behaviour Contents.Behaviour.Nodes
 
-  @impl Contents.Nodes.Core.Behaviour
+  @impl Contents.Behaviour.Nodes
   def handle_sample(%{input: input}, _context) when is_tuple(input) do
     Tuple.to_list(input) |> Enum.all?(&(!&1))
   end

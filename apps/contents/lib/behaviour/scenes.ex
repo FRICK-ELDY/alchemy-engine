@@ -1,4 +1,4 @@
-defmodule Contents.Scenes.Core.Behaviour do
+defmodule Contents.Behaviour.Scenes do
   @moduledoc """
   Scene 層の Behaviour。時間軸としての契約。
 

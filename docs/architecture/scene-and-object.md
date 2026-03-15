@@ -43,7 +43,7 @@ Contents（体験）
 
 ### 3.2 Scene の契約
 
-- `Contents.SceneBehaviour` または `Contents.Scenes.Core.Behaviour` を実装
+- `Contents.SceneBehaviour`（`Contents.Behaviour.Scenes` を use）を実装
 - `init/1`, `update/2`, `render_type/0` を提供
 - state には `%{root_object: Object.t(), ...}` を持つ（新規コンテンツでは必須）。どの Object をルートにするかはコンテンツ製作者が選択
 
@@ -108,7 +108,7 @@ Contents
 | モジュール | 本設計での扱い |
 |------------|----------------|
 | `Contents.SceneStack` | Scene 概念のインフラ。push/pop/replace を提供 |
-| `Contents.SceneBehaviour` | 既存の Scene 契約。将来的に `Contents.Scenes.Core.Behaviour` を拡張 |
+| `Contents.SceneBehaviour` | 既存の Scene 契約。`Contents.Behaviour.Scenes` を use |
 | 各コンテンツの `Scenes.Playing` 等 | Scene として扱う。state に root_object（着地点）を持つ（新規コンテンツでは必須） |
 
 既存コンテンツ（FormulaTest 等）は移行対象外。参照用として残し、新規・将来コンテンツのみ新規約に従う。

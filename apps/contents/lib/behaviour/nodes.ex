@@ -1,4 +1,4 @@
-defmodule Contents.Nodes.Core.Behaviour do
+defmodule Contents.Behaviour.Nodes do
   @moduledoc """
   Node 層の Behaviour。論理の原子としての契約。
 

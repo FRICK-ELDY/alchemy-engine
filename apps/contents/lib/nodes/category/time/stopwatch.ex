@@ -2,11 +2,11 @@ defmodule Contents.Nodes.Category.Time.Stopwatch do
   @moduledoc """
   ストップウォッチノード。経過時間の計測。
   """
-  @behaviour Contents.Nodes.Core.Behaviour
+  @behaviour Contents.Behaviour.Nodes
 
-  @impl Contents.Nodes.Core.Behaviour
+  @impl Contents.Behaviour.Nodes
   def handle_pulse(_pulse, _context), do: :ok
 
-  @impl Contents.Nodes.Core.Behaviour
+  @impl Contents.Behaviour.Nodes
   def handle_sample(_inputs, _context), do: nil
 end

@@ -5,9 +5,9 @@ defmodule Contents.Nodes.Category.Core.Input.Value do
   `:value` が存在しない場合は `{:error, :missing_value}` を返す。
   後続ノード（Add, Equals 等）への nil 渡しによるクラッシュを防ぐ。
   """
-  @behaviour Contents.Nodes.Core.Behaviour
+  @behaviour Contents.Behaviour.Nodes
 
-  @impl Contents.Nodes.Core.Behaviour
+  @impl Contents.Behaviour.Nodes
   def handle_sample(_inputs, context) do
     case Map.get(context || %{}, :value) do
       nil -> {:error, :missing_value}

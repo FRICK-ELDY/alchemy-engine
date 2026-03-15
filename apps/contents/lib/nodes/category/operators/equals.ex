@@ -8,9 +8,9 @@ defmodule Contents.Nodes.Category.Operators.Equals do
   `a` または `b` が nil あるいは比較不可能な型の場合は `{:error, :invalid_type}` を返す。
   Add/Sub と同じく、呼び出し側でエラー扱いするか判断する。
   """
-  @behaviour Contents.Nodes.Core.Behaviour
+  @behaviour Contents.Behaviour.Nodes
 
-  @impl Contents.Nodes.Core.Behaviour
+  @impl Contents.Behaviour.Nodes
   def handle_sample(%{a: a, b: b, op: op}, _context) when op in [:gt, :ge, :lt, :le] do
     if comparable?(a, b) do
       case op do
