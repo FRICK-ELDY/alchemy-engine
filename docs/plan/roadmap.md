@@ -31,7 +31,7 @@
 
 | 順序 | ドキュメント | フェーズ | 依存 | 状態 |
 |:---:|-------------|----------|------|------|
-| 1 | [client-server-separation-procedure](current/client-server-separation-procedure.md) | 0〜5 | なし | 未着手 |
+| 1 | [client-server-separation-procedure](completed/client-server-separation-procedure.md) | 0〜3 実施済み、4〜5 は [client-server-separation-future](reference/client-server-separation-future.md) | なし | 一部完了 |
 | 2 | [env-and-serialization-migration-plan](current/env-and-serialization-migration-plan.md) | 環境変数・Erlang term 化 | B-1 の Phase 1 と整合 | 一部完了（platform-info 実装済み） |
 | 3 | [render-thread-offload-plan](current/render-thread-offload-plan.md) | 1〜3 | B-1 の Phase 2 と並行検討可能 | 未着手 |
 

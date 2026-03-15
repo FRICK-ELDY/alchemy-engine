@@ -142,6 +142,6 @@ elixir -S mix alchemy.build --release    # リリースビルド
 ## 関連ドキュメント
 
 - [ビジョンと設計思想](./docs/vision.md)
-- [クライアント・サーバー分離手順](./docs/plan/client-server-separation-procedure.md)
+- [クライアント・サーバー分離手順](./docs/plan/completed/client-server-separation-procedure.md)（未実施は [client-server-separation-future.md](./docs/plan/reference/client-server-separation-future.md)）
 - [ランチャー課題・設計](./docs/plan/improvement-plan.md#i-g-ランチャーlauncherの課題)（[launcher-design_do.md](./docs/plan/launcher-design_do.md) 実施計画）
 - [クライアント exe のビルド・クロスコンパイル](./docs/cross-compile.md)

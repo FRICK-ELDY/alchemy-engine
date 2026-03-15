@@ -4,7 +4,7 @@
 > 出典: [contents-defines-rust-executes.md](../plan/backlog/contents-defines-rust-executes.md) P2-1  
 > 目的: Elixir 側を SSoT（Single Source of Truth）として DrawCommand のタグ・フィールドを文書化する
 >
-> **プロトコル仕様**: 本ドキュメントは [client-server-separation-procedure.md](../plan/current/client-server-separation-procedure.md) フェーズ 1 フレームペイロードの SSoT として確定。Zenoh 経由のフレーム配信でも本仕様に従う。
+> **プロトコル仕様**: 本ドキュメントは [client-server-separation-procedure.md](../plan/completed/client-server-separation-procedure.md) フェーズ 1 フレームペイロードの SSoT として確定。Zenoh 経由のフレーム配信でも本仕様に従う。
 
 ---
 

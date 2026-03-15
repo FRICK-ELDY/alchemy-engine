@@ -1,7 +1,7 @@
 # Zenoh プロトコル仕様（クライアント・サーバー分離）
 
 > 作成日: 2026-03-07  
-> 出典: [client-server-separation-procedure.md](../plan/current/client-server-separation-procedure.md) フェーズ 1  
+> 出典: [client-server-separation-procedure.md](../plan/completed/client-server-separation-procedure.md) フェーズ 1  
 > 目的: サーバー（Elixir）とクライアント（Rust exe）間の Zenoh 経由プロトコルを定義する
 
 ---
@@ -133,7 +133,7 @@
 
 ## 6. 関連ドキュメント
 
-- [client-server-separation-procedure.md](../plan/current/client-server-separation-procedure.md) — 分離手順
+- [client-server-separation-procedure.md](../plan/completed/client-server-separation-procedure.md) — 分離手順
 - [messagepack-schema.md](messagepack-schema.md) — フレームバイナリ形式
 - [network-protocol-current.md](network-protocol-current.md) — 既存 Channel / UDP プロトコル
 - [draw-command-spec.md](draw-command-spec.md) — DrawCommand タグ・フィールド

@@ -1,20 +1,23 @@
-# クライアント・サーバー分離 手順書
+# クライアント・サーバー分離 手順書（実施済み）
 
 > 作成日: 2026-03-07  
+> 完了日: 2026-03-15  
 > 目的: render + input を別プロセス・別 exe として分離し、サーバー（Elixir）とネットワークで接続する構成を実現する。あわせて Elixir と Rust の状態・定義の切り分けを明確にする。
+>
+> **実施結果**: フェーズ 0〜3 を完了。NetworkRenderBridge、Zenoh 経路、FrameBroadcaster/ZenohBridge によるフレーム配信・入力受信が実装済み。未実施項目は [client-server-separation-future.md](../reference/client-server-separation-future.md) を参照。
 
 ---
 
 ## 要約
 
-| フェーズ | 内容 | 工数目安 |
-|:---|:---|:---|
-| 0 | 定義の SSoT 化・既存プロトコル確認 | 1〜2 週間 |
-| 1 | プロトコル設計（フレーム・入力の仕様） | 1〜2 週間 |
-| 2 | クライアント exe 土台（NetworkRenderBridge） | 2〜3 週間 |
-| 3 | サーバー側フレーム配信経路 | 2〜3 週間 |
-| 4 | ビルド・配布 | 1 週間 |
-| 5 | ヘッドレスモード・オプション化 | 1〜2 週間（任意） |
+| フェーズ | 内容 | 工数目安 | 状況 |
+|:---|:---|:---|:---|
+| 0 | 定義の SSoT 化・既存プロトコル確認 | 1〜2 週間 | ✅ 完了 |
+| 1 | プロトコル設計（フレーム・入力の仕様） | 1〜2 週間 | ✅ 完了 |
+| 2 | クライアント exe 土台（NetworkRenderBridge） | 2〜3 週間 | ✅ 完了 |
+| 3 | サーバー側フレーム配信経路 | 2〜3 週間 | ✅ 完了 |
+| 4 | ビルド・配布 | 1 週間 | → [reference](../reference/client-server-separation-future.md) |
+| 5 | ヘッドレスモード・オプション化 | 1〜2 週間（任意） | → [reference](../reference/client-server-separation-future.md) |
 
 ---
 
@@ -178,9 +181,9 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 
 ---
 
-## 3. フェーズ別手順
+## 3. フェーズ別手順（実施済み）
 
-### フェーズ 0: 事前整理（1〜2 週間）
+### フェーズ 0: 事前整理（1〜2 週間）✅
 
 #### 0.1 constants 分類一覧（参照用）
 
@@ -192,7 +195,7 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 
 ---
 
-### フェーズ 1: プロトコル設計（1〜2 週間）
+### フェーズ 1: プロトコル設計（1〜2 週間）✅
 
 #### 1.1 Zenoh キー設計
 
@@ -231,11 +234,13 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 
 ---
 
-### フェーズ 2: クライアント exe の土台（2〜3 週間）
+### フェーズ 2: クライアント exe の土台（2〜3 週間）✅
 
 #### 2.0 構成方針（desktop_ プレフィックス）
 
 クライアント側クレートは `desktop_` プレフィックスで命名。フェーズ 2 では `client_desktop` のみを追加。将来的に `desktop_audio`, `desktop_input`, `desktop_render` 等へリネームする際の一貫性を確保。
+
+※ **実施結果**: `client_desktop` は [bin-deprecation-mix-tasks-plan.md](bin-deprecation-mix-tasks-plan.md) により `app` に統合済み。
 
 #### 2.2 RenderBridge のネットワーク版（参照用）
 
@@ -249,9 +254,11 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 - `next_frame()`: ネットワーク受信バッファから最新フレームを取得（デシリアライズ）
 - `on_*`: ネットワーク経由でサーバーに送信
 
+※ **実施結果**: `native/network/src/network_render_bridge.rs` に実装済み。`app` (main.rs) が NetworkRenderBridge を使用。
+
 ---
 
-### フェーズ 3: サーバー側の送信経路（2〜3 週間）
+### フェーズ 3: サーバー側の送信経路（2〜3 週間）✅
 
 #### 3.1 フレーム配信の二経路化
 
@@ -262,25 +269,7 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 - **ルーム :main かつ ローカル描画あり**: 従来どおり RenderFrameBuffer + start_render_thread
 - **リモートクライアント接続時**: `push_render_frame` の内容を WebSocket / UDP でブロードキャスト
 
----
-
-### フェーズ 4: ビルド・配布（1 週間）
-
-#### 4.1 クライアント exe ビルド
-
-- [ ] `cargo build --release -p client_desktop` で Windows exe を生成
-- [ ] CI にクライアントビルドを追加
-
-#### 4.2 アセット・設定
-
-- [ ] クライアント exe と同梱するアセット（atlas.png, shaders）の配置方針
-- [ ] Zenoh / サーバー接続先のデフォルト（例: `tcp/localhost:7447` 等、Zenoh の接続形式に準拠）
-
----
-
-### フェーズ 5: ローカル描画のオプション化（任意・1〜2 週間）
-
-- [ ] サーバーをヘッドレスで起動するモード（`start_render_thread` を呼ばない）
+※ **実施結果**: FrameBroadcaster、ZenohBridge により Zenoh 経由のフレーム配信・入力受信が実装済み。`config :network, :zenoh_enabled` で有効化。
 
 ---
 
