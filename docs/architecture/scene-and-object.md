@@ -1,6 +1,6 @@
 # Scene と Object の責務と境界
 
-> 参照: [fix_contents.md](./fix_contents.md), [scene-concept-addition-plan.md](../plan/current/scene-concept-addition-plan.md)
+> 参照: [fix_contents.md](./fix_contents.md), [scene-concept-addition-plan.md](../plan/completed/scene-concept-addition-plan.md)
 
 ---
 
@@ -112,3 +112,21 @@ Contents
 | 各コンテンツの `Scenes.Playing` 等 | Scene として扱う。state に root_object（着地点）を持つ（新規コンテンツでは必須） |
 
 既存コンテンツ（FormulaTest 等）は移行対象外。参照用として残し、新規・将来コンテンツのみ新規約に従う。
+
+---
+
+## 8. Scene state の規約（新規・将来コンテンツ）
+
+### 8.1 必須項目
+
+Scene の state は `%{root_object: Object.t(), ...}` を持つことを**必須**とする。
+
+- **root_object**: Object ツリーのルート参照。ユーザーが Scene に降り立つ着地点。
+- **どの Object をルートにするかはコンテンツ製作者が選択**する（プレイヤー、ワールドルート、UI ルート等）。
+
+### 8.2 既存コンテンツの扱い
+
+| 対象 | 扱い |
+|------|------|
+| **既存コンテンツ** | 移行対象外。root_object なしでも許容。参照用として残す |
+| **新規・将来コンテンツ** | 本規約に従い、state に root_object を必須で持つ |

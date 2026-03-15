@@ -64,7 +64,6 @@
 | [fix-contents-implementation-procedure](current/fix-contents-implementation-procedure.md) | structs / nodes / components / objects 骨格実装 |
 | [contents-migration-plan](current/contents-migration-plan.md) | 既存コンテンツの新アーキテクチャ移行 |
 | [client-server-separation-procedure](current/client-server-separation-procedure.md) | クライアント・サーバー分離 |
-| [scene-concept-addition-plan](current/scene-concept-addition-plan.md) | シーン概念の追加 |
 | [contents-components-reorganization-procedure](current/contents-components-reorganization-procedure.md) | コンポーネント再編 |
 | [bin-deprecation-mix-tasks-plan](current/bin-deprecation-mix-tasks-plan.md) | bin 廃止・mix tasks 化 |
 | [env-and-serialization-migration-plan](current/env-and-serialization-migration-plan.md) | 環境変数・Erlang term シリアライズ |
@@ -78,6 +77,7 @@
 | ファイル | 概要 |
 |----------|------|
 | [platform-info-crate-and-local-user-execution-plan](completed/platform-info-crate-and-local-user-execution-plan.md) | client_info 作成〜メニュー表示 ✅ |
+| [scene-concept-addition-plan](completed/scene-concept-addition-plan.md) | シーン概念の追加 ✅ |
 
 ### backlog/
 
@@ -96,6 +96,7 @@
 
 | ファイル | 概要 |
 |----------|------|
+| [scene-concept-phase4-future](reference/scene-concept-phase4-future.md) | Scene 概念 将来拡張の検討（Phase 4） |
 | [improvement-plan](reference/improvement-plan.md) | 課題一覧・改善方針 |
 | [rust-ecs-implementation-status](reference/rust-ecs-implementation-status.md) | ECS 実装状況 |
 | [game-world-inner-flow](reference/game-world-inner-flow.md) | データフロー整理 |
