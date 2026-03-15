@@ -1,7 +1,7 @@
 # 案B: シーン種別＝atom・実装＝コンテンツ 実施手順書
 
 > 作成日: 2026-03-15  
-> 参照: [scene-abstraction-and-engines.md](../current/scene-abstraction-and-engines.md) 案B, [scene-and-object.md](../../../architecture/scene-and-object.md), [contents-migration-plan.md](../current/contents-migration-plan.md)  
+> 参照: [scene-and-object.md](../../../architecture/scene-and-object.md), [contents-migration-plan.md](../current/contents-migration-plan.md)  
 > 目的: シーンを「モジュール」ではなく**種別（atom）**で扱い、**コンテンツ**が `scene_init/2` / `scene_update/3` / `scene_render_type/1` で実装する方式に移行する。  
 > 結果として「Contents.Scenes.Playing」は概念（`:playing`）としてのみ存在し、`Content.VampireSurvivor` 等が「:playing をこう実装する」と明確になる。
 
@@ -294,7 +294,6 @@ mix compile --warnings-as-errors
 
 ## 5. 参照
 
-- [scene-abstraction-and-engines.md](../current/scene-abstraction-and-engines.md) — 案B の説明と他エンジン比較
 - [formula-test-scene-migration-procedure.md](../current/formula-test-scene-migration-procedure.md) — 現方式での FormulaTest シーン移行（案B とは別経路）
 - [scene-and-object.md](../../../architecture/scene-and-object.md) — Scene の責務と root_object
 - [Contents.SceneStack](../../../apps/contents/lib/contents/scene_stack.ex) — 現行 SceneStack
