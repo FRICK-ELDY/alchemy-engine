@@ -39,7 +39,7 @@ defmodule Contents.Scenes do
   state に `:origin` が無い場合は `Transform.new()` を返す。
   """
   @spec origin_from_state(state :: term()) :: Transform.t()
-  def origin_from_state(state) when is_map(state) do
+  def origin_from_state(%{} = state) do
     Map.get(state, :origin, Transform.new())
   end
 
