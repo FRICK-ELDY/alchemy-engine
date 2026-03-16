@@ -1,6 +1,6 @@
 # Scene と Object の責務と境界
 
-> 参照: [fix_contents.md](./fix_contents.md), [scene-concept-addition-plan.md](../plan/completed/scene-concept-addition-plan.md)
+> 参照: [fix_contents.md](./fix_contents.md), [scene-concept-addition-plan.md](../plan/completed/scene-concept-addition-plan.md), [scene-origin-and-landing-reference-plan.md](../plan/current/scene-origin-and-landing-reference-plan.md)
 
 ---
 
@@ -25,7 +25,7 @@ Contents（体験）
 ```
 
 - Scene は Contents の下位、Object の上位
-- Scene が Object ツリーのルートを保持する
+- Scene が空間の原点（origin）を持ち、着地点は Object への参照（任意）で持つ。Scene がトップレベル Object の親となる（または親なしのリストを保持）
 - Object は Scene に依存しない（単方向依存）
 
 ---
@@ -37,7 +37,8 @@ Contents（体験）
 | 項目 | 内容 |
 |------|------|
 | **遷移状態** | スタック上で top かどうかは Contents.Scenes.Stack が管理。Scene は自身の state を保持 |
-| **root_object** | Object ツリーのルート参照。ユーザーが Scene に降り立つ着地点。どの Object をルートにするかはコンテンツ製作者が選択。新規・将来コンテンツでは必須 |
+| **origin** | 空間の原点（Transform）。シーン座標系の基準。Scene に属する。新規・将来コンテンツでは state に持つことを推奨 |
+| **着地点参照（任意）** | ユーザーが Scene に降り立つ際のフォーカス対象となる Object への参照（例: `landing_object`）。必須ではなく、必要に応じて state に持つ |
 | **時間依存の state** | カウントダウン、経過時間、遷移条件に使うフラグ等 |
 | **遷移判定ロジック** | update 内で `{:transition, ...}` を返す |
 
@@ -45,7 +46,7 @@ Contents（体験）
 
 - `Contents.SceneBehaviour`（`Contents.Behaviour.Scenes` を use）を実装
 - `init/1`, `update/2`, `render_type/0` を提供
-- state には `%{root_object: Object.t(), ...}` を持つ（新規コンテンツでは必須）。どの Object をルートにするかはコンテンツ製作者が選択
+- state には **origin**（空間の原点）を持ち、必要に応じて **着地点参照**（例: `landing_object`）を持つ。root_object 必須は廃止（既存コンテンツは移行対象外のため root_object を残したままでも許容）
 
 ### 3.3 例：Scene の責務
 
@@ -97,7 +98,7 @@ Contents
                                     └── Structs
 ```
 
-- **Scenes** は **Objects** に依存する（root_object を保持）
+- **Scenes** は **Objects** に依存する（着地点参照で Object を参照する場合など）
 - **Objects** は **Scenes** に依存しない
 - **Contents** は **Scenes** を initial_scenes 等で定義する
 
@@ -109,24 +110,22 @@ Contents
 |------------|----------------|
 | `Contents.Scenes.Stack` | Scene 概念のインフラ。push/pop/replace を提供 |
 | `Contents.SceneBehaviour` | 既存の Scene 契約。`Contents.Behaviour.Scenes` を use |
-| 各コンテンツの `Scenes.Playing` 等 | Scene として扱う。state に root_object（着地点）を持つ（新規コンテンツでは必須） |
+| 各コンテンツの `Scenes.Playing` 等 | Scene として扱う。state に origin（空間の原点）を持ち、必要に応じて着地点参照（例: landing_object）を持つ |
 
-既存コンテンツ（FormulaTest 等）は移行対象外。参照用として残し、新規・将来コンテンツのみ新規約に従う。
+既存コンテンツ（FormulaTest 等）は移行対象外。参照用として残し、root_object を残したままでも許容。新規・将来コンテンツでは origin と着地点参照の規約に従う。
 
 ---
 
 ## 8. Scene state の規約（新規・将来コンテンツ）
 
-### 8.1 必須項目
+### 8.1 推奨項目
 
-Scene の state は `%{root_object: Object.t(), ...}` を持つことを**必須**とする。
-
-- **root_object**: Object ツリーのルート参照。ユーザーが Scene に降り立つ着地点。
-- **どの Object をルートにするかはコンテンツ製作者が選択**する（プレイヤー、ワールドルート、UI ルート等）。
+- **origin（空間の原点）**: Scene が持つシーン座標系の基準（Transform）。新規・将来コンテンツでは state に持つことを推奨する。
+- **着地点参照（任意）**: ユーザーが Scene に降り立つ際のフォーカス対象となる Object への参照（例: `landing_object`）。必須ではなく、必要に応じて state に持つ。どの Object を着地点にするかはコンテンツ製作者が選択する。
 
 ### 8.2 既存コンテンツの扱い
 
 | 対象 | 扱い |
 |------|------|
-| **既存コンテンツ** | 移行対象外。root_object なしでも許容。参照用として残す |
-| **新規・将来コンテンツ** | 本規約に従い、state に root_object を必須で持つ |
+| **既存コンテンツ** | 移行対象外。root_object を残したままでも許容。参照用として残す |
+| **新規・将来コンテンツ** | 本規約に従い、state に origin を持ち、必要に応じて着地点参照（landing_object 等）を持つ。root_object 必須は廃止 |

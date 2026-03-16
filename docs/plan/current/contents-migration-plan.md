@@ -48,7 +48,7 @@
 
 ### 2.1 各コンテンツで行うこと
 
-1. **Scene の root_object（新規コンテンツで必須）**: Scene の state に `root_object`（Object ツリーのルート、ユーザーが Scene に降り立つ着地点）を**必須**で持つ。どの Object をルートにするかはコンテンツ製作者が選択。既存コンテンツは移行対象外のため root_object なしでも許容。参照: [scene-and-object.md](../../architecture/scene-and-object.md)
+1. **Scene の origin と着地点参照**: Scene の state に **origin**（空間の原点）を持ち、必要に応じて着地点となる Object への参照（例: `landing_object`）を持つ。root_object 必須は廃止。既存コンテンツは移行対象外のため root_object を残したままでも許容。参照: [scene-and-object.md](../../architecture/scene-and-object.md), [scene-origin-and-landing-reference-plan.md](./scene-origin-and-landing-reference-plan.md)
 2. **Object 階層の導入**: シーン state に「空間の実体」を `Contents.Objects.Core.Struct` で表現
 3. **Component の二重化解消**: `Core.Component`（エンジン用）と `Contents.Behaviour.Components`（新アーキテクチャ）の役割を整理
   - 当面: 既存 `Core.Component` を維持しつつ、内部で新 Object/Node を参照
@@ -287,7 +287,7 @@
 ## 6. 参照
 
 - [fix_contents.md](../../architecture/fix_contents.md) — アーキテクチャ概要
-- [scene-and-object.md](../../architecture/scene-and-object.md) — Scene と Object の責務、Scene state の規約（root_object 必須）
+- [scene-and-object.md](../../architecture/scene-and-object.md) — Scene と Object の責務、Scene state の規約（origin・着地点参照）
 - [scene-concept-addition-plan.md](../completed/scene-concept-addition-plan.md) — Scene 概念の追加プラン（完了）
 - [fix-contents-implementation-procedure.md](../completed/fix-contents-implementation-procedure.md) — 骨格実装手順
 

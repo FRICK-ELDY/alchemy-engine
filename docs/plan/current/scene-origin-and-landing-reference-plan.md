@@ -54,10 +54,10 @@
 | 既存コンテンツ | 移行対象外。FormulaTest 等で root_object を残したままでも許容。参照用として残す。 |
 | contents-migration-plan.md | 「Scene の root_object 必須」を「Scene の origin と着地点参照」に更新。scene-and-object.md への参照を維持。 |
 
-### Phase 4: 将来のコード変更（本計画では実施しない）
+### Phase 4: コード実装（別計画で実施）
 
-- Scene の state 型や Stack が origin / children（トップレベル Object リスト）を扱う実装は、別タスクで検討。
-- FormulaTest.Playing の root_object / child_object を origin + landing_object（またはトップレベル子の参照）に置き換えるかは、新規コンテンツの実装に合わせて検討。
+- Scene の state 型や Stack が origin / children（トップレベル Object リスト）を扱う実装、および FormulaTest.Playing の root_object 置き換えは、実施計画書に委譲する。
+- 実施計画: [scene-origin-landing-implementation-plan.md](./scene-origin-landing-implementation-plan.md)
 
 ---
 
@@ -73,8 +73,8 @@
 
 ## 4. 完了条件
 
-- [ ] docs/architecture/scene-and-object.md が origin と着地点参照の規約に更新されている
-- [ ] docs/architecture/fix_contents.md の Scene 記述が更新されている
-- [ ] Contents.Behaviour.Scenes の @moduledoc / init の @doc が新方針に更新されている
-- [ ] Contents.SceneBehaviour の @moduledoc が現状の方針に更新されている
-- [ ] docs/plan/current/contents-migration-plan.md の該当箇所が更新されている
+- [x] docs/architecture/scene-and-object.md が origin と着地点参照の規約に更新されている
+- [x] docs/architecture/fix_contents.md の Scene 記述が更新されている
+- [x] Contents.Behaviour.Scenes の @moduledoc / init の @doc が新方針に更新されている
+- [x] Contents.SceneBehaviour の @moduledoc が現状の方針に更新されている
+- [x] docs/plan/current/contents-migration-plan.md の該当箇所が更新されている
