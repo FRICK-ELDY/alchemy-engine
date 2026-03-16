@@ -45,6 +45,7 @@ defmodule Content.VampireSurvivor.Scenes.BossAlert do
 
     if runner do
       content = Core.Config.current()
+
       Contents.Scenes.Stack.update_by_scene_type(
         runner,
         content.playing_scene(),

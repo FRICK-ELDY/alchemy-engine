@@ -43,7 +43,9 @@ defmodule Contents.Events.Game.Diagnostics do
     # 呼び出し元（handle_frame_events_main の {:ok, ...} 経路）では runner は常に non-nil。
     # 防御的に nil 分岐を残す。nil 時は content.scene_render_type(playing_scene) で代替（通常は :main かつ 60 フレームごとのみ呼ばれるため、実運用では nil にならない想定）。
     render_type =
-      if runner, do: GenServer.call(runner, :render_type), else: content.scene_render_type(content.playing_scene())
+      if runner,
+        do: GenServer.call(runner, :render_type),
+        else: content.scene_render_type(content.playing_scene())
 
     hud_data = {player_hp, player_max_hp, score, elapsed_s}
 

@@ -215,7 +215,9 @@ defmodule Network.ZenohBridge do
         send(pid, {:ui_action, name})
 
       :error ->
-        Logger.debug("[ZenohBridge] No event handler for room=#{room_id}, dropping action #{name}")
+        Logger.debug(
+          "[ZenohBridge] No event handler for room=#{room_id}, dropping action #{name}"
+        )
     end
   end
 
