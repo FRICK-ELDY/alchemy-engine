@@ -44,7 +44,9 @@ defmodule Contents.Behaviour.Content do
   @callback flow_runner(room_id :: term()) :: pid() | nil
 
   @doc """
-  シーン種別ごとの初期化。返却 state には root_object を含めることを推奨（新規・将来コンテンツ）。
+  シーン種別ごとの初期化。返却 state には、新規・将来コンテンツでは origin（空間の原点）を持ち、
+  必要に応じて着地点参照（landing_object）・トップレベル子（children）を含めることを推奨する。
+  `Contents.Behaviour.Scenes` の init/1 の @doc も参照。
   """
   @callback scene_init(scene_type(), init_arg :: term()) :: {:ok, state :: term()}
 

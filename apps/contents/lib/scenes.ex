@@ -5,12 +5,45 @@ defmodule Contents.Scenes do
   Content はシーンモジュールを直接呼ばず、本モジュールの `init/1` / `update/2` / `render_type/1` を経由する。
   「どのシーンか」の定義は Scenes は持たず、呼び出し元が init_arg に `%{module: mod, payload: payload}` を渡す。
 
+  ## 推奨 scene state
+
+  新規・将来コンテンツでは、シーン state に次のキーを持つことを推奨する（`@type recommended_state` 参照）:
+
+  - **origin** — 空間の原点（`Structs.Category.Space.Transform.t()`）。シーン座標系の基準。未設定の場合は `Transform.new()` とみなす。
+  - **landing_object** — 着地点となる Object への参照（任意）。
+  - **children** — トップレベル Object のリスト（親なしの Object を Scene 直下に並べる）。
+
+  上記に加え、シーン固有のキー（例: `formula_results`, `hud_visible`）も state に持てる。
+
   ## 契約とエラー
 
   - `init/1`: init_arg は**必ず** `%{module: mod, payload: payload}` であること。nil やキー欠損・型違いでは FunctionClauseError。
   - `update/2`: state は**必ず** `%{scene_module: mod, inner_state: inner}`（本ファサードの init 返り）であること。ファサード未使用の Content が誤って渡した場合も FunctionClauseError。
   - `mod` は `Contents.SceneBehaviour` を実装していること。実装漏れは `mod.init(payload)` / `mod.update/2` 実行時に検知される（事前チェックは行っていない）。
   """
+
+  alias Structs.Category.Space.Transform
+  alias Contents.Objects.Core.Struct, as: ObjectStruct
+
+  # 他のシーン固有キー（例: formula_results, hud_visible）も optional(atom()) => term() で許容する。
+  @type recommended_state :: %{
+          optional(:origin) => Transform.t(),
+          optional(:landing_object) => ObjectStruct.t(),
+          optional(:children) => [ObjectStruct.t()],
+          optional(atom()) => term()
+        }
+
+  @doc """
+  scene state から origin（空間の原点）を取得する。
+
+  state に `:origin` が無い場合は `Transform.new()` を返す。
+  """
+  @spec origin_from_state(state :: term()) :: Transform.t()
+  def origin_from_state(%{} = state) do
+    Map.get(state, :origin, Transform.new())
+  end
+
+  def origin_from_state(_state), do: Transform.new()
 
   @doc """
   シーンを初期化する。

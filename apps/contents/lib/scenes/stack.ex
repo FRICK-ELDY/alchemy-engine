@@ -6,6 +6,10 @@ defmodule Contents.Scenes.Stack do
   push / pop によりスタックで管理する。初期化・更新は content の
   `scene_init/2`, `scene_update/3`, `scene_render_type/1` で行う。
 
+  state の構造は Content に委ねる。推奨規約（origin / landing_object / children）は
+  `Contents.Scenes` の `@type recommended_state` および
+  docs/architecture/scene-and-object.md を参照。
+
   ## オプション
 
   - `:content_module` (必須) - シーン構成を提供するコンテンツモジュール（`initial_scenes/0`, `scene_*` を実装）
@@ -67,6 +71,12 @@ defmodule Contents.Scenes.Stack do
     GenServer.call(server, {:update_by_scene_type, scene_type, fun})
   end
 
+  @doc """
+  指定した scene_type のシーンの state を返す（unwrap 済みの inner state）。
+
+  該当シーンがスタックに無い場合は `%{}` を返す。このため「シーンが存在しない」と
+  「シーンはあるが state が空 map」は区別できない。区別が必要な場合は将来 nil を返す API の検討余地がある。
+  """
   def get_scene_state(server \\ default_server(), scene_type) do
     GenServer.call(server, {:get_scene_state, scene_type})
   end
@@ -161,12 +171,11 @@ defmodule Contents.Scenes.Stack do
   end
 
   def handle_call({:update_by_scene_type, scene_type, fun}, _from, %{stack: stack} = state) do
-    case Enum.find_index(stack, &(&1.scene_type == scene_type)) do
+    case Enum.with_index(stack) |> Enum.find(fn {s, _idx} -> s.scene_type == scene_type end) do
       nil ->
         {:reply, :ok, state}
 
-      index ->
-        scene = Enum.at(stack, index)
+      {scene, index} ->
         inner = unwrap_scene_state(scene.state)
         new_inner = fun.(inner)
         new_state = wrap_scene_state(scene.state, new_inner)
