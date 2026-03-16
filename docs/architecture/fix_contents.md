@@ -7,7 +7,7 @@
 すべてのデジタル体験は、以下の層の連鎖（パイプライン）で構成されます。**時間軸（Scene）** と **空間軸（Object）** を分離することで、体験の「段階」を明示的に扱います。
 
 - **Contents（体験）**: ユーザーが知覚する最終的な物語や空間。既存の `lib/contents/` 配下に配置。
-- **Scenes（時間軸）**: いまどの段階か、次にどこへ遷移するか。Object ツリーのルート参照（root_object：ユーザーが Scene に降り立つ着地点）、遷移管理を担う。`Contents.SceneBehaviour`（`Contents.Behaviour.Scenes` を use）を実装。
+- **Scenes（時間軸）**: いまどの段階か、次にどこへ遷移するか。空間の原点（origin）と、必要に応じて着地点となる Object への参照（例: landing_object）を持ち、遷移管理を担う。`Contents.SceneBehaviour`（`Contents.Behaviour.Scenes` を use）を実装。
 - **Objects（空間軸）**: 空間に存在する実体（Entities）。Transform、親子関係、Component のアタッチ。GenServer として動作。
 - **Components（状態のピア）**: ノードを束ねて特定の「機能」を持たせた細胞。状態を保持する。GenServer として動作。
 - **Nodes（論理のピア）**: Action と Logic が交差する処理の原子。Logic Processors。プロセス化しない。
@@ -17,7 +17,7 @@
 
 | 軸 | 層 | 責務 |
 |:---|:---|:---|
-| **時間軸** | Scenes | 遷移（push/pop/replace）、Object ツリーのルート参照（root_object：着地点）、時間依存の state、遷移トリガー判定 |
+| **時間軸** | Scenes | 遷移（push/pop/replace）、空間の原点（origin）、着地点参照（任意）、時間依存の state、遷移トリガー判定 |
 | **空間軸** | Objects | Transform、親子関係、Component のアタッチ、空間に紐づく属性（name, tag, active） |
 
 詳細は [scene-and-object.md](./scene-and-object.md) を参照。
@@ -77,7 +77,7 @@ apps/contents/
 │       ├── space/           # 空間に関わる型（Transform など）
 │       └── users/
 │           └── local_user.ex  # 操作者というコンテキスト
-├── scenes/                  # 時間軸。遷移管理・Object ツリーのルート参照。契約は behaviour/scenes.ex（Contents.Behaviour.Scenes）
+├── scenes/                  # 時間軸。遷移管理・空間の原点（origin）・着地点参照（任意）。契約は behaviour/scenes.ex（Contents.Behaviour.Scenes）
 ├── objects/                 # 空間軸（Entities）。契約は behaviour/objects.ex（Contents.Behaviour.Objects）
 ├── components/              # 状態のピア（State Holders）。GenServer で動作。契約は behaviour/components.ex（Contents.Behaviour.Components）
 │   └── category/
@@ -108,7 +108,7 @@ apps/contents/
 | `nodes/ports/`              | Action / Logic のポート（action in/out, logic in/out）を定義。ノード間の Link による通信のルール。                              |
 | `structs/`                  | データの形を定義。`defstruct` / `@type`。`category` でドメイン別に分類し、VR 空間での型の可視性を高める。                                 |
 | `structs/category/space/`   | 空間に関わる型。Resonite の Components に合わせた配置。transform など。3 次元ベクトルは value の Float.t3。 |
-| `scenes/`                   | 時間軸。遷移管理、Object ツリーのルート参照。契約は `Contents.Behaviour.Scenes`。                                         |
+| `scenes/`                   | 時間軸。遷移管理、空間の原点（origin）、着地点参照（任意）。契約は `Contents.Behaviour.Scenes`。                                         |
 | `objects/`                  | 空間上の実体。ECS の Entity 相当。GenServer で動作。契約は `Contents.Behaviour.Objects`。                                                             |
 | `components/`               | 状態を保持する細胞。ノードを束ねて特定の機能を提供。GenServer で動作。契約は `Contents.Behaviour.Components`。                                                          |
 | `nodes/`                    | 論理の原子。Action / Logic ports に基づく処理。Port と Link で接続。プロセス化しない。契約は `Contents.Behaviour.Nodes`。`category/actions/` は Resonite の Actions に合わせた分類。 |
@@ -229,7 +229,7 @@ flowchart TB
 | Behaviour                        | 役割                                                                            |
 | -------------------------------- | ----------------------------------------------------------------------------- |
 | **core/behaviour.ex（憲法）**        | 全層共通の土台。GenServer の init/terminate、プロセス識別子、共通の型・コールバックの雛形。各層が「従う」前提の契約。       |
-| **scenes/core/behaviour.ex**     | Scene 固有の契約。遷移管理、root_object（ユーザーが Scene に降り立つ着地点）、init/update/render_type。時間軸の区切りと Object ツリーのルート参照。     |
+| **scenes/core/behaviour.ex**     | Scene 固有の契約。遷移管理、origin（空間の原点）、着地点参照（任意）、init/update/render_type。時間軸の区切りと空間の基準。     |
 | **nodes/core/behaviour.ex**      | Node 固有の契約。Action/Logic ports（action in/out, logic in/out）の宣言、handle_pulse、handle_sample など。Port 間の Link による接続規則。 |
 | **components/core/behaviour.ex** | Component 固有の契約。状態保持、ノード束ね、on_ready / on_process などライフサイクル。                   |
 | **objects/core/behaviour.ex**    | Object 固有の契約。空間上の実体としての init、handle_cast（空間イベント）、子の管理など。                      |

@@ -5,12 +5,11 @@ defmodule Contents.Behaviour.Scenes do
   ## 責務
 
   - **時間の区切り**: いまどの段階か、次にどこへ遷移するか。
-  - **root_object（必須）**: Object ツリーのルート参照。ユーザーが Scene に降り立つ着地点。
-    どの Object をルートにするかはコンテンツ製作者が選択。新規・将来コンテンツでは state に
-    `%{root_object: Object.t(), ...}` を持つことを必須とする。
+  - **origin（空間の原点）**: Scene がシーン座標系の基準（Transform）を持つ。新規・将来コンテンツでは state に持つことを推奨。
+  - **着地点参照（任意）**: ユーザーが Scene に降り立つ際のフォーカス対象となる Object への参照（例: `landing_object`）。必須ではなく、必要に応じて state に持つ。root_object 必須は廃止。
   - **遷移管理**: init/update/render_type により SceneStack と連携。
 
-  参照: docs/architecture/scene-and-object.md
+  参照: docs/architecture/scene-and-object.md, docs/plan/current/scene-origin-and-landing-reference-plan.md
   """
 
   @doc false
@@ -19,8 +18,9 @@ defmodule Contents.Behaviour.Scenes do
       @doc """
       Scene を初期化する。
 
-      返却する state には `root_object` を**必須**で含める（新規・将来コンテンツ）。
-      root_object はユーザーが Scene に降り立つ着地点となる Object。
+      返却する state には、新規・将来コンテンツでは **origin**（空間の原点）を持ち、
+      必要に応じて **着地点参照**（例: `landing_object`）を含めることを推奨する。
+      root_object 必須は廃止。既存コンテンツは root_object を残したままでも許容。
       """
       @callback init(init_arg :: term()) :: {:ok, state :: term()}
 
