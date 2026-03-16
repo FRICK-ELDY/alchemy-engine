@@ -16,27 +16,31 @@ defmodule Content.FormulaTest.Playing do
   alias Contents.Nodes.Category.Operators.Equals, as: EqualsNode
   alias Contents.Objects.Core.Struct, as: ObjectStruct
   alias Contents.Objects.Core.CreateEmptyChild
+  alias Structs.Category.Space.Transform
 
   @impl Contents.SceneBehaviour
   def init(_init_arg) do
     results = run_formula_tests()
-    root_object = ObjectStruct.new(name: "FormulaTestRoot")
+    origin = Transform.new()
+    top_object = ObjectStruct.new(name: "User")
 
-    child =
-      case CreateEmptyChild.create(root_object, name: "Child") do
-        {:ok, c} ->
-          c
+    # Scene 直下のトップレベルは User のみ。Child は User の子なので children には含めない。
+    # 作成した Child を本シーンで参照する必要はないため、戻り値は束縛しない。
+    case CreateEmptyChild.create(top_object, name: "Child") do
+      {:ok, _child} ->
+        :ok
 
-        {:error, reason} ->
-          raise "FormulaTest.Playing init: CreateEmptyChild.create failed: #{inspect(reason)}"
-      end
+      {:error, reason} ->
+        raise "FormulaTest.Playing init: CreateEmptyChild.create failed: #{inspect(reason)}"
+    end
 
     state = %{
+      origin: origin,
+      landing_object: top_object,
+      children: [top_object],
       formula_results: results,
       hud_visible: true,
-      cursor_grab_request: :no_change,
-      root_object: root_object,
-      child_object: child
+      cursor_grab_request: :no_change
     }
 
     {:ok, state}
