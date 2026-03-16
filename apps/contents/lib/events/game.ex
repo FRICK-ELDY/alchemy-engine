@@ -127,9 +127,12 @@ defmodule Contents.Events.Game do
 
           runner ->
             initial_state = build_loaded_scene_state(content, loaded_state)
+
             # Phase 5: physics_scenes() は [scene_type()]。空の場合は playing_scene() で replace。
             # initial_state を init_arg として content.scene_init(scene_type, init_arg) に渡す。
-            scene_type_to_restore = content.physics_scenes() |> List.first() || content.playing_scene()
+            scene_type_to_restore =
+              content.physics_scenes() |> List.first() || content.playing_scene()
+
             GenServer.call(runner, {:replace, scene_type_to_restore, initial_state})
             {:reply, :ok, state}
         end
@@ -400,9 +403,12 @@ defmodule Contents.Events.Game do
 
           runner ->
             initial_state = build_loaded_scene_state(content, loaded_state)
+
             # Phase 5: physics_scenes() は [scene_type()]。空の場合は playing_scene() で replace。
             # initial_state を init_arg として content.scene_init(scene_type, init_arg) に渡す。
-            scene_type_to_restore = content.physics_scenes() |> List.first() || content.playing_scene()
+            scene_type_to_restore =
+              content.physics_scenes() |> List.first() || content.playing_scene()
+
             GenServer.call(runner, {:replace, scene_type_to_restore, initial_state})
             state
         end
@@ -681,7 +687,8 @@ defmodule Contents.Events.Game do
       start_ms: state.start_ms,
       push_scene: fn scene_type, init_arg ->
         if runner do
-          if function_exported?(content, :pause_on_push?, 1) and content.pause_on_push?(scene_type) do
+          if function_exported?(content, :pause_on_push?, 1) and
+               content.pause_on_push?(scene_type) do
             Core.NifBridge.pause_physics(control_ref)
           end
 
@@ -726,7 +733,13 @@ defmodule Contents.Events.Game do
     state
   end
 
-  defp process_transition({:transition, {:push, scene_type, init_arg}, _}, state, _now, content, runner) do
+  defp process_transition(
+         {:transition, {:push, scene_type, init_arg}, _},
+         state,
+         _now,
+         content,
+         runner
+       ) do
     should_pause =
       function_exported?(content, :pause_on_push?, 1) and content.pause_on_push?(scene_type)
 

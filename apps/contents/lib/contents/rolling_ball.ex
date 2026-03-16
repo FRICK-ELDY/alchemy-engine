@@ -93,18 +93,28 @@ defmodule Content.RollingBall do
   def scene_render_type(:ending), do: :playing
 
   defp map_transition_module_to_scene_type({:continue, state}), do: {:continue, state}
-  defp map_transition_module_to_scene_type({:continue, state, opts}), do: {:continue, state, opts || %{}}
-  defp map_transition_module_to_scene_type({:transition, :pop, state}), do: {:transition, :pop, state}
-  defp map_transition_module_to_scene_type({:transition, :pop, state, opts}), do: {:transition, :pop, state, opts || %{}}
+
+  defp map_transition_module_to_scene_type({:continue, state, opts}),
+    do: {:continue, state, opts || %{}}
+
+  defp map_transition_module_to_scene_type({:transition, :pop, state}),
+    do: {:transition, :pop, state}
+
+  defp map_transition_module_to_scene_type({:transition, :pop, state, opts}),
+    do: {:transition, :pop, state, opts || %{}}
+
   defp map_transition_module_to_scene_type({:transition, {:push, mod, arg}, state}) do
     {:transition, {:push, scene_module_to_type(mod), arg}, state}
   end
+
   defp map_transition_module_to_scene_type({:transition, {:push, mod, arg}, state, opts}) do
     {:transition, {:push, scene_module_to_type(mod), arg}, state, opts || %{}}
   end
+
   defp map_transition_module_to_scene_type({:transition, {:replace, mod, arg}, state}) do
     {:transition, {:replace, scene_module_to_type(mod), arg}, state}
   end
+
   defp map_transition_module_to_scene_type({:transition, {:replace, mod, arg}, state, opts}) do
     {:transition, {:replace, scene_module_to_type(mod), arg}, state, opts || %{}}
   end

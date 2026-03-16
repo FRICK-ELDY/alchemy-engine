@@ -1,4 +1,4 @@
-defmodule Contents.Scenes.FormulaTest.Playing do
+defmodule Content.FormulaTest.Playing do
   @moduledoc """
   FormulaTest のプレイ中シーン。
 
@@ -6,7 +6,7 @@ defmodule Contents.Scenes.FormulaTest.Playing do
   ノードアーキテクチャの動作を検証する。結果は state に格納し、RenderComponent で表示。
 
   Phase 1 移行: FormulaGraph を Contents.Nodes に置き換え。
-  配置: apps/contents/lib/scenes（新方式）。
+  配置: apps/contents/lib/contents/formula_test/playing.ex（Content 配下）。
   """
   @behaviour Contents.SceneBehaviour
 
@@ -22,8 +22,14 @@ defmodule Contents.Scenes.FormulaTest.Playing do
     results = run_formula_tests()
     root_object = ObjectStruct.new(name: "FormulaTestRoot")
 
-    # CreateEmptyChild が {:error, _} を返した場合はパターンマッチで init が失敗する。必要に応じて case で分岐しメッセージや代替処理を明示すると堅牢になる。
-    {:ok, child} = CreateEmptyChild.create(root_object, name: "Child")
+    child =
+      case CreateEmptyChild.create(root_object, name: "Child") do
+        {:ok, c} ->
+          c
+
+        {:error, reason} ->
+          raise "FormulaTest.Playing init: CreateEmptyChild.create failed: #{inspect(reason)}"
+      end
 
     state = %{
       formula_results: results,

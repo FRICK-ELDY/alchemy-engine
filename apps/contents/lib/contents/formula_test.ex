@@ -47,18 +47,18 @@ defmodule Content.FormulaTest do
   def playing_scene, do: :playing
   def game_over_scene, do: :playing
 
-  # 次フェーズで Contents.Scenes ファサード経由に置き換える予定（Contents.Scenes.init(:formula_test_playing, init_arg) 等）。
-  # Ref: docs/plan/current/contents-scenes-facade-implementation-plan.md
+  # Contents.Scenes ファサード経由。init_arg に module + payload を渡し、Scenes は定義を持たない。
   def scene_init(:playing, init_arg) do
-    Contents.Scenes.FormulaTest.Playing.init(init_arg)
+    scene_init_arg = %{module: Content.FormulaTest.Playing, payload: init_arg}
+    Contents.Scenes.init(scene_init_arg)
   end
 
   def scene_update(:playing, context, state) do
-    Contents.Scenes.FormulaTest.Playing.update(context, state)
+    Contents.Scenes.update(context, state)
   end
 
-  # シーンの render_type に委譲（二重定義を避け、シーン側で変更したときに追従する）。ファサード化後は Contents.Scenes.render_type(:formula_test_playing) に置き換え予定。
-  def scene_render_type(:playing), do: Contents.Scenes.FormulaTest.Playing.render_type()
+  # シーンの render_type に委譲。Stack の現 API は scene_type のみ渡すため、現時点では scene_type に対応するモジュールの render_type/0 を直接呼ぶ（init/update はファサード経由・render_type は非ファサード）。将来 Stack が state を渡す形になれば Contents.Scenes.render_type(state) に寄せる想定。
+  def scene_render_type(:playing), do: Content.FormulaTest.Playing.render_type()
 
   def title, do: "Formula Test"
   def version, do: "0.1.0"

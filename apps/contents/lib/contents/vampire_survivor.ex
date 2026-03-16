@@ -53,7 +53,9 @@ defmodule Content.VampireSurvivor do
   def scene_init(:playing, init_arg), do: Content.VampireSurvivor.Scenes.Playing.init(init_arg)
   def scene_init(:game_over, init_arg), do: Content.VampireSurvivor.Scenes.GameOver.init(init_arg)
   def scene_init(:level_up, init_arg), do: Content.VampireSurvivor.Scenes.LevelUp.init(init_arg)
-  def scene_init(:boss_alert, init_arg), do: Content.VampireSurvivor.Scenes.BossAlert.init(init_arg)
+
+  def scene_init(:boss_alert, init_arg),
+    do: Content.VampireSurvivor.Scenes.BossAlert.init(init_arg)
 
   def scene_update(:playing, context, state) do
     Content.VampireSurvivor.Scenes.Playing.update(context, state)
@@ -78,18 +80,28 @@ defmodule Content.VampireSurvivor do
   def scene_render_type(:boss_alert), do: :boss_alert
 
   defp map_transition_module_to_scene_type({:continue, state}), do: {:continue, state}
-  defp map_transition_module_to_scene_type({:continue, state, opts}), do: {:continue, state, opts || %{}}
-  defp map_transition_module_to_scene_type({:transition, :pop, state}), do: {:transition, :pop, state}
-  defp map_transition_module_to_scene_type({:transition, :pop, state, opts}), do: {:transition, :pop, state, opts || %{}}
+
+  defp map_transition_module_to_scene_type({:continue, state, opts}),
+    do: {:continue, state, opts || %{}}
+
+  defp map_transition_module_to_scene_type({:transition, :pop, state}),
+    do: {:transition, :pop, state}
+
+  defp map_transition_module_to_scene_type({:transition, :pop, state, opts}),
+    do: {:transition, :pop, state, opts || %{}}
+
   defp map_transition_module_to_scene_type({:transition, {:push, mod, arg}, state}) do
     {:transition, {:push, scene_module_to_type(mod), arg}, state}
   end
+
   defp map_transition_module_to_scene_type({:transition, {:push, mod, arg}, state, opts}) do
     {:transition, {:push, scene_module_to_type(mod), arg}, state, opts || %{}}
   end
+
   defp map_transition_module_to_scene_type({:transition, {:replace, mod, arg}, state}) do
     {:transition, {:replace, scene_module_to_type(mod), arg}, state}
   end
+
   defp map_transition_module_to_scene_type({:transition, {:replace, mod, arg}, state, opts}) do
     {:transition, {:replace, scene_module_to_type(mod), arg}, state, opts || %{}}
   end

@@ -2,6 +2,7 @@
 
 > 作成日: 2026-03-16  
 > 更新日: 2026-03-16（方針変更: scene_key 廃止、init_arg で定義を保持するデータ方式に統一）  
+> 完了日: 2026-03-16（Phase 1〜2 実施・起動確認済み）  
 > 目的: Content の `scene_init` / `scene_update` から、シーンモジュール直呼び出し（`Contents.Scenes.FormulaTest.Playing.init/1` 等）をやめ、**Contents.Scenes を入口とする呼び出し**に統一する。**「どのシーンか」の定義は Scenes は持たず、Content が init_arg（データ）で渡す。**
 
 ---
@@ -145,6 +146,8 @@ apps/contents/lib/
 
 `scene_render_type` について: 現在はシーン種別（`:playing`）だけを引数にしているため、**render_type を取得する側が「現在の state」を渡せる**形にしないといけない。Stack や Game ループが state を持っているなら、`Contents.Scenes.render_type(state)` を呼ぶようにする。呼び出し元が state を持っていない場合は、設計上のすり合わせ（例: 現在シーンの state をどこで保持するか）が必要。
 
+**render_type の入口統一（方針）**: 現時点では Stack が state を渡さないため、FormulaTest は `scene_render_type(:playing)` で `Content.FormulaTest.Playing.render_type()` を直接呼ぶ形とした（init/update はファサード経由・render_type は非ファサード）。**いずれ Stack が state を渡す API に変えたら、Content は `Contents.Scenes.render_type(state)` に委譲する形に寄せる想定**。それまでは「render_type は Content 経由のまま、Scenes ファサードは init/update のみ」で進める。
+
 #### Step 2-2: 他コンテンツの確認
 
 - 他の Content で `Contents.Scenes.*` の `init` / `update` / `render_type` を直接呼んでいる箇所があれば、同様に init_arg を `%{module: mod, payload: ...}` で組み立てて `Contents.Scenes.init/1` を呼ぶ形、および `Contents.Scenes.update/2` / `Contents.Scenes.render_type/1` に置き換える。
@@ -179,12 +182,12 @@ apps/contents/lib/
 ### 4.3 案B（シーン種別＝atom）との関係
 
 - 本計画は「現方式（シーン＝モジュール）」のまま、**呼び出し入口を Contents.Scenes に集約し、定義は init_arg で渡す**形にする。
-- 案B（scene_type が atom、実装は Content の scene_*）を採用する場合は、Content が `content.scene_init(:playing, init_arg)` を実装するため、本ファサードの役割は変わる。その場合の整理は [scene-type-as-atom-implementation-procedure.md](./scene-type-as-atom-implementation-procedure.md) を参照。
+- 案B（scene_type が atom、実装は Content の scene_*）を採用する場合は、Content が `content.scene_init(:playing, init_arg)` を実装するため、本ファサードの役割は変わる。その場合の整理は [scene-type-as-atom-implementation-procedure.md](../current/scene-type-as-atom-implementation-procedure.md) を参照。
 
 ---
 
 ## 5. 参照
 
-- [formula-test-scene-migration-procedure.md](../completed/formula-test-scene-migration-procedure.md) — シーンを `scenes/formula_test/playing.ex` に移行した手順
+- [formula-test-scene-migration-procedure.md](./formula-test-scene-migration-procedure.md) — シーンを `scenes/formula_test/playing.ex` に移行した手順
 - [Contents.SceneBehaviour](../../../apps/contents/lib/contents/scene_behaviour.ex) — シーン契約（init / update / render_type）
-- [scene-type-as-atom-implementation-procedure.md](./scene-type-as-atom-implementation-procedure.md) — 案B の場合の手順
+- [scene-type-as-atom-implementation-procedure.md](../current/scene-type-as-atom-implementation-procedure.md) — 案B の場合の手順

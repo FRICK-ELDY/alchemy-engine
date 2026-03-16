@@ -51,11 +51,19 @@ defmodule Contents.Scenes.Stack do
     GenServer.call(server, {:replace, scene_type, init_arg})
   end
 
+  @doc """
+  現在トップのシーンの state を、fun の返り値で置き換える。
+
+  fun の引数はスタックに保存されている **state そのもの**。
+  ファサード利用 Content では state は `%{scene_module: mod, inner_state: inner}` のラップ済みなので、
+  「現在の inner state を引数に取り更新する」ような fun を渡す場合はラップ構造を意識すること。
+  """
   def update_current(server \\ default_server(), fun) when is_function(fun, 1) do
     GenServer.call(server, {:update_current, fun})
   end
 
-  def update_by_scene_type(server \\ default_server(), scene_type, fun) when is_function(fun, 1) do
+  def update_by_scene_type(server \\ default_server(), scene_type, fun)
+      when is_function(fun, 1) do
     GenServer.call(server, {:update_by_scene_type, scene_type, fun})
   end
 
@@ -107,7 +115,11 @@ defmodule Contents.Scenes.Stack do
     {:reply, content.scene_render_type(top.scene_type), state}
   end
 
-  def handle_call({:push, scene_type, init_arg}, _from, %{stack: stack, content_module: content} = state) do
+  def handle_call(
+        {:push, scene_type, init_arg},
+        _from,
+        %{stack: stack, content_module: content} = state
+      ) do
     {:ok, scene} = init_scene(content, scene_type, init_arg)
     {:reply, :ok, %{state | stack: [scene | stack]}}
   end
@@ -120,12 +132,20 @@ defmodule Contents.Scenes.Stack do
     {:reply, :ok, %{state | stack: rest}}
   end
 
-  def handle_call({:replace, scene_type, init_arg}, _from, %{stack: [_ | rest], content_module: content} = state) do
+  def handle_call(
+        {:replace, scene_type, init_arg},
+        _from,
+        %{stack: [_ | rest], content_module: content} = state
+      ) do
     {:ok, scene} = init_scene(content, scene_type, init_arg)
     {:reply, :ok, %{state | stack: [scene | rest]}}
   end
 
-  def handle_call({:replace, scene_type, init_arg}, _from, %{stack: [], content_module: content} = state) do
+  def handle_call(
+        {:replace, scene_type, init_arg},
+        _from,
+        %{stack: [], content_module: content} = state
+      ) do
     {:ok, scene} = init_scene(content, scene_type, init_arg)
     {:reply, :ok, %{state | stack: [scene]}}
   end
@@ -147,7 +167,10 @@ defmodule Contents.Scenes.Stack do
 
       index ->
         scene = Enum.at(stack, index)
-        new_scene = %{scene | state: fun.(scene.state)}
+        inner = unwrap_scene_state(scene.state)
+        new_inner = fun.(inner)
+        new_state = wrap_scene_state(scene.state, new_inner)
+        new_scene = %{scene | state: new_state}
         new_stack = List.replace_at(stack, index, new_scene)
         {:reply, :ok, %{state | stack: new_stack}}
     end
@@ -156,7 +179,7 @@ defmodule Contents.Scenes.Stack do
   def handle_call({:get_scene_state, scene_type}, _from, %{stack: stack} = state) do
     scene_state =
       case Enum.find(stack, fn scene -> scene.scene_type == scene_type end) do
-        %{state: s} -> s
+        %{state: s} -> unwrap_scene_state(s)
         nil -> %{}
       end
 
@@ -180,4 +203,14 @@ defmodule Contents.Scenes.Stack do
     # 単一 Stack は __MODULE__ で登録。マルチルーム時は呼び出し元が {__MODULE__, room_id} を明示的に渡す。
     __MODULE__
   end
+
+  # Contents.Scenes ファサード経由で init した場合、state は %{scene_module: mod, inner_state: inner} で包まれる。
+  # get_scene_state / update_by_scene_type の呼び出し元は inner を期待するため、ラップの有無で出し分ける。
+  defp unwrap_scene_state(%{scene_module: _mod, inner_state: inner}), do: inner
+  defp unwrap_scene_state(other), do: other
+
+  defp wrap_scene_state(%{scene_module: mod, inner_state: _}, new_inner),
+    do: %{scene_module: mod, inner_state: new_inner}
+
+  defp wrap_scene_state(_, new_inner), do: new_inner
 end

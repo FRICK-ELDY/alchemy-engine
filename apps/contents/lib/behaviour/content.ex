@@ -52,14 +52,16 @@ defmodule Contents.Behaviour.Content do
   シーン種別ごとの update。戻り値は SceneBehaviour の update と同様（{:continue, state} または {:transition, ...}）。
   """
   @callback scene_update(scene_type(), context :: map(), state :: term()) ::
-    {:continue, state :: term()}
-    | {:continue, state :: term(), opts :: map()}
-    | {:transition, :pop, state :: term()}
-    | {:transition, :pop, state :: term(), opts :: map()}
-    | {:transition, {:push, scene_type(), init_arg :: term()}, state :: term()}
-    | {:transition, {:push, scene_type(), init_arg :: term()}, state :: term(), opts :: map()}
-    | {:transition, {:replace, scene_type(), init_arg :: term()}, state :: term()}
-    | {:transition, {:replace, scene_type(), init_arg :: term()}, state :: term(), opts :: map()}
+              {:continue, state :: term()}
+              | {:continue, state :: term(), opts :: map()}
+              | {:transition, :pop, state :: term()}
+              | {:transition, :pop, state :: term(), opts :: map()}
+              | {:transition, {:push, scene_type(), init_arg :: term()}, state :: term()}
+              | {:transition, {:push, scene_type(), init_arg :: term()}, state :: term(),
+                 opts :: map()}
+              | {:transition, {:replace, scene_type(), init_arg :: term()}, state :: term()}
+              | {:transition, {:replace, scene_type(), init_arg :: term()}, state :: term(),
+                 opts :: map()}
 
   @doc """
   シーン種別ごとの描画種別（例: :playing, :title）。

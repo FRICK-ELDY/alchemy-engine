@@ -10,13 +10,17 @@ defmodule Content.VampireSurvivor.Helpers do
   content が accumulate_exp/2 を実装していれば呼び出し、そうでなければ state をそのまま返す。
   """
   def maybe_accumulate_exp(state, content, exp) do
-    if function_exported?(content, :accumulate_exp, 2), do: content.accumulate_exp(state, exp), else: state
+    if function_exported?(content, :accumulate_exp, 2),
+      do: content.accumulate_exp(state, exp),
+      else: state
   end
 
   @doc """
   content が apply_boss_defeated/1 を実装していれば呼び出し、そうでなければ state をそのまま返す。
   """
   def maybe_apply_boss_defeated(state, content) do
-    if function_exported?(content, :apply_boss_defeated, 1), do: content.apply_boss_defeated(state), else: state
+    if function_exported?(content, :apply_boss_defeated, 1),
+      do: content.apply_boss_defeated(state),
+      else: state
   end
 end
