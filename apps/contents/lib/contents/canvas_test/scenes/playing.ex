@@ -46,24 +46,21 @@ defmodule Content.CanvasTest.Scenes.Playing do
   # ワールド空間に配置するテキストパネルを Object として作成する。
   # 各 Object の transform.position に 3D 座標を保持。描画は RenderComponent が既存ロジックで行う。
   defp build_world_panel_objects do
-    [
-      ObjectStruct.new(
-        name: "WorldPanel_Hello",
-        transform: %Transform{position: {5.0, 1.5, -5.0}}
-      ),
-      ObjectStruct.new(
-        name: "WorldPanel_Debug",
-        transform: %Transform{position: {-5.0, 1.5, -5.0}}
-      ),
-      ObjectStruct.new(
-        name: "WorldPanel_Title",
-        transform: %Transform{position: {0.0, 1.5, -10.0}}
-      ),
-      ObjectStruct.new(
-        name: "WorldPanel_Info",
-        transform: %Transform{position: {8.0, 1.5, 0.0}}
-      )
+    panel_y = 1.5
+
+    panel_definitions = [
+      %{name: "WorldPanel_Hello", position: {5.0, panel_y, -5.0}},
+      %{name: "WorldPanel_Debug", position: {-5.0, panel_y, -5.0}},
+      %{name: "WorldPanel_Title", position: {0.0, panel_y, -10.0}},
+      %{name: "WorldPanel_Info", position: {8.0, panel_y, 0.0}}
     ]
+
+    for panel_def <- panel_definitions do
+      ObjectStruct.new(
+        name: panel_def.name,
+        transform: %Transform{position: panel_def.position}
+      )
+    end
   end
 
   @impl Contents.SceneBehaviour
