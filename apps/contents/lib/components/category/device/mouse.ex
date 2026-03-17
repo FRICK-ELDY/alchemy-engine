@@ -10,21 +10,18 @@ defmodule Contents.Components.Category.Device.Mouse do
 
   @impl Core.Component
   def on_event({:move_input, dx, dz}, _context) when is_float(dx) and is_float(dz) do
-    content = Core.Config.current()
-    runner = content.flow_runner(:main)
-
-    if runner do
-      Contents.Scenes.Stack.update_by_scene_type(
-        runner,
-        content.playing_scene(),
-        fn state -> Map.put(state, :move_input, {dx, dz}) end
-      )
-    end
-
+    with_playing_scene(fn state -> Map.put(state, :move_input, {dx, dz}) end)
     :ok
   end
 
   def on_event({:mouse_delta, dx, dy}, _context) when is_float(dx) and is_float(dy) do
+    with_playing_scene(fn state -> Map.put(state, :mouse_delta, {dx, dy}) end)
+    :ok
+  end
+
+  def on_event(_event, _context), do: :ok
+
+  defp with_playing_scene(fun) do
     content = Core.Config.current()
     runner = content.flow_runner(:main)
 
@@ -32,12 +29,8 @@ defmodule Contents.Components.Category.Device.Mouse do
       Contents.Scenes.Stack.update_by_scene_type(
         runner,
         content.playing_scene(),
-        fn state -> Map.put(state, :mouse_delta, {dx, dy}) end
+        fun
       )
     end
-
-    :ok
   end
-
-  def on_event(_event, _context), do: :ok
 end

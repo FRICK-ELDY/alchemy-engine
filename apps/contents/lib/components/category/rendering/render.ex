@@ -101,24 +101,41 @@ defmodule Contents.Components.Category.Rendering.Render do
        [
          {:node, {:top_left, {0.0, 0.0}, :wrap},
           {:vertical_layout, 10.0, {40.0, 30.0, 40.0, 30.0}},
-          [
-            {:node, {:top_left, {0.0, 0.0}, :wrap},
-             {:text, "DEBUG MENU", {0.9, 0.95, 1.0, 1.0}, 28.0, true}, []},
-            {:node, {:top_left, {0.0, 0.0}, :wrap}, :separator, []},
-            {:node, {:top_left, {0.0, 0.0}, :wrap},
-             {:text, "WASD  : Move", {0.8, 0.85, 0.9, 1.0}, 15.0, false}, []},
-            {:node, {:top_left, {0.0, 0.0}, :wrap},
-             {:text, "Mouse : Look", {0.8, 0.85, 0.9, 1.0}, 15.0, false}, []},
-            {:node, {:top_left, {0.0, 0.0}, :wrap},
-             {:text, "Shift : Sprint", {0.8, 0.85, 0.9, 1.0}, 15.0, false}, []},
-            {:node, {:top_left, {0.0, 0.0}, :wrap},
-             {:text, "ESC   : Close this menu", {0.8, 0.85, 0.9, 1.0}, 15.0, false}, []},
-            {:node, {:top_left, {0.0, 0.0}, :wrap}, :separator, []},
-            {:node, {:top_left, {0.0, 0.0}, :wrap},
-             {:button, "  Quit  ", "__quit__", {0.55, 0.2, 0.2, 1.0}, 140.0, 40.0}, []}
-          ]}
+          hud_panel_contents()}
        ]}
     ]
+  end
+
+  defp hud_panel_contents do
+    [
+      hud_title(),
+      hud_separator(),
+      hud_text("WASD  : Move"),
+      hud_text("Mouse : Look"),
+      hud_text("Shift : Sprint"),
+      hud_text("ESC   : Close this menu"),
+      hud_separator(),
+      hud_quit_button()
+    ]
+  end
+
+  defp hud_title do
+    {:node, {:top_left, {0.0, 0.0}, :wrap},
+     {:text, "DEBUG MENU", {0.9, 0.95, 1.0, 1.0}, 28.0, true}, []}
+  end
+
+  defp hud_separator do
+    {:node, {:top_left, {0.0, 0.0}, :wrap}, :separator, []}
+  end
+
+  defp hud_text(text) do
+    {:node, {:top_left, {0.0, 0.0}, :wrap},
+     {:text, text, {0.8, 0.85, 0.9, 1.0}, 15.0, false}, []}
+  end
+
+  defp hud_quit_button do
+    {:node, {:top_left, {0.0, 0.0}, :wrap},
+     {:button, "  Quit  ", "__quit__", {0.55, 0.2, 0.2, 1.0}, 140.0, 40.0}, []}
   end
 
   defp build_world_nodes_from_objects(state, context, defaults) do
