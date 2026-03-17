@@ -5,8 +5,14 @@ defmodule Content.CanvasTest.Scenes.Playing do
   1人称（FPS）カメラで自由移動できるデバッグ空間。
   カメラ姿勢（位置・Yaw・Pitch）・HUD表示フラグを Elixir 側で管理する。
   物理エンジンは使用しない。
+
+  Phase 2 移行: ワールド空間の Canvas パネルを Object 階層で表現する。
+  各パネルは Contents.Objects.Core.Struct で、transform に 3D 位置を保持する。
   """
   @behaviour Contents.SceneBehaviour
+
+  alias Contents.Objects.Core.Struct, as: ObjectStruct
+  alias Structs.Category.Space.Transform
 
   @tick_sec 1.0 / 60.0
 
@@ -17,8 +23,13 @@ defmodule Content.CanvasTest.Scenes.Playing do
 
   @impl Contents.SceneBehaviour
   def init(_init_arg) do
+    origin = Transform.new()
+    world_panels = build_world_panel_objects()
+
     {:ok,
      %{
+       origin: origin,
+       children: world_panels,
        pos: {0.0, 1.7, 0.0},
        yaw: 0.0,
        pitch: 0.0,
@@ -30,6 +41,29 @@ defmodule Content.CanvasTest.Scenes.Playing do
        # RenderComponent が毎フレーム読み取り、Rust へ送信後 :no_change にリセットする
        cursor_grab_request: :no_change
      }}
+  end
+
+  # ワールド空間に配置するテキストパネルを Object として作成する。
+  # 各 Object の transform.position に 3D 座標を保持。描画は RenderComponent が既存ロジックで行う。
+  defp build_world_panel_objects do
+    [
+      ObjectStruct.new(
+        name: "WorldPanel_Hello",
+        transform: %Transform{position: {5.0, 1.5, -5.0}}
+      ),
+      ObjectStruct.new(
+        name: "WorldPanel_Debug",
+        transform: %Transform{position: {-5.0, 1.5, -5.0}}
+      ),
+      ObjectStruct.new(
+        name: "WorldPanel_Title",
+        transform: %Transform{position: {0.0, 1.5, -10.0}}
+      ),
+      ObjectStruct.new(
+        name: "WorldPanel_Info",
+        transform: %Transform{position: {8.0, 1.5, 0.0}}
+      )
+    ]
   end
 
   @impl Contents.SceneBehaviour
