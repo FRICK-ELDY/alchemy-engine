@@ -1,4 +1,4 @@
-defmodule Content.CanvasTest.Scenes.Playing do
+defmodule Content.CanvasTest.Playing do
   @moduledoc """
   CanvasTest のプレイ中シーン。
 
@@ -21,6 +21,42 @@ defmodule Content.CanvasTest.Scenes.Playing do
   @mouse_sensitivity 0.002
   @pitch_clamp 1.396
 
+  # 描画用の既定値（Rendering.Render が参照。値の定義は Playing に集約）
+  @render_camera_fov 75.0
+  @render_camera_near 0.1
+  @render_camera_far 200.0
+  @render_color_sky_top {0.35, 0.55, 0.85, 1.0}
+  @render_color_sky_bottom {0.65, 0.80, 1.0, 1.0}
+  @render_color_grid {0.3, 0.3, 0.3, 1.0}
+  @render_color_box_white {1.0, 1.0, 1.0, 1.0}
+  @render_color_box_gray {0.5, 0.5, 0.5, 1.0}
+  @render_grid_size 40.0
+  @render_grid_divisions 40
+  @render_world_text_lifetime 9999.0
+  @render_world_text_color {0.9, 0.95, 1.0, 1.0}
+  @render_world_panel_static_texts [
+    "Hello, World Canvas!",
+    "CanvasUI Debug Panel\nThis is a world-space canvas.",
+    "Alchemy Engine\nCanvas Test v0.1"
+  ]
+
+  @doc "Rendering.Render が参照する描画用既定値"
+  def render_defaults do
+    %{
+      camera: {@render_camera_fov, @render_camera_near, @render_camera_far},
+      color_sky_top: @render_color_sky_top,
+      color_sky_bottom: @render_color_sky_bottom,
+      color_grid: @render_color_grid,
+      color_box_white: @render_color_box_white,
+      color_box_gray: @render_color_box_gray,
+      grid_size: @render_grid_size,
+      grid_divisions: @render_grid_divisions,
+      world_text_lifetime: @render_world_text_lifetime,
+      world_text_color: @render_world_text_color,
+      world_panel_static_texts: @render_world_panel_static_texts
+    }
+  end
+
   @impl Contents.SceneBehaviour
   def init(_init_arg) do
     origin = Transform.new()
@@ -38,13 +74,13 @@ defmodule Content.CanvasTest.Scenes.Playing do
        sprint: false,
        hud_visible: false,
        # カーソルグラブ要求: :grab | :release | :no_change
-       # RenderComponent が毎フレーム読み取り、Rust へ送信後 :no_change にリセットする
+       # Rendering.Render が毎フレーム読み取り、Rust へ送信後 :no_change にリセットする
        cursor_grab_request: :no_change
      }}
   end
 
   # ワールド空間に配置するテキストパネルを Object として作成する。
-  # 各 Object の transform.position に 3D 座標を保持。描画は RenderComponent が既存ロジックで行う。
+  # 各 Object の transform.position に 3D 座標を保持。描画は Rendering.Render が行う。
   defp build_world_panel_objects do
     panel_y = 1.5
 

@@ -136,7 +136,15 @@ defmodule Contents.Behaviour.Content do
   """
   @callback local_user_input_module() :: module() | nil
 
+  @doc """
+  終了要求（`__quit__` UI アクション等）が届いたときに呼ばれる。
+  セーブ、確認ダイアログ等を行ってから `System.stop/1` を呼ぶ想定。
+  未実装時は Game が `System.stop(0)` をデフォルトで実行する。
+  """
+  @callback on_quit_requested() :: :ok
+
   @optional_callbacks [
+    on_quit_requested: 0,
     level_up_scene: 0,
     boss_alert_scene: 0,
     boss_exp_reward: 1,
