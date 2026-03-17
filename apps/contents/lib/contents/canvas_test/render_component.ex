@@ -183,15 +183,11 @@ defmodule Content.CanvasTest.RenderComponent do
     static_texts = @world_panel_static_texts
     texts = static_texts ++ [info_text]
 
-    children
-    |> Enum.take(length(texts))
-    |> Enum.zip(texts)
-    |> Enum.filter(fn {obj, _text} -> obj.active end)
-    |> Enum.map(fn {obj, text} ->
+    for {obj, text} <- Enum.zip(Enum.take(children, length(texts)), texts), obj.active do
       {x, y, z} = obj.transform.position
       {:node, {:top_left, {0.0, 0.0}, :wrap},
        {:world_text, x, y, z, text, @world_text_color,
         {@world_text_lifetime, @world_text_lifetime}}, []}
-    end)
+    end
   end
 end
