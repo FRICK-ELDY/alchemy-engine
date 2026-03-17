@@ -323,6 +323,16 @@ defmodule Contents.Events.Game do
     {:noreply, state}
   end
 
+  # 終了要求（Device.Keyboard 等が __quit__ 受け取り時に送信。Content コールバックを経由）
+  def handle_info(:quit_requested, _state) do
+    content = current_content()
+    if function_exported?(content, :on_quit_requested, 0) do
+      content.on_quit_requested()
+    else
+      System.stop(0)
+    end
+  end
+
   # ── インフォ: エンジン内部メッセージ（汎用ディスパッチ）──────────────────
   # コンポーネントが Process.send_after 等で送った遅延メッセージを
   # on_engine_message/2 で該当コンポーネントに転送する

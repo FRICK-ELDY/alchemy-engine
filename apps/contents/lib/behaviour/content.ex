@@ -136,7 +136,26 @@ defmodule Contents.Behaviour.Content do
   """
   @callback local_user_input_module() :: module() | nil
 
+  @doc """
+  終了要求（`__quit__` UI アクション等）が届いたときに呼ばれる。
+  セーブ、確認ダイアログ等を行ってから `System.stop/1` を呼ぶ想定。
+  未実装時は Game が `System.stop(0)` をデフォルトで実行する。
+  """
+  @callback on_quit_requested() :: :ok
+
+  @doc """
+  描画フレームを組み立てる。Rendering.Render が呼ぶ。
+
+  playing_state は現在の playing シーンの state。context は on_nif_sync の context。
+  戻り値は `Content.MessagePackEncoder.encode_frame/4` に渡す形式の
+  `{commands, camera, ui}`。未実装の Content では Render が描画をスキップする。
+  """
+  @callback build_frame(playing_state :: map(), context :: map()) ::
+              {commands :: list(), camera :: tuple(), ui :: tuple()}
+
   @optional_callbacks [
+    build_frame: 2,
+    on_quit_requested: 0,
     level_up_scene: 0,
     boss_alert_scene: 0,
     boss_exp_reward: 1,

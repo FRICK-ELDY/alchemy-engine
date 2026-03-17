@@ -99,7 +99,7 @@
 #### 3.1 設計
 
 - **値の定義**: 描画に使う具体的な値（カメラパラメータ、色、グリッドサイズ、ワールドパネル文言、HUD レイアウトなど）は **`apps/contents/lib/contents/canvas_test/playing.ex`**（または Content.CanvasTest）で定義する。
-- **Renderer.Render** (`renderer/render.ex`): 役割は「**どのメッシュをどのシェーダーで描画するか**」に限定する。メッシュとシェーダーを**参照するだけ**で、クライアントへ送る「器」（描画コマンドの組み立て・送信の枠）だけを提供する。具体的な頂点データやシェーダー実装は持たない。
+- **Rendering.Render** (`rendering/render.ex`): 役割は「**どのメッシュをどのシェーダーで描画するか**」に限定する。メッシュとシェーダーを**参照するだけ**で、クライアントへ送る「器」（描画コマンドの組み立て・送信の枠）だけを提供する。具体的な頂点データやシェーダー実装は持たない。
 - **メッシュ（器）**: 以下をクライアントに投げるためのモジュールとして用意する。中身は「メッシュ種別とパラメータを返す／エンコードする」程度の骨格でよい。
   - `apps/contents/lib/components/category/procedural/meshes/box.ex`
   - `apps/contents/lib/components/category/procedural/meshes/quad.ex`
@@ -117,8 +117,8 @@
    - `apps/contents/lib/components/category/shader/skybox.ex` — Skybox シェーダーをクライアントに渡すための定義・参照用。
    - `apps/contents/lib/components/category/shader/pbs_metallic.ex` — PBS Metallic シェーダーをクライアントに渡すための定義・参照用。
 
-3. **Renderer.Render の作成**
-   - **新規作成:** `apps/contents/lib/components/category/renderer/render.ex`（モジュール: `Contents.Components.Category.Renderer.Render`）
+3. **Rendering.Render の作成**
+   - **新規作成:** `apps/contents/lib/components/category/rendering/render.ex`（モジュール: `Contents.Components.Category.Rendering.Render`）
    - 役割: メッシュとシェーダーを**参照**し、「どのメッシュをどのシェーダーで描画するか」を組み立て、クライアントへ投げる器だけを提供する。具体的な値（カメラ・色・グリッド等）は **Playing** から渡されるか、state から取得する想定。
    - 移動元の `render_component.ex` のうち、フレーム送信の枠と、メッシュ/シェーダー参照に相当する部分をここに置く。値の定義は Playing に移す。
 
@@ -128,7 +128,7 @@
 5. 旧ファイル `apps/contents/lib/contents/canvas_test/render_component.ex` を削除する。
 
 6. **Content の components 更新**
-   - `Content.CanvasTest.components/0` に `Contents.Components.Category.Renderer.Render` を登録する。
+   - `Content.CanvasTest.components/0` に `Contents.Components.Category.Rendering.Render` を登録する。
 
 ---
 
@@ -145,8 +145,8 @@ apps/contents/lib/
       device/
         mouse.ex                    # Contents.Components.Category.Device.Mouse
         keyboard.ex                 # Contents.Components.Category.Device.Keyboard
-      renderer/
-        render.ex                   # Contents.Components.Category.Renderer.Render（メッシュ・シェーダー参照、クライアントへ投げる器）
+      rendering/
+        render.ex                   # Contents.Components.Category.Rendering.Render（メッシュ・シェーダー参照、クライアントへ投げる器）
       procedural/
         meshes/
           box.ex                    # Box メッシュの器
