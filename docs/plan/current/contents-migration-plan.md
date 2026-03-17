@@ -111,7 +111,7 @@
 
 ---
 
-### Phase 2: CanvasTest
+### Phase 2: CanvasTest ✅ 完了（2026-03-17）
 
 **目的**: UI 系コンポーネントと新アーキテクチャの対応を検証する。
 
@@ -132,6 +132,11 @@
 #### 2.3 検証
 
 - HUD の表示/非表示、ワールドパネル、Quit ボタンが従来通り動作すること
+
+#### 2.4 実施内容（2026-03-17）
+
+- **Scenes.Playing**: `origin`（Transform）、`children`（ワールドパネル用 Object 4 件）を state に追加。各パネルは `Contents.Objects.Core.Struct` で `transform.position` に 3D 座標を保持（(5,1.5,-5), (-5,1.5,-5), (0,1.5,-10), (8,1.5,0)）。
+- **RenderComponent**: ワールドノードを `state.children` から組み立てる `build_world_nodes_from_objects/2` を追加。各 Object の `transform.position` を参照し、テキストは従来どおり（静的な 3 件＋4 番目は FPS/Pos で動的）。`Contents.Components.Category.UI.*` は既存の骨格のみのため、Object 階層のみ導入し描画ロジックは維持。
 
 ---
 

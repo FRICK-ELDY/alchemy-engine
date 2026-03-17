@@ -32,6 +32,13 @@ defmodule Content.CanvasTest.RenderComponent do
   @world_text_lifetime 9999.0
   @world_text_color {0.9, 0.95, 1.0, 1.0}
 
+  # ワールドパネル用の静的なテキスト（children の順序と対応）。4番目は動的のため build_ui 内で生成する。
+  @world_panel_static_texts [
+    "Hello, World Canvas!",
+    "CanvasUI Debug Panel\nThis is a world-space canvas.",
+    "Alchemy Engine\nCanvas Test v0.1"
+  ]
+
   @impl Core.Component
   def on_nif_sync(context) do
     content = Core.Config.current()
@@ -129,30 +136,7 @@ defmodule Content.CanvasTest.RenderComponent do
 
   defp build_ui(state, context) do
     hud_visible = Map.get(state, :hud_visible, false)
-    {px, py, pz} = Map.get(state, :pos, {0.0, 1.7, 0.0})
-
-    pos_text =
-      "Pos: (#{Float.round(px, 1)}, #{Float.round(py, 1)}, #{Float.round(pz, 1)})"
-
-    fps_text =
-      if context.tick_ms > 0,
-        do: "FPS: #{round(1000.0 / context.tick_ms)}",
-        else: "FPS: --"
-
-    world_nodes = [
-      {:node, {:top_left, {0.0, 0.0}, :wrap},
-       {:world_text, 5.0, 1.5, -5.0, "Hello, World Canvas!", @world_text_color,
-        {@world_text_lifetime, @world_text_lifetime}}, []},
-      {:node, {:top_left, {0.0, 0.0}, :wrap},
-       {:world_text, -5.0, 1.5, -5.0, "CanvasUI Debug Panel\nThis is a world-space canvas.",
-        @world_text_color, {@world_text_lifetime, @world_text_lifetime}}, []},
-      {:node, {:top_left, {0.0, 0.0}, :wrap},
-       {:world_text, 0.0, 1.5, -10.0, "Alchemy Engine\nCanvas Test v0.1", @world_text_color,
-        {@world_text_lifetime, @world_text_lifetime}}, []},
-      {:node, {:top_left, {0.0, 0.0}, :wrap},
-       {:world_text, 8.0, 1.5, 0.0, "[INFO]\n#{fps_text}\n#{pos_text}", @world_text_color,
-        {@world_text_lifetime, @world_text_lifetime}}, []}
-    ]
+    world_nodes = build_world_nodes_from_objects(state, context)
 
     hud_nodes =
       if hud_visible do
@@ -185,5 +169,25 @@ defmodule Content.CanvasTest.RenderComponent do
       end
 
     {:canvas, world_nodes ++ hud_nodes}
+  end
+
+  # Phase 2: ワールドパネルを state.children（Object のリスト）から組み立てる。
+  # 各 Object の transform.position を 3D 位置として使用。テキストは静的な3件＋4番目のみ FPS/Pos で動的。
+  defp build_world_nodes_from_objects(state, context) do
+    children = Map.get(state, :children, [])
+    {px, py, pz} = Map.get(state, :pos, {0.0, 1.7, 0.0})
+    pos_text = "Pos: (#{Float.round(px, 1)}, #{Float.round(py, 1)}, #{Float.round(pz, 1)})"
+    fps_text = if context.tick_ms > 0, do: "FPS: #{round(1000.0 / context.tick_ms)}", else: "FPS: --"
+    info_text = "[INFO]\n#{fps_text}\n#{pos_text}"
+
+    static_texts = @world_panel_static_texts
+    texts = static_texts ++ [info_text]
+
+    for {obj, text} <- Enum.zip(Enum.take(children, length(texts)), texts), obj.active do
+      {x, y, z} = obj.transform.position
+      {:node, {:top_left, {0.0, 0.0}, :wrap},
+       {:world_text, x, y, z, text, @world_text_color,
+        {@world_text_lifetime, @world_text_lifetime}}, []}
+    end
   end
 end
