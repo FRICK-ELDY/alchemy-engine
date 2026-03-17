@@ -18,14 +18,18 @@ defmodule Contents.Components.Category.Device.Keyboard do
   """
   @behaviour Core.Component
 
+  alias Contents.Components.Category.Device.Helpers
+
   @impl Core.Component
   def on_event({:sprint, value}, _context) when is_boolean(value) do
-    with_playing_scene(fn state -> Map.put(state, :sprint, value) end)
+    Helpers.with_playing_scene(fn state ->
+      Map.put(state, :sprint, value)
+    end)
     :ok
   end
 
   def on_event({:key_pressed, :escape}, _context) do
-    with_playing_scene(&toggle_hud_and_cursor/1)
+    Helpers.with_playing_scene(&toggle_hud_and_cursor/1)
     :ok
   end
 
@@ -38,19 +42,6 @@ defmodule Contents.Components.Category.Device.Keyboard do
   end
 
   def on_event(_event, _context), do: :ok
-
-  defp with_playing_scene(fun) do
-    content = Core.Config.current()
-    runner = content.flow_runner(:main)
-
-    if runner do
-      Contents.Scenes.Stack.update_by_scene_type(
-        runner,
-        content.playing_scene(),
-        fun
-      )
-    end
-  end
 
   defp toggle_hud_and_cursor(state) do
     if state.hud_visible do

@@ -276,15 +276,13 @@ defmodule Content.FormulaTest.Playing do
   defp build_frame_format_results(results, defaults) do
     results
     |> Enum.with_index(1)
-    |> Enum.flat_map(fn {{status, desc, value}, i} ->
+    |> Enum.map(fn {{status, desc, value}, i} ->
       color = if status == :ok, do: defaults.color_ok, else: defaults.color_error
       status_str = if status == :ok, do: "OK", else: "ERR"
       value_str = build_frame_format_value(value)
 
-      [
-        {:node, {:top_left, {0.0, 0.0}, :wrap},
-         {:text, "#{i}. [#{status_str}] #{desc} => #{value_str}", color, 14.0, false}, []}
-      ]
+      {:node, {:top_left, {0.0, 0.0}, :wrap},
+       {:text, "#{i}. [#{status_str}] #{desc} => #{value_str}", color, 14.0, false}, []}
     end)
   end
 
