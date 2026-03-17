@@ -42,6 +42,9 @@ defmodule Content.CanvasTest do
 
   def on_quit_requested, do: System.stop(0)
 
+  def build_frame(playing_state, context),
+    do: Content.CanvasTest.Playing.build_frame(playing_state, context)
+
   def initial_scenes do
     [%{scene_type: :playing, init_arg: %{}}]
   end
