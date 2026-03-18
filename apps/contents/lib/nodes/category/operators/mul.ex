@@ -11,6 +11,5 @@ defmodule Contents.Nodes.Category.Operators.Mul do
   @impl Contents.Behaviour.Nodes
   @spec handle_sample(%{a: number(), b: number()}, map()) :: number() | {:error, :invalid_type}
   def handle_sample(%{a: a, b: b}, _context) when is_number(a) and is_number(b), do: a * b
-  def handle_sample(%{a: _a, b: _b}, _context), do: {:error, :invalid_type}
   def handle_sample(_inputs, _context), do: {:error, :invalid_type}
 end

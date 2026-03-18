@@ -10,7 +10,7 @@ defmodule Contents.Nodes.Category.Operators.BoolVectors.Any do
   @impl Contents.Behaviour.Nodes
   @spec handle_sample(map(), map()) :: Structs.Category.Value.Bool.t()
   def handle_sample(%{input: input}, _context) when is_tuple(input) do
-    Tuple.to_list(input) |> Enum.any?(& &1)
+    Tuple.to_list(input) |> Enum.any?()
   end
 
   def handle_sample(_inputs, _context), do: false

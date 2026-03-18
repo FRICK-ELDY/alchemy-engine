@@ -10,7 +10,8 @@ defmodule Contents.Nodes.Category.Operators.BoolVectors.None do
   @impl Contents.Behaviour.Nodes
   @spec handle_sample(map(), map()) :: Structs.Category.Value.Bool.t()
   def handle_sample(%{input: input}, _context) when is_tuple(input) do
-    Tuple.to_list(input) |> Enum.all?(&(!&1))
+    # 全要素が falsy のとき true（Enum.none?/1 は本環境で未定義のため Enum.all?(&(!&1)) を使用）
+Tuple.to_list(input) |> Enum.all?(&(!&1))
   end
 
   def handle_sample(_inputs, _context), do: true
