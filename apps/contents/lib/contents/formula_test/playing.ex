@@ -2,15 +2,48 @@ defmodule Content.FormulaTest.Playing do
   @moduledoc """
   FormulaTest のプレイ中シーン。
 
-  起動時に Contents.Nodes を用いて複数パターンの式を実行し、
-  ノードアーキテクチャの動作を検証する。結果は state に格納し、build_frame/2 で組み立てて Rendering.Render が送信する。
+  起動時に `Contents.Nodes.Test.Formula.run/0` で複数パターンの式検証を実行し、
+  結果を state に格納。build_frame/2 で組み立てて Rendering.Render が送信する。
 
-  Phase 1 移行: FormulaGraph を Contents.Nodes に置き換え。
+  Phase 1 移行: FormulaGraph を Contents.Nodes に置き換え。式検証は nodes/test に共通化。
   配置: apps/contents/lib/contents/formula_test/playing.ex（Content 配下）。
   """
   @behaviour Contents.SceneBehaviour
 
+  alias Structs.Category.Space.Transform
+  alias Structs.Category.Value.Float, as: ValueFloat
+  alias Structs.Category.Value.Color, as: Color
+
+  # Contents.Nodes.Test.Formula.run/0 の戻り型と合わせて String.t() を使用
+  @type formula_result :: {:ok, String.t(), term()} | {:error, String.t(), term()}
+
+  @type state :: %{
+          required(:origin) => Transform.t(),
+          required(:landing_object) => term(),
+          required(:children) => [term()],
+          required(:formula_results) => [formula_result()],
+          required(:hud_visible) => boolean(),
+          required(:cursor_grab_request) => :no_change | term()
+        }
+
+  @type render_defaults :: %{
+          camera_eye: ValueFloat.t3(),
+          camera_target: ValueFloat.t3(),
+          camera_up: ValueFloat.t3(),
+          camera: {float(), float(), float()},
+          color_sky_top: Color.normalized_t(),
+          color_sky_bottom: Color.normalized_t(),
+          grid_size: float(),
+          grid_divisions: non_neg_integer(),
+          color_grid: Color.normalized_t(),
+          color_ok: Color.normalized_t(),
+          color_error: Color.normalized_t(),
+          color_text: Color.normalized_t(),
+          color_bg: Color.normalized_t()
+        }
+
   # 描画用の既定値（build_frame/2 で参照。値の定義は Playing に集約）
+  # 色は Structs.Category.Value.Color の正規化表現 (0.0..1.0)
   @render_camera_eye {0.0, 3.0, 8.0}
   @render_camera_target {0.0, 0.0, 0.0}
   @render_camera_up {0.0, 1.0, 0.0}
@@ -28,6 +61,7 @@ defmodule Content.FormulaTest.Playing do
   @render_color_bg {0.05, 0.08, 0.12, 0.92}
 
   @doc "1 フレーム分の描画データを組み立てる。Rendering.Render が Content.build_frame 経由で呼ぶ。"
+  @spec build_frame(state(), term()) :: {list(), term(), term()}
   def build_frame(state, context) do
     defaults = render_defaults()
     commands = build_frame_commands(defaults)
@@ -37,6 +71,7 @@ defmodule Content.FormulaTest.Playing do
   end
 
   @doc "build_frame/2 が参照する描画用既定値"
+  @spec render_defaults() :: render_defaults()
   def render_defaults do
     %{
       camera_eye: @render_camera_eye,
@@ -55,18 +90,14 @@ defmodule Content.FormulaTest.Playing do
     }
   end
 
-  alias Contents.Nodes.Category.Core.Input.Value, as: ValueNode
-  alias Contents.Nodes.Category.Operators.Add, as: AddNode
-  alias Contents.Nodes.Category.Operators.Sub, as: SubNode
-  alias Contents.Nodes.Category.Operators.Equals, as: EqualsNode
   alias Contents.Objects.Core.Struct, as: ObjectStruct
   alias Contents.Objects.Core.CreateEmptyChild
-  alias Structs.Category.Space.Transform
   alias Contents.Components.Category.Shader.Skybox
 
   @impl Contents.SceneBehaviour
+  @spec init(term()) :: {:ok, state()}
   def init(_init_arg) do
-    results = run_formula_tests()
+    results = Contents.Nodes.Test.Formula.run()
     origin = Transform.new()
     top_object = ObjectStruct.new(name: "User")
 
@@ -97,108 +128,9 @@ defmodule Content.FormulaTest.Playing do
   def render_type, do: :playing
 
   @impl Contents.SceneBehaviour
+  @spec update(term(), state()) :: {:continue, state()}
   def update(_context, state) do
     {:continue, state}
-  end
-
-  # ── Formula 検証 ───────────────────────────────────────────────────
-
-  defp run_formula_tests do
-    [
-      test_add_inputs(),
-      test_constants(),
-      test_comparison(),
-      test_store(),
-      test_multiple_outputs()
-    ]
-  end
-
-  defp test_add_inputs do
-    # Value(1) -> a, Value(2) -> b, Add(a, b) -> result
-    # player_x, player_y は元 FormulaGraph の入力名。1+2 の加算を検証
-    a = ValueNode.handle_sample(%{}, %{value: 1.0})
-    b = ValueNode.handle_sample(%{}, %{value: 2.0})
-    result = AddNode.handle_sample(%{a: a, b: b}, %{})
-
-    case result do
-      ival when is_number(ival) and ival == 3.0 ->
-        {:ok, "player_x + player_y (1+2)", 3.0}
-
-      ival when is_number(ival) ->
-        {:ok, "player_x + player_y", inspect([ival])}
-
-      {:error, reason} ->
-        {:error, "player_x + player_y", "#{inspect(reason)}"}
-    end
-  end
-
-  defp test_constants do
-    # Value(10) -> a, Value(3) -> b, Add(a, b) -> result
-    a = ValueNode.handle_sample(%{}, %{value: 10})
-    b = ValueNode.handle_sample(%{}, %{value: 3})
-    result = AddNode.handle_sample(%{a: a, b: b}, %{})
-
-    case result do
-      ival when is_number(ival) and ival == 13 -> {:ok, "10 + 3", 13}
-      ival when is_number(ival) -> {:ok, "10 + 3", inspect([ival])}
-      {:error, reason} -> {:error, "10 + 3", "#{inspect(reason)}"}
-    end
-  end
-
-  defp test_comparison do
-    # Value(1.0) -> a, Value(2.0) -> b, Equals(a, b, op: :lt) -> result
-    a = ValueNode.handle_sample(%{}, %{value: 1.0})
-    b = ValueNode.handle_sample(%{}, %{value: 2.0})
-    result = EqualsNode.handle_sample(%{a: a, b: b, op: :lt}, %{})
-
-    case result do
-      true -> {:ok, "lt(1.0, 2.0)", true}
-      false -> {:error, "lt(1.0, 2.0)", "expected true, got false"}
-      {:error, reason} -> {:error, "lt(1.0, 2.0)", inspect(reason)}
-      other -> {:error, "lt(1.0, 2.0)", "unexpected result: #{inspect(other)}"}
-    end
-  end
-
-  defp test_store do
-    # Store ノード（read_store / write_store）は Contents.Nodes に未実装のため、
-    # 同等の計算（0 + 1 = 1）を Value + Add で検証する。
-    # Phase 1 では Store の概念をスキップし、加算のみで動作確認。
-    r = ValueNode.handle_sample(%{}, %{value: 0})
-    one = ValueNode.handle_sample(%{}, %{value: 1})
-    result = AddNode.handle_sample(%{a: r, b: one}, %{})
-
-    case result do
-      ival when is_number(ival) and ival == 1 ->
-        {:ok, "read_store/write_store (0->1, simulated)", 1}
-
-      ival when is_number(ival) ->
-        {:ok, "read_store/write_store", inspect([ival])}
-
-      {:error, reason} ->
-        {:error, "read_store/write_store", "#{inspect(reason)}"}
-    end
-  end
-
-  defp test_multiple_outputs do
-    # Value(2), Value(3) -> Add -> 5, Sub -> -1
-    a = ValueNode.handle_sample(%{}, %{value: 2.0})
-    b = ValueNode.handle_sample(%{}, %{value: 3.0})
-    add_result = AddNode.handle_sample(%{a: a, b: b}, %{})
-    sub_result = SubNode.handle_sample(%{a: a, b: b}, %{})
-
-    case {add_result, sub_result} do
-      {a_r, s_r} when is_number(a_r) and is_number(s_r) and a_r == 5.0 and s_r == -1.0 ->
-        {:ok, "x+y, x-y (2,3)", [5.0, -1.0]}
-
-      {a_r, s_r} when is_number(a_r) and is_number(s_r) ->
-        {:ok, "x+y, x-y", inspect([a_r, s_r])}
-
-      {{:error, reason}, _} ->
-        {:error, "x+y, x-y", "#{inspect(reason)}"}
-
-      {_, {:error, reason}} ->
-        {:error, "x+y, x-y", "#{inspect(reason)}"}
-    end
   end
 
   # ── 描画フレーム組み立て（定義は contents に集約）───────────────────────

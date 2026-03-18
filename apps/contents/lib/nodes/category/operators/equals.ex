@@ -7,10 +7,14 @@ defmodule Contents.Nodes.Category.Operators.Equals do
 
   `a` または `b` が nil あるいは比較不可能な型の場合は `{:error, :invalid_type}` を返す。
   Add/Sub と同じく、呼び出し側でエラー扱いするか判断する。
+
+  比較可能な型: 数値（`Value.Float.t/0`, `Value.Int.t/0`）、文字列（`Structs.Category.Text.String.t/0`）、atom 等。
+  戻り値: `Structs.Category.Value.Bool.t/0` または `{:error, :invalid_type}`。
   """
   @behaviour Contents.Behaviour.Nodes
 
   @impl Contents.Behaviour.Nodes
+  @spec handle_sample(map(), map()) :: Structs.Category.Value.Bool.t() | {:error, :invalid_type}
   def handle_sample(%{a: a, b: b, op: op}, _context) when op in [:gt, :ge, :lt, :le] do
     if comparable?(a, b) do
       case op do
