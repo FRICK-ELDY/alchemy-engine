@@ -32,7 +32,6 @@ graph TD
     REG[Registry<br/>Core.RoomRegistry]
     FS[Core.FormulaStore.LocalBackend]
     SS[Contents.Scenes.Stack]
-    IH[Core.InputHandler]
     EB[Core.EventBus]
     RS[Core.RoomSupervisor]
     GEV[Contents.Events.Game<br/>:main ルーム]
@@ -43,7 +42,6 @@ graph TD
     APP --> REG
     APP --> FS
     APP --> SS
-    APP --> IH
     APP --> EB
     APP --> RS
     RS -->|start_room :main| GEV

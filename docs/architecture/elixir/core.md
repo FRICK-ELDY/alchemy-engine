@@ -61,25 +61,28 @@ NIF 関数は 3 カテゴリに分類されます：
 
 ---
 
-## `content_behaviour.ex` — コンテンツ定義インターフェース
+## `Contents.Behaviour.Content` — コンテンツ定義インターフェース
 
-コンテンツモジュールが実装すべきビヘイビア。旧 `WorldBehaviour` / `RuleBehaviour` の 2 分割設計を統合した設計。
+コンテンツモジュールが実装すべきビヘイビア。`apps/contents/lib/behaviour/content.ex` に定義。core はコンパイル時には contents に依存せず、実行時に `Core.Config.current/0` で得た content モジュールを参照する。
 
 **必須コールバック:**
 
 ```elixir
-@callback components()        :: [module()]
-@callback flow_runner(room_id())       :: pid() | nil   # シーンスタックの pid
-@callback event_handler(room_id())    :: pid() | nil   # GameEvents の pid
-@callback initial_scenes()    :: [%{module: scene_module(), init_arg: map()}]
-@callback physics_scenes()    :: [scene_module()]
-@callback playing_scene()     :: scene_module()
-@callback game_over_scene()   :: scene_module()
-@callback entity_registry()   :: map()
-@callback enemy_exp_reward(kind_id :: non_neg_integer()) :: exp()
-@callback score_from_exp(exp()) :: non_neg_integer()
-@callback wave_label(elapsed_sec :: float()) :: String.t()
-@callback context_defaults()  :: map()
+@callback components()                    :: [module()]
+@callback flow_runner(room_id())          :: pid() | nil   # Contents.Scenes.Stack の pid
+@callback event_handler(room_id())        :: pid() | nil   # Contents.Events.Game の pid
+@callback scene_init(scene_type(), init_arg) :: {:ok, state}
+@callback scene_update(scene_type(), context, state) :: {:continue, state} | {:transition, ...}
+@callback scene_render_type(scene_type()) :: atom()
+@callback initial_scenes()                :: [%{scene_type: atom(), init_arg: map()}]
+@callback physics_scenes()                :: [scene_type()]
+@callback playing_scene()                 :: scene_type()
+@callback game_over_scene()               :: scene_type()
+@callback entity_registry()               :: map()
+@callback enemy_exp_reward(kind_id)       :: exp()
+@callback score_from_exp(exp())           :: non_neg_integer()
+@callback wave_label(elapsed_sec)         :: String.t()
+@callback context_defaults()              :: map()
 ```
 
 **オプショナル: `scene_stack_spec/1`** — ルーム用シーンスタック（`Contents.Scenes.Stack`）の `child_spec`。マルチルーム時などに使用。
@@ -131,10 +134,10 @@ NIF 関数は 3 カテゴリに分類されます：
 
 ## `config.ex` — 設定解決ヘルパー
 
-`:current` の Application 設定を解決する。
+`Application.get_env(:server, :current)` でコンテンツモジュールを解決する。
 
 ```elixir
-Core.Config.current()     # ContentBehaviour 実装モジュールを返す
+Core.Config.current()     # Contents.Behaviour.Content 実装モジュールを返す
 Core.Config.components()  # current().components() を呼び出す
 ```
 
