@@ -118,7 +118,7 @@ impl NetworkRenderBridge {
             }
         };
         if let Err(e) = self.session.put_drop(&self.movement_key_expr, &payload) {
-            log::warn!("movement publish failed: {e}");
+            log::warn!("[input:client] movement publish failed: {e}");
         }
     }
 

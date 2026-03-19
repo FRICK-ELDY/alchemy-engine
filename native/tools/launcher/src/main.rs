@@ -51,7 +51,11 @@ const ICON_GREEN_R: u8 = 0x22;
 const ICON_GREEN_G: u8 = 0x8B;
 const ICON_GREEN_B: u8 = 0x22;
 
-/// zenohd は tcp/[::]:7447 で待ち受けるため、IPv4 と IPv6 の両方を試す。
+/// zenohd の listen エンドポイント。Windows では tcp/[::]:7447 だけだと 127.0.0.1 に届かないため、
+/// tcp/127.0.0.1:7447 を明示して localhost 接続を確実にする（mix alchemy.router と同様）。
+const ZENOHD_LISTEN_ARGS: &[&str] = &["-l", "tcp/127.0.0.1:7447", "-l", "tcp/[::]:7447"];
+
+/// zenohd は 127.0.0.1 と [::1] で待ち受けるため、IPv4 と IPv6 の両方を試す。
 const PORT_CHECK_ADDRESSES: &[&str] = &["127.0.0.1", "[::1]"];
 
 /// zenohd がポートに bind するまでの初回待機。
@@ -692,7 +696,10 @@ fn main() {
                         let zenohd_started = {
                             let mut child_opt = zenohd_child.borrow_mut();
                             if child_opt.is_none() {
-                                match Command::new("zenohd").spawn() {
+                                match Command::new("zenohd")
+                                    .args(ZENOHD_LISTEN_ARGS)
+                                    .spawn()
+                                {
                                     Ok(child) => {
                                         *child_opt = Some(child);
                                         *zenohd_starting_cancelled.borrow_mut() = false;

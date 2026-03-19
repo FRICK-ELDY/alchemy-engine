@@ -4,6 +4,8 @@ defmodule Contents.LocalUserComponent do
 
   全コンテンツ共通のキーマッピング（WASD/矢印→move、Shift→sprint、Escape→key_pressed）で
   raw_key, raw_mouse_motion, focus_lost を処理する。
+  Zenoh / Phoenix Channel / UDP 等のネットワーク経由の {:move_input, dx, dy} も受け付け、
+  ETS に保存して get_move_vector/1 から参照可能にする。
 
   コンテンツが local_user_input_module/0 を実装しない場合に使用される。
   """
@@ -69,6 +71,12 @@ defmodule Contents.LocalUserComponent do
   def on_event({:cursor_position, x, y}, context) when is_number(x) and is_number(y) do
     room_id = Map.get(context, :room_id, :main)
     :ets.insert(@table, {{room_id, :mouse_pos}, {x * 1.0, y * 1.0}})
+    :ok
+  end
+
+  def on_event({:move_input, dx, dy}, context) when is_number(dx) and is_number(dy) do
+    room_id = Map.get(context, :room_id, :main)
+    :ets.insert(@table, {{room_id, :move}, {dx * 1.0, dy * 1.0}})
     :ok
   end
 

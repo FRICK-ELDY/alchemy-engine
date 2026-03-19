@@ -33,23 +33,44 @@ defmodule Contents.Components.Category.Rendering.Render do
           do: content.mesh_definitions(),
           else: []
 
+      # ゲームオーバー等でボタンクリックが必要なシーンでは cursor_grab: :release を送る
+      cursor_grab = resolve_cursor_grab(content, playing_state, current_scene)
+
       frame_binary =
-        Content.MessagePackEncoder.encode_frame(commands, camera, ui, mesh_definitions)
+        Content.MessagePackEncoder.encode_frame(
+          commands,
+          camera,
+          ui,
+          mesh_definitions,
+          cursor_grab
+        )
 
       Contents.FrameBroadcaster.put(context.room_id, frame_binary)
 
-      cursor_grab = Map.get(playing_state, :cursor_grab_request, :no_change)
+      cursor_grab_reset = Map.get(playing_state, :cursor_grab_request, :no_change)
 
-      if cursor_grab != :no_change and runner do
+      if cursor_grab_reset != :no_change and runner do
         Contents.Scenes.Stack.update_by_scene_type(
           runner,
           content.playing_scene(),
-          &apply_cursor_grab_request(&1, cursor_grab)
+          &apply_cursor_grab_request(&1, cursor_grab_reset)
         )
       end
     end
 
     :ok
+  end
+
+  # フレームに含める cursor_grab。ゲームオーバー等では :release でボタンクリックを可能に。
+  defp resolve_cursor_grab(content, playing_state, current_scene) do
+    from_playing = Map.get(playing_state, :cursor_grab_request, :no_change)
+
+    cond do
+      from_playing != :no_change -> from_playing
+      # ゲームオーバーシーンではカーソルを解放して RETRY 等のボタンをクリック可能に
+      current_scene == content.game_over_scene() -> :release
+      true -> :no_change
+    end
   end
 
   defp apply_cursor_grab_request(state, cursor_grab) do

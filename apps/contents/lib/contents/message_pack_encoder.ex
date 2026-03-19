@@ -11,26 +11,33 @@ defmodule Content.MessagePackEncoder do
   @doc """
   1フレーム分を MessagePack バイナリにエンコードする。
 
-  cursor_grab はバイナリに含めず、NIF の別引数で渡す。
+  - cursor_grab: `:grab` | `:release` | `:no_change`（省略可）。Zenoh 配信時にクライアントへ渡す。
+  - NIF（ローカル）経由の場合は cursor_grab を別引数で渡す方式のまま。
   """
   @spec encode_frame(
           commands :: list(),
           camera :: tuple(),
           ui :: tuple(),
-          mesh_definitions :: list()
-        ) ::
-          binary()
-  def encode_frame(commands, camera, ui, mesh_definitions) do
-    frame = %{
-      "commands" => encode_commands(commands),
-      "camera" => encode_camera(camera),
-      "ui" => encode_ui(ui),
-      "mesh_definitions" => encode_mesh_definitions(mesh_definitions)
-    }
+          mesh_definitions :: list(),
+          cursor_grab :: :grab | :release | :no_change | nil
+        ) :: binary()
+  def encode_frame(commands, camera, ui, mesh_definitions, cursor_grab \\ nil) do
+    frame =
+      %{
+        "commands" => encode_commands(commands),
+        "camera" => encode_camera(camera),
+        "ui" => encode_ui(ui),
+        "mesh_definitions" => encode_mesh_definitions(mesh_definitions)
+      }
+      |> maybe_put_cursor_grab(cursor_grab)
 
     # Msgpax.pack! は NaN/Inf やサポート外の型で Msgpax.PackError を投げる
     Msgpax.pack!(frame, iodata: false)
   end
+
+  defp maybe_put_cursor_grab(frame, :release), do: Map.put(frame, "cursor_grab", "release")
+  defp maybe_put_cursor_grab(frame, :grab), do: Map.put(frame, "cursor_grab", "grab")
+  defp maybe_put_cursor_grab(frame, _), do: frame
 
   @doc "DrawCommand リストを MessagePack 用の map リストに変換する。"
   def encode_commands(commands) do

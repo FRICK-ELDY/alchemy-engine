@@ -12,7 +12,6 @@ defmodule Content.VampireSurvivor do
 
   def components do
     [
-      Content.VampireSurvivor.LocalUserComponent,
       Contents.Components.Category.Spawner,
       Content.VampireSurvivor.LevelComponent,
       Content.VampireSurvivor.BossComponent,
@@ -27,8 +26,6 @@ defmodule Content.VampireSurvivor do
   def build_frame(playing_state, context) do
     Content.VampireSurvivor.FrameBuilder.build(playing_state, context)
   end
-
-  def local_user_input_module, do: Content.VampireSurvivor.LocalUserComponent
 
   # ── シーン定義（エンジンが参照するシーン構成）────────────────────
 

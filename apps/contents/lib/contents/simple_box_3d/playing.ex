@@ -90,10 +90,13 @@ defmodule Content.SimpleBox3D.Scenes.Playing do
   def render_type, do: :playing
 
   @impl Contents.SceneBehaviour
-  def update(_context, state) do
+  def update(context, state) do
     if Map.get(state, :alive, true) do
-      # move_input は Rust の on_move_input が f64 としてエンコードするため float で届く。
-      {dx, dz} = Map.get(state, :move_input, {0.0, 0.0})
+      # Zenoh / Phoenix 経由の入力は LocalUserComponent の ETS に格納される。
+      # state.move_input（Mouse コンポーネント経由）に依存せず、直接参照して
+      # リモートクライアント入力が確実に反映されるようにする。
+      room_id = Map.get(context, :room_id, :main)
+      {dx, dz} = Contents.ComponentList.local_user_input_module().get_move_vector(room_id)
       new_state = tick(state, dx, dz)
       {:continue, new_state}
     else
