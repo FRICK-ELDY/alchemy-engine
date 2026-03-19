@@ -96,8 +96,8 @@ defmodule Content.SimpleBox3D.Scenes.Playing do
       # state.move_input（Mouse コンポーネント経由）に依存せず、直接参照して
       # リモートクライアント入力が確実に反映されるようにする。
       room_id = Map.get(context, :room_id, :main)
-      {dx, dy} = Contents.ComponentList.local_user_input_module().get_move_vector(room_id)
-      new_state = tick(state, dx, dy)
+      {dx, dz} = Contents.ComponentList.local_user_input_module().get_move_vector(room_id)
+      new_state = tick(state, dx, dz)
       {:continue, new_state}
     else
       {:transition, {:replace, Content.SimpleBox3D.Scenes.GameOver, %{}}, state}

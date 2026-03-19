@@ -209,7 +209,7 @@ defmodule Network.ZenohBridge do
       {:ok, map} when is_map(map) ->
         case Map.get(map, "name") do
           name when is_binary(name) -> forward_ui_action(room_id, name)
-          _ -> Logger.debug("[ZenohBridge] Invalid action payload (missing name) room=#{room_id}")
+          _ -> Logger.warning("[input:ZenohBridge] Invalid action payload (missing name) room=#{room_id}")
         end
 
       # Rust rmp_serde が struct を配列 [name, payload] としてシリアライズする場合に対応
@@ -217,10 +217,10 @@ defmodule Network.ZenohBridge do
         forward_ui_action(room_id, name)
 
       {:ok, other} ->
-        Logger.debug("[ZenohBridge] Invalid action payload room=#{room_id} format=#{inspect(other, limit: 3)}")
+        Logger.warning("[input:ZenohBridge] Invalid action payload room=#{room_id} format=#{inspect(other, limit: 3)}")
 
       {:error, reason} ->
-        Logger.debug("[ZenohBridge] action unpack error: #{inspect(reason)} room=#{room_id}")
+        Logger.warning("[input:ZenohBridge] action unpack error: #{inspect(reason)} room=#{room_id}")
     end
   end
 

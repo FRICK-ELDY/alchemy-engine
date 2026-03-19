@@ -34,7 +34,7 @@ defmodule Contents.Components.Category.Rendering.Render do
           else: []
 
       # ゲームオーバー等でボタンクリックが必要なシーンでは cursor_grab: :release を送る
-      cursor_grab = resolve_cursor_grab(runner, content, playing_state, current_scene)
+      cursor_grab = resolve_cursor_grab(content, playing_state, current_scene)
 
       frame_binary =
         Content.MessagePackEncoder.encode_frame(
@@ -62,7 +62,7 @@ defmodule Contents.Components.Category.Rendering.Render do
   end
 
   # フレームに含める cursor_grab。ゲームオーバー等では :release でボタンクリックを可能に。
-  defp resolve_cursor_grab(runner, content, playing_state, current_scene) do
+  defp resolve_cursor_grab(content, playing_state, current_scene) do
     from_playing = Map.get(playing_state, :cursor_grab_request, :no_change)
 
     cond do
