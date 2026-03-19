@@ -18,13 +18,19 @@ defmodule Content.BulletHell3D do
 
   def components do
     [
-      Content.BulletHell3D.SpawnComponent,
-      Content.BulletHell3D.InputComponent,
-      Content.BulletHell3D.BulletComponent,
-      Content.BulletHell3D.DamageComponent,
-      Content.BulletHell3D.RenderComponent
+      Contents.Components.Category.Spawner,
+      Contents.Components.Category.Device.Mouse,
+      Contents.Components.Category.Device.Keyboard,
+      Contents.Components.Category.Rendering.Render
     ]
   end
+
+  # Spawner が set_world_size に渡す。Rust 物理エンジンの physics_step が
+  # map_size < PLAYER_SIZE でパニックしないよう十分な値を設定する。
+  def world_size, do: {2048.0, 2048.0}
+
+  def build_frame(playing_state, context),
+    do: Content.BulletHell3D.Playing.build_frame(playing_state, context)
 
   # ── シーン定義 ────────────────────────────────────────────────────
 
@@ -50,22 +56,24 @@ defmodule Content.BulletHell3D do
   def playing_scene, do: :playing
   def game_over_scene, do: :game_over
 
-  def scene_init(:playing, init_arg), do: Content.BulletHell3D.Scenes.Playing.init(init_arg)
-  def scene_init(:game_over, init_arg), do: Content.BulletHell3D.Scenes.GameOver.init(init_arg)
+  def scene_init(:playing, init_arg), do: Content.BulletHell3D.Playing.init(init_arg)
+  def scene_init(:game_over, init_arg), do: Content.BulletHell3D.GameOver.init(init_arg)
 
   def scene_update(:playing, context, state) do
-    Content.BulletHell3D.Scenes.Playing.update(context, state)
+    Content.BulletHell3D.Playing.update(context, state)
     |> map_transition_module_to_scene_type()
   end
 
   def scene_update(:game_over, context, state) do
-    Content.BulletHell3D.Scenes.GameOver.update(context, state)
+    Content.BulletHell3D.GameOver.update(context, state)
     |> map_transition_module_to_scene_type()
   end
 
   def scene_render_type(:playing), do: :playing
   def scene_render_type(:game_over), do: :game_over
 
+  # ContentBehaviour の全遷移パターンに対応。BulletHell3D は continue / replace のみ使用。
+  @doc false
   defp map_transition_module_to_scene_type({:continue, state}), do: {:continue, state}
 
   defp map_transition_module_to_scene_type({:continue, state, opts}),
@@ -93,8 +101,8 @@ defmodule Content.BulletHell3D do
     {:transition, {:replace, scene_module_to_type(mod), arg}, state, opts || %{}}
   end
 
-  defp scene_module_to_type(Content.BulletHell3D.Scenes.Playing), do: :playing
-  defp scene_module_to_type(Content.BulletHell3D.Scenes.GameOver), do: :game_over
+  defp scene_module_to_type(Content.BulletHell3D.Playing), do: :playing
+  defp scene_module_to_type(Content.BulletHell3D.GameOver), do: :game_over
   defp scene_module_to_type(mod), do: raise("unknown scene module: #{inspect(mod)}")
 
   # ── メタ情報 ──────────────────────────────────────────────────────

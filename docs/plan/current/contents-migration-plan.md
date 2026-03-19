@@ -172,7 +172,7 @@
 
 ---
 
-### Phase 4: BulletHell3D
+### Phase 4: BulletHell3D ✅ 完了（2026-03-19）
 
 **目的**: 弾・ダメージのコンポーネントを Object / Node で整理する。
 
@@ -192,6 +192,13 @@
 #### 4.3 検証
 
 - 弾幕、HP 減少、ゲームオーバーが従来通り動作すること
+
+#### 4.4 実施内容（2026-03-19）
+
+- **構成変更**: `scenes/` を廃止し、`game_over.ex` と `playing.ex` を `bullet_hell_3d/` 直下に配置。モジュール名を `Content.BulletHell3D.Playing` / `Content.BulletHell3D.GameOver` に変更。
+- **共有コンポーネントへ移行**: SpawnComponent, InputComponent, BulletComponent, DamageComponent, RenderComponent を削除。`Contents.Components.Category.Spawner`, `Device.Mouse`, `Device.Keyboard`, `Rendering.Render` を使用。`build_frame/2` を Content に追加し Playing.build_frame に委譲。
+- **Playing**: `origin`、`landing_object`、`player_object`（`Objects.Core.Struct`）、`enemy_objects`（`[%{id, object}]`）、`bullet_objects`（`[%{id, object, vel}]`）を state に追加。各 Object の `transform.position` で座標を保持。tick 処理で `extract_positions` / `put_position` / `put_positions` により Object の position を更新。弾は Object + vel のペアで管理。衝突判定は Object の position を比較する既存ロジックを維持。
+- **build_frame**: `player_object`・`enemy_objects`・`bullet_objects` から `position_from_object` で座標を取得し DrawCommand を組み立て。HUD は従来どおり。
 
 ---
 

@@ -1,4 +1,4 @@
-defmodule Content.BulletHell3D.Scenes.GameOver do
+defmodule Content.BulletHell3D.GameOver do
   @moduledoc """
   BulletHell3D のゲームオーバーシーン。
 
@@ -8,7 +8,10 @@ defmodule Content.BulletHell3D.Scenes.GameOver do
   @behaviour Contents.SceneBehaviour
 
   @impl Contents.SceneBehaviour
-  def init(init_arg), do: {:ok, init_arg}
+  def init(init_arg) do
+    state = (init_arg || %{}) |> Map.take([:elapsed_sec])
+    {:ok, state}
+  end
 
   @impl Contents.SceneBehaviour
   def render_type, do: :game_over
@@ -16,7 +19,7 @@ defmodule Content.BulletHell3D.Scenes.GameOver do
   @impl Contents.SceneBehaviour
   def update(_context, state) do
     if Map.get(state, :retry, false) do
-      {:transition, {:replace, Content.BulletHell3D.Scenes.Playing, %{}}, state}
+      {:transition, {:replace, Content.BulletHell3D.Playing, %{}}, state}
     else
       {:continue, state}
     end
