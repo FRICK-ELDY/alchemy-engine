@@ -51,7 +51,9 @@ config :network, :zenoh_connect, "tcp/localhost:7447"
 # Content.SimpleBox3D     — シンプルな3Dゲーム（Phase R-6 動作検証用）
 # Content.BulletHell3D    — 3D 弾幕避けゲーム
 # Content.FormulaTest     — Formula エンジン検証（Elixir→Rust→Elixir）
-config :server, :current, Content.BulletHell3D
+# Content.RollingBall     — ローリングボール迷路（Phase 6 移行済み）
+# ローカル開発・動作検証時は上記いずれかに切り替える。本番は config/runtime.exs で設定すること。
+config :server, :current, Content.RollingBall
 config :server, :map, :plain
 config :server, :game_events_module, Contents.Events.Game
 

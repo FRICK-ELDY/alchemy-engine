@@ -8,6 +8,13 @@ defmodule Contents.Components.Category.Device.Keyboard do
   - `{:ui_action, "__quit__"}` — 終了要求（実行は上位層に委譲。イベント送信のみ）
   - `{:ui_action, "__retry__"}` — リトライ要求（game_over シーン state に retry: true を設定）
 
+  ## UI アクション（ui_action_handlers で統一）
+  Keyboard がデフォルトで `__retry__` と `__quit__` を用意し、Content の `ui_action_handlers/0`
+  とマージして適用する。Content が同じキーを返した場合は上書きされる（競合ではなく意図的なオーバーライド）。
+  `__retry__` / `__quit__` を Content に含めなくてもデフォルトで動作する。
+  ハンドラ値: `{scene_type, fn state -> new_state end}` または `:quit`。
+  例: `%{"__start__" => {:title, fn s -> Map.put(s, :start, true) end}}`
+
   ## 終了の委譲
   `__quit__` を受け取った場合、`System.stop/1` は呼ばない。
   イベントハンドラ（Game プロセス）に `:quit_requested` を送信し、
@@ -35,28 +42,56 @@ defmodule Contents.Components.Category.Device.Keyboard do
     :ok
   end
 
-  def on_event({:ui_action, "__retry__"}, _context) do
+  def on_event({:ui_action, action}, context) when is_binary(action) do
     content = Core.Config.current()
+    handlers = get_effective_handlers(content)
 
-    Helpers.with_scene_type(content.game_over_scene(), fn state ->
-      Map.put(state, :retry, true)
-    end)
+    case Map.get(handlers, action) do
+      {scene_type, fun} when is_function(fun, 1) ->
+        Helpers.with_scene_type(scene_type, fun)
+        :ok
 
-    :ok
-  end
+      :quit ->
+        pid = content.event_handler(Map.get(context, :room_id, :main))
+        if pid, do: send(pid, :quit_requested)
+        :ok
 
-  def on_event({:ui_action, "__quit__"}, context) do
-    # 終了はコンテンツまたは上位層に委譲。イベントハンドラに通知するのみ。
-    content = Core.Config.current()
-    pid = content.event_handler(Map.get(context, :room_id, :main))
-    if pid, do: send(pid, :quit_requested)
-    :ok
+      nil ->
+        # 未知のアクションは無視（FunctionClauseError を避ける）
+        :ok
+    end
   end
 
   def on_event(_event, _context), do: :ok
 
+  # defaults を custom でマージ（custom 優先）。順序を誤ると __retry__ 等が上書きされない。
+  defp get_effective_handlers(content) do
+    defaults =
+      %{}
+      |> maybe_put_retry(content)
+      |> Map.put("__quit__", :quit)
+
+    custom =
+      if function_exported?(content, :ui_action_handlers, 0) do
+        content.ui_action_handlers()
+      else
+        %{}
+      end
+
+    Map.merge(defaults, custom)
+  end
+
+  # Content behaviour では game_over_scene/0 は必須。将来 optional にした場合は __retry__ は登録されない。
+  defp maybe_put_retry(acc, content) do
+    if function_exported?(content, :game_over_scene, 0) do
+      Map.put(acc, "__retry__", {content.game_over_scene(), fn s -> Map.put(s, :retry, true) end})
+    else
+      acc
+    end
+  end
+
   defp toggle_hud_and_cursor(state) do
-    if state.hud_visible do
+    if Map.get(state, :hud_visible, false) do
       # HUD表示中: HUDを閉じてカーソルをグラブ（ゲームに戻る）
       state
       |> Map.put(:hud_visible, false)
