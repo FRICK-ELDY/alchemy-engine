@@ -128,16 +128,7 @@ defmodule Network.ZenohBridge do
 
   @impl true
   def handle_info(%Zenohex.Sample{key_expr: key_expr, payload: payload, kind: kind}, state) do
-    # [DEBUG] 受信した Sample をログ（ movement のみ）
     parsed = parse_input_key(key_expr)
-    if match?({:movement, _}, parsed) do
-      count = :persistent_term.get({__MODULE__, :movement_recv_count}, 0) + 1
-      :persistent_term.put({__MODULE__, :movement_recv_count}, count)
-      payload_size = if is_binary(payload), do: byte_size(payload), else: 0
-      Logger.info(
-        "[input:ZenohBridge] Sample recv key=#{key_expr} kind=#{inspect(kind)} payload_size=#{payload_size} count=#{count}"
-      )
-    end
 
     if kind != :put do
       Logger.warning("[input:ZenohBridge] Sample kind is not :put (got #{inspect(kind)}), skipping")
@@ -160,9 +151,8 @@ defmodule Network.ZenohBridge do
     {:noreply, state}
   end
 
-  # [DEBUG] マッチしない handle_info を全てログ（Sample の構造確認用）
   def handle_info(msg, state) do
-    Logger.info("[input:ZenohBridge] handle_info UNMATCHED msg=#{inspect(msg, limit: 3)}")
+    Logger.debug("[input:ZenohBridge] handle_info UNMATCHED msg=#{inspect(msg, limit: 3)}")
     {:noreply, state}
   end
 
@@ -243,7 +233,6 @@ defmodule Network.ZenohBridge do
 
     case Core.RoomRegistry.get_loop(room_key) do
       {:ok, pid} ->
-        Logger.info("[input:ZenohBridge] forward_move_input room=#{room_id} (dx=#{dx}, dy=#{dy}) → pid=#{inspect(pid)}")
         send(pid, {:move_input, dx, dy})
 
       :error ->

@@ -77,9 +77,6 @@ defmodule Contents.LocalUserComponent do
   def on_event({:move_input, dx, dy}, context) when is_number(dx) and is_number(dy) do
     room_id = Map.get(context, :room_id, :main)
     :ets.insert(@table, {{room_id, :move}, {dx * 1.0, dy * 1.0}})
-    # [DEBUG]
-    require Logger
-    Logger.info("[input:LocalUserComponent] on_event {:move_input, #{dx}, #{dy}} → ETS insert room=#{inspect(room_id)}")
     :ok
   end
 
