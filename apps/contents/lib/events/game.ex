@@ -326,6 +326,7 @@ defmodule Contents.Events.Game do
   # 終了要求（Device.Keyboard 等が __quit__ 受け取り時に送信。Content コールバックを経由）
   def handle_info(:quit_requested, _state) do
     content = current_content()
+
     if function_exported?(content, :on_quit_requested, 0) do
       content.on_quit_requested()
     else

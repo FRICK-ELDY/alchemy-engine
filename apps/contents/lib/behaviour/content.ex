@@ -147,14 +147,30 @@ defmodule Contents.Behaviour.Content do
   描画フレームを組み立てる。Rendering.Render が呼ぶ。
 
   playing_state は現在の playing シーンの state。context は on_nif_sync の context。
+  context には :current_scene が含まれる（現在表示中のシーン種別）。
   戻り値は `Content.MessagePackEncoder.encode_frame/4` に渡す形式の
   `{commands, camera, ui}`。未実装の Content では Render が描画をスキップする。
   """
   @callback build_frame(playing_state :: map(), context :: map()) ::
               {commands :: list(), camera :: tuple(), ui :: tuple()}
 
+  @doc """
+  メッシュ定義のリストを返す。Rendering.Render が encode_frame の第4引数に渡す。
+  未実装の Content では [] を使用する。
+  """
+  @callback mesh_definitions() :: list()
+
+  @doc """
+  ワールドサイズを {width, height} で返す。Spawner が set_world_size に渡す。
+  physics_scenes を持つコンテンツで Spawner を使用する場合に実装する。
+  未実装の Content では Spawner は set_world_size を呼ばない。
+  """
+  @callback world_size() :: {width :: float(), height :: float()}
+
   @optional_callbacks [
     build_frame: 2,
+    mesh_definitions: 0,
+    world_size: 0,
     on_quit_requested: 0,
     level_up_scene: 0,
     boss_alert_scene: 0,

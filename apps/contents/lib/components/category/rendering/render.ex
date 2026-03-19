@@ -15,14 +15,31 @@ defmodule Contents.Components.Category.Rendering.Render do
 
     if function_exported?(content, :build_frame, 2) do
       runner = content.flow_runner(:main)
+
       playing_state =
         (runner && Contents.Scenes.Stack.get_scene_state(runner, content.playing_scene())) || %{}
 
-      {commands, camera, ui} = content.build_frame(playing_state, context)
-      frame_binary = Content.MessagePackEncoder.encode_frame(commands, camera, ui, [])
+      current_scene =
+        case runner && Contents.Scenes.Stack.current(runner) do
+          {:ok, %{scene_type: st}} -> st
+          _ -> content.playing_scene()
+        end
+
+      context_with_scene = Map.put(context, :current_scene, current_scene)
+      {commands, camera, ui} = content.build_frame(playing_state, context_with_scene)
+
+      mesh_definitions =
+        if function_exported?(content, :mesh_definitions, 0),
+          do: content.mesh_definitions(),
+          else: []
+
+      frame_binary =
+        Content.MessagePackEncoder.encode_frame(commands, camera, ui, mesh_definitions)
+
       Contents.FrameBroadcaster.put(context.room_id, frame_binary)
 
       cursor_grab = Map.get(playing_state, :cursor_grab_request, :no_change)
+
       if cursor_grab != :no_change and runner do
         Contents.Scenes.Stack.update_by_scene_type(
           runner,
@@ -36,7 +53,7 @@ defmodule Contents.Components.Category.Rendering.Render do
   end
 
   defp apply_cursor_grab_request(state, cursor_grab) do
-    if state.cursor_grab_request == cursor_grab do
+    if Map.get(state, :cursor_grab_request) == cursor_grab do
       Map.put(state, :cursor_grab_request, :no_change)
     else
       state

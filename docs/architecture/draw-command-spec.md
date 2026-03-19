@@ -143,7 +143,7 @@
 
 | フィールド | 型 | 説明 |
 |:---|:---|:---|
-| vertices | list | Elixir 定義の頂点リスト。`Content.MeshDef.grid_plane/1` から取得可 |
+| vertices | list | Elixir 定義の頂点リスト。`Contents.Components.Category.Procedural.Meshes.Grid.grid_plane/1` から取得可 |
 
 ---
 

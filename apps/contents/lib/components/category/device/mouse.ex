@@ -15,6 +15,7 @@ defmodule Contents.Components.Category.Device.Mouse do
     Helpers.with_playing_scene(fn state ->
       Map.put(state, :move_input, {dx, dz})
     end)
+
     :ok
   end
 
@@ -22,6 +23,7 @@ defmodule Contents.Components.Category.Device.Mouse do
     Helpers.with_playing_scene(fn state ->
       Map.put(state, :mouse_delta, {dx, dy})
     end)
+
     :ok
   end
 
