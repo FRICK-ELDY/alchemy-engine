@@ -65,6 +65,7 @@ defmodule Content.FormulaTest.Playing do
   def build_frame(state, context) do
     # Object の components は state を直接更新しない。将来 state を更新する Component を追加する場合は、
     # 呼び出し位置や戻り値の扱いの再検討が必要。
+    # トップレベルの Object のみ走査。Child 等の子 Object の Component は実行されない。
     Contents.Objects.Components.run_components_for_objects(Map.get(state, :children, []), context)
 
     defaults = render_defaults()
@@ -104,16 +105,17 @@ defmodule Content.FormulaTest.Playing do
     results = Contents.Nodes.Test.Formula.run()
     origin = Transform.new()
     top_object =
-      ObjectStruct.new(name: "User", components: [Content.FormulaTest.Components.NoopObjectComponent])
+      ObjectStruct.new(name: "User", components: [Contents.Objects.Components.Noop])
 
     # Scene 直下のトップレベルは User のみ。Child は User の子なので children には含めない。
     # 作成した Child を本シーンで参照する必要はないため、戻り値は束縛しない。
+    # init/1 では起動時エラーを即失敗させたいため raise。上位で {:error, reason} を扱う構成にすることも可。
     case CreateEmptyChild.create(top_object, name: "Child") do
       {:ok, _child} ->
         :ok
 
       {:error, reason} ->
-        raise "FormulaTest.Playing init: CreateEmptyChild.create failed: #{inspect(reason)}"
+        raise "FormulaTest.Playing init: CreateEmptyChild.create failed for 'Child': #{inspect(reason)}"
     end
 
     state = %{
