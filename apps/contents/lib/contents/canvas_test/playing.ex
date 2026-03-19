@@ -8,10 +8,12 @@ defmodule Content.CanvasTest.Playing do
 
   Phase 2 移行: ワールド空間の Canvas パネルを Object 階層で表現する。
   各パネルは Contents.Objects.Core.Struct で、transform に 3D 位置を保持する。
+  Struct → Node → Component → Object の紐づきは FormulaTest と同様に適用。
   """
   @behaviour Contents.SceneBehaviour
 
   alias Contents.Objects.Core.Struct, as: ObjectStruct
+  alias Contents.Objects.Core.CreateEmptyChild
   alias Structs.Category.Space.Transform
   alias Contents.Components.Category.Shader.Skybox
   alias Contents.Components.Category.Procedural.Meshes.Box
@@ -44,6 +46,11 @@ defmodule Content.CanvasTest.Playing do
 
   @doc "1 フレーム分の描画データを組み立てる。Rendering.Render が Content.build_frame 経由で呼ぶ。"
   def build_frame(state, context) do
+    # Object の components は state を直接更新しない。将来 state を更新する Component を追加する場合は、
+    # 呼び出し位置や戻り値の扱いの再検討が必要。
+    # トップレベルの Object のみ走査。world_panels 等の子 Object の Component は実行されない。
+    Contents.Objects.Components.run_components_for_objects(Map.get(state, :children, []), context)
+
     defaults = render_defaults()
     commands = build_frame_commands(defaults)
     camera = build_frame_camera(state, defaults)
@@ -71,15 +78,20 @@ defmodule Content.CanvasTest.Playing do
   @impl Contents.SceneBehaviour
   def init(_init_arg) do
     origin = Transform.new()
-    world_panels = build_world_panel_objects()
+    top_object =
+      ObjectStruct.new(name: "User", components: [Contents.Objects.Components.Noop])
+
+    world_panels = build_world_panel_objects(top_object)
 
     {:ok,
      %{
        origin: origin,
-       children: world_panels,
+       landing_object: top_object,
+       children: [top_object],
        pos: {0.0, 1.7, 0.0},
        yaw: 0.0,
        pitch: 0.0,
+       world_panels: world_panels,
        move_input: {0.0, 0.0},
        mouse_delta: {0.0, 0.0},
        sprint: false,
@@ -91,8 +103,9 @@ defmodule Content.CanvasTest.Playing do
   end
 
   # ワールド空間に配置するテキストパネルを Object として作成する。
-  # 各 Object の transform.position に 3D 座標を保持。描画は Rendering.Render が行う。
-  defp build_world_panel_objects do
+  # CreateEmptyChild で User の子として作成し、transform.position に 3D 座標を保持。
+  # 描画は Rendering.Render が行う。
+  defp build_world_panel_objects(top_object) do
     panel_y = 1.5
 
     panel_definitions = [
@@ -102,11 +115,15 @@ defmodule Content.CanvasTest.Playing do
       %{name: "WorldPanel_Info", position: {8.0, panel_y, 0.0}}
     ]
 
+    # init/1 では起動時エラーを即失敗させたいため raise。上位で {:error, reason} を扱う構成にすることも可。
     for panel_def <- panel_definitions do
-      ObjectStruct.new(
-        name: panel_def.name,
-        transform: %Transform{position: panel_def.position}
-      )
+      case CreateEmptyChild.create(top_object, name: panel_def.name) do
+        {:ok, child} ->
+          %{child | transform: %Transform{position: panel_def.position}}
+
+        {:error, reason} ->
+          raise "CanvasTest.Playing init: CreateEmptyChild.create failed: #{inspect(reason)}"
+      end
     end
   end
 
@@ -256,7 +273,7 @@ defmodule Content.CanvasTest.Playing do
   end
 
   defp build_frame_world_nodes(state, context, defaults) do
-    children = Map.get(state, :children, [])
+    world_panels = Map.get(state, :world_panels, [])
     {px, py, pz} = Map.get(state, :pos, {0.0, 1.7, 0.0})
     pos_text = "Pos: (#{Float.round(px, 1)}, #{Float.round(py, 1)}, #{Float.round(pz, 1)})"
     fps_text = if context.tick_ms > 0, do: "FPS: #{round(1000.0 / context.tick_ms)}", else: "FPS: --"
@@ -266,7 +283,7 @@ defmodule Content.CanvasTest.Playing do
     lifetime = defaults.world_text_lifetime
     color = defaults.world_text_color
 
-    for {obj, text} <- Enum.zip(Enum.take(children, length(texts)), texts), obj.active do
+    for {obj, text} <- Enum.zip(Enum.take(world_panels, length(texts)), texts), obj.active do
       {x, y, z} = obj.transform.position
       {:node, {:top_left, {0.0, 0.0}, :wrap},
        {:world_text, x, y, z, text, color, {lifetime, lifetime}}, []}

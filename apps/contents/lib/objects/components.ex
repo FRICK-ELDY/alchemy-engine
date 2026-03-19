@@ -45,7 +45,8 @@ defmodule Contents.Objects.Components do
   @doc """
   トップレベル Object のリストに対して、各 Object の Component を実行する。
 
-  再帰は行わない（Object 構造体に子リストがないため、トップレベルのみ）。
+  **トップレベルのみ走査**: 再帰は行わない（Object 構造体に子リストがないため）。
+  子 Object の Component は実行されない。将来子にも実行したい場合は本関数の仕様拡張が必要。
   リスト内の nil はスキップする（state.children の型が [term()] のため nil が混入し得る）。
   """
   @spec run_components_for_objects([ObjectStruct.t() | nil], map()) :: :ok
