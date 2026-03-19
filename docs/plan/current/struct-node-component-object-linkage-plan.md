@@ -139,9 +139,9 @@ Contents（体験）
 
 ## 5. 完了条件
 
-- [ ] `Contents.Objects.Core.Struct` に `components` フィールドが追加されている
-- [ ] `Contents.Behaviour.ObjectComponent` が定義され、`run/2` がコールバックとして宣言されている
-- [ ] Object の components を実行するヘルパーが用意され、build_frame または update から呼ばれている
-- [ ] （任意）サンプル ObjectComponent が 1 つ実装され、Object に付与する例がある
-- [ ] scene-and-object.md の「Component のリスト」が本実装に合わせて更新されている
-- [ ] 本計画書の「将来やるべきこと」が doc または backlog に反映されている（必要に応じて）
+- [x] `Contents.Objects.Core.Struct` に `components` フィールドが追加されている
+- [x] `Contents.Behaviour.ObjectComponent` が定義され、`run/2` がコールバックとして宣言されている
+- [x] Object の components を実行するヘルパーが用意され、build_frame または update から呼ばれている
+- [x] （任意）サンプル ObjectComponent が 1 つ実装され、Object に付与する例がある
+- [x] scene-and-object.md の「Component のリスト」が本実装に合わせて更新されている
+- [x] 本計画書の「将来やるべきこと」が doc または backlog に反映されている（必要に応じて）

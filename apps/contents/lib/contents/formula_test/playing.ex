@@ -63,6 +63,8 @@ defmodule Content.FormulaTest.Playing do
   @doc "1 フレーム分の描画データを組み立てる。Rendering.Render が Content.build_frame 経由で呼ぶ。"
   @spec build_frame(state(), term()) :: {list(), term(), term()}
   def build_frame(state, context) do
+    Contents.Objects.Components.run_components_for_objects(Map.get(state, :children, []), context)
+
     defaults = render_defaults()
     commands = build_frame_commands(defaults)
     camera = build_frame_camera(defaults)
@@ -99,7 +101,8 @@ defmodule Content.FormulaTest.Playing do
   def init(_init_arg) do
     results = Contents.Nodes.Test.Formula.run()
     origin = Transform.new()
-    top_object = ObjectStruct.new(name: "User")
+    top_object =
+      ObjectStruct.new(name: "User", components: [Content.FormulaTest.Components.NoopObjectComponent])
 
     # Scene 直下のトップレベルは User のみ。Child は User の子なので children には含めない。
     # 作成した Child を本シーンで参照する必要はないため、戻り値は束縛しない。
