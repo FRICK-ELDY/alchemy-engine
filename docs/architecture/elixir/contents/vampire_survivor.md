@@ -11,7 +11,7 @@
 ```elixir
 def components do
   [
-    Content.VampireSurvivor.LocalUserComponent,   # ローカル入力
+    Contents.LocalUserComponent,                  # ローカル入力（Zenoh / raw_key 両対応）
     Contents.Components.Category.Spawner,         # ワールド初期化・エンティティ登録
     Content.VampireSurvivor.LevelComponent,       # EXP・レベル・スコア・HP・武器選択（playing.ex 内）
     Content.VampireSurvivor.BossComponent,        # ボス HP・AI 制御（playing.ex 内）

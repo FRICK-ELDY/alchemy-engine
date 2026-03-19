@@ -177,6 +177,9 @@ defmodule Contents.Events.Game do
   # ── インフォ: 移動入力 ────────────────────────────────────────────
 
   def handle_info({:move_input, dx, dy}, state) do
+    # [DEBUG]
+    Logger.info("[input:GameEvents] handle_info {:move_input, #{dx}, #{dy}} → dispatch_event_to_components")
+
     # set_player_input は maybe_set_input_and_broadcast でフレームごとに ETS から読んで行う。
     # ここではコンポーネントへのディスパッチのみ（InputComponent 等がシーン state を更新する）。
 
@@ -615,6 +618,11 @@ defmodule Contents.Events.Game do
         Contents.ComponentList.local_user_input_module() || Contents.LocalUserComponent
 
       {dx, dy} = local_mod.get_move_vector(state.room_id)
+
+      # [DEBUG] 300フレーム(約5秒)に1回、現在の move_vector をログ
+      if rem(state.frame_count, 300) == 1 do
+        Logger.info("[input:GameEvents] maybe_set_input_and_broadcast frame=#{state.frame_count} room=#{inspect(state.room_id)} get_move_vector=({#{dx}, #{dy}})")
+      end
 
       inj = Process.get(:frame_injection, %{})
       Process.put(:frame_injection, Map.put(inj, :player_input, {dx * 1.0, dy * 1.0}))

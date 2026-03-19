@@ -20,6 +20,10 @@ defmodule Mix.Tasks.Alchemy.Router do
     Mix.shell().info("Press Ctrl+C to stop")
     Mix.shell().info("")
 
-    System.cmd("zenohd", [], into: IO.stream(:stdio, :line))
+    # Windows では tcp/[::]:7447 だけだと 127.0.0.1 に届かない場合があるため、
+    # tcp/127.0.0.1:7447 を明示して localhost 接続を確実にする。
+    # tcp/[::]:7447 も指定して LAN 等からの接続を維持する。
+    args = ["-l", "tcp/127.0.0.1:7447", "-l", "tcp/[::]:7447"]
+    System.cmd("zenohd", args, into: IO.stream(:stdio, :line))
   end
 end

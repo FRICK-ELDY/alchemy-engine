@@ -118,7 +118,7 @@ impl NetworkRenderBridge {
             }
         };
         if let Err(e) = self.session.put_drop(&self.movement_key_expr, &payload) {
-            log::warn!("movement publish failed: {e}");
+            log::warn!("[input:client] movement publish failed: {e}");
         }
     }
 
@@ -159,6 +159,10 @@ impl RenderBridge for NetworkRenderBridge {
             let keys = self.keys_held.lock().unwrap();
             move_vector_from_keys(&keys)
         };
+        // [DEBUG] 入力デバッグ: 非ゼロのときのみログ（60Hz を抑止）
+        if dx != 0.0 || dy != 0.0 {
+            log::info!("[input:client] next_frame keys→(dx={dx}, dy={dy}) publishing to {}", self.movement_key_expr);
+        }
         self.publish_movement(dx, dy);
 
         if let Ok(mut guard) = self.frame_buffer.lock() {
@@ -183,6 +187,9 @@ impl RenderBridge for NetworkRenderBridge {
                 keys.remove(&key);
             }
         }
+        // [DEBUG] キー入力デバッグ
+        let (dx, dy) = move_vector_from_keys(&keys);
+        log::info!("[input:client] on_raw_key key={key:?} state={state:?} keys_count={} → (dx={dx}, dy={dy})", keys.len());
     }
 
     fn on_raw_mouse_motion(&self, _dx: f32, _dy: f32) {

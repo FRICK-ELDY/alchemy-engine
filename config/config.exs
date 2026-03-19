@@ -55,7 +55,7 @@ config :network, :zenoh_connect, "tcp/localhost:7447"
 # ローカル開発・動作検証時は上記いずれかに切り替える。本番は config/runtime.exs で設定すること。
 # 注: デフォルトで VampireSurvivor を指定しているのはローカル動作確認のため。
 #     本番デプロイ時は runtime.exs で desired content に切り替える想定。
-config :server, :current, Content.VampireSurvivor
+config :server, :current, Content.SimpleBox3D
 config :server, :map, :plain
 config :server, :game_events_module, Contents.Events.Game
 

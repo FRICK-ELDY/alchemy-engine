@@ -4,6 +4,12 @@ defmodule Contents.ComponentListTest.NilReturningContent do
   def local_user_input_module, do: nil
 end
 
+# local_user_input_module をオーバーライドするコンテンツ（実装パス検証用）
+defmodule Contents.ComponentListTest.CustomLocalUserContent do
+  def components, do: []
+  def local_user_input_module, do: Contents.LocalUserComponent
+end
+
 defmodule Contents.ComponentListTest do
   use ExUnit.Case, async: false
 
@@ -14,12 +20,8 @@ defmodule Contents.ComponentListTest do
     end
 
     test "local_user_input_module 実装コンテンツはそのモジュールを返す" do
-      # content を明示的に渡して設定に依存しない単体テストにする
-      # Code.ensure_loaded で beam から正しいモジュールをロードする
-      # 設定に依存しないよう content を明示。ensure_loaded で function_exported? が正しく働くようにする
-      content = Content.VampireSurvivor
-      Code.ensure_loaded(content)
-      expected = Content.VampireSurvivor.LocalUserComponent
+      content = Contents.ComponentListTest.CustomLocalUserContent
+      expected = Contents.LocalUserComponent
 
       assert Contents.ComponentList.local_user_input_module(content) == expected
     end

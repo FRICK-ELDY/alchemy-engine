@@ -46,17 +46,25 @@ defmodule Network.ZenohBridge do
         ensure_client_info_table()
 
         # movement / action / client_info の subscriber を登録（自プロセスにメッセージ配送）
-        {:ok, _mov} = Zenohex.Session.declare_subscriber(session_id, @movement_selector, self())
-        {:ok, _act} = Zenohex.Session.declare_subscriber(session_id, @action_selector, self())
-
-        {:ok, _info} =
+        # 注意: Zenohex は subscriber_id を保持しないと GC でドロップされるため state に格納する
+        {:ok, mov_sub} = Zenohex.Session.declare_subscriber(session_id, @movement_selector, self())
+        {:ok, act_sub} = Zenohex.Session.declare_subscriber(session_id, @action_selector, self())
+        {:ok, info_sub} =
           Zenohex.Session.declare_subscriber(session_id, @client_info_selector, self())
 
         Logger.info(
           "[ZenohBridge] Started, frame publish + movement/action/client_info subscribe"
         )
 
-        {:ok, %{session_id: session_id}}
+        Logger.info("[input:ZenohBridge] init: subscribed to movement=#{@movement_selector}")
+
+        {:ok,
+         %{
+           session_id: session_id,
+           mov_sub: mov_sub,
+           act_sub: act_sub,
+           info_sub: info_sub
+         }}
 
       {:error, reason} ->
         Logger.error("[ZenohBridge] Failed to open session: #{inspect(reason)}")
@@ -119,8 +127,22 @@ defmodule Network.ZenohBridge do
   end
 
   @impl true
-  def handle_info(%Zenohex.Sample{key_expr: key_expr, payload: payload, kind: :put}, state) do
-    case parse_input_key(key_expr) do
+  def handle_info(%Zenohex.Sample{key_expr: key_expr, payload: payload, kind: kind}, state) do
+    # [DEBUG] 受信した Sample をログ（ movement のみ）
+    parsed = parse_input_key(key_expr)
+    if match?({:movement, _}, parsed) do
+      count = :persistent_term.get({__MODULE__, :movement_recv_count}, 0) + 1
+      :persistent_term.put({__MODULE__, :movement_recv_count}, count)
+      payload_size = if is_binary(payload), do: byte_size(payload), else: 0
+      Logger.info(
+        "[input:ZenohBridge] Sample recv key=#{key_expr} kind=#{inspect(kind)} payload_size=#{payload_size} count=#{count}"
+      )
+    end
+
+    if kind != :put do
+      Logger.warning("[input:ZenohBridge] Sample kind is not :put (got #{inspect(kind)}), skipping")
+    else
+      case parsed do
       {:movement, room_id} ->
         handle_movement(room_id, payload)
 
@@ -131,9 +153,16 @@ defmodule Network.ZenohBridge do
         handle_client_info(room_id, payload)
 
       :unknown ->
-        :ok
+        Logger.debug("[input:ZenohBridge] Unknown key_expr=#{key_expr}")
+    end
     end
 
+    {:noreply, state}
+  end
+
+  # [DEBUG] マッチしない handle_info を全てログ（Sample の構造確認用）
+  def handle_info(msg, state) do
+    Logger.info("[input:ZenohBridge] handle_info UNMATCHED msg=#{inspect(msg, limit: 3)}")
     {:noreply, state}
   end
 
@@ -170,8 +199,15 @@ defmodule Network.ZenohBridge do
         dy = map |> Map.get("dy", 0) |> to_float()
         forward_move_input(room_id, dx, dy)
 
-      _ ->
-        Logger.debug("[ZenohBridge] Invalid movement payload room=#{room_id}")
+      # Rust rmp_serde が struct を配列 [dx, dy] としてシリアライズする場合に対応
+      {:ok, [dx, dy]} when is_number(dx) and is_number(dy) ->
+        forward_move_input(room_id, to_float(dx), to_float(dy))
+
+      {:ok, other} ->
+        Logger.warning("[input:ZenohBridge] handle_movement unpack ok but unexpected format: #{inspect(other, limit: 5)}")
+
+      {:error, reason} ->
+        Logger.warning("[input:ZenohBridge] handle_movement unpack error: #{inspect(reason)} room=#{room_id}")
     end
   end
 
@@ -200,10 +236,11 @@ defmodule Network.ZenohBridge do
 
     case Core.RoomRegistry.get_loop(room_key) do
       {:ok, pid} ->
+        Logger.info("[input:ZenohBridge] forward_move_input room=#{room_id} (dx=#{dx}, dy=#{dy}) → pid=#{inspect(pid)}")
         send(pid, {:move_input, dx, dy})
 
       :error ->
-        Logger.debug("[ZenohBridge] No event handler for room=#{room_id}, dropping movement")
+        Logger.warning("[input:ZenohBridge] forward_move_input FAILED: No event handler for room=#{room_id}, dropping (dx=#{dx}, dy=#{dy})")
     end
   end
 

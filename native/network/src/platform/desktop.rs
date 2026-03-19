@@ -21,12 +21,20 @@ impl ClientSession {
     pub fn open(connect_config: &str) -> Result<Self, String> {
         let mut config = Config::default();
         if !connect_config.is_empty() {
+            // Elixir Network.ZenohBridge と同様に zenohd へ接続する **client** モードを明示する。
+            // connect/endpoints のみ指定した場合、既定は peer に寄り、PUT がルータ上の
+            // 購読者（サーバー側 Zenohex subscriber）に届かず、フレーム受信だけ成功する、
+            // といった片方向だけ通る状態になり得る。
+            config
+                .insert_json5("mode", r#""client""#)
+                .map_err(|e| format!("zenoh mode config failed: {e}"))?;
             config
                 .insert_json5(
                     "connect/endpoints",
                     format!(r#"["{}"]"#, connect_config).as_str(),
                 )
                 .map_err(|e| format!("zenoh connect config failed: {e}"))?;
+            log::info!("[zenoh] session config: mode=client connect/endpoints=[{connect_config}]");
         }
         let session = zenoh::open(config)
             .wait()
