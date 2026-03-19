@@ -109,8 +109,8 @@ apps/contents/
 | `structs/`                  | データの形を定義。`defstruct` / `@type`。`category` でドメイン別に分類し、VR 空間での型の可視性を高める。                                 |
 | `structs/category/space/`   | 空間に関わる型。Resonite の Components に合わせた配置。transform など。3 次元ベクトルは value の Float.t3。 |
 | `scenes/`                   | 時間軸。遷移管理、空間の原点（origin）、着地点参照（任意）。契約は `Contents.Behaviour.Scenes`。                                         |
-| `objects/`                  | 空間上の実体。ECS の Entity 相当。GenServer で動作。契約は `Contents.Behaviour.Objects`。                                                             |
-| `components/`               | 状態を保持する細胞。ノードを束ねて特定の機能を提供。GenServer で動作。契約は `Contents.Behaviour.Components`。                                                          |
+| `objects/`                  | 空間上の実体。ECS の Entity 相当。`components` フィールドで Object に紐づく Component モジュールのリストを持つ。実行は contents 層の build_frame / update 等から `Contents.Objects.Components.run_components_for_objects/2` により行う。契約は `Contents.Behaviour.Objects`。                                                             |
+| `components/`               | 状態を保持する細胞。ノードを束ねて特定の機能を提供。GenServer で動作。契約は `Contents.Behaviour.Components`。Object に紐づく Component は `Contents.Behaviour.ObjectComponent` を実装する。                                                          |
 | `nodes/`                    | 論理の原子。Action / Logic ports に基づく処理。Port と Link で接続。プロセス化しない。契約は `Contents.Behaviour.Nodes`。`category/actions/` は Resonite の Actions に合わせた分類。 |
 
 

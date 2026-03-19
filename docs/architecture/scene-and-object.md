@@ -64,7 +64,7 @@ Contents（体験）
 |------|------|
 | **Transform** | 位置・回転・スケール |
 | **親子関係** | parent, children |
-| **Component のリスト** | 将来実装 |
+| **Component のリスト** | Object は `components` フィールドで Component モジュールのリストを持つ。実行は contents 層の build_frame / update 等から `Contents.Objects.Components.run_components_for_objects/2` により行う。Object に紐づく Component は `Contents.Behaviour.ObjectComponent` を実装する。 |
 | **空間属性** | name, tag, active |
 
 ### 4.2 例：Object の責務
