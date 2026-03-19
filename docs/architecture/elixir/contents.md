@@ -2,7 +2,7 @@
 
 ## 概要
 
-`contents` はゲームコンテンツ（VampireSurvivor / AsteroidArena / SimpleBox3D / BulletHell3D / RollingBall / CanvasTest / FormulaTest）の実装と、シーン管理・メインゲームループのディスパッチを担当します。エンジン本体（[core](./core.md)）はゲームロジックを知らず、ContentBehaviour で定義されたインターフェースに従ってコンポーネントへ委譲します。描画は Zenoh 専用。RenderComponent が DrawCommand・Camera・UiCanvas を組み立て、`Contents.MessagePackEncoder` で MessagePack にエンコードし、`FrameBroadcaster.put(room_id, frame_binary)` で Zenoh へ publish する。
+`contents` はゲームコンテンツ（VampireSurvivor / AsteroidArena / SimpleBox3D / BulletHell3D / RollingBall / CanvasTest / FormulaTest）の実装と、シーン管理・メインゲームループのディスパッチを担当します。エンジン本体（[core](./core.md)）はゲームロジックを知らず、`Contents.Behaviour.Content` で定義されたインターフェースに従ってコンポーネントへ委譲します。描画は Zenoh 専用。Render コンポーネントが DrawCommand・Camera・UiCanvas を組み立て、`Content.MessagePackEncoder` で MessagePack にエンコードし、`FrameBroadcaster.put(room_id, frame_binary)` で Zenoh へ publish する。
 
 使用するコンテンツは `config/config.exs` の `config :server, :current, ...` で指定します（既定値は `Content.VampireSurvivor`）。
 
@@ -10,15 +10,15 @@
 
 ## コンテンツ設計パターン
 
-各コンテンツは `ContentBehaviour` を実装するエントリポイントモジュールと、`Component` ビヘイビアを実装するコンポーネント群で構成されます。
+各コンテンツは `Contents.Behaviour.Content` を実装するエントリポイントモジュールと、`Core.Component` ビヘイビアを実装するコンポーネント群で構成されます。
 
 ```mermaid
 graph LR
-    CB["ContentBehaviour\n（エントリポイント）"]
-    SC["SpawnComponent\non_ready: ワールド初期化"]
+    CB["Contents.Behaviour.Content\n（エントリポイント）"]
+    SC["Spawner\non_ready: ワールド初期化\nContents.Components.Category.Spawner"]
     LC["LevelComponent\non_frame_event: EXP・HP\non_nif_sync: NIF 注入"]
     BC["BossComponent\non_physics_process: ボス AI\non_nif_sync: ボス HP 注入"]
-    RC["RenderComponent\non_nif_sync: FrameBroadcaster.put"]
+    RC["Rendering.Render\non_nif_sync: FrameBroadcaster.put\nContents.Components.Category.Rendering.Render"]
 
     CB -->|components/0 で列挙| SC
     CB -->|components/0 で列挙| LC
@@ -26,13 +26,13 @@ graph LR
     CB -->|components/0 で列挙| RC
 ```
 
-> VampireSurvivor は Spawn / Level / Boss / Render の 4 コンポーネント。AsteroidArena は Spawn / Split の 2 コンポーネント。
+> VampireSurvivor は Spawner + LocalUserComponent + LevelComponent + BossComponent + Render。AsteroidArena は Spawner + PhysicsEntity。
 
 ---
 
 ## `Contents.SceneBehaviour` — シーンコールバック定義
 
-各シーンが実装すべきコールバック。`apps/contents/lib/contents/scene_behaviour.ex` に定義。
+各シーンが実装すべきコールバック。`apps/contents/lib/contents/scene_behaviour.ex` に定義。実コンテンツは `Contents.Behaviour.Content` の `scene_init/2`・`scene_update/3`・`scene_render_type/1` を経由して実装する。
 
 ```elixir
 @callback init(init_arg)        :: {:ok, state}
@@ -53,7 +53,7 @@ graph LR
 
 ## `Contents.Scenes.Stack` — シーンスタック管理 GenServer
 
-シーンスタックを管理する GenServer。`apps/contents/lib/scenes/stack.ex` に定義。起動時に `content_module.initial_scenes()` からスタックを初期化します。`Server.Application` で `{Contents.Scenes.Stack, [content_module: content]}` として起動。
+シーンスタックを管理する GenServer。`apps/contents/lib/scenes/stack.ex` に定義。起動時に `content_module.initial_scenes()` からスタックを初期化し、`content.scene_init/2`・`content.scene_update/3` でシーンを更新する。`Server.Application` で `{Contents.Scenes.Stack, [content_module: content]}` として起動。
 
 | 関数 | 説明 |
 |:---|:---|
@@ -134,7 +134,7 @@ stateDiagram-v2
 |:---|:---|
 | `Contents.ComponentList` | コンポーネント解決。LocalUserComponent・TelemetryComponent を自動注入 |
 | `Contents.FrameBroadcaster` | Zenoh フレーム配信。`put(room_id, frame_binary)` で Process.put → GameEvents が ZenohBridge に配送 |
-| `Contents.MessagePackEncoder` | RenderFrame の MessagePack エンコード |
+| `Content.MessagePackEncoder` | RenderFrame の MessagePack エンコード |
 
 ---
 

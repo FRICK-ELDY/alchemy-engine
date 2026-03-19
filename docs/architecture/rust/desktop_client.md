@@ -51,7 +51,7 @@ sequenceDiagram
     participant Render as Renderer
 
     Note over Server,Render: サーバー → クライアント（フレーム配信）
-    Server->>Server: RenderComponent<br/>MessagePackEncoder.encode_frame
+    Server->>Server: Render コンポーネント<br/>Content.MessagePackEncoder.encode_frame
     Server->>Zenohex: publish_frame(room_id, frame_binary)
     Zenohex->>Zenoh: put game/room/{id}/frame
     Zenoh->>ZRust: subscribe
@@ -78,8 +78,8 @@ sequenceDiagram
 ```mermaid
 flowchart LR
     subgraph Server["Elixir サーバー"]
-        RC[RenderComponent]
-        MPE[MessagePackEncoder.encode_frame]
+        RC[Rendering.Render]
+        MPE[Content.MessagePackEncoder.encode_frame]
         ZB[ZenohBridge.publish_frame]
     end
 
@@ -104,7 +104,7 @@ flowchart LR
 
 **エンコード（サーバー側・Elixir）**:
 
-- `Content.MessagePackEncoder.encode_frame/4` で `commands`, `camera`, `ui`, `mesh_definitions` を map に組み立て
+- `Content.MessagePackEncoder.encode_frame/4` で `commands`, `camera`, `ui`, `mesh_definitions` を map に組み立て（Msgpax.pack! でバイナリ化）
 - `Msgpax.pack!` で MessagePack バイナリ化
 - `Network.ZenohBridge.publish_frame(room_id, frame_binary)` で Zenoh へ publish
 

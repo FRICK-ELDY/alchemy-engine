@@ -39,7 +39,7 @@
 | `set_player_input/3` | 移動ベクトルを設定 |
 | `drain_frame_events/1` | フレームイベントを取り出す |
 
-描画は Zenoh 専用。Elixir の RenderComponent が `FrameBroadcaster.put` で Zenoh へ publish する。ローカル描画（NIF 内 RenderFrameBuffer）は廃止済み。
+描画は Zenoh 専用。Elixir の Render コンポーネント（`Contents.Components.Category.Rendering.Render`）が `FrameBroadcaster.put` で Zenoh へ publish する。ローカル描画（NIF 内 RenderFrameBuffer）は廃止済み。
 
 ---
 
@@ -61,25 +61,28 @@ NIF 関数は 3 カテゴリに分類されます：
 
 ---
 
-## `content_behaviour.ex` — コンテンツ定義インターフェース
+## `Contents.Behaviour.Content` — コンテンツ定義インターフェース
 
-コンテンツモジュールが実装すべきビヘイビア。旧 `WorldBehaviour` / `RuleBehaviour` の 2 分割設計を統合した設計。
+コンテンツモジュールが実装すべきビヘイビア。`apps/contents/lib/behaviour/content.ex` に定義。core はコンパイル時には contents に依存せず、実行時に `Core.Config.current/0` で得た content モジュールを参照する。
 
 **必須コールバック:**
 
 ```elixir
-@callback components()        :: [module()]
-@callback flow_runner(room_id())       :: pid() | nil   # シーンスタックの pid
-@callback event_handler(room_id())    :: pid() | nil   # GameEvents の pid
-@callback initial_scenes()    :: [%{module: scene_module(), init_arg: map()}]
-@callback physics_scenes()    :: [scene_module()]
-@callback playing_scene()     :: scene_module()
-@callback game_over_scene()   :: scene_module()
-@callback entity_registry()   :: map()
-@callback enemy_exp_reward(kind_id :: non_neg_integer()) :: exp()
-@callback score_from_exp(exp()) :: non_neg_integer()
-@callback wave_label(elapsed_sec :: float()) :: String.t()
-@callback context_defaults()  :: map()
+@callback components()                    :: [module()]
+@callback flow_runner(room_id())          :: pid() | nil   # Contents.Scenes.Stack の pid
+@callback event_handler(room_id())        :: pid() | nil   # Contents.Events.Game の pid
+@callback scene_init(scene_type(), init_arg) :: {:ok, state}
+@callback scene_update(scene_type(), context, state) :: {:continue, state} | {:transition, ...}
+@callback scene_render_type(scene_type()) :: atom()
+@callback initial_scenes()                :: [%{scene_type: atom(), init_arg: map()}]
+@callback physics_scenes()                :: [scene_type()]
+@callback playing_scene()                 :: scene_type()
+@callback game_over_scene()               :: scene_type()
+@callback entity_registry()               :: map()
+@callback enemy_exp_reward(kind_id)       :: exp()
+@callback score_from_exp(exp())           :: non_neg_integer()
+@callback wave_label(elapsed_sec)         :: String.t()
+@callback context_defaults()              :: map()
 ```
 
 **オプショナル: `scene_stack_spec/1`** — ルーム用シーンスタック（`Contents.Scenes.Stack`）の `child_spec`。マルチルーム時などに使用。
@@ -108,7 +111,7 @@ NIF 関数は 3 カテゴリに分類されます：
 @callback on_physics_process(context())  :: :ok  # 物理フレーム（60Hz）
 @callback on_event(event(), context())   :: :ok  # UI アクション・内部イベント
 @callback on_frame_event(event(), context()) :: :ok  # Rust フレームイベント
-@callback on_nif_sync(context())         :: :ok  # 毎フレームの NIF 注入・FrameBroadcaster.put（RenderComponent）
+@callback on_nif_sync(context())         :: :ok  # 毎フレームの NIF 注入・FrameBroadcaster.put（Rendering.Render）
 @callback on_engine_message(msg(), context()) :: :ok  # 遅延コールバック等のディスパッチ
 ```
 
@@ -131,10 +134,10 @@ NIF 関数は 3 カテゴリに分類されます：
 
 ## `config.ex` — 設定解決ヘルパー
 
-`:current` の Application 設定を解決する。
+`Application.get_env(:server, :current)` でコンテンツモジュールを解決する。
 
 ```elixir
-Core.Config.current()     # ContentBehaviour 実装モジュールを返す
+Core.Config.current()     # Contents.Behaviour.Content 実装モジュールを返す
 Core.Config.components()  # current().components() を呼び出す
 ```
 

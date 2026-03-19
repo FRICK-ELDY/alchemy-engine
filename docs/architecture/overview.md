@@ -60,7 +60,7 @@ alchemy-engine/
 ├── mix.exs                          # Umbrella ルートプロジェクト定義
 ├── mix.lock                         # Elixir 依存ロックファイル
 ├── config/
-│   ├── config.exs                   # :current / :map / libcluster / save_hmac_secret 等
+│   ├── config.exs                   # :server :current / :map / libcluster / save_hmac_secret 等
 │   └── runtime.exs                  # 実行時設定（ポート等）
 │
 ├── apps/                            # Elixir アプリケーション群
@@ -71,9 +71,9 @@ alchemy-engine/
 │   │       └── core/
 │   │           ├── nif_bridge.ex        # Rustler NIF ラッパー
 │   │           ├── nif_bridge_behaviour.ex  # NifBridge ビヘイビア（テスト用 Mock 対応）
-│   │           ├── content_behaviour.ex # ContentBehaviour（コンテンツ定義インターフェース）
+│   │
 │   │           ├── component.ex         # Component ビヘイビア（コンテンツ構成単位）
-│   │           ├── config.ex            # :current コンテンツモジュール解決
+│   │           ├── config.ex            # :server :current でコンテンツモジュール解決
 │   │           ├── room_supervisor.ex   # DynamicSupervisor
 │   │           ├── room_registry.ex     # Registry ラッパー
 │   │           ├── event_bus.ex         # フレームイベント配信 GenServer（subscribe / broadcast）
@@ -97,64 +97,42 @@ alchemy-engine/
 │   │
 │   ├── contents/                    # ゲームコンテンツ
 │   │   ├── mix.exs
-│   │   └── lib/contents/
-│   │       ├── contents.ex                # Content 名前空間モジュール
-│   │       ├── game_events.ex             # メインゲームループ GenServer（contents 層）
-│   │       ├── game_events/
-│   │       │   └── diagnostics.ex         # ログ・FrameCache 更新ヘルパー
-│   │       ├── scene_behaviour.ex         # シーンコールバック定義（contents 層）
-│   │       ├── scene_stack.ex             # シーンスタック管理 GenServer（contents 層）
-│   │       ├── entity_params.ex           # EXP・スコア・ボスパラメータ（Elixir SSoT）
-│   │       ├── frame_broadcaster.ex       # Zenoh フレーム配信（Process.put → ZenohBridge）
-│   │       ├── component_list.ex          # コンポーネント解決（LocalUserComponent / TelemetryComponent 注入）
-│   │       ├── message_pack_encoder.ex    # RenderFrame の MessagePack エンコード
-│   │       ├── local_user_component.ex    # ローカル入力共通コンポーネント
-│   │       ├── telemetry_component.ex     # 入力状態参照用（全コンテンツに注入）
-│   │       ├── menu_component.ex          # メニュー UI 共通コンポーネント
-│   │       ├── content_loader.ex          # 将来用: descriptor ベースコンテンツ（stub）
-│   │       ├── content_runner.ex          # 将来用: descriptor ベースコンテンツ（stub）
-│   │       ├── component_registry.ex      # 将来用: descriptor ベースコンテンツ（stub）
-│   │       ├── vampire_survivor.ex        # Content.VampireSurvivor
-│   │       ├── vampire_survivor/
-│   │       │   ├── spawn_component.ex
-│   │       │   ├── local_user_component.ex
-│   │       │   ├── level_component.ex
-│   │       │   ├── boss_component.ex
-│   │       │   ├── render_component.ex
-│   │       │   ├── sprite_params.ex
-│   │       │   ├── spawn_system.ex
-│   │       │   ├── boss_system.ex
-│   │       │   ├── level_system.ex
-│   │       │   ├── weapon_formulas.ex     # 武器パラメータ計算式
-│   │       │   └── scenes/ playing.ex, level_up.ex, boss_alert.ex, game_over.ex
-│   │       ├── asteroid_arena.ex          # Content.AsteroidArena
-│   │       ├── asteroid_arena/
-│   │       │   ├── spawn_component.ex
-│   │       │   ├── split_component.ex
-│   │       │   ├── spawn_system.ex
-│   │       │   └── scenes/ playing.ex, game_over.ex
-│   │       ├── simple_box_3d.ex           # Content.SimpleBox3D（Phase R-6 動作検証）
-│   │       ├── simple_box_3d/
-│   │       │   ├── spawn_component.ex, input_component.ex, render_component.ex
-│   │       │   └── scenes/ playing.ex, game_over.ex
-│   │       ├── bullet_hell_3d.ex          # Content.BulletHell3D（3D 弾幕避け）
-│   │       ├── bullet_hell_3d/
-│   │       │   ├── spawn_component.ex, input_component.ex, render_component.ex
-│   │       │   ├── bullet_component.ex, damage_component.ex
-│   │       │   └── scenes/ playing.ex, game_over.ex
-│   │       ├── rolling_ball.ex            # Content.RollingBall（玉転がし）
-│   │       ├── rolling_ball/
-│   │       │   ├── spawn_component.ex, physics_component.ex, render_component.ex
-│   │       │   ├── stage_data.ex
-│   │       │   └── scenes/ title.ex, playing.ex, stage_clear.ex, ending.ex, game_over.ex
-│   │       ├── canvas_test.ex             # Content.CanvasTest（描画テスト）
-│   │       ├── canvas_test/
-│   │       │   ├── input_component.ex, render_component.ex
-│   │       │   └── scenes/ playing.ex
-│   │       ├── formula_test.ex            # Content.FormulaTest（Formula エンジン検証）
-│   │       ├── formula_test/
-│   │       │   ├── input_component.ex, render_component.ex
-│   │       │   └── scenes/ playing.ex
+│   │   └── lib/
+│   │       ├── behaviour/
+│   │       │   └── content.ex             # Contents.Behaviour.Content（コンテンツ契約）
+│   │       ├── contents/
+│   │       │   ├── contents.ex            # Content 名前空間モジュール
+│   │       │   ├── entity_params.ex       # 共通 EXP・スコア（Content.EntityParams）
+│   │       │   ├── scene_behaviour.ex     # シーンコールバック定義
+│   │       │   ├── frame_broadcaster.ex   # Zenoh フレーム配信（Process.put → ZenohBridge）
+│   │       │   ├── component_list.ex      # コンポーネント解決（LocalUserComponent / TelemetryComponent 注入）
+│   │       │   ├── message_pack_encoder.ex# Content.MessagePackEncoder（RenderFrame の MessagePack エンコード）
+│   │       │   ├── local_user_component.ex# ローカル入力共通コンポーネント
+│   │       │   ├── telemetry_component.ex # 入力状態参照用（全コンテンツに注入）
+│   │       │   ├── menu_component.ex      # メニュー UI 共通コンポーネント
+│   │       │   ├── content_loader.ex      # 将来用: descriptor ベース（stub）
+│   │       │   ├── content_runner.ex      # 将来用（stub）
+│   │       │   ├── component_registry.ex  # 将来用（stub）
+│   │       │   ├── vampire_survivor.ex    # Content.VampireSurvivor（Spawner / Level / Boss / Render 使用）
+│   │       │   ├── vampire_survivor/
+│   │       │   │   ├── local_user_component.ex, entity_params.ex, sprite_params.ex
+│   │       │   │   ├── spawn_system.ex, frame_builder.ex, helpers.ex
+│   │       │   │   ├── playing.ex         # Playing シーン + LevelComponent + BossComponent + LevelSystem
+│   │       │   │   ├── level_up.ex, boss_alert.ex, game_over.ex
+│   │       │   ├── asteroid_arena.ex      # Spawner + PhysicsEntity 使用
+│   │       │   ├── asteroid_arena/
+│   │       │   │   └── playing.ex, game_over.ex
+│   │       │   ├── simple_box_3d.ex / simple_box_3d/ playing.ex, game_over.ex
+│   │       │   ├── bullet_hell_3d.ex / bullet_hell_3d/ playing.ex, game_over.ex
+│   │       │   ├── rolling_ball.ex / rolling_ball/ title.ex, playing.ex, stage_clear.ex, ending.ex, game_over.ex
+│   │       │   ├── canvas_test.ex / canvas_test/ playing.ex
+│   │       │   └── formula_test.ex / formula_test/ playing.ex
+│   │       ├── components/category/       # Spawner, PhysicsEntity, Rendering.Render 等（共有）
+│   │       ├── events/
+│   │       │   ├── game.ex                # Contents.Events.Game（メインゲームループ GenServer）
+│   │       │   └── game/diagnostics.ex
+│   │       └── scenes/
+│   │           └── stack.ex               # Contents.Scenes.Stack（シーンスタック管理）
 │   │
 │   └── network/                     # 通信レイヤー
 │       ├── mix.exs                  # deps: phoenix ~> 1.8, phoenix_pubsub, plug_cowboy, libcluster
@@ -236,8 +214,8 @@ graph TB
 | レイヤー | 責務 | 技術 |
 |:---|:---|:---|
 | `server` | OTP Application 起動・Supervisor ツリー構築 | Elixir / OTP |
-| `core` | ゲームループ制御・イベント受信・セーブ・ContentBehaviour / Component インターフェース定義 | Elixir GenServer / ETS |
-| `contents` | GameEvents・シーンスタック・SceneBehaviour・ContentBehaviour 実装・Component 群・エンティティパラメータ | Elixir |
+| `core` | ゲームループ制御・イベント受信・セーブ・Core.Component インターフェース定義 | Elixir GenServer / ETS |
+| `contents` | Contents.Events.Game・Contents.Scenes.Stack・Contents.Behaviour.Content 実装・Component 群・エンティティパラメータ | Elixir |
 | `network` | Phoenix Channels・UDP・Zenoh（フレーム publish・入力 subscribe）・ローカルマルチルーム管理 | Elixir / Phoenix / Zenohex |
 | `nif` | Elixir-Rust 間 NIF ブリッジ・ゲームループ・physics 内包 | Rust / Rustler |
 | `render` | GPU 描画パイプライン・HUD・ヘッドレスモード（ウィンドウは window が生成） | Rust / wgpu / egui |
@@ -283,17 +261,17 @@ EnemyWorld {
 ```mermaid
 sequenceDiagram
     participant R as Rust 60Hz ループ
-    participant GE as GameEvents GenServer
+    participant GE as Contents.Events.Game
     participant COMP as Component 群
     participant SS as Contents.Scenes.Stack
-    participant S as Scene.update()
+    participant S as content.scene_update
 
     loop 毎フレーム（60Hz）
         R->>R: physics_step()
         R->>R: drain_frame_events()
         R-->>GE: {:frame_events, [enemy_killed, player_damaged, ...]}
         GE->>COMP: on_frame_event/2（スコア・HP・ボス HP 更新）
-        GE->>SS: flow_runner 経由で Scene.update() → シーン遷移判断
+        GE->>SS: flow_runner 経由で scene_update/3 → シーン遷移判断
         GE->>COMP: on_physics_process/1（ボス AI 等）
         GE->>COMP: on_nif_sync/1（Elixir state → Rust 注入）
     end
@@ -301,18 +279,18 @@ sequenceDiagram
 
 ### 4. 描画命令の Zenoh 配信
 
-Elixir 側（contents）の RenderComponent が DrawCommand リスト・CameraParams・UiCanvas を組み立て、`Contents.MessagePackEncoder` で MessagePack にエンコードし、`FrameBroadcaster.put(room_id, frame_binary)` で Zenoh へ publish する。`Network.ZenohBridge` が受信し、`app`（VRAlchemy exe）が subscribe して描画する。ローカル描画は廃止済み（Zenoh 専用）。
+Elixir 側（contents）の Render コンポーネントが DrawCommand リスト・CameraParams・UiCanvas を組み立て、`Content.MessagePackEncoder` で MessagePack にエンコードし、`FrameBroadcaster.put(room_id, frame_binary)` で Zenoh へ publish する。`Network.ZenohBridge` が受信し、`app`（VRAlchemy exe）が subscribe して描画する。ローカル描画は廃止済み（Zenoh 専用）。
 
-### 5. ContentBehaviour + Component による拡張設計
+### 5. Contents.Behaviour.Content + Component による拡張設計
 
 ```mermaid
 graph LR
-    CFG["config.exs\n:current コンテンツモジュール"]
-    CB["ContentBehaviour\ncomponents / initial_scenes\nentity_registry 等"]
-    COMP["Component ビヘイビア\non_ready / on_frame_event\non_nif_sync 等（全オプショナル）"]
+    CFG["config.exs\n:server :current コンテンツモジュール"]
+    CB["Contents.Behaviour.Content\ncomponents / scene_init / scene_update\nentity_registry 等"]
+    COMP["Core.Component ビヘイビア\non_ready / on_frame_event\non_nif_sync 等（全オプショナル）"]
     GE["Contents.Events.Game\n（contents 層）"]
-    VS["VampireSurvivor\n+ SpawnComponent\n+ LevelComponent\n+ BossComponent"]
-    AA["AsteroidArena\n+ SpawnComponent\n+ SplitComponent"]
+    VS["Content.VampireSurvivor\nSpawner + LevelComponent\n+ BossComponent + Render"]
+    AA["Content.AsteroidArena\nSpawner + PhysicsEntity"]
 
     CFG -->|解決| CB
     CB -->|実装| VS
@@ -334,16 +312,16 @@ sequenceDiagram
     participant MX as mix run
     participant APP as Server.Application
     participant RS as RoomSupervisor
-    participant GEV as GameEvents
+    participant GEV as Contents.Events.Game
     participant NIF as NifBridge (nif)
     participant COMP as Component 群（on_ready）
 
     MX->>APP: start/2
-    APP->>APP: Registry / SceneStack / EventBus / RoomSupervisor / StressMonitor / Stats / Telemetry 起動
+    APP->>APP: Registry / Scenes.Stack / EventBus / RoomSupervisor / StressMonitor / Stats / Telemetry 起動
     APP->>RS: RoomSupervisor 起動
     APP->>APP: StressMonitor / Stats / Telemetry 起動
     APP->>RS: start_room(:main)
-    RS->>GEV: GameEvents 起動（:main ルーム）
+    RS->>GEV: Contents.Events.Game 起動（:main ルーム）
     GEV->>NIF: create_world()
     NIF-->>GEV: GameWorld リソース
     GEV->>COMP: on_ready(world_ref) × コンポーネント数
@@ -413,9 +391,9 @@ flowchart TD
 **フレーム処理の順序（毎フレーム）:**
 
 1. `on_frame_event/2` — 全コンポーネントにフレームイベントを配信（スコア・HP・ボス HP 更新）
-2. `Scene.update/2` — シーン遷移判断
+2. `content.scene_update/3` — シーン遷移判断（flow_runner 経由）
 3. `on_physics_process/1` — ボス AI 等の物理コールバック（NIF 書き込みを含む）
-4. `on_nif_sync/1` — Elixir state を Rust 側に注入。RenderComponent は `FrameBroadcaster.put` で DrawCommand・Camera・UiCanvas を Zenoh へ配信する
+4. `on_nif_sync/1` — Elixir state を Rust 側に注入。Render コンポーネントは `FrameBroadcaster.put` で DrawCommand・Camera・UiCanvas を Zenoh へ配信する
 
 ---
 
@@ -427,7 +405,7 @@ flowchart TD
 
 ## レンダリングフロー
 
-Elixir の RenderComponent が `FrameBroadcaster.put` で Zenoh へ frame を publish。`app`（VRAlchemy exe）の `NetworkRenderBridge`（network クレート）が subscribe して描画する。
+Elixir の Render コンポーネントが `FrameBroadcaster.put` で Zenoh へ frame を publish。`app`（VRAlchemy exe）の `NetworkRenderBridge`（network クレート）が subscribe して描画する。
 
 ---
 

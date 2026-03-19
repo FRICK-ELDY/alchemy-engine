@@ -11,8 +11,8 @@
 ```elixir
 def components do
   [
-    Content.AsteroidArena.SpawnComponent,  # ワールド初期化・エンティティ登録
-    Content.AsteroidArena.SplitComponent   # 小惑星分裂処理
+    Contents.Components.Category.Spawner,       # ワールド初期化・エンティティ登録
+    Contents.Components.Category.PhysicsEntity  # 物理エンティティ・分裂処理（Playing に埋め込み）
   ]
 end
 ```
@@ -21,21 +21,21 @@ end
 
 ## 特徴
 
-- `level_up_scene/0` / `boss_alert_scene/0` を実装しない（ContentBehaviour のオプショナルコールバック）
+- `level_up_scene/0` / `boss_alert_scene/0` を実装しない（Contents.Behaviour.Content のオプショナルコールバック）
 - 小惑星の分裂処理: Large → Medium × 2 → Small × 2
 - シーン構成: **Playing** / **GameOver** のみ
 
 ---
 
-## SpawnComponent
+## Spawner（Contents.Components.Category.Spawner）
 
 ワールド初期化・エンティティ登録。VampireSurvivor と同様に `on_ready/1` でマップサイズ・エンティティパラメータを注入。
 
 ---
 
-## SplitComponent
+## PhysicsEntity（Contents.Components.Category.PhysicsEntity）
 
-小惑星撃破時の分裂処理を担当。`on_frame_event/2` で敵撃破イベントを受け、大型・中型の小惑星を分割してスポーン。
+物理エンティティ管理。小惑星撃破時の分裂処理は Playing シーン内に埋め込み。
 
 - **Large** → Medium × 2
 - **Medium** → Small × 2

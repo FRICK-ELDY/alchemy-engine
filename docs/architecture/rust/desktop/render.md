@@ -4,7 +4,7 @@
 
 `render` クレートは **wgpu** による GPU 描画パイプライン・**egui** HUD・ヘッドレスモードを担当します（The Eye）。ウィンドウとイベントループは [window](./input.md) が担当します。
 
-**RenderFrame**（DrawCommand リスト・CameraParams・UiCanvas）は Elixir 側の RenderComponent が MessagePack にエンコードし、`FrameBroadcaster.put` → `Network.ZenohBridge.publish_frame` で Zenoh へ publish する。`app`（VRAlchemy）は `network` 経由で Zenoh の `game/room/{room_id}/frame` を subscribe し、RenderFrame を受信して描画する。ローカル描画（NIF 内 RenderFrameBuffer）は廃止済み（Zenoh 専用）。
+**RenderFrame**（DrawCommand リスト・CameraParams・UiCanvas）は Elixir 側の Render コンポーネントが `Content.MessagePackEncoder` で MessagePack にエンコードし、`FrameBroadcaster.put` → `Network.ZenohBridge.publish_frame` で Zenoh へ publish する。`app`（VRAlchemy）は `network` 経由で Zenoh の `game/room/{room_id}/frame` を subscribe し、RenderFrame を受信して描画する。ローカル描画（NIF 内 RenderFrameBuffer）は廃止済み（Zenoh 専用）。
 
 - **パス**: `native/render/`
 - **依存**: `nif`, `wgpu`, `winit`, `egui`, `bytemuck`, `image`, `pollster`, `log`
