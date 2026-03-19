@@ -133,7 +133,7 @@ NIF ローダー。パニックフック（debug 時）・GameWorld / GameLoopCo
 | `pause_physics(control)` | 物理演算を一時停止 |
 | `resume_physics(control)` | 物理演算を再開 |
 
-描画は Elixir の RenderComponent が `FrameBroadcaster.put` で Zenoh へ配信し、`app`（VRAlchemy）が `network` 経由で受信する。nif は描画系に依存しない。
+描画は Elixir の Render コンポーネントが `FrameBroadcaster.put` で Zenoh へ配信し、`app`（VRAlchemy）が `network` 経由で受信する。nif は描画系に依存しない。
 
 ---
 

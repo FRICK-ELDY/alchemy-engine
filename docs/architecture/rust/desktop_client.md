@@ -78,7 +78,7 @@ sequenceDiagram
 ```mermaid
 flowchart LR
     subgraph Server["Elixir サーバー"]
-        RC[RenderComponent]
+        RC[Rendering.Render]
         MPE[Content.MessagePackEncoder.encode_frame]
         ZB[ZenohBridge.publish_frame]
     end

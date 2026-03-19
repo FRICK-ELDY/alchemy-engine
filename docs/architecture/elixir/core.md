@@ -39,7 +39,7 @@
 | `set_player_input/3` | 移動ベクトルを設定 |
 | `drain_frame_events/1` | フレームイベントを取り出す |
 
-描画は Zenoh 専用。Elixir の RenderComponent が `FrameBroadcaster.put` で Zenoh へ publish する。ローカル描画（NIF 内 RenderFrameBuffer）は廃止済み。
+描画は Zenoh 専用。Elixir の Render コンポーネント（`Contents.Components.Category.Rendering.Render`）が `FrameBroadcaster.put` で Zenoh へ publish する。ローカル描画（NIF 内 RenderFrameBuffer）は廃止済み。
 
 ---
 
@@ -111,7 +111,7 @@ NIF 関数は 3 カテゴリに分類されます：
 @callback on_physics_process(context())  :: :ok  # 物理フレーム（60Hz）
 @callback on_event(event(), context())   :: :ok  # UI アクション・内部イベント
 @callback on_frame_event(event(), context()) :: :ok  # Rust フレームイベント
-@callback on_nif_sync(context())         :: :ok  # 毎フレームの NIF 注入・FrameBroadcaster.put（RenderComponent）
+@callback on_nif_sync(context())         :: :ok  # 毎フレームの NIF 注入・FrameBroadcaster.put（Rendering.Render）
 @callback on_engine_message(msg(), context()) :: :ok  # 遅延コールバック等のディスパッチ
 ```
 

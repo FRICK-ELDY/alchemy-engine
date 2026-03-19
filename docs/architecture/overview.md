@@ -405,7 +405,7 @@ flowchart TD
 
 ## レンダリングフロー
 
-Elixir の RenderComponent が `FrameBroadcaster.put` で Zenoh へ frame を publish。`app`（VRAlchemy exe）の `NetworkRenderBridge`（network クレート）が subscribe して描画する。
+Elixir の Render コンポーネントが `FrameBroadcaster.put` で Zenoh へ frame を publish。`app`（VRAlchemy exe）の `NetworkRenderBridge`（network クレート）が subscribe して描画する。
 
 ---
 
