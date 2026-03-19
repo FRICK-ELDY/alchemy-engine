@@ -202,7 +202,7 @@
 
 ---
 
-### Phase 5: AsteroidArena
+### Phase 5: AsteroidArena ✅ 完了（2026-03-19）
 
 **目的**: NIF（SpawnSystem, world_ref）との境界を Object 層で整理する。
 
@@ -223,6 +223,15 @@
 #### 5.3 検証
 
 - 小惑星・UFO のスポーン、分裂、プレイヤー死亡が従来通り動作すること
+
+#### 5.4 実施内容（2026-03-19）
+
+- **構成変更**: `scenes/` を廃止し、`game_over.ex` と `playing.ex` を `asteroid_arena/` 直下に配置。モジュール名を `Content.AsteroidArena.Playing` / `Content.AsteroidArena.GameOver` に変更。
+- **共有コンポーネントへ移行**: SpawnComponent, SplitComponent を削除。`Contents.Components.Category.Spawner`（entity_params_for_nif 対応に拡張）、`Contents.Components.Category.PhysicsEntity`（新規）を使用。
+- **Split ロジック**: コンテンツ内に埋め込み。`Content.AsteroidArena.Playing.handle_split_and_drop/4` に統合。`Content.AsteroidArena.handle_enemy_killed/4` が PhysicsEntity の on_frame_event（enemy_killed）から呼ばれる。
+- **Spawner 拡張**: `entity_params_for_nif/0` コールバックを実装する Content に対し、`set_entity_params` NIF を呼び出すよう拡張。
+- **PhysicsEntity 新規**: `on_nif_sync` で enemy_damage_this_frame を frame_injection に注入。`on_frame_event` で enemy_killed イベントを handle_enemy_killed に委譲。
+- **境界の整理**: Elixir 側はスポーンタイミング・分裂ルール・報酬を管理。NIF は物理・描画・エンティティの永続状態を保持。イベント（enemy_killed）は NIF→Elixir の一方向で流れる。
 
 ---
 
