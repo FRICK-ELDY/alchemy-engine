@@ -1,6 +1,5 @@
 defmodule Content.RollingBall.RenderComponent do
   alias Content.MessagePackEncoder
-  alias Content.RollingBall.MeshDef
   alias Contents.FrameBroadcaster
   alias Contents.Scenes.Stack, as: SceneStack
 
@@ -56,7 +55,7 @@ defmodule Content.RollingBall.RenderComponent do
     camera = build_camera()
     ui = build_ui(playing_state, current_scene, content)
 
-    mesh_defs = MeshDef.definitions()
+    mesh_defs = content.mesh_definitions()
     frame_binary = MessagePackEncoder.encode_frame(commands, camera, ui, mesh_defs)
     FrameBroadcaster.put(context.room_id, frame_binary)
 

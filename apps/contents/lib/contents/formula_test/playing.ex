@@ -104,6 +104,7 @@ defmodule Content.FormulaTest.Playing do
   def init(_init_arg) do
     results = Contents.Nodes.Test.Formula.run()
     origin = Transform.new()
+
     top_object =
       ObjectStruct.new(name: "User", components: [Contents.Objects.Components.Noop])
 
@@ -144,7 +145,7 @@ defmodule Content.FormulaTest.Playing do
 
   defp build_frame_commands(defaults) do
     grid_vertices =
-      Content.MeshDef.grid_plane(
+      Contents.Components.Category.Procedural.Meshes.Grid.grid_plane(
         size: defaults.grid_size,
         divisions: defaults.grid_divisions,
         color: defaults.color_grid
@@ -158,6 +159,7 @@ defmodule Content.FormulaTest.Playing do
 
   defp build_frame_camera(defaults) do
     {fov, near, far} = defaults.camera
+
     {:camera_3d, defaults.camera_eye, defaults.camera_target, defaults.camera_up,
      {fov, near, far}}
   end
@@ -189,21 +191,20 @@ defmodule Content.FormulaTest.Playing do
 
     {:node, {:center, {0.0, 0.0}, :wrap}, {:rect, defaults.color_bg, 12.0, :none},
      [
-       {:node, {:top_left, {0.0, 0.0}, :wrap},
-        {:vertical_layout, 8.0, {24.0, 20.0, 24.0, 20.0}},
+       {:node, {:top_left, {0.0, 0.0}, :wrap}, {:vertical_layout, 8.0, {24.0, 20.0, 24.0, 20.0}},
         [
           {:node, {:top_left, {0.0, 0.0}, :wrap},
            {:text, "Formula Engine Verification", defaults.color_text, 24.0, true}, []},
           {:node, {:top_left, {0.0, 0.0}, :wrap},
-           {:text, "Elixir -> Rust (NIF VM) -> Elixir", {0.7, 0.75, 0.85, 1.0}, 14.0, false},
-           []},
+           {:text, "Elixir -> Rust (NIF VM) -> Elixir", {0.7, 0.75, 0.85, 1.0}, 14.0, false}, []},
           {:node, {:top_left, {0.0, 0.0}, :wrap}, :separator, []},
-          {:node, {:top_left, {0.0, 0.0}, :wrap}, {:text, summary, defaults.color_text, 18.0, true},
-           []},
+          {:node, {:top_left, {0.0, 0.0}, :wrap},
+           {:text, summary, defaults.color_text, 18.0, true}, []},
           {:node, {:top_left, {0.0, 0.0}, :wrap},
            {:text, fps_text, {0.6, 0.65, 0.8, 1.0}, 14.0, false}, []},
           {:node, {:top_left, {0.0, 0.0}, :wrap}, :separator, []}
-        ] ++ result_lines ++
+        ] ++
+          result_lines ++
           [
             {:node, {:top_left, {0.0, 0.0}, :wrap}, :separator, []},
             {:node, {:top_left, {0.0, 0.0}, :wrap},

@@ -64,7 +64,7 @@ defmodule Content.BulletHell3D.RenderComponent do
     camera = build_camera()
     ui = build_ui(current_scene, content, playing_state, game_over_state)
 
-    mesh_defs = Content.BulletHell3D.MeshDef.definitions()
+    mesh_defs = content.mesh_definitions()
     frame_binary = Content.MessagePackEncoder.encode_frame(commands, camera, ui, mesh_defs)
     Contents.FrameBroadcaster.put(context.room_id, frame_binary)
 
@@ -90,7 +90,7 @@ defmodule Content.BulletHell3D.RenderComponent do
        {sky_bot_r, sky_bot_g, sky_bot_b, sky_bot_a}}
 
     grid_vertices =
-      Content.MeshDef.grid_plane(
+      Contents.Components.Category.Procedural.Meshes.Grid.grid_plane(
         size: @grid_size,
         divisions: @grid_divisions,
         color: {grid_r, grid_g, grid_b, grid_a}

@@ -6,6 +6,7 @@ defmodule Contents.Components.Category.Device.Keyboard do
   - `{:sprint, bool}` — 左 Shift キー押下状態
   - `{:key_pressed, :escape}` — HUD 表示トグル（グラブ中・解放中どちらでも届く）
   - `{:ui_action, "__quit__"}` — 終了要求（実行は上位層に委譲。イベント送信のみ）
+  - `{:ui_action, "__retry__"}` — リトライ要求（game_over シーン state に retry: true を設定）
 
   ## 終了の委譲
   `__quit__` を受け取った場合、`System.stop/1` は呼ばない。
@@ -25,11 +26,22 @@ defmodule Contents.Components.Category.Device.Keyboard do
     Helpers.with_playing_scene(fn state ->
       Map.put(state, :sprint, value)
     end)
+
     :ok
   end
 
   def on_event({:key_pressed, :escape}, _context) do
     Helpers.with_playing_scene(&toggle_hud_and_cursor/1)
+    :ok
+  end
+
+  def on_event({:ui_action, "__retry__"}, _context) do
+    content = Core.Config.current()
+
+    Helpers.with_scene_type(content.game_over_scene(), fn state ->
+      Map.put(state, :retry, true)
+    end)
+
     :ok
   end
 

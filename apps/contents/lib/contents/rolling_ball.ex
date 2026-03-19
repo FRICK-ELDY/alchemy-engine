@@ -133,6 +133,13 @@ defmodule Content.RollingBall do
 
   def assets_path, do: ""
 
+  def mesh_definitions do
+    [
+      Contents.Components.Category.Procedural.Meshes.Box.mesh_def(),
+      Contents.Components.Category.Procedural.Meshes.Quad.mesh_def()
+    ]
+  end
+
   # ── エンティティレジストリ（RollingBall はエネミー・武器の概念なし）──
 
   def entity_registry, do: %{weapons: %{}, enemies: %{}}

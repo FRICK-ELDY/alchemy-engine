@@ -124,7 +124,7 @@ flowchart TB
 | `Core.RoomRegistry` | ルーム・イベントハンドラ登録 |
 | `Content.MessagePackEncoder` | frame の MessagePack エンコード |
 | `Contents.FrameBroadcaster` | frame をクライアントへ配信 |
-| `Content.MeshDef` | グリッド平面の頂点生成 |
+| `Contents.Components.Category.Procedural.Meshes.Grid` | グリッド平面の頂点生成 |
 
 ---
 

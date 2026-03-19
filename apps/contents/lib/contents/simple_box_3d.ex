@@ -19,9 +19,24 @@ defmodule Content.SimpleBox3D do
 
   def components do
     [
-      Content.SimpleBox3D.SpawnComponent,
-      Content.SimpleBox3D.InputComponent,
-      Content.SimpleBox3D.RenderComponent
+      Contents.Components.Category.Spawner,
+      Contents.Components.Category.Device.Mouse,
+      Contents.Components.Category.Device.Keyboard,
+      Contents.Components.Category.Rendering.Render
+    ]
+  end
+
+  # Spawner が set_world_size に渡す。Rust 物理エンジンの physics_step が
+  # map_size < PLAYER_SIZE（64.0px）でパニックしないよう十分な値を設定。
+  def world_size, do: {2048.0, 2048.0}
+
+  def build_frame(playing_state, context),
+    do: Content.SimpleBox3D.Scenes.Playing.build_frame(playing_state, context)
+
+  def mesh_definitions do
+    [
+      Contents.Components.Category.Procedural.Meshes.Box.mesh_def(),
+      Contents.Components.Category.Procedural.Meshes.Quad.mesh_def()
     ]
   end
 

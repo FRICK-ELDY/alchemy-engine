@@ -140,7 +140,7 @@
 
 ---
 
-### Phase 3: SimpleBox3D
+### Phase 3: SimpleBox3D ✅ 完了（2026-03-19）
 
 **目的**: ゲームロジック（プレイヤー・敵・衝突）を Object / Component で表現する。
 
@@ -163,6 +163,12 @@
 #### 3.3 検証
 
 - プレイヤー移動、敵の追跡、衝突でゲームオーバー、リトライが従来通り動作すること
+
+#### 3.4 実施内容（2026-03-19）
+
+- **Scenes.Playing**: `origin`（Transform）、`landing_object`（プレイヤー Object への参照）、`player_object`（`Objects.Core.Struct`）、`enemy_objects`（敵 Object リスト）を state に追加。各 Object の `transform.position` に 3D 座標を保持。tick 処理で `extract_positions` / `put_position` / `put_positions` により Object の position を更新。`collides_any?` は Object の position を比較する既存ロジックを維持。
+- **RenderComponent**: `build_commands` で `player_object`・`enemy_objects` から `position_from_object` で座標を取得し DrawCommand を組み立て。`player_object` が nil の場合は `{0,0,0}` をフォールバック。
+- **InputComponent**: `Contents.SceneStack` → `Contents.Scenes.Stack` に修正（既知の不具合対応）。
 
 ---
 

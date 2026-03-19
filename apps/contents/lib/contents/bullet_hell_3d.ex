@@ -106,6 +106,13 @@ defmodule Content.BulletHell3D do
 
   def assets_path, do: ""
 
+  def mesh_definitions do
+    [
+      Contents.Components.Category.Procedural.Meshes.Box.mesh_def(),
+      Contents.Components.Category.Procedural.Meshes.Quad.mesh_def()
+    ]
+  end
+
   # ── コンテキストデフォルト ────────────────────────────────────────
 
   def context_defaults, do: %{}

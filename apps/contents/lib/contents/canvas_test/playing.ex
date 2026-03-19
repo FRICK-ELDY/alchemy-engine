@@ -78,6 +78,7 @@ defmodule Content.CanvasTest.Playing do
   @impl Contents.SceneBehaviour
   def init(_init_arg) do
     origin = Transform.new()
+
     top_object =
       ObjectStruct.new(name: "User", components: [Contents.Objects.Components.Noop])
 
@@ -184,7 +185,7 @@ defmodule Content.CanvasTest.Playing do
 
   defp build_frame_commands(defaults) do
     grid_vertices =
-      Content.MeshDef.grid_plane(
+      Contents.Components.Category.Procedural.Meshes.Grid.grid_plane(
         size: defaults.grid_size,
         divisions: defaults.grid_divisions,
         color: defaults.color_grid
@@ -234,8 +235,7 @@ defmodule Content.CanvasTest.Playing do
        {:rect, {0.05, 0.05, 0.08, 0.88}, 12.0, {{0.4, 0.4, 0.5, 0.9}, 1.5}},
        [
          {:node, {:top_left, {0.0, 0.0}, :wrap},
-          {:vertical_layout, 10.0, {40.0, 30.0, 40.0, 30.0}},
-          build_frame_hud_panel_contents()}
+          {:vertical_layout, 10.0, {40.0, 30.0, 40.0, 30.0}}, build_frame_hud_panel_contents()}
        ]}
     ]
   end
@@ -263,8 +263,7 @@ defmodule Content.CanvasTest.Playing do
   end
 
   defp build_frame_hud_text(text) do
-    {:node, {:top_left, {0.0, 0.0}, :wrap},
-     {:text, text, {0.8, 0.85, 0.9, 1.0}, 15.0, false}, []}
+    {:node, {:top_left, {0.0, 0.0}, :wrap}, {:text, text, {0.8, 0.85, 0.9, 1.0}, 15.0, false}, []}
   end
 
   defp build_frame_hud_quit_button do
@@ -276,7 +275,10 @@ defmodule Content.CanvasTest.Playing do
     world_panels = Map.get(state, :world_panels, [])
     {px, py, pz} = Map.get(state, :pos, {0.0, 1.7, 0.0})
     pos_text = "Pos: (#{Float.round(px, 1)}, #{Float.round(py, 1)}, #{Float.round(pz, 1)})"
-    fps_text = if context.tick_ms > 0, do: "FPS: #{round(1000.0 / context.tick_ms)}", else: "FPS: --"
+
+    fps_text =
+      if context.tick_ms > 0, do: "FPS: #{round(1000.0 / context.tick_ms)}", else: "FPS: --"
+
     info_text = "[INFO]\n#{fps_text}\n#{pos_text}"
     static_texts = defaults.world_panel_static_texts
     texts = static_texts ++ [info_text]
@@ -285,6 +287,7 @@ defmodule Content.CanvasTest.Playing do
 
     for {obj, text} <- Enum.zip(Enum.take(world_panels, length(texts)), texts), obj.active do
       {x, y, z} = obj.transform.position
+
       {:node, {:top_left, {0.0, 0.0}, :wrap},
        {:world_text, x, y, z, text, color, {lifetime, lifetime}}, []}
     end
