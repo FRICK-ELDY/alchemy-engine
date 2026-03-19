@@ -122,7 +122,7 @@ defmodule Content.CanvasTest.Playing do
           %{child | transform: %Transform{position: panel_def.position}}
 
         {:error, reason} ->
-          raise "CanvasTest.Playing init: CreateEmptyChild.create failed: #{inspect(reason)}"
+          raise "CanvasTest.Playing init: CreateEmptyChild.create failed for '#{panel_def.name}': #{inspect(reason)}"
       end
     end
   end

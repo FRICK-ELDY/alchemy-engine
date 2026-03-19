@@ -115,7 +115,7 @@ defmodule Content.FormulaTest.Playing do
         :ok
 
       {:error, reason} ->
-        raise "FormulaTest.Playing init: CreateEmptyChild.create failed: #{inspect(reason)}"
+        raise "FormulaTest.Playing init: CreateEmptyChild.create failed for 'Child': #{inspect(reason)}"
     end
 
     state = %{
