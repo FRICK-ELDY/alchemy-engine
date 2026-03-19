@@ -1,20 +1,18 @@
 defmodule Content.AsteroidArena do
-  alias Content.AsteroidArena.SpawnComponent
-
   @moduledoc """
   AsteroidArena のコンテンツ定義。
 
   武器・ボス・レベルアップの概念を持たないシンプルなシューターコンテンツ。
-  `level_up_scene/0`・`boss_alert_scene/0` を実装しないことで、
-  エンジンコアがこれらの概念を持たなくても動作することを実証する。
+  Phase 5 移行: Spawner + PhysicsEntity 共有コンポーネントを使用。
+  Split ロジックは Playing に埋め込み。
   """
 
   # ── コンポーネントリスト ──────────────────────────────────────────
 
   def components do
     [
-      Content.AsteroidArena.SpawnComponent,
-      Content.AsteroidArena.SplitComponent
+      Contents.Components.Category.Spawner,
+      Contents.Components.Category.PhysicsEntity
     ]
   end
 
@@ -42,16 +40,16 @@ defmodule Content.AsteroidArena do
   def playing_scene, do: :playing
   def game_over_scene, do: :game_over
 
-  def scene_init(:playing, init_arg), do: Content.AsteroidArena.Scenes.Playing.init(init_arg)
-  def scene_init(:game_over, init_arg), do: Content.AsteroidArena.Scenes.GameOver.init(init_arg)
+  def scene_init(:playing, init_arg), do: Content.AsteroidArena.Playing.init(init_arg)
+  def scene_init(:game_over, init_arg), do: Content.AsteroidArena.GameOver.init(init_arg)
 
   def scene_update(:playing, context, state) do
-    Content.AsteroidArena.Scenes.Playing.update(context, state)
+    Content.AsteroidArena.Playing.update(context, state)
     |> map_transition_module_to_scene_type()
   end
 
   def scene_update(:game_over, context, state),
-    do: Content.AsteroidArena.Scenes.GameOver.update(context, state)
+    do: Content.AsteroidArena.GameOver.update(context, state)
 
   def scene_render_type(:playing), do: :playing
   def scene_render_type(:game_over), do: :game_over
@@ -83,8 +81,8 @@ defmodule Content.AsteroidArena do
     {:transition, {:replace, scene_module_to_type(mod), arg}, state, opts || %{}}
   end
 
-  defp scene_module_to_type(Content.AsteroidArena.Scenes.Playing), do: :playing
-  defp scene_module_to_type(Content.AsteroidArena.Scenes.GameOver), do: :game_over
+  defp scene_module_to_type(Content.AsteroidArena.Playing), do: :playing
+  defp scene_module_to_type(Content.AsteroidArena.GameOver), do: :game_over
   defp scene_module_to_type(mod), do: raise("unknown scene module: #{inspect(mod)}")
 
   # ── メタ情報 ──────────────────────────────────────────────────────
@@ -92,36 +90,124 @@ defmodule Content.AsteroidArena do
   def title, do: "Asteroid Arena"
   def version, do: "0.1.0"
 
+  # ── ワールド・エンティティ（Spawner 用）────────────────────────────
+
+  def world_size, do: {2048.0, 2048.0}
+
+  def entity_params_for_nif do
+    {
+      enemy_params(),
+      [],
+      []
+    }
+  end
+
+  defp enemy_params do
+    [
+      # 0: Asteroid Large — 大型、低速、分裂する
+      %{
+        max_hp: 3.0,
+        speed: 0.0,
+        radius: 40.0,
+        damage_per_sec: 15.0,
+        render_kind: 20,
+        particle_color: [0.7, 0.6, 0.5, 1.0],
+        passes_obstacles: false
+      },
+      # 1: Asteroid Medium — 中型
+      %{
+        max_hp: 2.0,
+        speed: 0.0,
+        radius: 24.0,
+        damage_per_sec: 10.0,
+        render_kind: 21,
+        particle_color: [0.65, 0.55, 0.45, 1.0],
+        passes_obstacles: false
+      },
+      # 2: Asteroid Small — 小型、消滅のみ
+      %{
+        max_hp: 1.0,
+        speed: 0.0,
+        radius: 12.0,
+        damage_per_sec: 5.0,
+        render_kind: 22,
+        particle_color: [0.6, 0.5, 0.4, 1.0],
+        passes_obstacles: false
+      },
+      # 3: UFO — 高速、プレイヤーを追跡
+      %{
+        max_hp: 5.0,
+        speed: 100.0,
+        radius: 18.0,
+        damage_per_sec: 20.0,
+        render_kind: 23,
+        particle_color: [0.2, 0.9, 0.8, 1.0],
+        passes_obstacles: false
+      }
+    ]
+  end
+
   # ── アセット・エンティティ登録 ────────────────────────────────────
 
-  defdelegate assets_path, to: Content.AsteroidArena.SpawnComponent
-  defdelegate entity_registry, to: Content.AsteroidArena.SpawnComponent
+  def assets_path, do: "asteroid_arena"
+
+  def entity_registry do
+    %{
+      enemies: %{
+        asteroid_large: 0,
+        asteroid_medium: 1,
+        asteroid_small: 2,
+        ufo: 3
+      },
+      weapons: %{},
+      bosses: %{}
+    }
+  end
+
+  # ── PhysicsEntity 用コールバック ───────────────────────────────────
 
   @doc """
   R-P2: 敵接触の damage_this_frame リスト。[{kind_id, damage}, ...]。
-  SplitComponent が on_nif_sync で set_enemy_damage_this_frame NIF に渡す。
+  PhysicsEntity が on_nif_sync で frame_injection に注入する。
   """
   def enemy_damage_this_frame(context) do
-    # GameEvents.build_context で必ず :dt が渡される。フォールバックは将来の変更に対する保険。
     dt = Map.get(context, :dt, 16 / 1000.0)
 
-    SpawnComponent.enemy_damage_per_sec_list()
-    |> Enum.map(fn {kind_id, damage_per_sec} -> {kind_id, damage_per_sec * dt} end)
+    enemy_params()
+    |> Enum.with_index()
+    |> Enum.map(fn {p, i} -> {i, (p[:damage_per_sec] || 0) * dt} end)
+  end
+
+  @doc """
+  敵撃破時の分裂・アイテムドロップ。PhysicsEntity が on_frame_event で呼ぶ。
+  """
+  def handle_enemy_killed(world_ref, kind_id, x, y) do
+    Content.AsteroidArena.Playing.handle_split_and_drop(world_ref, kind_id, x, y)
   end
 
   # ── コンテキストデフォルト ────────────────────────────────────────
 
   def context_defaults, do: %{}
 
+  # 被弾後の無敵時間（ms）。PhysicsEntity が player_damaged 処理で使用。
+  def invincible_duration_ms, do: 500
+
   # ── 報酬・スコア計算 ──────────────────────────────────────────────
 
-  defdelegate enemy_exp_reward(enemy_kind),
-    to: Content.AsteroidArena.SpawnSystem,
-    as: :exp_reward
+  def enemy_exp_reward(kind_id) do
+    %{0 => 20, 1 => 10, 2 => 5, 3 => 50} |> Map.get(kind_id, 0)
+  end
 
-  defdelegate score_from_exp(exp), to: Content.AsteroidArena.SpawnSystem
+  def score_from_exp(exp), do: exp * 2
 
   # ── ウェーブラベル ────────────────────────────────────────────────
 
-  defdelegate wave_label(elapsed_sec), to: Content.AsteroidArena.SpawnSystem
+  def wave_label(elapsed_sec) do
+    cond do
+      elapsed_sec < 30 -> "Wave 1 - Asteroids"
+      elapsed_sec < 90 -> "Wave 2 - Denser"
+      elapsed_sec < 180 -> "Wave 3 - UFOs Appear"
+      true -> "Wave 4 - Chaos"
+    end
+  end
 end
