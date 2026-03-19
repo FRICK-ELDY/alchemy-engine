@@ -11,7 +11,8 @@ defmodule Contents.Objects.Core.Struct do
   ## components について
 
   Object に紐づく Component モジュールのリスト。contents 層の build_frame / update 等から
-  `Contents.Objects.Components.run_components/2` により実行される。設計: docs/plan/current/struct-node-component-object-linkage-plan.md
+  **主な入口**は `Contents.Objects.Components.run_components_for_objects/2`（Object リストを受け取る）。
+  単一 Object の場合は `run_components/2` を直接呼ぶ。設計: docs/plan/current/struct-node-component-object-linkage-plan.md
   """
   alias Structs.Category.Space.Transform
 

@@ -4,8 +4,12 @@ defmodule Contents.Behaviour.ObjectComponent do
 
   コンテンツ単位でエンジンから呼ばれる `Core.Component` とは別に、
   Object に属する Component が実装する Behaviour。
-  contents 層の build_frame / update 等から `Contents.Objects.Components.run_components/2` により
+  contents 層の build_frame / update 等から `Contents.Objects.Components.run_components_for_objects/2` により
   `run/2` が呼ばれる。内部で Node と Struct を利用する。
+
+  `run/2` を `@optional_callbacks` にしているのは、components リストに
+  本 Behaviour を実装していないモジュールが含まれる場合に `function_exported?/3` で
+  スキップできるようにするため。実装側では `run/2` を提供することを推奨する。
 
   設計: docs/plan/current/struct-node-component-object-linkage-plan.md
   """
