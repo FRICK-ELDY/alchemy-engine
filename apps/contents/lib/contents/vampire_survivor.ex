@@ -1,5 +1,5 @@
 defmodule Content.VampireSurvivor do
-  alias Content.VampireSurvivor.SpawnComponent
+  alias Content.VampireSurvivor.EntityParams
 
   @moduledoc """
   ヴァンパイアサバイバーのコンテンツ定義。
@@ -13,11 +13,19 @@ defmodule Content.VampireSurvivor do
   def components do
     [
       Content.VampireSurvivor.LocalUserComponent,
-      Content.VampireSurvivor.SpawnComponent,
+      Contents.Components.Category.Spawner,
       Content.VampireSurvivor.LevelComponent,
       Content.VampireSurvivor.BossComponent,
-      Content.VampireSurvivor.RenderComponent
+      Contents.Components.Category.Rendering.Render
     ]
+  end
+
+  def world_size, do: EntityParams.world_size()
+  def world_params_for_nif, do: EntityParams.world_params_for_nif()
+  def entity_params_for_nif, do: EntityParams.entity_params_for_nif()
+
+  def build_frame(playing_state, context) do
+    Content.VampireSurvivor.FrameBuilder.build(playing_state, context)
   end
 
   def local_user_input_module, do: Content.VampireSurvivor.LocalUserComponent
@@ -50,28 +58,28 @@ defmodule Content.VampireSurvivor do
   def level_up_scene, do: :level_up
   def boss_alert_scene, do: :boss_alert
 
-  def scene_init(:playing, init_arg), do: Content.VampireSurvivor.Scenes.Playing.init(init_arg)
-  def scene_init(:game_over, init_arg), do: Content.VampireSurvivor.Scenes.GameOver.init(init_arg)
-  def scene_init(:level_up, init_arg), do: Content.VampireSurvivor.Scenes.LevelUp.init(init_arg)
+  def scene_init(:playing, init_arg), do: Content.VampireSurvivor.Playing.init(init_arg)
+  def scene_init(:game_over, init_arg), do: Content.VampireSurvivor.GameOver.init(init_arg)
+  def scene_init(:level_up, init_arg), do: Content.VampireSurvivor.LevelUp.init(init_arg)
 
   def scene_init(:boss_alert, init_arg),
-    do: Content.VampireSurvivor.Scenes.BossAlert.init(init_arg)
+    do: Content.VampireSurvivor.BossAlert.init(init_arg)
 
   def scene_update(:playing, context, state) do
-    Content.VampireSurvivor.Scenes.Playing.update(context, state)
+    Content.VampireSurvivor.Playing.update(context, state)
     |> map_transition_module_to_scene_type()
   end
 
   def scene_update(:game_over, context, state) do
-    Content.VampireSurvivor.Scenes.GameOver.update(context, state)
+    Content.VampireSurvivor.GameOver.update(context, state)
   end
 
   def scene_update(:level_up, context, state) do
-    Content.VampireSurvivor.Scenes.LevelUp.update(context, state)
+    Content.VampireSurvivor.LevelUp.update(context, state)
   end
 
   def scene_update(:boss_alert, context, state) do
-    Content.VampireSurvivor.Scenes.BossAlert.update(context, state)
+    Content.VampireSurvivor.BossAlert.update(context, state)
   end
 
   def scene_render_type(:playing), do: :playing
@@ -106,10 +114,10 @@ defmodule Content.VampireSurvivor do
     {:transition, {:replace, scene_module_to_type(mod), arg}, state, opts || %{}}
   end
 
-  defp scene_module_to_type(Content.VampireSurvivor.Scenes.Playing), do: :playing
-  defp scene_module_to_type(Content.VampireSurvivor.Scenes.GameOver), do: :game_over
-  defp scene_module_to_type(Content.VampireSurvivor.Scenes.LevelUp), do: :level_up
-  defp scene_module_to_type(Content.VampireSurvivor.Scenes.BossAlert), do: :boss_alert
+  defp scene_module_to_type(Content.VampireSurvivor.Playing), do: :playing
+  defp scene_module_to_type(Content.VampireSurvivor.GameOver), do: :game_over
+  defp scene_module_to_type(Content.VampireSurvivor.LevelUp), do: :level_up
+  defp scene_module_to_type(Content.VampireSurvivor.BossAlert), do: :boss_alert
   defp scene_module_to_type(mod), do: raise("unknown scene module: #{inspect(mod)}")
 
   # ── メタ情報 ──────────────────────────────────────────────────────
@@ -117,20 +125,21 @@ defmodule Content.VampireSurvivor do
   def title, do: "Vampire Survivor"
   def version, do: "0.1.0"
 
-  # ── アセット・エンティティ登録（SpawnComponent に委譲）──────────
+  # ── アセット・エンティティ登録（EntityParams に委譲）────────────
 
-  defdelegate assets_path, to: Content.VampireSurvivor.SpawnComponent
-  defdelegate entity_registry, to: Content.VampireSurvivor.SpawnComponent
+  defdelegate assets_path, to: Content.VampireSurvivor.EntityParams
+  defdelegate entity_registry, to: Content.VampireSurvivor.EntityParams
+  defdelegate score_popup_lifetime, to: Content.VampireSurvivor.EntityParams
+  defdelegate weapon_params, to: Content.VampireSurvivor.EntityParams
 
   @doc """
   R-P2: 敵接触の damage_this_frame リスト。[{kind_id, damage}, ...]。
   LevelComponent が on_nif_sync で set_enemy_damage_this_frame NIF に渡す。
   """
   def enemy_damage_this_frame(context) do
-    # GameEvents.build_context で必ず :dt が渡される。フォールバックは将来の変更に対する保険。
     dt = Map.get(context, :dt, 16 / 1000.0)
 
-    SpawnComponent.enemy_damage_per_sec_list()
+    EntityParams.enemy_damage_per_sec_list()
     |> Enum.map(fn {kind_id, damage_per_sec} -> {kind_id, damage_per_sec * dt} end)
   end
 
@@ -140,20 +149,22 @@ defmodule Content.VampireSurvivor do
 
   # ── レベルアップ・武器選択（LevelSystem / Playing シーンに委譲）──
 
-  defdelegate generate_weapon_choices(weapon_levels), to: Content.VampireSurvivor.LevelSystem
-  defdelegate apply_level_up(scene_state, choices), to: Content.VampireSurvivor.Scenes.Playing
+  defdelegate generate_weapon_choices(weapon_levels),
+    to: Content.VampireSurvivor.Playing.LevelSystem
+
+  defdelegate apply_level_up(scene_state, choices), to: Content.VampireSurvivor.Playing
 
   defdelegate apply_weapon_selected(scene_state, weapon),
-    to: Content.VampireSurvivor.Scenes.Playing
+    to: Content.VampireSurvivor.Playing
 
-  defdelegate apply_level_up_skipped(scene_state), to: Content.VampireSurvivor.Scenes.Playing
+  defdelegate apply_level_up_skipped(scene_state), to: Content.VampireSurvivor.Playing
 
   def weapon_slots_for_nif(weapon_levels, weapon_cooldowns \\ %{}) do
-    Content.VampireSurvivor.Scenes.Playing.weapon_slots_for_nif(weapon_levels, weapon_cooldowns)
+    Content.VampireSurvivor.Playing.weapon_slots_for_nif(weapon_levels, weapon_cooldowns)
   end
 
-  defdelegate accumulate_exp(state, exp), to: Content.VampireSurvivor.Scenes.Playing
-  defdelegate apply_boss_defeated(state), to: Content.VampireSurvivor.Scenes.Playing
+  defdelegate accumulate_exp(state, exp), to: Content.VampireSurvivor.Playing
+  defdelegate apply_boss_defeated(state), to: Content.VampireSurvivor.Playing
 
   # ── 報酬・スコア計算（EntityParams に委譲）──────────────────────
 

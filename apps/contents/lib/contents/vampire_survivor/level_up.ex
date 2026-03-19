@@ -1,4 +1,4 @@
-defmodule Content.VampireSurvivor.Scenes.LevelUp do
+defmodule Content.VampireSurvivor.LevelUp do
   @moduledoc """
   レベルアップ武器選択シーン。物理演算を一時停止。
   """

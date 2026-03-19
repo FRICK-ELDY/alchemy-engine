@@ -1,7 +1,7 @@
 defmodule Content.VampireSurvivor.LevelSystemTest do
   use ExUnit.Case, async: true
 
-  alias Content.VampireSurvivor.LevelSystem
+  alias Content.VampireSurvivor.Playing.LevelSystem
 
   @max_weapon_level 8
   @max_weapon_slots 6

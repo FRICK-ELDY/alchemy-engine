@@ -1,25 +1,12 @@
-defmodule Content.VampireSurvivor.RenderComponent do
+defmodule Content.VampireSurvivor.FrameBuilder do
+  @moduledoc """
+  VampireSurvivor の build_frame ロジック。
+  Rendering.Render が content.build_frame を呼ぶ際に使用する。
+  """
   require Logger
 
-  alias Content.VampireSurvivor.SpawnComponent
   alias Content.VampireSurvivor.SpriteParams
-  alias Content.VampireSurvivor.WeaponFormulas
 
-  @moduledoc """
-  毎フレーム DrawCommand リストを組み立てて FrameBroadcaster.put で Zenoh へ配信するコンポーネント。
-
-  Phase R-2: render_snapshot.rs の責務を Elixir 側（contents）に移した。
-  GameWorldInner への直接依存を排除し、get_render_entities NIF 経由で
-  描画用データを取得する。
-
-  ## on_nif_sync
-  1. `get_render_entities/1` で物理ワールドのスナップショットを取得する
-  2. Playing シーン state から UiCanvas ツリーを組み立てる
-  3. `FrameBroadcaster.put/2` で Zenoh 経由で client_desktop に配信する
-  """
-  @behaviour Core.Component
-
-  # Rust 側の constants.rs と同値
   @screen_width 1280.0
   @screen_height 720.0
   @player_size 64.0
@@ -34,37 +21,24 @@ defmodule Content.VampireSurvivor.RenderComponent do
     "garlic" => "Garlic"
   }
 
-  @impl Core.Component
-  def on_nif_sync(context) do
+  def build(playing_state, context) do
     content = Core.Config.current()
-    runner = content.flow_runner(:main)
 
-    playing_state =
-      (runner && Contents.Scenes.Stack.get_scene_state(runner, content.playing_scene())) || %{}
-
-    # Stack.current は %{scene_type: atom(), state: term()} を返す。scene_type で現在シーンを識別する。
-    current_scene =
-      case runner && Contents.Scenes.Stack.current(runner) do
-        {:ok, %{scene_type: st}} -> st
-        _ -> content.playing_scene()
-      end
-
-    {{player_x, player_y, frame_id, enemy_count, bullet_count}, {magnet_timer, invincible_timer},
-     {enemies, bullets, particles}, {items, obstacles, _boss_nif, score_popups}} =
+    {{player_x, player_y, frame_id, enemy_count, bullet_count},
+     {magnet_timer, invincible_timer}, {enemies, bullets, particles},
+     {items, obstacles, _boss_nif, score_popups}} =
       Core.NifBridge.get_render_entities(context.world_ref)
 
     anim_frame = rem(div(frame_id, 4), 4)
-
     boss = boss_from_playing_state(playing_state)
     entities = {enemies, bullets, particles, items, obstacles, boss}
     commands = build_commands(player_x, player_y, anim_frame, entities)
-
     camera = build_camera(player_x, player_y)
 
     ui_ctx = %{
       context: context,
       playing_state: playing_state,
-      current_scene: current_scene,
+      current_scene: Map.get(context, :current_scene, content.playing_scene()),
       content: content,
       enemy_count: enemy_count,
       bullet_count: bullet_count,
@@ -75,14 +49,8 @@ defmodule Content.VampireSurvivor.RenderComponent do
     }
 
     ui = build_ui(ui_ctx)
-
-    frame_binary = Content.MessagePackEncoder.encode_frame(commands, camera, ui, [])
-    Contents.FrameBroadcaster.put(context.room_id, frame_binary)
-
-    :ok
+    {commands, camera, ui}
   end
-
-  # ── DrawCommand 組み立て ──────────────────────────────────────────
 
   defp build_commands(player_x, player_y, anim_frame, entities) do
     {enemies, bullets, particles, items, obstacles, boss} = entities
@@ -99,7 +67,6 @@ defmodule Content.VampireSurvivor.RenderComponent do
   end
 
   defp push_player(acc, x, y, frame) do
-    # R-R1: SpriteParams を SSoT として SpriteRaw で描画
     {:ok, {pos_x, pos_y, w, h, uv_off, uv_sz, color}} =
       SpriteParams.player_sprite_raw_params(x, y, frame)
 
@@ -110,12 +77,7 @@ defmodule Content.VampireSurvivor.RenderComponent do
     entity_x = x - radius
     entity_y = y - radius
 
-    case SpriteParams.sprite_raw_params(
-           entity_x,
-           entity_y,
-           render_kind,
-           0
-         ) do
+    case SpriteParams.sprite_raw_params(entity_x, entity_y, render_kind, 0) do
       {:ok, {pos_x, pos_y, w, h, uv_off, uv_sz, color}} ->
         [{:sprite_raw, pos_x, pos_y, w, h, {uv_off, uv_sz, color}} | acc]
 
@@ -173,11 +135,7 @@ defmodule Content.VampireSurvivor.RenderComponent do
 
   defp push_items(acc, items) do
     Enum.reduce(items, acc, fn {x, y, render_kind}, a ->
-      case SpriteParams.item_sprite_raw_params(
-             x,
-             y,
-             render_kind
-           ) do
+      case SpriteParams.item_sprite_raw_params(x, y, render_kind) do
         {:ok, {pos_x, pos_y, w, h, uv_off, uv_sz, color}} ->
           [{:sprite_raw, pos_x, pos_y, w, h, {uv_off, uv_sz, color}} | a]
 
@@ -194,37 +152,22 @@ defmodule Content.VampireSurvivor.RenderComponent do
     end)
   end
 
-  # ── カメラ組み立て ─────────────────────────────────────────────────
-
   defp build_camera(player_x, player_y) do
     cam_x = player_x + @player_size / 2.0 - @screen_width / 2.0
     cam_y = player_y + @player_size / 2.0 - @screen_height / 2.0
     {:camera_2d, cam_x, cam_y}
   end
 
-  # ── UiCanvas 組み立て ─────────────────────────────────────────────
-
   defp build_ui(%{current_scene: current_scene, content: content} = ctx) do
     nodes =
       if current_scene == content.game_over_scene() do
         [build_game_over_panel(ctx.playing_state)]
       else
-        build_playing_nodes(
-          ctx.context,
-          ctx.playing_state,
-          ctx.enemy_count,
-          ctx.bullet_count,
-          ctx.boss,
-          ctx.score_popups,
-          ctx.magnet_timer,
-          ctx.invincible_timer
-        )
+        build_playing_nodes(ctx)
       end
 
     {:canvas, nodes}
   end
-
-  # ── GameOver パネル ───────────────────────────────────────────────
 
   defp build_game_over_panel(playing_state) do
     elapsed_s = trunc(Map.get(playing_state, :elapsed_ms, 0) / 1000)
@@ -267,57 +210,40 @@ defmodule Content.VampireSurvivor.RenderComponent do
     )
   end
 
-  # ── Playing 中ノード群 ────────────────────────────────────────────
-
-  defp build_playing_nodes(
-         context,
-         playing_state,
-         enemy_count,
-         bullet_count,
-         boss,
-         score_popups,
-         magnet_timer,
-         invincible_timer
-       ) do
+  defp build_playing_nodes(ctx) do
+    content = ctx.content
     nodes = []
 
-    # 画面フラッシュ（無敵時間中）
     nodes =
-      if invincible_timer > 0.0 do
-        alpha = min(invincible_timer, 1.0) * 0.35
+      if ctx.invincible_timer > 0.0 do
+        alpha = min(ctx.invincible_timer, 1.0) * 0.35
         [screen_flash_node({0.78, 0.12, 0.12, alpha}) | nodes]
       else
         nodes
       end
 
-    # スコアポップアップ（ワールド座標テキスト）
-    max_lifetime = SpawnComponent.score_popup_lifetime()
+    max_lifetime = content.score_popup_lifetime()
 
     nodes =
-      Enum.reduce(score_popups, nodes, fn {wx, wy, value, lifetime}, acc ->
+      Enum.reduce(ctx.score_popups, nodes, fn {wx, wy, value, lifetime}, acc ->
         [
           world_text_node(wx, wy, "+#{value}", {1.0, 0.90, 0.20, 1.0}, lifetime, max_lifetime)
           | acc
         ]
       end)
 
-    # 上部 HUD バー
-    nodes = [build_top_hud_bar(context, playing_state, magnet_timer) | nodes]
+    nodes = [build_top_hud_bar(ctx) | nodes]
+    nodes = [build_debug_panel(ctx) | nodes]
 
-    # デバッグ情報（右上）
-    nodes = [build_debug_panel(enemy_count, bullet_count, playing_state, magnet_timer) | nodes]
-
-    # ボス HP バー
     nodes =
-      case build_boss_hp_bar(boss, playing_state) do
+      case build_boss_hp_bar(ctx.boss, ctx.playing_state) do
         nil -> nodes
         bar_node -> [bar_node | nodes]
       end
 
-    # レベルアップ選択モーダル
     nodes =
-      if Map.get(playing_state, :level_up_pending, false) do
-        [build_level_up_modal(context, playing_state) | nodes]
+      if Map.get(ctx.playing_state, :level_up_pending, false) do
+        [build_level_up_modal(ctx) | nodes]
       else
         nodes
       end
@@ -325,13 +251,12 @@ defmodule Content.VampireSurvivor.RenderComponent do
     Enum.reverse(nodes)
   end
 
-  # ── 上部 HUD バー ─────────────────────────────────────────────────
-
-  defp build_top_hud_bar(context, playing_state, magnet_timer) do
+  defp build_top_hud_bar(ctx) do
+    playing_state = ctx.playing_state
     hp = Map.get(playing_state, :player_hp, 100.0)
     max_hp = Map.get(playing_state, :player_max_hp, 100.0)
     score = Map.get(playing_state, :score, 0)
-    elapsed_ms = Map.get(playing_state, :elapsed_ms) || context.elapsed
+    elapsed_ms = Map.get(playing_state, :elapsed_ms) || ctx.context.elapsed
     elapsed_s = trunc(elapsed_ms / 1000)
     m = div(elapsed_s, 60)
     s = rem(elapsed_s, 60)
@@ -385,11 +310,11 @@ defmodule Content.VampireSurvivor.RenderComponent do
     ]
 
     magnet_children =
-      if magnet_timer > 0.0 do
+      if ctx.magnet_timer > 0.0 do
         [
           separator_node(),
           text_node(
-            "MAGNET #{:erlang.float_to_binary(magnet_timer, decimals: 1)}s",
+            "MAGNET #{:erlang.float_to_binary(ctx.magnet_timer, decimals: 1)}s",
             {1.0, 0.90, 0.20, 1.0},
             13.0,
             bold: true
@@ -417,14 +342,13 @@ defmodule Content.VampireSurvivor.RenderComponent do
      ]}
   end
 
-  # ── デバッグパネル（右上）────────────────────────────────────────
-
-  defp build_debug_panel(enemy_count, bullet_count, playing_state, _magnet_timer) do
+  defp build_debug_panel(ctx) do
+    playing_state = ctx.playing_state
     item_count = Map.get(playing_state, :item_count, 0)
 
     children = [
-      text_node("Enemies: #{enemy_count}", {1.0, 0.59, 0.39, 1.0}, 13.0),
-      text_node("Bullets: #{bullet_count}", {0.78, 0.78, 1.0, 1.0}, 13.0),
+      text_node("Enemies: #{ctx.enemy_count}", {1.0, 0.59, 0.39, 1.0}, 13.0),
+      text_node("Bullets: #{ctx.bullet_count}", {0.78, 0.78, 1.0, 1.0}, 13.0),
       text_node("Items: #{item_count}", {0.59, 0.90, 0.59, 1.0}, 13.0)
     ]
 
@@ -434,8 +358,6 @@ defmodule Content.VampireSurvivor.RenderComponent do
         children}
      ]}
   end
-
-  # ── ボス HP バー ──────────────────────────────────────────────────
 
   defp build_boss_hp_bar({:alive, _, _, _, _}, playing_state) do
     boss_hp = Map.get(playing_state, :boss_hp)
@@ -468,19 +390,19 @@ defmodule Content.VampireSurvivor.RenderComponent do
 
   defp build_boss_hp_bar({:none, _, _, _, _}, _), do: nil
 
-  # ── レベルアップモーダル ──────────────────────────────────────────
-
-  defp build_level_up_modal(_context, playing_state) do
+  defp build_level_up_modal(ctx) do
+    playing_state = ctx.playing_state
+    content = ctx.content
     level = Map.get(playing_state, :level, 1)
     weapon_choices = Map.get(playing_state, :weapon_choices, []) |> Enum.map(&to_string/1)
     weapon_levels = Map.get(playing_state, :weapon_levels, %{})
 
     weapon_upgrade_descs =
       if weapon_choices != [] do
-        weapon_params = SpawnComponent.weapon_params()
+        weapon_params = content.weapon_params()
         choices_atoms = Enum.map(weapon_choices, &String.to_existing_atom/1)
 
-        WeaponFormulas.weapon_upgrade_descs(
+        Content.VampireSurvivor.Playing.WeaponFormulas.weapon_upgrade_descs(
           choices_atoms,
           weapon_levels,
           weapon_params
@@ -571,8 +493,6 @@ defmodule Content.VampireSurvivor.RenderComponent do
      ]}
   end
 
-  # ── UiNode ヘルパー ───────────────────────────────────────────────
-
   defp text_node(text, {r, g, b, a}, size, opts \\ []) do
     bold = Keyword.get(opts, :bold, false)
     {:node, {:top_left, {0.0, 0.0}, :wrap}, {:text, text, {r, g, b, a}, size, bold}, []}
@@ -606,7 +526,6 @@ defmodule Content.VampireSurvivor.RenderComponent do
   end
 
   defp spacing_node(amount) do
-    # amount * 1.0 は整数リテラルを float に強制変換するため（NIF は f32 を期待する）
     {:node, {:top_left, {0.0, 0.0}, :wrap}, {:spacing, amount * 1.0}, []}
   end
 

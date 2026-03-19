@@ -1,88 +1,77 @@
-defmodule Content.EntityParamsTest do
+defmodule Content.VampireSurvivor.EntityParamsTest do
   use ExUnit.Case, async: true
 
-  alias Content.EntityParams
+  alias Content.VampireSurvivor.EntityParams
 
-  describe "enemy_exp_reward/1" do
-    test "全敵種別 ID (0..4) で正の整数を返す" do
-      for kind_id <- 0..4 do
-        reward = EntityParams.enemy_exp_reward(kind_id)
-        assert is_integer(reward), "kind_id=#{kind_id} は整数を返すべき"
-        assert reward > 0, "kind_id=#{kind_id} の EXP 報酬は正の整数であるべき"
-      end
+  describe "entity_registry/0" do
+    setup do
+      %{registry: EntityParams.entity_registry()}
     end
 
-    test "各種別の EXP 報酬が期待値と一致する" do
-      # slime
-      assert EntityParams.enemy_exp_reward(0) == 5
-      # bat
-      assert EntityParams.enemy_exp_reward(1) == 3
-      # skeleton
-      assert EntityParams.enemy_exp_reward(2) == 20
-      # ghost
-      assert EntityParams.enemy_exp_reward(3) == 10
-      # golem
-      assert EntityParams.enemy_exp_reward(4) == 8
+    test "enemies/weapons/bosses キーを持つ", %{registry: r} do
+      assert Map.has_key?(r, :enemies)
+      assert Map.has_key?(r, :weapons)
+      assert Map.has_key?(r, :bosses)
     end
 
-    test "未定義の kind_id は KeyError を発生させる" do
-      assert_raise KeyError, fn -> EntityParams.enemy_exp_reward(99) end
-    end
-  end
-
-  describe "boss_exp_reward/1" do
-    test "全ボス種別 ID (0..2) で正の整数を返す" do
-      for kind_id <- 0..2 do
-        reward = EntityParams.boss_exp_reward(kind_id)
-        assert is_integer(reward)
-        assert reward > 0
-      end
-    end
-
-    test "ボス EXP 報酬が期待値と一致する" do
-      # slime_king
-      assert EntityParams.boss_exp_reward(0) == 200
-      # bat_lord
-      assert EntityParams.boss_exp_reward(1) == 400
-      # stone_golem
-      assert EntityParams.boss_exp_reward(2) == 800
-    end
-  end
-
-  describe "score_from_exp/1" do
-    test "EXP → スコア変換が単調増加する" do
-      exps = [0, 1, 5, 10, 50, 100, 1000]
-      scores = Enum.map(exps, &EntityParams.score_from_exp/1)
-
-      Enum.zip(scores, tl(scores))
-      |> Enum.each(fn {a, b} ->
-        assert a <= b, "スコアは EXP に対して単調増加すべき: #{a} <= #{b}"
+    test "enemies の値は atom → non_neg_integer のマップ", %{registry: r} do
+      Enum.each(r.enemies, fn {k, v} ->
+        assert is_atom(k), "キーは atom であるべき: #{inspect(k)}"
+        assert is_integer(v) and v >= 0, "値は非負整数であるべき: #{v}"
       end)
     end
 
-    test "スコアは EXP × 2 の線形関係" do
-      for exp <- [0, 1, 5, 10, 100] do
-        assert EntityParams.score_from_exp(exp) == exp * 2
-      end
-    end
-  end
-
-  describe "boss_max_hp/1" do
-    test "全ボス種別 ID で正の float を返す" do
-      for kind_id <- 0..2 do
-        hp = EntityParams.boss_max_hp(kind_id)
-        assert is_float(hp)
-        assert hp > 0.0
-      end
+    test "weapons の値は atom → non_neg_integer のマップ", %{registry: r} do
+      Enum.each(r.weapons, fn {k, v} ->
+        assert is_atom(k)
+        assert is_integer(v) and v >= 0
+      end)
     end
 
-    test "ボス最大 HP が期待値と一致する" do
-      # slime_king
-      assert EntityParams.boss_max_hp(0) == 1000.0
-      # bat_lord
-      assert EntityParams.boss_max_hp(1) == 2000.0
-      # stone_golem
-      assert EntityParams.boss_max_hp(2) == 5000.0
+    test "bosses の値は atom → non_neg_integer のマップ", %{registry: r} do
+      Enum.each(r.bosses, fn {k, v} ->
+        assert is_atom(k)
+        assert is_integer(v) and v >= 0
+      end)
+    end
+
+    test "enemies の ID に重複がない", %{registry: r} do
+      ids = Map.values(r.enemies)
+      assert ids == Enum.uniq(ids), "enemy ID に重複がある: #{inspect(ids)}"
+    end
+
+    test "weapons の ID に重複がない", %{registry: r} do
+      ids = Map.values(r.weapons)
+      assert ids == Enum.uniq(ids), "weapon ID に重複がある: #{inspect(ids)}"
+    end
+
+    test "bosses の ID に重複がない", %{registry: r} do
+      ids = Map.values(r.bosses)
+      assert ids == Enum.uniq(ids), "boss ID に重複がある: #{inspect(ids)}"
+    end
+
+    test "期待する敵種別が全て登録されている", %{registry: r} do
+      expected_enemies = [:slime, :bat, :golem, :skeleton, :ghost]
+
+      Enum.each(expected_enemies, fn e ->
+        assert Map.has_key?(r.enemies, e), "#{e} が enemies に登録されていない"
+      end)
+    end
+
+    test "期待する武器種別が全て登録されている", %{registry: r} do
+      expected_weapons = [:magic_wand, :axe, :cross, :whip, :fireball, :lightning, :garlic]
+
+      Enum.each(expected_weapons, fn w ->
+        assert Map.has_key?(r.weapons, w), "#{w} が weapons に登録されていない"
+      end)
+    end
+
+    test "期待するボス種別が全て登録されている", %{registry: r} do
+      expected_bosses = [:slime_king, :bat_lord, :stone_golem]
+
+      Enum.each(expected_bosses, fn b ->
+        assert Map.has_key?(r.bosses, b), "#{b} が bosses に登録されていない"
+      end)
     end
   end
 end

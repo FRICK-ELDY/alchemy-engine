@@ -1,18 +1,15 @@
 # credo:disable-for-this-file Credo.Check.Design.AliasUsage
-defmodule Content.VampireSurvivor.SpawnComponent do
-  # Content.VampireSurvivor.WeaponFormulas は alias 不可（WeaponFormulas ↔ SpawnComponent の循環参照）
+defmodule Content.VampireSurvivor.EntityParams do
   @moduledoc """
-  ワールド初期化・エンティティ登録を担うコンポーネント。
-
-  旧 `Content.VampireSurvivorWorld` の責務を引き継ぐ。
+  VampireSurvivor のワールド・エンティティパラメータ定義。
+  Spawner および Content から参照する。
   """
-  @behaviour Core.Component
-
   @map_width 4096.0
   @map_height 4096.0
 
-  # R-C1/R-I1/R-S1: 物理・アイテム・スポーン定数（set_world_params NIF で注入）。Rust デフォルトと同値。
-  defp world_params do
+  def world_size, do: {@map_width, @map_height}
+
+  def world_params_for_nif do
     %{
       player_speed: 200.0,
       bullet_speed: 400.0,
@@ -23,7 +20,6 @@ defmodule Content.VampireSurvivor.SpawnComponent do
       magnet_speed: 300.0,
       spawn_min_dist: 800.0,
       spawn_max_dist: 1200.0,
-      # P2-2, P2-3: contents で定義（SSoT）
       particle_gravity: 200.0,
       bullet_query_radius: 38.0,
       map_margin: 100.0,
@@ -31,17 +27,19 @@ defmodule Content.VampireSurvivor.SpawnComponent do
     }
   end
 
-  @doc "アセットファイルのベースパスを返す"
-  def assets_path, do: "vampire_survivor"
+  def entity_params_for_nif do
+    {
+      enemy_params(),
+      weapon_params(),
+      Content.EntityParams.boss_params()
+    }
+  end
 
-  @doc """
-  エンティティ種別の ID マッピングを返す。
-
-  エンジンは atom → u8 の変換にこのマッピングを使用する。
-  """
+  # Content.EntityParams の敵種別ID順序と一致させること（enemy_exp_reward 等で使用）
+  # slime(0), bat(1), skeleton(2), ghost(3), golem(4)
   def entity_registry do
     %{
-      enemies: %{slime: 0, bat: 1, golem: 2, skeleton: 3, ghost: 4},
+      enemies: %{slime: 0, bat: 1, skeleton: 2, ghost: 3, golem: 4},
       weapons: %{
         magic_wand: 0,
         axe: 1,
@@ -55,55 +53,20 @@ defmodule Content.VampireSurvivor.SpawnComponent do
     }
   end
 
-  @doc "初期武器リストを返す"
+  def assets_path, do: "vampire_survivor"
   def initial_weapons, do: [:magic_wand]
-
-  # R-E1: スコアポップアップの表示時間（秒）。add_score_popup NIF と RenderComponent の max_lifetime で使用。
-  @doc "スコアポップアップの表示時間（秒）。Rust POPUP_LIFETIME の SSoT。"
   def score_popup_lifetime, do: 0.8
 
-  @impl Core.Component
-  def on_ready(world_ref) do
-    Core.NifBridge.set_world_size(world_ref, @map_width, @map_height)
-
-    Core.NifBridge.set_world_params(world_ref, world_params())
-
-    # P4-1: opts は省略可（nil）。default_enemy_radius 等を上書きする場合は第5引数に map を渡す。
-    Core.NifBridge.set_entity_params(
-      world_ref,
-      enemy_params(),
-      weapon_params_impl(),
-      Content.EntityParams.boss_params()
-    )
-
-    # I-2: 初期武器は Playing シーン state の weapon_levels から毎フレーム set_weapon_slots で注入する。
-    # on_ready での add_weapon 呼び出しは不要。
-    :ok
-  end
-
-  # ── エンティティパラメータ定義 ────────────────────────────────────
-  # enemy_params / weapon_params の順序は Rust 側 decode_enemy_params /
-  # decode_weapon_params と一致させること。
-  # boss_params は Content.EntityParams.boss_params/0（SSoT）を参照。
-
-  @doc """
-  武器パラメータリスト。Content.VampireSurvivor.WeaponFormulas 等で SSoT として参照する。
-
-  SpawnComponent 内部の on_ready では weapon_params_impl/0 を set_entity_params NIF に渡す。
-  Content.VampireSurvivor.WeaponFormulas.weapon_upgrade_descs/3 がレベルアップカード表示に使用する。
-  """
   def weapon_params, do: weapon_params_impl()
 
-  @doc """
-  R-P2: 敵種別の damage_per_sec リスト。[{kind_id, damage_per_sec}, ...]。
-  LevelComponent が damage_this_frame 計算に使用する。
-  """
   def enemy_damage_per_sec_list do
     enemy_params()
     |> Enum.with_index()
     |> Enum.map(fn {p, i} -> {i, p[:damage_per_sec] || 0} end)
   end
 
+  # 順序は Content.EntityParams の kind_id と一致させる（index = kind_id）
+  # 0: slime, 1: bat, 2: skeleton, 3: ghost, 4: golem
   defp enemy_params do
     [
       # 0: Slime
@@ -126,17 +89,7 @@ defmodule Content.VampireSurvivor.SpawnComponent do
         particle_color: [0.7, 0.2, 0.9, 1.0],
         passes_obstacles: false
       },
-      # 2: Golem
-      %{
-        max_hp: 150.0,
-        speed: 40.0,
-        radius: 32.0,
-        damage_per_sec: 40.0,
-        render_kind: 3,
-        particle_color: [0.6, 0.6, 0.6, 1.0],
-        passes_obstacles: false
-      },
-      # 3: Skeleton
+      # 2: Skeleton
       %{
         max_hp: 60.0,
         speed: 60.0,
@@ -146,7 +99,7 @@ defmodule Content.VampireSurvivor.SpawnComponent do
         particle_color: [0.9, 0.85, 0.7, 1.0],
         passes_obstacles: false
       },
-      # 4: Ghost（壁すり抜け）
+      # 3: Ghost（壁すり抜け）
       %{
         max_hp: 40.0,
         speed: 100.0,
@@ -155,19 +108,22 @@ defmodule Content.VampireSurvivor.SpawnComponent do
         render_kind: 4,
         particle_color: [0.5, 0.5, 1.0, 0.8],
         passes_obstacles: true
+      },
+      # 4: Golem
+      %{
+        max_hp: 150.0,
+        speed: 40.0,
+        radius: 32.0,
+        damage_per_sec: 40.0,
+        render_kind: 3,
+        particle_color: [0.6, 0.6, 0.6, 1.0],
+        passes_obstacles: false
       }
     ]
   end
 
   defp weapon_params_impl do
     [
-      # fire_pattern: "aimed"=最近接扇状, "fixed_up"=上方向固定, "radial"=全方向,
-      #               "whip"=扇形判定, "piercing"=貫通弾, "chain"=連鎖, "aura"=オーラ
-      # range: Whip の基本半径 / Aura の基本半径
-      # chain_count: Chain の基本連鎖数
-      # R-F1: whip_range_per_level, aura_radius_per_level, chain_count_per_level は
-      #       Content.VampireSurvivor.WeaponFormulas で計算したテーブルを注入（SSoT）
-      # 0: magic_wand (Phase 1: aimed_spread_rad, effect_lifetime_sec. P2-1: hit_particle_color)
       %{
         cooldown: 1.0,
         damage: 10,
@@ -181,7 +137,6 @@ defmodule Content.VampireSurvivor.SpawnComponent do
         effect_lifetime_sec: 0.0,
         hit_particle_color: [1.0, 0.9, 0.3, 1.0]
       },
-      # 1: axe
       %{
         cooldown: 1.5,
         damage: 25,
@@ -195,7 +150,6 @@ defmodule Content.VampireSurvivor.SpawnComponent do
         effect_lifetime_sec: 0.0,
         hit_particle_color: [1.0, 0.8, 0.2, 1.0]
       },
-      # 2: cross (P3-1: radial_dir_count_per_level — WeaponFormulas.fire_pattern_extra と一致)
       %{
         cooldown: 2.0,
         damage: 15,
@@ -210,8 +164,6 @@ defmodule Content.VampireSurvivor.SpawnComponent do
         hit_particle_color: [1.0, 0.9, 0.3, 1.0],
         radial_dir_count_per_level: [4, 4, 4, 8, 8, 8, 8, 8]
       },
-      # 3: whip (Phase 1: whip_half_angle_rad, effect_lifetime_sec を contents で定義)
-      # whip_range_per_level: 1..8 → 8要素。Rust は level 1..8 で index 0..7 を参照。level 9 以上は index 7 を使用。
       %{
         cooldown: 1.0,
         damage: 30,
@@ -221,13 +173,13 @@ defmodule Content.VampireSurvivor.SpawnComponent do
         range: 120.0,
         chain_count: 0,
         whip_range_per_level:
-          1..8 |> Enum.map(&Content.VampireSurvivor.WeaponFormulas.whip_range(120.0, &1)),
+          1..8
+          |> Enum.map(&Content.VampireSurvivor.Playing.WeaponFormulas.whip_range(120.0, &1)),
         aimed_spread_rad: 0.0,
         whip_half_angle_rad: :math.pi() * 0.3,
         effect_lifetime_sec: 0.12,
         hit_particle_color: [1.0, 0.6, 0.1, 1.0]
       },
-      # 4: fireball (貫通弾)
       %{
         cooldown: 1.0,
         damage: 20,
@@ -241,8 +193,6 @@ defmodule Content.VampireSurvivor.SpawnComponent do
         effect_lifetime_sec: 0.0,
         hit_particle_color: [1.0, 0.4, 0.0, 1.0]
       },
-      # 5: lightning (Phase 1: effect_lifetime_sec を contents で定義)
-      # chain_count_per_level: 1..8 → 8要素。Rust は level 1..8 で index 0..7 を参照。
       %{
         cooldown: 1.0,
         damage: 15,
@@ -253,14 +203,14 @@ defmodule Content.VampireSurvivor.SpawnComponent do
         chain_count: 2,
         chain_count_per_level:
           1..8
-          |> Enum.map(&Content.VampireSurvivor.WeaponFormulas.chain_count_for_level(2, &1)),
+          |> Enum.map(
+            &Content.VampireSurvivor.Playing.WeaponFormulas.chain_count_for_level(2, &1)
+          ),
         aimed_spread_rad: 0.0,
         whip_half_angle_rad: 0.0,
         effect_lifetime_sec: 0.10,
         hit_particle_color: [0.3, 0.8, 1.0, 1.0]
       },
-      # 6: garlic
-      # aura_radius_per_level: 1..8 → 8要素。Rust は level 1..8 で index 0..7 を参照。
       %{
         cooldown: 0.2,
         damage: 1,
@@ -270,7 +220,8 @@ defmodule Content.VampireSurvivor.SpawnComponent do
         range: 80.0,
         chain_count: 0,
         aura_radius_per_level:
-          1..8 |> Enum.map(&Content.VampireSurvivor.WeaponFormulas.aura_radius(80.0, &1)),
+          1..8
+          |> Enum.map(&Content.VampireSurvivor.Playing.WeaponFormulas.aura_radius(80.0, &1)),
         aimed_spread_rad: 0.0,
         whip_half_angle_rad: 0.0,
         effect_lifetime_sec: 0.0,
