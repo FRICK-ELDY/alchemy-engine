@@ -1,4 +1,4 @@
-defmodule Content.RollingBall.Scenes.GameOver do
+defmodule Content.RollingBall.GameOver do
   @moduledoc """
   RollingBall のゲームオーバーシーン。
 
@@ -25,10 +25,10 @@ defmodule Content.RollingBall.Scenes.GameOver do
 
       if retries_left > 0 do
         {:transition,
-         {:replace, Content.RollingBall.Scenes.Playing,
+         {:replace, Content.RollingBall.Playing,
           %{stage: state.stage, retries_left: retries_left}}, state}
       else
-        {:transition, {:replace, Content.RollingBall.Scenes.Title, %{}}, state}
+        {:transition, {:replace, Content.RollingBall.Title, %{}}, state}
       end
     else
       {:continue, state}

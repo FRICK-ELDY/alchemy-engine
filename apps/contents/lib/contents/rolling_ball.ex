@@ -27,10 +27,25 @@ defmodule Content.RollingBall do
 
   def components do
     [
-      Content.RollingBall.SpawnComponent,
-      Content.RollingBall.PhysicsComponent,
-      Content.RollingBall.RenderComponent
+      Contents.Components.Category.Spawner,
+      Contents.Components.Category.Device.Mouse,
+      Contents.Components.Category.Device.Keyboard,
+      Contents.Components.Category.Rendering.Render
     ]
+  end
+
+  def world_size, do: {2048.0, 2048.0}
+
+  def build_frame(playing_state, context),
+    do: Content.RollingBall.Playing.build_frame(playing_state, context)
+
+  # __retry__ と __quit__ は Keyboard のデフォルトで処理。必要ならここで上書き可能。
+  def ui_action_handlers do
+    %{
+      "__start__" => {:title, fn state -> Map.put(state, :start, true) end},
+      "__next_stage__" => {:stage_clear, fn state -> Map.put(state, :next, true) end},
+      "__back_to_title__" => {:ending, fn state -> Map.put(state, :back_to_title, true) end}
+    }
   end
 
   # ── シーン定義 ────────────────────────────────────────────────────
@@ -55,34 +70,34 @@ defmodule Content.RollingBall do
   def playing_scene, do: :playing
   def game_over_scene, do: :game_over
 
-  def scene_init(:title, init_arg), do: Content.RollingBall.Scenes.Title.init(init_arg)
-  def scene_init(:playing, init_arg), do: Content.RollingBall.Scenes.Playing.init(init_arg)
-  def scene_init(:stage_clear, init_arg), do: Content.RollingBall.Scenes.StageClear.init(init_arg)
-  def scene_init(:game_over, init_arg), do: Content.RollingBall.Scenes.GameOver.init(init_arg)
-  def scene_init(:ending, init_arg), do: Content.RollingBall.Scenes.Ending.init(init_arg)
+  def scene_init(:title, init_arg), do: Content.RollingBall.Title.init(init_arg)
+  def scene_init(:playing, init_arg), do: Content.RollingBall.Playing.init(init_arg)
+  def scene_init(:stage_clear, init_arg), do: Content.RollingBall.StageClear.init(init_arg)
+  def scene_init(:game_over, init_arg), do: Content.RollingBall.GameOver.init(init_arg)
+  def scene_init(:ending, init_arg), do: Content.RollingBall.Ending.init(init_arg)
 
   def scene_update(:title, context, state) do
-    Content.RollingBall.Scenes.Title.update(context, state)
+    Content.RollingBall.Title.update(context, state)
     |> map_transition_module_to_scene_type()
   end
 
   def scene_update(:playing, context, state) do
-    Content.RollingBall.Scenes.Playing.update(context, state)
+    Content.RollingBall.Playing.update(context, state)
     |> map_transition_module_to_scene_type()
   end
 
   def scene_update(:stage_clear, context, state) do
-    Content.RollingBall.Scenes.StageClear.update(context, state)
+    Content.RollingBall.StageClear.update(context, state)
     |> map_transition_module_to_scene_type()
   end
 
   def scene_update(:game_over, context, state) do
-    Content.RollingBall.Scenes.GameOver.update(context, state)
+    Content.RollingBall.GameOver.update(context, state)
     |> map_transition_module_to_scene_type()
   end
 
   def scene_update(:ending, context, state) do
-    Content.RollingBall.Scenes.Ending.update(context, state)
+    Content.RollingBall.Ending.update(context, state)
     |> map_transition_module_to_scene_type()
   end
 
@@ -119,11 +134,11 @@ defmodule Content.RollingBall do
     {:transition, {:replace, scene_module_to_type(mod), arg}, state, opts || %{}}
   end
 
-  defp scene_module_to_type(Content.RollingBall.Scenes.Title), do: :title
-  defp scene_module_to_type(Content.RollingBall.Scenes.Playing), do: :playing
-  defp scene_module_to_type(Content.RollingBall.Scenes.StageClear), do: :stage_clear
-  defp scene_module_to_type(Content.RollingBall.Scenes.GameOver), do: :game_over
-  defp scene_module_to_type(Content.RollingBall.Scenes.Ending), do: :ending
+  defp scene_module_to_type(Content.RollingBall.Title), do: :title
+  defp scene_module_to_type(Content.RollingBall.Playing), do: :playing
+  defp scene_module_to_type(Content.RollingBall.StageClear), do: :stage_clear
+  defp scene_module_to_type(Content.RollingBall.GameOver), do: :game_over
+  defp scene_module_to_type(Content.RollingBall.Ending), do: :ending
   defp scene_module_to_type(mod), do: raise("unknown scene module: #{inspect(mod)}")
 
   # ── メタ情報 ──────────────────────────────────────────────────────

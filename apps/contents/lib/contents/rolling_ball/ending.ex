@@ -1,4 +1,4 @@
-defmodule Content.RollingBall.Scenes.Ending do
+defmodule Content.RollingBall.Ending do
   @moduledoc """
   RollingBall のエンディングシーン。
 
@@ -16,7 +16,7 @@ defmodule Content.RollingBall.Scenes.Ending do
   @impl Contents.SceneBehaviour
   def update(_context, state) do
     if Map.get(state, :back_to_title, false) do
-      {:transition, {:replace, Content.RollingBall.Scenes.Title, %{}}, state}
+      {:transition, {:replace, Content.RollingBall.Title, %{}}, state}
     else
       {:continue, state}
     end

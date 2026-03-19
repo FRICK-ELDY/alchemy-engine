@@ -1,4 +1,4 @@
-defmodule Content.RollingBall.Scenes.Title do
+defmodule Content.RollingBall.Title do
   @moduledoc """
   RollingBall のタイトルシーン。
 
@@ -15,8 +15,7 @@ defmodule Content.RollingBall.Scenes.Title do
   @impl Contents.SceneBehaviour
   def update(_context, state) do
     if Map.get(state, :start, false) do
-      {:transition, {:replace, Content.RollingBall.Scenes.Playing, %{stage: 1, retries_left: 3}},
-       state}
+      {:transition, {:replace, Content.RollingBall.Playing, %{stage: 1, retries_left: 3}}, state}
     else
       {:continue, state}
     end

@@ -1,4 +1,4 @@
-defmodule Content.RollingBall.Scenes.StageClear do
+defmodule Content.RollingBall.StageClear do
   @moduledoc """
   RollingBall のステージクリアシーン。
 
@@ -19,7 +19,7 @@ defmodule Content.RollingBall.Scenes.StageClear do
   def update(_context, state) do
     if Map.get(state, :next, false) do
       {:transition,
-       {:replace, Content.RollingBall.Scenes.Playing,
+       {:replace, Content.RollingBall.Playing,
         %{stage: state.next_stage, retries_left: state.retries_left}}, state}
     else
       {:continue, state}
