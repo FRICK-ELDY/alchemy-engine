@@ -81,13 +81,9 @@ defmodule Contents.Components.Category.Device.Keyboard do
     Map.merge(defaults, custom)
   end
 
-  # Content behaviour では game_over_scene/0 は必須。将来 optional にした場合は __retry__ は登録されない。
+  # Content behaviour では game_over_scene/0 は必須コールバックのため、常に登録する。
   defp maybe_put_retry(acc, content) do
-    if function_exported?(content, :game_over_scene, 0) do
-      Map.put(acc, "__retry__", {content.game_over_scene(), fn s -> Map.put(s, :retry, true) end})
-    else
-      acc
-    end
+    Map.put(acc, "__retry__", {content.game_over_scene(), fn s -> Map.put(s, :retry, true) end})
   end
 
   defp toggle_hud_and_cursor(state) do

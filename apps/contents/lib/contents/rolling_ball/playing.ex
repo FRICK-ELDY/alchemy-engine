@@ -45,6 +45,12 @@ defmodule Content.RollingBall.Playing do
   # 障害物衝突半径（ボール半径 0.55 + 障害物半径 0.65）
   @obstacle_collision_radius 1.2
 
+  # 障害物衝突時の反発係数（coefficient of restitution）
+  @restitution_coefficient 0.5
+
+  # フロア端クランプ時の余裕（ボール半径 + マージン = 0.6）
+  @floor_clamp_margin 0.05
+
   # 描画用定数
   @tile_size 2.0
   @tile_half_xz 0.98
@@ -283,7 +289,7 @@ defmodule Content.RollingBall.Playing do
       %{state | ball_object: new_ball, vy: new_vy}
     else
       stage_data = get_stage_data(state.stage)
-      half = stage_data.floor_size / 2.0 * stage_data.tile_size - 0.6
+      half = stage_data.floor_size / 2.0 * stage_data.tile_size - @ball_half - @floor_clamp_margin
 
       new_bx = clamp(bx + state.vx * @tick_sec, -half, half)
       new_bz = clamp(bz + state.vz * @tick_sec, -half, half)
@@ -316,8 +322,8 @@ defmodule Content.RollingBall.Playing do
         new_cx = cx + nx_x * overlap
         new_cz = cz + nx_z * overlap
         dot = cvx * nx_x + cvz * nx_z
-        new_vx = cvx - 2.0 * dot * nx_x * 0.5
-        new_vz = cvz - 2.0 * dot * nx_z * 0.5
+        new_vx = cvx - 2.0 * dot * nx_x * @restitution_coefficient
+        new_vz = cvz - 2.0 * dot * nx_z * @restitution_coefficient
         {new_cx, new_cz, new_vx, new_vz}
       else
         {cx, cz, cvx, cvz}
