@@ -67,6 +67,8 @@
 
 ## 3. 検討項目（未決定）
 
+- [ ] **Content.EntityParams と Content.VampireSurvivor.EntityParams の責務分担**  
+  boss_params は Content.EntityParams、enemy/weapon は VampireSurvivor.EntityParams にあり混在している。SSoT の観点から VampireSurvivor のパラメータをどこで一元管理するか、方針を整理する余地がある。
 - [ ] VampireSurvivor の LevelComponent との関係（重複許容か、将来的に統合するか）
 - [ ] 新規 physics コンテンツの想定（player の扱いがどの程度共通化されるか）
 - [ ] コンポーネント数の増加と保守性のトレードオフ

@@ -1,7 +1,7 @@
 defmodule Content.VampireSurvivor.BossSystemTest do
   use ExUnit.Case, async: true
 
-  alias Content.VampireSurvivor.BossSystem
+  alias Content.VampireSurvivor.Playing.BossSystem
 
   describe "check_spawn/2" do
     test "180 秒経過で slime_king をスポーンする" do

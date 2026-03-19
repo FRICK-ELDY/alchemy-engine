@@ -270,7 +270,7 @@
 
 ---
 
-### Phase 7: VampireSurvivor
+### Phase 7: VampireSurvivor ✅ 完了（2026-03-19）
 
 **目的**: 最も複雑なコンテンツの全層移行。武器・ボス・レベルアップを Object / Node で表現する。
 
@@ -292,6 +292,11 @@
 #### 7.3 検証
 
 - ゲームプレイ、レベルアップ、ボス出現、セーブ/ロードが従来通り動作すること
+
+#### 7.4 実施内容（2026-03-19）
+
+- **構成変更**: `scenes/` を廃止し、`boss_alert.ex`、`game_over.ex`、`level_up.ex`、`playing.ex` を `vampire_survivor/` 直下に配置。モジュール名を `Content.VampireSurvivor.Playing` / `Content.VampireSurvivor.BossAlert` 等に変更。
+- **VampireSurvivor 固有モジュールの内包**: `boss_component.ex`、`boss_system.ex`、`level_component.ex`、`level_system.ex`、`weapon_formulas.ex` を `playing.ex` に内包。モジュール名は `Content.VampireSurvivor.Playing.WeaponFormulas`、`Content.VampireSurvivor.Playing.LevelSystem`、`Content.VampireSurvivor.Playing.BossSystem` としてネスト。`LevelComponent` と `BossComponent` は `playing.ex` 内に定義されるが、モジュール名は `Content.VampireSurvivor.LevelComponent` / `Content.VampireSurvivor.BossComponent` を維持（エンジンの components リストと互換）。
 
 ---
 

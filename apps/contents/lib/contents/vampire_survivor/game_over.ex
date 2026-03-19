@@ -1,4 +1,4 @@
-defmodule Content.VampireSurvivor.Scenes.GameOver do
+defmodule Content.VampireSurvivor.GameOver do
   @moduledoc """
   ゲームオーバーシーン。スコア表示・リトライ待機。
   """

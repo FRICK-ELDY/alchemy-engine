@@ -2,7 +2,7 @@ defmodule Content.VampireSurvivor.BossComponentTest do
   use ExUnit.Case, async: true
 
   alias Content.VampireSurvivor.BossComponent
-  alias Content.VampireSurvivor.Scenes.Playing
+  alias Content.VampireSurvivor.Playing
 
   # BossComponent.on_frame_event は SceneManager.update_by_module を通じて
   # Playing シーンの state を更新する。

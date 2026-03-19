@@ -1,13 +1,10 @@
-defmodule Content.VampireSurvivor.Scenes.BossAlert do
+defmodule Content.VampireSurvivor.BossAlert do
   @moduledoc """
   ボス出現警告シーン。一定時間後に Elixir SSoT でボスをスポーンして Playing に戻る。
-
-  spawn_special_entity は呼ばず、Playing state を直接更新する。
   """
   @behaviour Contents.SceneBehaviour
 
-  alias Content.VampireSurvivor.BossSystem
-  alias Content.VampireSurvivor.Scenes.Playing
+  alias Content.VampireSurvivor.Playing
 
   require Logger
 
@@ -27,7 +24,7 @@ defmodule Content.VampireSurvivor.Scenes.BossAlert do
     now = context.now
     elapsed = now - alert_ms
 
-    if elapsed >= BossSystem.alert_duration_ms() do
+    if elapsed >= Content.VampireSurvivor.Playing.BossSystem.alert_duration_ms() do
       do_spawn_boss(context, boss_kind, boss_name)
       {:transition, :pop, state}
     else

@@ -4,15 +4,12 @@ defmodule Contents.Components.Category.Spawner do
 
   Content がオプショナルコールバックを実装している場合に初期化を行う。
   - `world_size/0` → `Core.NifBridge.set_world_size/3`
+  - `world_params_for_nif/0` → `Core.NifBridge.set_world_params/2`（オプション）
   - `entity_params_for_nif/0` → `Core.NifBridge.set_entity_params/5`
     （enemies, weapons, bosses の 3 要素タプルを返すこと）
 
   physics_scenes を持つコンテンツは、Rust 物理エンジンの physics_step が
   map_size < PLAYER_SIZE でパニックしないよう、十分なサイズを指定すること。
-
-  ## 専用 SpawnComponent を維持するコンテンツ
-  VampireSurvivor 等、武器フォーミュラ等の追加初期化が必要なコンテンツは
-  従来通り専用 SpawnComponent を使用する。
   """
   @behaviour Core.Component
 
@@ -23,6 +20,11 @@ defmodule Contents.Components.Category.Spawner do
     if function_exported?(content, :world_size, 0) do
       {width, height} = content.world_size()
       Core.NifBridge.set_world_size(world_ref, width, height)
+    end
+
+    if function_exported?(content, :world_params_for_nif, 0) do
+      params = content.world_params_for_nif()
+      Core.NifBridge.set_world_params(world_ref, params)
     end
 
     if function_exported?(content, :entity_params_for_nif, 0) do
