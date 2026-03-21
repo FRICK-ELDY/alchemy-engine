@@ -137,8 +137,12 @@ defmodule Content.Tetris.Scenes.Playing do
     ghost_blocks =
       if is_map(active_piece) do
         ghost = ghost_piece(active_piece, board)
+        active_cells = MapSet.new(piece_cells(active_piece))
 
-        Enum.map(piece_cells(ghost), fn {x, y} ->
+        ghost
+        |> piece_cells()
+        |> Enum.reject(&MapSet.member?(active_cells, &1))
+        |> Enum.map(fn {x, y} ->
           block_command(x, y, @color_ghost)
         end)
       else
@@ -178,17 +182,17 @@ defmodule Content.Tetris.Scenes.Playing do
       if current_scene == content.game_over_scene() do
         [
           {:node, {:center, {0.0, 0.0}, :wrap},
-           {:rect, {0.1, 0.03, 0.03, 0.9}, 16.0, {{0.78, 0.2, 0.2, 1.0}, 2.0}},
+           {:rect, {0.14, 0.05, 0.05, 1.0}, 16.0, {{1.0, 0.35, 0.35, 1.0}, 2.0}},
            [
              {:node, {:top_left, {0.0, 0.0}, :wrap},
               {:vertical_layout, 10.0, {56.0, 34.0, 56.0, 34.0}},
               [
                 {:node, {:top_left, {0.0, 0.0}, :wrap},
-                 {:text, "GAME OVER", {1.0, 0.3, 0.3, 1.0}, 40.0, true}, []},
+                 {:text, "GAME OVER", {1.0, 0.5, 0.5, 1.0}, 40.0, true}, []},
                 {:node, {:top_left, {0.0, 0.0}, :wrap},
-                 {:text, "Score: #{score}", {0.95, 0.9, 0.78, 1.0}, 20.0, true}, []},
+                 {:text, "Score: #{score}", {1.0, 0.98, 0.9, 1.0}, 20.0, true}, []},
                 {:node, {:top_left, {0.0, 0.0}, :wrap},
-                 {:button, "  RETRY  ", "__retry__", {0.63, 0.16, 0.16, 1.0}, 160.0, 44.0}, []}
+                 {:button, "  RETRY  ", "__retry__", {0.84, 0.24, 0.24, 1.0}, 160.0, 44.0}, []}
               ]}
            ]}
         ]

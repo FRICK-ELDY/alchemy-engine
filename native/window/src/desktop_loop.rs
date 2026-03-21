@@ -3,7 +3,7 @@
 //! render の Renderer を用いて描画するが、イベントループの所有権はここにある。
 
 use render::window::{KeyState, RenderBridge, WindowConfig};
-use render::{GameUiState, Renderer};
+use render::{GameUiState, Renderer, UiComponent, UiNode};
 use std::sync::Arc;
 use winit::{
     application::ApplicationHandler,
@@ -38,6 +38,7 @@ struct DesktopApp<B: RenderBridge> {
     ui_state: GameUiState,
     cursor_grabbed: bool,
     suppress_grab_frames: u8,
+    retry_button_visible: bool,
 }
 
 impl<B: RenderBridge> DesktopApp<B> {
@@ -50,6 +51,7 @@ impl<B: RenderBridge> DesktopApp<B> {
             ui_state: GameUiState::default(),
             cursor_grabbed: false,
             suppress_grab_frames: 0,
+            retry_button_visible: false,
         }
     }
 
@@ -64,6 +66,18 @@ impl<B: RenderBridge> DesktopApp<B> {
         } else {
             let _ = window.set_cursor_grab(CursorGrabMode::None);
         }
+    }
+
+    fn frame_has_retry_button(nodes: &[UiNode]) -> bool {
+        nodes.iter().any(|node| {
+            matches!(
+                &node.component,
+                UiComponent::Button {
+                    action,
+                    ..
+                } if action == "__retry__"
+            ) || Self::frame_has_retry_button(&node.children)
+        })
     }
 }
 
@@ -102,11 +116,15 @@ impl<B: RenderBridge> ApplicationHandler for DesktopApp<B> {
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
-        if let (Some(renderer), Some(window)) = (&mut self.renderer, &self.window) {
-            if renderer.handle_window_event(window, &event) {
+        let ui_consumed = if let (Some(renderer), Some(window)) = (&mut self.renderer, &self.window) {
+            let consumed = renderer.handle_window_event(window, &event);
+            if consumed {
                 window.request_redraw();
             }
-        }
+            consumed
+        } else {
+            false
+        };
 
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
@@ -120,10 +138,20 @@ impl<B: RenderBridge> ApplicationHandler for DesktopApp<B> {
                 state: ElementState::Pressed,
                 ..
             } => {
-                if self.suppress_grab_frames > 0 {
+                if self.retry_button_visible {
+                    self.bridge.on_ui_action("__retry__".to_string());
+                    if self.cursor_grabbed {
+                        self.suppress_grab_frames = 3;
+                        self.set_cursor_grabbed(false);
+                    }
+                    return;
+                }
+
+                // クリックによる自動グラブは無効化する。
+                // グラブ切替は frame.cursor_grab（サーバー指示）または ESC トグルに委譲することで、
+                // タッチパッドのタップ/クリック時にも UI ボタン操作を安定させる。
+                if !ui_consumed && self.suppress_grab_frames > 0 {
                     self.suppress_grab_frames -= 1;
-                } else if !self.cursor_grabbed {
-                    self.set_cursor_grabbed(true);
                 }
             }
             WindowEvent::KeyboardInput { event, .. } => {
@@ -153,6 +181,15 @@ impl<B: RenderBridge> ApplicationHandler for DesktopApp<B> {
                     None
                 };
                 if let Some(ref frame) = frame {
+                    self.retry_button_visible = Self::frame_has_retry_button(&frame.ui.nodes);
+
+                    // __retry__ が存在する UI（GameOver 系）では、クライアント側でも安全にカーソルを解放する。
+                    // frame.cursor_grab の伝播が環境差で欠落した場合でも、ボタン操作不能を防ぐ。
+                    if self.retry_button_visible && self.cursor_grabbed {
+                        self.suppress_grab_frames = 3;
+                        self.set_cursor_grabbed(false);
+                    }
+
                     if let Some(grab) = frame.cursor_grab {
                         if grab != self.cursor_grabbed {
                             if !grab {

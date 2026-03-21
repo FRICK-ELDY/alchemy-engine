@@ -242,6 +242,7 @@ defmodule Network.ZenohBridge do
 
   defp forward_ui_action(room_id, name) do
     room_key = room_id_for_registry(room_id)
+    Logger.info("[input:ZenohBridge] ui_action room=#{room_id} name=#{name}")
 
     case Core.RoomRegistry.get_loop(room_key) do
       {:ok, pid} ->

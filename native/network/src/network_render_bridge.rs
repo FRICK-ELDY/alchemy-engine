@@ -23,6 +23,7 @@ fn move_vector_from_keys(keys: &HashSet<KeyCode>) -> (f32, f32) {
 
 pub struct NetworkRenderBridge {
     frame_buffer: Arc<Mutex<Option<RenderFrame>>>,
+    last_frame: Arc<Mutex<RenderFrame>>,
     keys_held: Arc<Mutex<HashSet<KeyCode>>>,
     session: ClientSession,
     movement_key_expr: String,
@@ -39,6 +40,7 @@ impl NetworkRenderBridge {
         let session = ClientSession::open(connect_config)?;
 
         let frame_buffer: Arc<Mutex<Option<RenderFrame>>> = Arc::new(Mutex::new(None));
+        let last_frame: Arc<Mutex<RenderFrame>> = Arc::new(Mutex::new(RenderFrame::default()));
         let keys_held = Arc::new(Mutex::new(HashSet::new()));
         let shutdown = Arc::new(AtomicBool::new(false));
 
@@ -72,6 +74,7 @@ impl NetworkRenderBridge {
 
         let bridge = Self {
             frame_buffer,
+            last_frame,
             keys_held,
             session,
             movement_key_expr: movement_key(room_id),
@@ -163,13 +166,22 @@ impl RenderBridge for NetworkRenderBridge {
 
         if let Ok(mut guard) = self.frame_buffer.lock() {
             if let Some(frame) = guard.take() {
+                if let Ok(mut last) = self.last_frame.lock() {
+                    *last = frame.clone();
+                }
                 return frame;
             }
         }
-        RenderFrame::default()
+
+        // 受信フレームが欠けたときも前回の描画を保持してフリッカーを防ぐ。
+        self.last_frame
+            .lock()
+            .map(|f| f.clone())
+            .unwrap_or_default()
     }
 
     fn on_ui_action(&self, action: String) {
+        log::info!("[ui] publish action={action}");
         self.publish_action(&action);
     }
 
