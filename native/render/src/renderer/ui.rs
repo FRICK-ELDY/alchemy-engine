@@ -155,7 +155,8 @@ fn render_node_as_area(
 
     let mut area = egui::Area::new(egui::Id::new(id_str))
         .anchor(align, offset)
-        .order(egui::Order::Foreground);
+        .order(egui::Order::Foreground)
+        .interactable(true);
 
     if let UiSize::Fixed(w, h) = node.rect.size {
         area = area.default_size(egui::vec2(w, h));
@@ -397,7 +398,9 @@ fn render_button(
         .fill(to_color32_rgb(color))
         .min_size(egui::vec2(min_width, min_height));
 
-    if ui.add(btn).clicked() {
+    let response = ui.add(btn);
+    if response.clicked() {
+        log::info!("[ui] button clicked action={action}");
         // Save/Load ボタンは pending_action 経由で処理する
         match action {
             "__save__" | "__load__" => {
