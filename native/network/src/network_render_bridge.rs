@@ -23,6 +23,8 @@ fn move_vector_from_keys(keys: &HashSet<KeyCode>) -> (f32, f32) {
 
 pub struct NetworkRenderBridge {
     frame_buffer: Arc<Mutex<Option<RenderFrame>>>,
+    /// 前回描画したフレーム。欠損時はこれを使用してフリッカーを防ぐ。
+    last_frame: Arc<Mutex<Option<RenderFrame>>>,
     keys_held: Arc<Mutex<HashSet<KeyCode>>>,
     session: ClientSession,
     movement_key_expr: String,
@@ -39,6 +41,7 @@ impl NetworkRenderBridge {
         let session = ClientSession::open(connect_config)?;
 
         let frame_buffer: Arc<Mutex<Option<RenderFrame>>> = Arc::new(Mutex::new(None));
+        let last_frame: Arc<Mutex<Option<RenderFrame>>> = Arc::new(Mutex::new(None));
         let keys_held = Arc::new(Mutex::new(HashSet::new()));
         let shutdown = Arc::new(AtomicBool::new(false));
 
@@ -72,6 +75,7 @@ impl NetworkRenderBridge {
 
         let bridge = Self {
             frame_buffer,
+            last_frame,
             keys_held,
             session,
             movement_key_expr: movement_key(room_id),
@@ -155,17 +159,45 @@ impl Drop for NetworkRenderBridge {
 
 impl RenderBridge for NetworkRenderBridge {
     fn next_frame(&self) -> RenderFrame {
-        let (dx, dy) = {
-            let keys = self.keys_held.lock().unwrap();
-            move_vector_from_keys(&keys)
+        let (dx, dy) = match self.keys_held.lock() {
+            Ok(keys) => move_vector_from_keys(&keys),
+            Err(e) => {
+                log::warn!("[network_render_bridge] keys_held lock failed (poisoned): {e}");
+                (0.0, 0.0)
+            }
         };
         self.publish_movement(dx, dy);
 
-        if let Ok(mut guard) = self.frame_buffer.lock() {
-            if let Some(frame) = guard.take() {
-                return frame;
+        // 新フレームの取得を試みる
+        let new_frame = match self.frame_buffer.lock() {
+            Ok(mut guard) => guard.take(),
+            Err(e) => {
+                log::warn!("[network_render_bridge] frame_buffer lock failed (poisoned): {e}");
+                None
+            }
+        };
+
+        if let Some(frame) = new_frame {
+            // 新フレームがあれば、last_frame を更新してそれを返す
+            match self.last_frame.lock() {
+                Ok(mut last_guard) => *last_guard = Some(frame.clone()),
+                Err(e) => log::warn!("[network_render_bridge] last_frame lock failed (poisoned) on update: {e}"),
+            }
+            return frame;
+        }
+
+        // 新フレームがなければ、前回描画したフレームを返す
+        match self.last_frame.lock() {
+            Ok(guard) => {
+                if let Some(frame) = guard.as_ref() {
+                    return frame.clone();
+                }
+            }
+            Err(e) => {
+                log::warn!("[network_render_bridge] last_frame lock failed (poisoned): {e}");
             }
         }
+
         RenderFrame::default()
     }
 
@@ -174,7 +206,10 @@ impl RenderBridge for NetworkRenderBridge {
     }
 
     fn on_raw_key(&self, key: KeyCode, state: KeyState) {
-        let mut keys = self.keys_held.lock().unwrap();
+        let Ok(mut keys) = self.keys_held.lock() else {
+            log::warn!("[network_render_bridge] keys_held lock failed (poisoned) in on_raw_key");
+            return;
+        };
         match state {
             KeyState::Pressed => {
                 keys.insert(key);
@@ -190,6 +225,10 @@ impl RenderBridge for NetworkRenderBridge {
     }
 
     fn on_focus_lost(&self) {
-        self.keys_held.lock().unwrap().clear();
+        if let Ok(mut keys) = self.keys_held.lock() {
+            keys.clear();
+        } else {
+            log::warn!("[network_render_bridge] keys_held lock failed (poisoned) in on_focus_lost");
+        }
     }
 }
