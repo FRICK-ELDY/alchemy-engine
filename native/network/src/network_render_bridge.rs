@@ -168,29 +168,34 @@ impl RenderBridge for NetworkRenderBridge {
         };
         self.publish_movement(dx, dy);
 
-        // 新フレームがある場合: 取得して last_frame を更新
-        match self.frame_buffer.lock() {
-            Ok(mut guard) => {
-                if let Some(frame) = guard.take() {
-                    let frame_clone = frame.clone();
-                    match self.last_frame.lock() {
-                        Ok(mut last_guard) => *last_guard = Some(frame_clone),
-                        Err(e) => log::warn!("[network_render_bridge] last_frame lock failed (poisoned): {e}"),
-                    }
-                    return frame;
-                }
+        // 新フレームの取得を試みる
+        let new_frame = match self.frame_buffer.lock() {
+            Ok(mut guard) => guard.take(),
+            Err(e) => {
+                log::warn!("[network_render_bridge] frame_buffer lock failed (poisoned): {e}");
+                None
             }
-            Err(e) => log::warn!("[network_render_bridge] frame_buffer lock failed (poisoned): {e}"),
+        };
+
+        if let Some(frame) = new_frame {
+            // 新フレームがあれば、last_frame を更新してそれを返す
+            match self.last_frame.lock() {
+                Ok(mut last_guard) => *last_guard = Some(frame.clone()),
+                Err(e) => log::warn!("[network_render_bridge] last_frame lock failed (poisoned) on update: {e}"),
+            }
+            return frame;
         }
 
-        // 新フレームなし: 前回の描画を返す（フリッカー防止）
+        // 新フレームがなければ、前回描画したフレームを返す
         match self.last_frame.lock() {
             Ok(guard) => {
-                if let Some(ref prev) = *guard {
-                    return prev.clone();
+                if let Some(frame) = guard.as_ref() {
+                    return frame.clone();
                 }
             }
-            Err(e) => log::warn!("[network_render_bridge] last_frame lock failed (poisoned): {e}"),
+            Err(e) => {
+                log::warn!("[network_render_bridge] last_frame lock failed (poisoned): {e}");
+            }
         }
 
         RenderFrame::default()
