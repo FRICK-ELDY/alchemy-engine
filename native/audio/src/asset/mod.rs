@@ -42,9 +42,9 @@ define_assets! {
 
 /// アセットのロードを行う。実行時ロード（ファイル存在時）＋埋め込みフォールバック。
 pub struct AssetLoader {
-    /// `GAME_ASSETS_PATH` 環境変数から設定されるベースディレクトリ
+    /// `ASSETS_PATH` 環境変数から設定されるベースディレクトリ
     base_path: Option<std::path::PathBuf>,
-    /// `GAME_ASSETS_ID` 環境変数から設定されるゲーム別サブディレクトリ名
+    /// `ASSETS_ID` 環境変数から設定されるコンテンツ別サブディレクトリ名
     game_assets_id: Option<String>,
 }
 
@@ -56,15 +56,17 @@ impl Default for AssetLoader {
 
 impl AssetLoader {
     fn base_path_from_env() -> Option<std::path::PathBuf> {
-        std::env::var("GAME_ASSETS_PATH")
+        std::env::var("ASSETS_PATH")
+            .or_else(|_| std::env::var("GAME_ASSETS_PATH"))
             .ok()
             .filter(|s| !s.is_empty())
             .map(std::path::PathBuf::from)
     }
 
-    /// 環境変数 `GAME_ASSETS_PATH` と `GAME_ASSETS_ID` から作成する。
+    /// 環境変数 `ASSETS_PATH` と `ASSETS_ID` から作成する。
     pub fn new() -> Self {
-        let game_assets_id = std::env::var("GAME_ASSETS_ID")
+        let game_assets_id = std::env::var("ASSETS_ID")
+            .or_else(|_| std::env::var("GAME_ASSETS_ID"))
             .ok()
             .filter(|s| !s.is_empty());
         Self {

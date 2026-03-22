@@ -562,13 +562,13 @@ defmodule Contents.Events.Game do
   end
 
   defp do_apply_frame_injection(state, injection) do
-    case Content.MessagePackEncoder.encode_injection_map(injection) do
+    case Content.FrameEncoder.encode_injection_map(injection) do
       {:ok, frame_binary} ->
         apply_frame_injection_binary(state, frame_binary)
 
       {:error, reason} ->
         Logger.error(
-          "[Msgpax] encode_injection_map failed (skipping frame injection): #{inspect(reason)}"
+          "[FrameEncoder] encode_injection_map failed (skipping frame injection): #{inspect(reason)}"
         )
     end
   end

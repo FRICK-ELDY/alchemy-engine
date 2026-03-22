@@ -33,7 +33,7 @@ local://assets/vampire_survivor/audio/bgm.wav
 local://assets/sprites/atlas.png          # ゲーム共通アセット
 ```
 
-- `local://` 以降のパスは **プロジェクトルート（または `GAME_ASSETS_PATH` 環境変数）からの相対パス**として解釈する
+- `local://` 以降のパスは **プロジェクトルート（または `ASSETS_PATH` 環境変数）からの相対パス**として解釈する
 - 開発中・CI・オフライン環境で使用する
 - ファイルが存在しない場合は `include_bytes!` 埋め込みフォールバックを使用する
 
@@ -297,7 +297,7 @@ defp resolve_atlas_uri(content) do
   case System.get_env("GAME_ASSETS_CDN_URL") do
     nil ->
       # ローカル参照
-      base = System.get_env("GAME_ASSETS_PATH") || "."
+      base = System.get_env("ASSETS_PATH") || System.get_env("GAME_ASSETS_PATH") || "."
       if game_assets_id do
         "local://#{base}/assets/#{game_assets_id}/sprites/atlas.png"
       else
@@ -319,14 +319,14 @@ end
 
 | 環境変数 | 役割 | 例 |
 |:---|:---|:---|
-| `GAME_ASSETS_PATH` | ローカルアセットのベースディレクトリ | `/opt/app/assets` |
-| `GAME_ASSETS_ID` | ゲーム別サブディレクトリ名 | `vampire_survivor` |
+| `ASSETS_PATH` | ローカルアセットのベースディレクトリ | `/opt/app/assets` |
+| `ASSETS_ID` | コンテンツ別サブディレクトリ名 | `vampire_survivor` |
 | `GAME_ASSETS_CDN_URL` | CDNのベースURL（設定時はCDN優先） | `https://assets.yourgame.com` |
 
 **作業ステップ:**
 1. `game_events.ex` の `resolve_atlas_path/1` を `resolve_atlas_uri/1` にリネームし、URI形式を返すよう変更する
 2. `GAME_ASSETS_CDN_URL` 環境変数が設定されている場合はCDN URLを優先するロジックを追加する
-3. `server/application.ex` の `GAME_ASSETS_ID` セット処理はそのまま維持する
+3. `server/application.ex` の `ASSETS_ID` セット処理はそのまま維持する
 4. `nif_bridge.ex` / `core.ex` のシグネチャは変更不要（文字列を渡すだけのため）
 
 ---

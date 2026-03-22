@@ -22,7 +22,7 @@
 | 入力元 | 悪意のある値の例 | 結果 |
 |:---|:---|:---|
 | Elixir `resolve_atlas_path` | `content.assets_path()` が `../../../etc` を返す | `assets/../../../etc/sprites/atlas.png` → 上位ディレクトリへ |
-| 環境変数 `GAME_ASSETS_PATH` | `GAME_ASSETS_PATH=/etc` | システムディレクトリをベースに |
+| 環境変数 `ASSETS_PATH` | `ASSETS_PATH=/etc` | システムディレクトリをベースに |
 | 将来: ユーザー入力 | 不信頼ソースからパスを受け取る場合 | 任意ファイル読み取り |
 
 現状、`atlas_path` は Elixir の `resolve_atlas_path(content)` から渡され、`content.assets_path()` はプロジェクト内のモジュールが返すため、**信頼境界は比較的狭い**。ただし、以下を理由に防御を追加することを推奨する:
@@ -53,7 +53,7 @@
 
 ### 3.1 ディレクトリ境界の検証
 
-**方針**: `std::fs::canonicalize` でパスを正規化し、**ベースディレクトリ（作業ディレクトリまたは GAME_ASSETS_PATH 相当）の canonical パス**以下に収まるかチェックする。
+**方針**: `std::fs::canonicalize` でパスを正規化し、**ベースディレクトリ（作業ディレクトリまたは ASSETS_PATH 相当）の canonical パス**以下に収まるかチェックする。
 
 ```
 実装の流れ:
@@ -74,7 +74,7 @@
 
 - `Path::components()` を走査し、`Component::ParentDir` が含まれる場合は拒否
 - 絶対パスが渡された場合、ベースディレクトリからの相対関係を満たすか検証
-- `game_assets_id` や `GAME_ASSETS_PATH` に `/` や `\` が含まれる場合は Elixir 側で拒否（オプション）
+- `assets_id` や `ASSETS_PATH` に `/` や `\` が含まれる場合は Elixir 側で拒否（オプション）
 
 ### 3.3 ファイル名のホワイトリスト
 

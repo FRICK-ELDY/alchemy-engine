@@ -125,7 +125,12 @@ let path = std::env::var("ASSETS_PATH")
 | `docs/architecture/overview.md` | MessagePackEncoder → FrameEncoder に更新 |
 | `docs/architecture/elixir/contents.md` | 同上 |
 
-### 2.6 依存関係の整理
+### 2.6 ETF ヘルパーの共通化（将来検討）
+
+`bert_injection`（nif）と `bert_decode`（network）で `term_to_bool` 等のヘルパーが重複している。
+Phase D（native/client 作成）でクレート依存を整理する際に、共通の eetf ヘルパー（例: `shared` または新規 `eetf_helpers`）への切り出しを検討する。
+
+### 2.7 依存関係の整理
 
 | クレート / ライブラリ | 移行後の扱い |
 |:---|:---|

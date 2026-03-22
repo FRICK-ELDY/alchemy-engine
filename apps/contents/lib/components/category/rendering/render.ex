@@ -37,7 +37,7 @@ defmodule Contents.Components.Category.Rendering.Render do
       cursor_grab = resolve_cursor_grab(content, playing_state, current_scene)
 
       frame_binary =
-        Content.MessagePackEncoder.encode_frame(
+        Content.FrameEncoder.encode_frame(
           commands,
           camera,
           ui,

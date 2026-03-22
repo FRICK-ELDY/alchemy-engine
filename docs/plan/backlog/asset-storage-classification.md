@@ -34,7 +34,7 @@
 | `"vampire_survivor"` | 当該ゲーム固有の LocalAssets サブディレクトリを参照 |
 | `"asteroid_arena"` | 同上 |
 
-`GAME_ASSETS_ID` 環境変数へ渡す値として、Application 起動時に Elixir から注入する。
+`ASSETS_ID` 環境変数へ渡す値として、Application 起動時に Elixir から注入する。
 
 ---
 
