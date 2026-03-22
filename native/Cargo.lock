@@ -3434,8 +3434,10 @@ version = "0.1.0"
 dependencies = [
  "audio",
  "bincode",
+ "eetf",
  "env_logger",
  "log",
+ "num-traits",
  "rayon",
  "rmp-serde",
  "rustc-hash 2.1.1",

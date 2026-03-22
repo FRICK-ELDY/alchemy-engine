@@ -86,9 +86,12 @@ Elixir 側（msgpax）と Rust 側（rmp-serde）で同一の構造を扱う。
 }
 ```
 
-## 7. set_frame_injection（injection_map）の MessagePack スキーマ
+## 7. set_frame_injection（injection_map）のスキーマ
 
-`set_frame_injection_binary` NIF が受け取るバイナリのスキーマ。
+> **注**: injection_map は Erlang term 形式に移行済み。[erlang-term-schema.md](erlang-term-schema.md) §7 を参照。
+> 構造（キー・値の型）は本節と同一。
+
+`set_frame_injection_binary` NIF が受け取るバイナリのスキーマ（レガシー参照用）。
 トップレベルは map。存在するキーのみ pack する（オプショナルキー）。
 
 | キー | 型 | 説明 |

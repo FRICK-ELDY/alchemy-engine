@@ -1,10 +1,11 @@
 //! Path: native/nif/src/nif/decode/mod.rs
-//! Summary: MessagePack デコードヘルパー
+//! Summary: NIF 用デコードヘルパー
 //!
-//! - `msgpack_injection`: set_frame_injection_binary 用。GameWorldInner 注入（player_input 等）。
-//!   RenderFrame とは独立。world_nif からのみ使用。
-//! - RenderFrame デコード（camera, draw_command, ui_canvas, decode_cursor_grab 等）は Phase 2 で削除済み。
+//! - `bert_injection`: set_frame_injection_binary 用。Erlang term バイナリをデコードして GameWorldInner に注入。
+//! - `msgpack_injection`: レガシー（MessagePack 形式）。削除予定。
 
+mod bert_injection;
+#[allow(dead_code)] // レガシー参照用。削除検討中。
 mod msgpack_injection;
 
-pub use msgpack_injection::apply_injection_from_msgpack;
+pub use bert_injection::apply_injection_from_bert;

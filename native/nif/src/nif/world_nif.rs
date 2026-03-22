@@ -1,7 +1,7 @@
 //! Path: native/nif/src/nif/world_nif.rs
 //! Summary: ワールド作成・入力・スポーン・障害物設定 NIF
 
-use super::decode::apply_injection_from_msgpack;
+use super::decode::apply_injection_from_bert;
 use super::util::{lock_poisoned_err, params_not_loaded_err};
 use crate::physics::constants::{
     BULLET_LIFETIME, BULLET_SPEED, CELL_SIZE, MAP_HEIGHT, MAP_WIDTH, PARTICLE_RNG_SEED,
@@ -358,14 +358,14 @@ pub fn set_frame_injection(world: ResourceArc<GameWorld>, injection_map: Term) -
     Ok(ok())
 }
 
-/// P5: MessagePack バイナリ形式の set_frame_injection。タプル decode のオーバーヘッドを削減。
+/// P5: Erlang term バイナリ形式の set_frame_injection。タプル decode のオーバーヘッドを削減。
 #[rustler::nif]
 pub fn set_frame_injection_binary(
     world: ResourceArc<GameWorld>,
     binary: Binary,
 ) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
-    apply_injection_from_msgpack(&mut w, binary.as_slice())
+    apply_injection_from_bert(&mut w, binary.as_slice())
         .map_err(|e| rustler::Error::Term(Box::new(e.to_string())))?;
     Ok(ok())
 }
