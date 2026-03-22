@@ -42,7 +42,14 @@ fn term_to_u8(t: &Term) -> Option<u8> {
 }
 
 fn term_to_bool(t: &Term) -> Option<bool> {
-    t.to_u8().map(|u| u != 0)
+    match t {
+        Term::Atom(a) => match a.name.as_str() {
+            "true" => Some(true),
+            "false" => Some(false),
+            _ => None,
+        },
+        _ => t.to_u8().map(|u| u != 0),
+    }
 }
 
 fn get_map(t: &Term) -> Option<&Map> {
