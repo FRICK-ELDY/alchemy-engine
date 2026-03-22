@@ -288,8 +288,8 @@ flowchart TD
 | 変数 | 説明 |
 |:---|:---|
 | `ZENOH_CONNECT` | 接続先（未指定時は zenoh デフォルト scouting） |
-| `GAME_ASSETS_PATH` | アセットルート |
-| `GAME_ASSETS_ID` | ゲーム ID（例: `vampire_survivor`）で `assets/{id}/` 参照 |
+| `ASSETS_PATH` | アセットルート |
+| `ASSETS_ID` | コンテンツ別サブディレクトリ（例: `vampire_survivor`）で `assets/{id}/` 参照 |
 
 ### 初期化
 

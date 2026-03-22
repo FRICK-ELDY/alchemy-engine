@@ -4,7 +4,8 @@
 //! 「データが届いた」という事実だけを伝える。
 
 pub mod common;
-pub mod msgpack_decode;
+pub mod bert_decode;
+pub mod bert_encode;
 pub mod network_render_bridge;
 pub mod platform;
 

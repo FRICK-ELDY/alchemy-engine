@@ -3,7 +3,7 @@
 //! クライアント exe 用。サーバーと分離された別プロセスで動作する。
 //! Zenoh 通信は platform/desktop.rs の ClientSession を経由する。
 
-use crate::msgpack_decode;
+use crate::bert_decode;
 use crate::{action_key, client_info_key, frame_key, movement_key, ClientInfo, ClientSession};
 use render::window::{KeyCode, KeyState, RenderBridge};
 use render::RenderFrame;
@@ -53,7 +53,7 @@ impl NetworkRenderBridge {
         let recv_handle = {
             let frame_count_clone = Arc::clone(&frame_count);
             session.spawn_subscriber(&sub_key, shutdown_clone, move |bytes| {
-                match msgpack_decode::decode_render_frame(&bytes) {
+                match bert_decode::decode_render_frame(&bytes) {
                     Ok(frame) => {
                         let prev = frame_count_clone.fetch_add(1, Ordering::Relaxed);
                         if prev == 0 {
@@ -106,15 +106,7 @@ impl NetworkRenderBridge {
     }
 
     fn publish_movement(&self, dx: f32, dy: f32) {
-        #[derive(serde::Serialize)]
-        struct MovementPayload {
-            dx: f64,
-            dy: f64,
-        }
-        let payload = match rmp_serde::to_vec(&MovementPayload {
-            dx: dx as f64,
-            dy: dy as f64,
-        }) {
+        let payload = match crate::bert_encode::encode_movement(dx, dy) {
             Ok(p) => p,
             Err(e) => {
                 log::warn!("movement serialize error: {e}");
@@ -127,15 +119,7 @@ impl NetworkRenderBridge {
     }
 
     fn publish_action(&self, name: &str) {
-        #[derive(serde::Serialize)]
-        struct ActionPayload<'a> {
-            name: &'a str,
-            payload: std::collections::HashMap<String, String>,
-        }
-        let payload = match rmp_serde::to_vec(&ActionPayload {
-            name,
-            payload: std::collections::HashMap::new(),
-        }) {
+        let payload = match crate::bert_encode::encode_action(name) {
             Ok(p) => p,
             Err(e) => {
                 log::warn!("action serialize error: {e}");

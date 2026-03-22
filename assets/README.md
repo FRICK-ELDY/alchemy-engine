@@ -18,7 +18,7 @@ assets/
 
 ## ゲーム別アセット生成
 
-`GAME_ASSETS_ID` により `assets/{game_id}/` を参照します。
+`ASSETS_ID` により `assets/{game_id}/` を参照します。
 
 ### ヴァンパイアサバイバー
 

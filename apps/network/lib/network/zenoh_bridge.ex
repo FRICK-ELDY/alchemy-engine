@@ -180,48 +180,43 @@ defmodule Network.ZenohBridge do
   end
 
   defp handle_movement(room_id, payload) do
-    case Msgpax.unpack(payload) do
-      {:ok, %{"dx" => dx, "dy" => dy}} when is_number(dx) and is_number(dy) ->
+    term = :erlang.binary_to_term(payload, [:safe])
+    case term do
+      %{"dx" => dx, "dy" => dy} when is_number(dx) and is_number(dy) ->
         forward_move_input(room_id, dx * 1.0, dy * 1.0)
 
-      {:ok, map} when is_map(map) ->
-        dx = map |> Map.get("dx", 0) |> to_float()
-        dy = map |> Map.get("dy", 0) |> to_float()
+      map when is_map(map) ->
+        dx = map |> Map.get("dx", Map.get(map, :dx, 0)) |> to_float()
+        dy = map |> Map.get("dy", Map.get(map, :dy, 0)) |> to_float()
         forward_move_input(room_id, dx, dy)
 
-      # Rust rmp_serde が struct を配列 [dx, dy] としてシリアライズする場合に対応
-      {:ok, [dx, dy]} when is_number(dx) and is_number(dy) ->
-        forward_move_input(room_id, to_float(dx), to_float(dy))
-
-      {:ok, other} ->
-        Logger.warning("[input:ZenohBridge] handle_movement unpack ok but unexpected format: #{inspect(other, limit: 5)}")
-
-      {:error, reason} ->
-        Logger.warning("[input:ZenohBridge] handle_movement unpack error: #{inspect(reason)} room=#{room_id}")
+      other ->
+        Logger.warning("[input:ZenohBridge] handle_movement unexpected format: #{inspect(other, limit: 5)}")
     end
+  rescue
+    e ->
+      Logger.warning("[input:ZenohBridge] handle_movement binary_to_term error: #{inspect(e)} room=#{room_id}")
   end
 
   defp handle_action(room_id, payload) do
-    case Msgpax.unpack(payload) do
-      {:ok, %{"name" => name}} when is_binary(name) ->
+    term = :erlang.binary_to_term(payload, [:safe])
+    case term do
+      %{"name" => name} when is_binary(name) ->
         forward_ui_action(room_id, name)
 
-      {:ok, map} when is_map(map) ->
-        case Map.get(map, "name") do
+      map when is_map(map) ->
+        case Map.get(map, "name") || Map.get(map, :name) do
           name when is_binary(name) -> forward_ui_action(room_id, name)
+          name when is_atom(name) -> forward_ui_action(room_id, Atom.to_string(name))
           _ -> Logger.warning("[input:ZenohBridge] Invalid action payload (missing name) room=#{room_id}")
         end
 
-      # Rust rmp_serde が struct を配列 [name, payload] としてシリアライズする場合に対応
-      {:ok, [name | _]} when is_binary(name) ->
-        forward_ui_action(room_id, name)
-
-      {:ok, other} ->
+      other ->
         Logger.warning("[input:ZenohBridge] Invalid action payload room=#{room_id} format=#{inspect(other, limit: 3)}")
-
-      {:error, reason} ->
-        Logger.warning("[input:ZenohBridge] action unpack error: #{inspect(reason)} room=#{room_id}")
     end
+  rescue
+    e ->
+      Logger.warning("[input:ZenohBridge] action binary_to_term error: #{inspect(e)} room=#{room_id}")
   end
 
   defp to_float(v) when is_float(v), do: v

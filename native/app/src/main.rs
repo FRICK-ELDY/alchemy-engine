@@ -8,8 +8,8 @@
 //!
 //! 環境変数:
 //!   ZENOH_CONNECT - 接続先（例: tcp/127.0.0.1:7447）。未指定時は zenoh のデフォルト
-//!   GAME_ASSETS_PATH - アセットルート（未指定時はカレントディレクトリ）
-//!   GAME_ASSETS_ID - ゲーム ID（例: vampire_survivor）で assets/{id}/ を参照
+//!   ASSETS_PATH - アセットルート（未指定時はカレントディレクトリ）
+//!   ASSETS_ID - コンテンツ別サブディレクトリ（例: vampire_survivor）で assets/{id}/ を参照
 
 use audio::AssetLoader;
 use network::NetworkRenderBridge;
@@ -28,7 +28,7 @@ fn main() -> Result<(), String> {
         std::env::set_var("ZENOH_CONNECT", connect_str);
     }
     if let Some(ref p) = assets_path {
-        std::env::set_var("GAME_ASSETS_PATH", p);
+        std::env::set_var("ASSETS_PATH", p);
     }
 
     let loader = loader_for_assets(assets_path.as_deref());

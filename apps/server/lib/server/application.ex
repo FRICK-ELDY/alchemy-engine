@@ -13,7 +13,7 @@ defmodule Server.Application do
     assets_path =
       if function_exported?(content, :assets_path, 0), do: content.assets_path(), else: ""
 
-    System.put_env("GAME_ASSETS_ID", assets_path)
+    System.put_env("ASSETS_ID", assets_path)
 
     children = [
       {Registry, [keys: :unique, name: Core.RoomRegistry]},
