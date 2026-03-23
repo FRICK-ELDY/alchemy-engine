@@ -64,7 +64,9 @@ defmodule Contents.Components.Category.PhysicsEntity do
       inj
     else
       runner = content.flow_runner(Map.get(context, :room_id, :main))
-      playing_state = (runner && Contents.Scenes.Stack.get_scene_state(runner, content.playing_scene())) || %{}
+
+      playing_state =
+        (runner && Contents.Scenes.Stack.get_scene_state(runner, content.playing_scene())) || %{}
 
       player_hp = Map.get(playing_state, :player_hp, 100.0)
       invincible_until_ms = Map.get(playing_state, :invincible_until_ms)

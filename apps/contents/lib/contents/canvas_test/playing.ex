@@ -12,11 +12,11 @@ defmodule Content.CanvasTest.Playing do
   """
   @behaviour Contents.SceneBehaviour
 
-  alias Contents.Objects.Core.Struct, as: ObjectStruct
-  alias Contents.Objects.Core.CreateEmptyChild
-  alias Structs.Category.Space.Transform
-  alias Contents.Components.Category.Shader.Skybox
   alias Contents.Components.Category.Procedural.Meshes.Box
+  alias Contents.Components.Category.Shader.Skybox
+  alias Contents.Objects.Core.CreateEmptyChild
+  alias Contents.Objects.Core.Struct, as: ObjectStruct
+  alias Structs.Category.Space.Transform
 
   @tick_sec 1.0 / 60.0
 
@@ -118,13 +118,8 @@ defmodule Content.CanvasTest.Playing do
 
     # init/1 では起動時エラーを即失敗させたいため raise。上位で {:error, reason} を扱う構成にすることも可。
     for panel_def <- panel_definitions do
-      case CreateEmptyChild.create(top_object, name: panel_def.name) do
-        {:ok, child} ->
-          %{child | transform: %Transform{position: panel_def.position}}
-
-        {:error, reason} ->
-          raise "CanvasTest.Playing init: CreateEmptyChild.create failed for '#{panel_def.name}': #{inspect(reason)}"
-      end
+      {:ok, child} = CreateEmptyChild.create(top_object, name: panel_def.name)
+      %{child | transform: %Transform{position: panel_def.position}}
     end
   end
 

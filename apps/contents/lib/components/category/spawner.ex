@@ -29,12 +29,13 @@ defmodule Contents.Components.Category.Spawner do
 
     if function_exported?(content, :entity_params_for_nif, 0) do
       case content.entity_params_for_nif() do
-        {enemies, weapons, bosses} when is_list(enemies) and is_list(weapons) and is_list(bosses) ->
+        {enemies, weapons, bosses}
+        when is_list(enemies) and is_list(weapons) and is_list(bosses) ->
           Core.NifBridge.set_entity_params(world_ref, enemies, weapons, bosses, nil)
 
         other ->
           raise ArgumentError,
-            "entity_params_for_nif/0 must return {enemies, weapons, bosses}, got: #{inspect(other)}"
+                "entity_params_for_nif/0 must return {enemies, weapons, bosses}, got: #{inspect(other)}"
       end
     end
 

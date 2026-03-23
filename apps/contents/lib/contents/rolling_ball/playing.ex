@@ -186,9 +186,24 @@ defmodule Content.RollingBall.Playing do
       tile_size: @tile_size,
       ball_start: {-8.0, -8.0},
       goal_pos: {8.0, 8.0},
-      holes:
-        [{1, 1}, {5, 1}, {8, 1}, {1, 5}, {8, 5}, {1, 8}, {5, 8}, {8, 8}, {3, 3}, {6, 3}, {3, 6},
-         {6, 6}, {4, 0}, {0, 4}, {9, 4}, {4, 9}],
+      holes: [
+        {1, 1},
+        {5, 1},
+        {8, 1},
+        {1, 5},
+        {8, 5},
+        {1, 8},
+        {5, 8},
+        {8, 8},
+        {3, 3},
+        {6, 3},
+        {3, 6},
+        {6, 6},
+        {4, 0},
+        {0, 4},
+        {9, 4},
+        {4, 9}
+      ],
       obstacles: [{4.0, 0.0}, {-4.0, 0.0}, {0.0, 4.0}, {0.0, -4.0}],
       moving_obstacles: [
         %{id: 0, x: 2.0, z: 2.0, vx: 3.0, vz: 0.0, range: 4.0},
@@ -406,9 +421,12 @@ defmodule Content.RollingBall.Playing do
 
   defp build_goal_cmds(scene_state) do
     case Map.get(scene_state, :goal_pos) do
-      nil -> []
+      nil ->
+        []
+
       {gx, gz} ->
         {gr, gg, gb, ga} = @color_goal
+
         [
           {:box_3d, gx, @goal_half_y, gz, @goal_half_xz, @goal_half_y,
            {@goal_half_xz, gr, gg, gb, ga}}
@@ -495,7 +513,8 @@ defmodule Content.RollingBall.Playing do
       {:node, {:top_left, {0.0, 0.0}, :wrap},
        {:text, "WASD / Arrow Keys: Move", {0.59, 0.67, 0.75, 1.0}, 13.0, false}, []},
       {:node, {:top_left, {0.0, 0.0}, :wrap},
-       {:text, "Reach the green goal to clear the stage", {0.59, 0.67, 0.75, 1.0}, 13.0, false}, []},
+       {:text, "Reach the green goal to clear the stage", {0.59, 0.67, 0.75, 1.0}, 13.0, false},
+       []},
       {:node, {:top_left, {0.0, 0.0}, :wrap},
        {:button, "  START GAME  ", "__start__", {0.16, 0.39, 0.78, 1.0}, 200.0, 50.0}, []}
     ]
@@ -533,7 +552,8 @@ defmodule Content.RollingBall.Playing do
       {:node, {:top_left, {0.0, 0.0}, :wrap},
        {:text, "All stages cleared!", {0.86, 0.78, 0.59, 1.0}, 18.0, false}, []},
       {:node, {:top_left, {0.0, 0.0}, :wrap},
-       {:button, "  BACK TO TITLE  ", "__back_to_title__", {0.47, 0.31, 0.08, 1.0}, 200.0, 50.0}, []}
+       {:button, "  BACK TO TITLE  ", "__back_to_title__", {0.47, 0.31, 0.08, 1.0}, 200.0, 50.0},
+       []}
     ]
 
     {:node, {:center, {0.0, 0.0}, :wrap},

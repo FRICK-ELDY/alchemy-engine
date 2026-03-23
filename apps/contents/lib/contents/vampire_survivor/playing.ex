@@ -266,8 +266,15 @@ defmodule Content.VampireSurvivor.Playing do
   end
 
   defp slot_damage_and_cooldown(wp, _kind_id, level) when is_map(wp) do
-    damage = Content.VampireSurvivor.Playing.WeaponFormulas.effective_damage(wp[:damage], max(1, level))
-    cd = Content.VampireSurvivor.Playing.WeaponFormulas.effective_cooldown(wp[:cooldown], max(1, level))
+    damage =
+      Content.VampireSurvivor.Playing.WeaponFormulas.effective_damage(wp[:damage], max(1, level))
+
+    cd =
+      Content.VampireSurvivor.Playing.WeaponFormulas.effective_cooldown(
+        wp[:cooldown],
+        max(1, level)
+      )
+
     {damage, cd}
   end
 

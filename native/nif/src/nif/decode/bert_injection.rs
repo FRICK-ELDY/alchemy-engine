@@ -66,7 +66,7 @@ fn get_map(t: &Term) -> Option<&Map> {
     }
 }
 
-fn get_vec<'a>(t: &'a Term) -> Option<Vec<&'a Term>> {
+fn get_vec(t: &Term) -> Option<Vec<&Term>> {
     match t {
         Term::List(l) => Some(l.elements.iter().collect()),
         _ => None,
@@ -88,7 +88,7 @@ fn parse_weapon_slot(t: &Term) -> Option<WeaponSlot> {
         );
         return None;
     }
-    let kind_id = term_to_u8(*arr.get(0)?)?;
+    let kind_id = term_to_u8(*arr.first()?)?;
     let level = term_to_u32(*arr.get(1)?)?;
     let cooldown = term_to_f64(*arr.get(2)?)? as f32;
     let cooldown_sec = term_to_f64(*arr.get(3)?)? as f32;
@@ -110,7 +110,9 @@ fn parse_special_entity_snapshot(map: &Map) -> Option<SpecialEntitySnapshot> {
     let y = map_get(map, "y").and_then(term_to_f64).unwrap_or(0.0) as f32;
     let radius = map_get(map, "radius").and_then(term_to_f64).unwrap_or(48.0) as f32;
     let damage = map_get(map, "damage").and_then(term_to_f64).unwrap_or(0.0) as f32;
-    let invincible = map_get(map, "invincible").and_then(term_to_bool).unwrap_or(false);
+    let invincible = map_get(map, "invincible")
+        .and_then(term_to_bool)
+        .unwrap_or(false);
     Some(SpecialEntitySnapshot {
         x,
         y,
@@ -168,8 +170,8 @@ pub fn apply_injection_from_bert(
                 let mut damage_map: Vec<(usize, f32)> = Vec::new();
                 for item in list {
                     if let Some(arr) = get_vec(item) {
-                        let kind_id = arr.get(0).and_then(|t| term_to_u64(*t).map(|u| u as usize));
-                        let damage = arr.get(1).and_then(|t| term_to_f64(*t));
+                        let kind_id = arr.first().and_then(|t| term_to_u64(t).map(|u| u as usize));
+                        let damage = arr.get(1).and_then(|t| term_to_f64(t));
                         if let (Some(i), Some(d)) = (kind_id, damage) {
                             max_id = max_id.max(i);
                             damage_map.push((i, d as f32));

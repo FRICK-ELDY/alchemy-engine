@@ -165,7 +165,9 @@ impl RenderBridge for NetworkRenderBridge {
             // 新フレームがあれば、last_frame を更新してそれを返す
             match self.last_frame.lock() {
                 Ok(mut last_guard) => *last_guard = Some(frame.clone()),
-                Err(e) => log::warn!("[network_render_bridge] last_frame lock failed (poisoned) on update: {e}"),
+                Err(e) => log::warn!(
+                    "[network_render_bridge] last_frame lock failed (poisoned) on update: {e}"
+                ),
             }
             return frame;
         }

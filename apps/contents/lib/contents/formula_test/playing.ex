@@ -11,8 +11,8 @@ defmodule Content.FormulaTest.Playing do
   @behaviour Contents.SceneBehaviour
 
   alias Structs.Category.Space.Transform
-  alias Structs.Category.Value.Float, as: ValueFloat
   alias Structs.Category.Value.Color, as: Color
+  alias Structs.Category.Value.Float, as: ValueFloat
 
   # Contents.Nodes.Test.Formula.run/0 の戻り型と合わせて String.t() を使用
   @type formula_result :: {:ok, String.t(), term()} | {:error, String.t(), term()}
@@ -95,9 +95,9 @@ defmodule Content.FormulaTest.Playing do
     }
   end
 
-  alias Contents.Objects.Core.Struct, as: ObjectStruct
-  alias Contents.Objects.Core.CreateEmptyChild
   alias Contents.Components.Category.Shader.Skybox
+  alias Contents.Objects.Core.CreateEmptyChild
+  alias Contents.Objects.Core.Struct, as: ObjectStruct
 
   @impl Contents.SceneBehaviour
   @spec init(term()) :: {:ok, state()}
@@ -111,13 +111,7 @@ defmodule Content.FormulaTest.Playing do
     # Scene 直下のトップレベルは User のみ。Child は User の子なので children には含めない。
     # 作成した Child を本シーンで参照する必要はないため、戻り値は束縛しない。
     # init/1 では起動時エラーを即失敗させたいため raise。上位で {:error, reason} を扱う構成にすることも可。
-    case CreateEmptyChild.create(top_object, name: "Child") do
-      {:ok, _child} ->
-        :ok
-
-      {:error, reason} ->
-        raise "FormulaTest.Playing init: CreateEmptyChild.create failed for 'Child': #{inspect(reason)}"
-    end
+    {:ok, _child} = CreateEmptyChild.create(top_object, name: "Child")
 
     state = %{
       origin: origin,

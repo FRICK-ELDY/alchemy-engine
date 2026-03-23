@@ -112,8 +112,8 @@ defmodule Content.BulletHell3D.Playing do
   @impl Contents.SceneBehaviour
   def update(_context, state) do
     if state.hp <= 0 do
-      {:transition,
-       {:replace, Content.BulletHell3D.GameOver, %{elapsed_sec: state.elapsed_sec}}, state}
+      {:transition, {:replace, Content.BulletHell3D.GameOver, %{elapsed_sec: state.elapsed_sec}},
+       state}
     else
       new_state = tick(state)
       {:continue, new_state}
@@ -172,6 +172,7 @@ defmodule Content.BulletHell3D.Playing do
       end
 
     {px, py, pz} = player
+
     player_cmd =
       {:box_3d, px, py + @player_half, pz, @player_half, @player_half,
        {@player_half, pr, pg, pb, alpha}}
@@ -486,7 +487,14 @@ defmodule Content.BulletHell3D.Playing do
 
   # ── 発射タイマー ──────────────────────────────────────────────────
 
-  defp update_shoot_timer(bullet_objects, timer_ms, next_id, enemy_objects, player_pos, shoot_interval_ms) do
+  defp update_shoot_timer(
+         bullet_objects,
+         timer_ms,
+         next_id,
+         enemy_objects,
+         player_pos,
+         shoot_interval_ms
+       ) do
     new_timer = timer_ms - trunc(@tick_ms)
 
     if new_timer <= 0 and enemy_objects != [] do
@@ -507,6 +515,7 @@ defmodule Content.BulletHell3D.Playing do
       if len > 0.001 do
         vx = ddx / len * @bullet_speed
         vz = ddz / len * @bullet_speed
+
         bullet_obj =
           ObjectStruct.new(
             name: "Bullet_#{id}",
