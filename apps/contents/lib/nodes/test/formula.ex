@@ -8,8 +8,8 @@ defmodule Contents.Nodes.Test.Formula do
   """
   alias Contents.Nodes.Category.Core.Input.Value, as: ValueNode
   alias Contents.Nodes.Category.Operators.Add, as: AddNode
-  alias Contents.Nodes.Category.Operators.Sub, as: SubNode
   alias Contents.Nodes.Category.Operators.Equals, as: EqualsNode
+  alias Contents.Nodes.Category.Operators.Sub, as: SubNode
 
   @type result_item :: {:ok, String.t(), term()} | {:error, String.t(), term()}
 

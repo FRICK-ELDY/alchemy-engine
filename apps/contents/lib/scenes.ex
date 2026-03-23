@@ -22,8 +22,8 @@ defmodule Contents.Scenes do
   - `mod` は `Contents.SceneBehaviour` を実装していること。実装漏れは `mod.init(payload)` / `mod.update/2` 実行時に検知される（事前チェックは行っていない）。
   """
 
-  alias Structs.Category.Space.Transform
   alias Contents.Objects.Core.Struct, as: ObjectStruct
+  alias Structs.Category.Space.Transform
 
   # 他のシーン固有キー（例: formula_results, hud_visible）も optional(atom()) => term() で許容する。
   @type recommended_state :: %{

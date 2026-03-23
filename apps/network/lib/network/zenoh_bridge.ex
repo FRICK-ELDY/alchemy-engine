@@ -47,8 +47,11 @@ defmodule Network.ZenohBridge do
 
         # movement / action / client_info の subscriber を登録（自プロセスにメッセージ配送）
         # 注意: Zenohex は subscriber_id を保持しないと GC でドロップされるため state に格納する
-        {:ok, mov_sub} = Zenohex.Session.declare_subscriber(session_id, @movement_selector, self())
+        {:ok, mov_sub} =
+          Zenohex.Session.declare_subscriber(session_id, @movement_selector, self())
+
         {:ok, act_sub} = Zenohex.Session.declare_subscriber(session_id, @action_selector, self())
+
         {:ok, info_sub} =
           Zenohex.Session.declare_subscriber(session_id, @client_info_selector, self())
 
@@ -131,21 +134,23 @@ defmodule Network.ZenohBridge do
     parsed = parse_input_key(key_expr)
 
     if kind != :put do
-      Logger.warning("[input:ZenohBridge] Sample kind is not :put (got #{inspect(kind)}), skipping")
+      Logger.warning(
+        "[input:ZenohBridge] Sample kind is not :put (got #{inspect(kind)}), skipping"
+      )
     else
       case parsed do
-      {:movement, room_id} ->
-        handle_movement(room_id, payload)
+        {:movement, room_id} ->
+          handle_movement(room_id, payload)
 
-      {:action, room_id} ->
-        handle_action(room_id, payload)
+        {:action, room_id} ->
+          handle_action(room_id, payload)
 
-      {:client_info, room_id} ->
-        handle_client_info(room_id, payload)
+        {:client_info, room_id} ->
+          handle_client_info(room_id, payload)
 
-      :unknown ->
-        Logger.debug("[input:ZenohBridge] Unknown key_expr=#{key_expr}")
-    end
+        :unknown ->
+          Logger.debug("[input:ZenohBridge] Unknown key_expr=#{key_expr}")
+      end
     end
 
     {:noreply, state}
@@ -181,6 +186,7 @@ defmodule Network.ZenohBridge do
 
   defp handle_movement(room_id, payload) do
     term = :erlang.binary_to_term(payload, [:safe])
+
     case term do
       %{"dx" => dx, "dy" => dy} when is_number(dx) and is_number(dy) ->
         forward_move_input(room_id, dx * 1.0, dy * 1.0)
@@ -191,32 +197,48 @@ defmodule Network.ZenohBridge do
         forward_move_input(room_id, dx, dy)
 
       other ->
-        Logger.warning("[input:ZenohBridge] handle_movement unexpected format: #{inspect(other, limit: 5)}")
+        Logger.warning(
+          "[input:ZenohBridge] handle_movement unexpected format: #{inspect(other, limit: 5)}"
+        )
     end
   rescue
     e ->
-      Logger.warning("[input:ZenohBridge] handle_movement binary_to_term error: #{inspect(e)} room=#{room_id}")
+      Logger.warning(
+        "[input:ZenohBridge] handle_movement binary_to_term error: #{inspect(e)} room=#{room_id}"
+      )
   end
 
   defp handle_action(room_id, payload) do
     term = :erlang.binary_to_term(payload, [:safe])
+
     case term do
       %{"name" => name} when is_binary(name) ->
         forward_ui_action(room_id, name)
 
       map when is_map(map) ->
         case Map.get(map, "name") || Map.get(map, :name) do
-          name when is_binary(name) -> forward_ui_action(room_id, name)
-          name when is_atom(name) -> forward_ui_action(room_id, Atom.to_string(name))
-          _ -> Logger.warning("[input:ZenohBridge] Invalid action payload (missing name) room=#{room_id}")
+          name when is_binary(name) ->
+            forward_ui_action(room_id, name)
+
+          name when is_atom(name) ->
+            forward_ui_action(room_id, Atom.to_string(name))
+
+          _ ->
+            Logger.warning(
+              "[input:ZenohBridge] Invalid action payload (missing name) room=#{room_id}"
+            )
         end
 
       other ->
-        Logger.warning("[input:ZenohBridge] Invalid action payload room=#{room_id} format=#{inspect(other, limit: 3)}")
+        Logger.warning(
+          "[input:ZenohBridge] Invalid action payload room=#{room_id} format=#{inspect(other, limit: 3)}"
+        )
     end
   rescue
     e ->
-      Logger.warning("[input:ZenohBridge] action binary_to_term error: #{inspect(e)} room=#{room_id}")
+      Logger.warning(
+        "[input:ZenohBridge] action binary_to_term error: #{inspect(e)} room=#{room_id}"
+      )
   end
 
   defp to_float(v) when is_float(v), do: v
@@ -231,7 +253,9 @@ defmodule Network.ZenohBridge do
         send(pid, {:move_input, dx, dy})
 
       :error ->
-        Logger.warning("[input:ZenohBridge] forward_move_input FAILED: No event handler for room=#{room_id}, dropping (dx=#{dx}, dy=#{dy})")
+        Logger.warning(
+          "[input:ZenohBridge] forward_move_input FAILED: No event handler for room=#{room_id}, dropping (dx=#{dx}, dy=#{dy})"
+        )
     end
   end
 

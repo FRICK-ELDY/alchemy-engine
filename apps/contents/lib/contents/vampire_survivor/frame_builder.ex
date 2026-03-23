@@ -24,9 +24,8 @@ defmodule Content.VampireSurvivor.FrameBuilder do
   def build(playing_state, context) do
     content = Core.Config.current()
 
-    {{player_x, player_y, frame_id, enemy_count, bullet_count},
-     {magnet_timer, invincible_timer}, {enemies, bullets, particles},
-     {items, obstacles, _boss_nif, score_popups}} =
+    {{player_x, player_y, frame_id, enemy_count, bullet_count}, {magnet_timer, invincible_timer},
+     {enemies, bullets, particles}, {items, obstacles, _boss_nif, score_popups}} =
       Core.NifBridge.get_render_entities(context.world_ref)
 
     anim_frame = rem(div(frame_id, 4), 4)

@@ -644,35 +644,36 @@ impl Pipeline3D {
                     color,
                 } => {
                     let base = self.box_verts_scratch.len() as u32;
-                    let (verts, idx) =
-                        if let Some((template, indices)) = self.mesh_def_cache.get("unit_box") {
-                            if !indices.is_empty() {
-                                // P3: Elixir 定義の unit_box を使用。スケール・移動・色を適用
-                                let hw = *half_w * 2.0;
-                                let hh = *half_h * 2.0;
-                                let hd = *half_d * 2.0;
-                                let verts: Vec<MeshVertex> = template
-                                    .iter()
-                                    .map(|v| MeshVertex {
-                                        position: [
-                                            v.position[0] * hw + x,
-                                            v.position[1] * hh + y,
-                                            v.position[2] * hd + z,
-                                        ],
-                                        color: *color,
-                                    })
-                                    .collect();
-                                let idx: Vec<u32> = indices.iter().map(|&i| i + base).collect();
-                                (verts, idx)
-                            } else {
-                                // mesh_def の indices が空（ETF デコード問題等）の場合はフォールバック
-                                let (v, i) = box_mesh(*x, *y, *z, *half_w, *half_h, *half_d, *color);
-                                (v.to_vec(), i.iter().map(|&i| i + base).collect::<Vec<_>>())
-                            }
+                    let (verts, idx) = if let Some((template, indices)) =
+                        self.mesh_def_cache.get("unit_box")
+                    {
+                        if !indices.is_empty() {
+                            // P3: Elixir 定義の unit_box を使用。スケール・移動・色を適用
+                            let hw = *half_w * 2.0;
+                            let hh = *half_h * 2.0;
+                            let hd = *half_d * 2.0;
+                            let verts: Vec<MeshVertex> = template
+                                .iter()
+                                .map(|v| MeshVertex {
+                                    position: [
+                                        v.position[0] * hw + x,
+                                        v.position[1] * hh + y,
+                                        v.position[2] * hd + z,
+                                    ],
+                                    color: *color,
+                                })
+                                .collect();
+                            let idx: Vec<u32> = indices.iter().map(|&i| i + base).collect();
+                            (verts, idx)
                         } else {
+                            // mesh_def の indices が空（ETF デコード問題等）の場合はフォールバック
                             let (v, i) = box_mesh(*x, *y, *z, *half_w, *half_h, *half_d, *color);
                             (v.to_vec(), i.iter().map(|&i| i + base).collect::<Vec<_>>())
-                        };
+                        }
+                    } else {
+                        let (v, i) = box_mesh(*x, *y, *z, *half_w, *half_h, *half_d, *color);
+                        (v.to_vec(), i.iter().map(|&i| i + base).collect::<Vec<_>>())
+                    };
                     self.box_verts_scratch.extend(verts);
                     self.box_indices_scratch.extend(idx);
                 }

@@ -1,4 +1,6 @@
 defmodule Content.FrameEncoder do
+  require Logger
+
   @moduledoc """
   Zenoh フレーム配信用 Erlang term バイナリエンコーダ。
 

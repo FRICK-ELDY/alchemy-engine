@@ -59,7 +59,7 @@ fn get_map(t: &Term) -> Option<&Map> {
     }
 }
 
-fn get_vec<'a>(t: &'a Term) -> Option<Vec<&'a Term>> {
+fn get_vec(t: &Term) -> Option<Vec<&Term>> {
     match t {
         Term::List(l) => Some(l.elements.iter().collect()),
         _ => None,
@@ -72,7 +72,7 @@ fn get_tag(map: &Map) -> Option<String> {
 
 fn f64_4(c: &[f64]) -> [f32; 4] {
     [
-        c.get(0).copied().unwrap_or(0.0) as f32,
+        c.first().copied().unwrap_or(0.0) as f32,
         c.get(1).copied().unwrap_or(0.0) as f32,
         c.get(2).copied().unwrap_or(0.0) as f32,
         c.get(3).copied().unwrap_or(1.0) as f32,
@@ -81,11 +81,7 @@ fn f64_4(c: &[f64]) -> [f32; 4] {
 
 fn arr_f64(t: &Term) -> Vec<f64> {
     get_vec(t)
-        .map(|v| {
-            v.iter()
-                .filter_map(|x| term_to_f64(x))
-                .collect::<Vec<_>>()
-        })
+        .map(|v| v.iter().filter_map(|x| term_to_f64(x)).collect::<Vec<_>>())
         .unwrap_or_default()
 }
 
@@ -105,14 +101,21 @@ fn parse_draw_command(map: &Map) -> Option<DrawCommand> {
             let height = map_get(map, "height").and_then(term_to_f64).unwrap_or(0.0) as f32;
             let uv_offset = arr_f64(map_get(map, "uv_offset").unwrap_or(&Term::from(List::nil())));
             let uv_size = arr_f64(map_get(map, "uv_size").unwrap_or(&Term::from(List::nil())));
-            let color_tint = arr_f64(map_get(map, "color_tint").unwrap_or(&Term::from(List::nil())));
+            let color_tint =
+                arr_f64(map_get(map, "color_tint").unwrap_or(&Term::from(List::nil())));
             DrawCommand::SpriteRaw {
                 x,
                 y,
                 width,
                 height,
-                uv_offset: [uv_offset.get(0).copied().unwrap_or(0.0) as f32, uv_offset.get(1).copied().unwrap_or(0.0) as f32],
-                uv_size: [uv_size.get(0).copied().unwrap_or(0.0) as f32, uv_size.get(1).copied().unwrap_or(0.0) as f32],
+                uv_offset: [
+                    uv_offset.first().copied().unwrap_or(0.0) as f32,
+                    uv_offset.get(1).copied().unwrap_or(0.0) as f32,
+                ],
+                uv_size: [
+                    uv_size.first().copied().unwrap_or(0.0) as f32,
+                    uv_size.get(1).copied().unwrap_or(0.0) as f32,
+                ],
                 color_tint: f64_4(&color_tint),
             }
         }
@@ -125,7 +128,13 @@ fn parse_draw_command(map: &Map) -> Option<DrawCommand> {
             let alpha = map_get(map, "alpha").and_then(term_to_f64).unwrap_or(0.0) as f32;
             let size = map_get(map, "size").and_then(term_to_f64).unwrap_or(0.0) as f32;
             DrawCommand::Particle {
-                x, y, r, g, b, alpha, size,
+                x,
+                y,
+                r,
+                g,
+                b,
+                alpha,
+                size,
             }
         }
         "item" => {
@@ -139,9 +148,7 @@ fn parse_draw_command(map: &Map) -> Option<DrawCommand> {
             let y = map_get(map, "y").and_then(term_to_f64).unwrap_or(0.0) as f32;
             let radius = map_get(map, "radius").and_then(term_to_f64).unwrap_or(0.0) as f32;
             let kind = map_get(map, "kind").and_then(term_to_u8).unwrap_or(0);
-            DrawCommand::Obstacle {
-                x, y, radius, kind,
-            }
+            DrawCommand::Obstacle { x, y, radius, kind }
         }
         "box_3d" => {
             let x = map_get(map, "x").and_then(term_to_f64).unwrap_or(0.0) as f32;
@@ -152,8 +159,12 @@ fn parse_draw_command(map: &Map) -> Option<DrawCommand> {
             let half_d = map_get(map, "half_d").and_then(term_to_f64).unwrap_or(0.0) as f32;
             let color = arr_f64(map_get(map, "color").unwrap_or(&Term::from(List::nil())));
             DrawCommand::Box3D {
-                x, y, z,
-                half_w, half_h, half_d,
+                x,
+                y,
+                z,
+                half_w,
+                half_h,
+                half_d,
                 color: f64_4(&color),
             }
         }
@@ -162,7 +173,9 @@ fn parse_draw_command(map: &Map) -> Option<DrawCommand> {
             let divisions = map_get(map, "divisions").and_then(term_to_u32).unwrap_or(0);
             let color = arr_f64(map_get(map, "color").unwrap_or(&Term::from(List::nil())));
             DrawCommand::GridPlane {
-                size, divisions, color: f64_4(&color),
+                size,
+                divisions,
+                color: f64_4(&color),
             }
         }
         "grid_plane_verts" => {
@@ -171,13 +184,30 @@ fn parse_draw_command(map: &Map) -> Option<DrawCommand> {
                 .iter()
                 .filter_map(|v| {
                     let arr = get_vec(v)?;
-                    let p = arr.get(0).and_then(|x| get_vec(x)).unwrap_or_default();
+                    let p = arr.first().and_then(|x| get_vec(x)).unwrap_or_default();
                     let c = arr.get(1).and_then(|x| get_vec(x)).unwrap_or_default();
-                    let p: Vec<f32> = p.iter().take(3).filter_map(|x| term_to_f64(x).map(|f| f as f32)).collect();
-                    let c: Vec<f32> = c.iter().take(4).filter_map(|x| term_to_f64(x).map(|f| f as f32)).collect();
+                    let p: Vec<f32> = p
+                        .iter()
+                        .take(3)
+                        .filter_map(|x| term_to_f64(x).map(|f| f as f32))
+                        .collect();
+                    let c: Vec<f32> = c
+                        .iter()
+                        .take(4)
+                        .filter_map(|x| term_to_f64(x).map(|f| f as f32))
+                        .collect();
                     Some(MeshVertex {
-                        position: [p.get(0).copied().unwrap_or(0.0), p.get(1).copied().unwrap_or(0.0), p.get(2).copied().unwrap_or(0.0)],
-                        color: [c.get(0).copied().unwrap_or(0.0), c.get(1).copied().unwrap_or(0.0), c.get(2).copied().unwrap_or(0.0), c.get(3).copied().unwrap_or(1.0)],
+                        position: [
+                            p.first().copied().unwrap_or(0.0),
+                            p.get(1).copied().unwrap_or(0.0),
+                            p.get(2).copied().unwrap_or(0.0),
+                        ],
+                        color: [
+                            c.first().copied().unwrap_or(0.0),
+                            c.get(1).copied().unwrap_or(0.0),
+                            c.get(2).copied().unwrap_or(0.0),
+                            c.get(3).copied().unwrap_or(1.0),
+                        ],
                     })
                 })
                 .collect();
@@ -199,22 +229,42 @@ fn parse_camera(map: &Map) -> CameraParams {
     let tag = get_tag(map).unwrap_or_default();
     match tag.as_str() {
         "camera_2d" => {
-            let offset_x = map_get(map, "offset_x").and_then(term_to_f64).unwrap_or(0.0) as f32;
-            let offset_y = map_get(map, "offset_y").and_then(term_to_f64).unwrap_or(0.0) as f32;
+            let offset_x = map_get(map, "offset_x")
+                .and_then(term_to_f64)
+                .unwrap_or(0.0) as f32;
+            let offset_y = map_get(map, "offset_y")
+                .and_then(term_to_f64)
+                .unwrap_or(0.0) as f32;
             CameraParams::Camera2D { offset_x, offset_y }
         }
         "camera_3d" => {
             let eye = arr_f64(map_get(map, "eye").unwrap_or(&Term::from(List::nil())));
             let target = arr_f64(map_get(map, "target").unwrap_or(&Term::from(List::nil())));
             let up = arr_f64(map_get(map, "up").unwrap_or(&Term::from(List::nil())));
-            let fov_deg = map_get(map, "fov_deg").and_then(term_to_f64).unwrap_or(60.0) as f32;
+            let fov_deg = map_get(map, "fov_deg")
+                .and_then(term_to_f64)
+                .unwrap_or(60.0) as f32;
             let near = map_get(map, "near").and_then(term_to_f64).unwrap_or(0.1) as f32;
             let far = map_get(map, "far").and_then(term_to_f64).unwrap_or(1000.0) as f32;
             CameraParams::Camera3D {
-                eye: [eye.get(0).copied().unwrap_or(0.0) as f32, eye.get(1).copied().unwrap_or(0.0) as f32, eye.get(2).copied().unwrap_or(0.0) as f32],
-                target: [target.get(0).copied().unwrap_or(0.0) as f32, target.get(1).copied().unwrap_or(0.0) as f32, target.get(2).copied().unwrap_or(0.0) as f32],
-                up: [up.get(0).copied().unwrap_or(0.0) as f32, up.get(1).copied().unwrap_or(1.0) as f32, up.get(2).copied().unwrap_or(0.0) as f32],
-                fov_deg, near, far,
+                eye: [
+                    eye.first().copied().unwrap_or(0.0) as f32,
+                    eye.get(1).copied().unwrap_or(0.0) as f32,
+                    eye.get(2).copied().unwrap_or(0.0) as f32,
+                ],
+                target: [
+                    target.first().copied().unwrap_or(0.0) as f32,
+                    target.get(1).copied().unwrap_or(0.0) as f32,
+                    target.get(2).copied().unwrap_or(0.0) as f32,
+                ],
+                up: [
+                    up.first().copied().unwrap_or(0.0) as f32,
+                    up.get(1).copied().unwrap_or(1.0) as f32,
+                    up.get(2).copied().unwrap_or(0.0) as f32,
+                ],
+                fov_deg,
+                near,
+                far,
             }
         }
         _ => CameraParams::Camera2D {
@@ -244,19 +294,27 @@ fn parse_ui_rect(map: Option<&Map>) -> UiRect {
         map: std::collections::HashMap::new(),
     };
     let map = map.unwrap_or(&empty_map);
-    let anchor = map_get(map, "anchor").and_then(term_to_str).unwrap_or_else(|| "top_left".into());
+    let anchor = map_get(map, "anchor")
+        .and_then(term_to_str)
+        .unwrap_or_else(|| "top_left".into());
     let offset = arr_f64(map_get(map, "offset").unwrap_or(&Term::from(List::nil())));
     let size_term = map_get(map, "size");
     let size = match size_term.and_then(term_to_str) {
         Some(s) if s == "wrap" => UiSize::WrapContent,
         _ => {
             let arr = size_term.map(arr_f64).unwrap_or_default();
-            UiSize::Fixed(arr.get(0).copied().unwrap_or(0.0) as f32, arr.get(1).copied().unwrap_or(0.0) as f32)
+            UiSize::Fixed(
+                arr.first().copied().unwrap_or(0.0) as f32,
+                arr.get(1).copied().unwrap_or(0.0) as f32,
+            )
         }
     };
     UiRect {
         anchor: ui_anchor_from_str(&anchor),
-        offset: [offset.get(0).copied().unwrap_or(0.0) as f32, offset.get(1).copied().unwrap_or(0.0) as f32],
+        offset: [
+            offset.first().copied().unwrap_or(0.0) as f32,
+            offset.get(1).copied().unwrap_or(0.0) as f32,
+        ],
         size,
     }
 }
@@ -275,7 +333,7 @@ fn parse_ui_component(map: Option<&Map>) -> UiComponent {
             UiComponent::VerticalLayout {
                 spacing,
                 padding: [
-                    padding.get(0).copied().unwrap_or(0.0) as f32,
+                    padding.first().copied().unwrap_or(0.0) as f32,
                     padding.get(1).copied().unwrap_or(0.0) as f32,
                     padding.get(2).copied().unwrap_or(0.0) as f32,
                     padding.get(3).copied().unwrap_or(0.0) as f32,
@@ -288,7 +346,7 @@ fn parse_ui_component(map: Option<&Map>) -> UiComponent {
             UiComponent::HorizontalLayout {
                 spacing,
                 padding: [
-                    padding.get(0).copied().unwrap_or(0.0) as f32,
+                    padding.first().copied().unwrap_or(0.0) as f32,
                     padding.get(1).copied().unwrap_or(0.0) as f32,
                     padding.get(2).copied().unwrap_or(0.0) as f32,
                     padding.get(3).copied().unwrap_or(0.0) as f32,
@@ -297,7 +355,9 @@ fn parse_ui_component(map: Option<&Map>) -> UiComponent {
         }
         "rect" => {
             let color = arr_f64(map_get(map, "color").unwrap_or(&Term::from(List::nil())));
-            let corner_radius = map_get(map, "corner_radius").and_then(term_to_f64).unwrap_or(0.0) as f32;
+            let corner_radius = map_get(map, "corner_radius")
+                .and_then(term_to_f64)
+                .unwrap_or(0.0) as f32;
             let border = None; // TODO: parse border if needed
             UiComponent::Rect {
                 color: f64_4(&color),
@@ -306,22 +366,39 @@ fn parse_ui_component(map: Option<&Map>) -> UiComponent {
             }
         }
         "text" => {
-            let text = map_get(map, "text").and_then(term_to_str).unwrap_or_default();
+            let text = map_get(map, "text")
+                .and_then(term_to_str)
+                .unwrap_or_default();
             let color = arr_f64(map_get(map, "color").unwrap_or(&Term::from(List::nil())));
             let size = map_get(map, "size").and_then(term_to_f64).unwrap_or(14.0) as f32;
             let bold = map_get(map, "bold").and_then(term_to_bool).unwrap_or(false);
             UiComponent::Text {
-                text, color: f64_4(&color), size, bold,
+                text,
+                color: f64_4(&color),
+                size,
+                bold,
             }
         }
         "button" => {
-            let label = map_get(map, "label").and_then(term_to_str).unwrap_or_default();
-            let action = map_get(map, "action").and_then(term_to_str).unwrap_or_default();
+            let label = map_get(map, "label")
+                .and_then(term_to_str)
+                .unwrap_or_default();
+            let action = map_get(map, "action")
+                .and_then(term_to_str)
+                .unwrap_or_default();
             let color = arr_f64(map_get(map, "color").unwrap_or(&Term::from(List::nil())));
-            let min_width = map_get(map, "min_width").and_then(term_to_f64).unwrap_or(0.0) as f32;
-            let min_height = map_get(map, "min_height").and_then(term_to_f64).unwrap_or(0.0) as f32;
+            let min_width = map_get(map, "min_width")
+                .and_then(term_to_f64)
+                .unwrap_or(0.0) as f32;
+            let min_height = map_get(map, "min_height")
+                .and_then(term_to_f64)
+                .unwrap_or(0.0) as f32;
             UiComponent::Button {
-                label, action, color: f64_4(&color), min_width, min_height,
+                label,
+                action,
+                color: f64_4(&color),
+                min_width,
+                min_height,
             }
         }
         "progress_bar" => {
@@ -329,13 +406,21 @@ fn parse_ui_component(map: Option<&Map>) -> UiComponent {
             let max = map_get(map, "max").and_then(term_to_f64).unwrap_or(1.0) as f32;
             let width = map_get(map, "width").and_then(term_to_f64).unwrap_or(0.0) as f32;
             let height = map_get(map, "height").and_then(term_to_f64).unwrap_or(0.0) as f32;
-            let fg_color_high = arr_f64(map_get(map, "fg_color_high").unwrap_or(&Term::from(List::nil())));
-            let fg_color_mid = arr_f64(map_get(map, "fg_color_mid").unwrap_or(&Term::from(List::nil())));
-            let fg_color_low = arr_f64(map_get(map, "fg_color_low").unwrap_or(&Term::from(List::nil())));
+            let fg_color_high =
+                arr_f64(map_get(map, "fg_color_high").unwrap_or(&Term::from(List::nil())));
+            let fg_color_mid =
+                arr_f64(map_get(map, "fg_color_mid").unwrap_or(&Term::from(List::nil())));
+            let fg_color_low =
+                arr_f64(map_get(map, "fg_color_low").unwrap_or(&Term::from(List::nil())));
             let bg_color = arr_f64(map_get(map, "bg_color").unwrap_or(&Term::from(List::nil())));
-            let corner_radius = map_get(map, "corner_radius").and_then(term_to_f64).unwrap_or(0.0) as f32;
+            let corner_radius = map_get(map, "corner_radius")
+                .and_then(term_to_f64)
+                .unwrap_or(0.0) as f32;
             UiComponent::ProgressBar {
-                value, max, width, height,
+                value,
+                max,
+                width,
+                height,
                 fg_color_high: f64_4(&fg_color_high),
                 fg_color_mid: f64_4(&fg_color_mid),
                 fg_color_low: f64_4(&fg_color_low),
@@ -351,19 +436,31 @@ fn parse_ui_component(map: Option<&Map>) -> UiComponent {
             let world_x = map_get(map, "world_x").and_then(term_to_f64).unwrap_or(0.0) as f32;
             let world_y = map_get(map, "world_y").and_then(term_to_f64).unwrap_or(0.0) as f32;
             let world_z = map_get(map, "world_z").and_then(term_to_f64).unwrap_or(0.0) as f32;
-            let text = map_get(map, "text").and_then(term_to_str).unwrap_or_default();
+            let text = map_get(map, "text")
+                .and_then(term_to_str)
+                .unwrap_or_default();
             let color = arr_f64(map_get(map, "color").unwrap_or(&Term::from(List::nil())));
-            let lifetime = map_get(map, "lifetime").and_then(term_to_f64).unwrap_or(0.0) as f32;
-            let max_lifetime = map_get(map, "max_lifetime").and_then(term_to_f64).unwrap_or(1.0) as f32;
+            let lifetime = map_get(map, "lifetime")
+                .and_then(term_to_f64)
+                .unwrap_or(0.0) as f32;
+            let max_lifetime = map_get(map, "max_lifetime")
+                .and_then(term_to_f64)
+                .unwrap_or(1.0) as f32;
             UiComponent::WorldText {
-                world_x, world_y, world_z, text,
+                world_x,
+                world_y,
+                world_z,
+                text,
                 color: f64_4(&color),
-                lifetime, max_lifetime,
+                lifetime,
+                max_lifetime,
             }
         }
         "screen_flash" => {
             let color = arr_f64(map_get(map, "color").unwrap_or(&Term::from(List::nil())));
-            UiComponent::ScreenFlash { color: f64_4(&color) }
+            UiComponent::ScreenFlash {
+                color: f64_4(&color),
+            }
         }
         _ => UiComponent::Separator,
     }
@@ -374,7 +471,9 @@ fn parse_ui_node(term: &Term) -> UiNode {
     let rect = parse_ui_rect(map.and_then(|m| map_get(m, "rect").and_then(get_map)));
     let component = parse_ui_component(map.and_then(|m| map_get(m, "component").and_then(get_map)));
     let empty_list = Term::from(List::nil());
-    let children_term = map.and_then(|m| map_get(m, "children")).unwrap_or(&empty_list);
+    let children_term = map
+        .and_then(|m| map_get(m, "children"))
+        .unwrap_or(&empty_list);
     let children: Vec<UiNode> = get_vec(children_term)
         .unwrap_or_default()
         .iter()
@@ -388,28 +487,52 @@ fn parse_ui_node(term: &Term) -> UiNode {
 }
 
 fn parse_mesh_def(map: &Map) -> MeshDef {
-    let name = map_get(map, "name").and_then(term_to_str).unwrap_or_default();
-    let vertices: Vec<MeshVertex> = get_vec(map_get(map, "vertices").unwrap_or(&Term::from(List::nil())))
-        .unwrap_or_default()
-        .iter()
-        .filter_map(|v| {
-            let arr = get_vec(v)?;
-            let p = arr.get(0).and_then(|x| get_vec(x)).unwrap_or_default();
-            let c = arr.get(1).and_then(|x| get_vec(x)).unwrap_or_default();
-            let p: Vec<f32> = p.iter().take(3).filter_map(|x| term_to_f64(x).map(|f| f as f32)).collect();
-            let c: Vec<f32> = c.iter().take(4).filter_map(|x| term_to_f64(x).map(|f| f as f32)).collect();
-            Some(MeshVertex {
-                position: [p.get(0).copied().unwrap_or(0.0), p.get(1).copied().unwrap_or(0.0), p.get(2).copied().unwrap_or(0.0)],
-                color: [c.get(0).copied().unwrap_or(0.0), c.get(1).copied().unwrap_or(0.0), c.get(2).copied().unwrap_or(0.0), c.get(3).copied().unwrap_or(1.0)],
+    let name = map_get(map, "name")
+        .and_then(term_to_str)
+        .unwrap_or_default();
+    let vertices: Vec<MeshVertex> =
+        get_vec(map_get(map, "vertices").unwrap_or(&Term::from(List::nil())))
+            .unwrap_or_default()
+            .iter()
+            .filter_map(|v| {
+                let arr = get_vec(v)?;
+                let p = arr.first().and_then(|x| get_vec(x)).unwrap_or_default();
+                let c = arr.get(1).and_then(|x| get_vec(x)).unwrap_or_default();
+                let p: Vec<f32> = p
+                    .iter()
+                    .take(3)
+                    .filter_map(|x| term_to_f64(x).map(|f| f as f32))
+                    .collect();
+                let c: Vec<f32> = c
+                    .iter()
+                    .take(4)
+                    .filter_map(|x| term_to_f64(x).map(|f| f as f32))
+                    .collect();
+                Some(MeshVertex {
+                    position: [
+                        p.first().copied().unwrap_or(0.0),
+                        p.get(1).copied().unwrap_or(0.0),
+                        p.get(2).copied().unwrap_or(0.0),
+                    ],
+                    color: [
+                        c.first().copied().unwrap_or(0.0),
+                        c.get(1).copied().unwrap_or(0.0),
+                        c.get(2).copied().unwrap_or(0.0),
+                        c.get(3).copied().unwrap_or(1.0),
+                    ],
+                })
             })
-        })
-        .collect();
+            .collect();
     let indices: Vec<u32> = get_vec(map_get(map, "indices").unwrap_or(&Term::from(List::nil())))
         .unwrap_or_default()
         .iter()
         .filter_map(|x| term_to_u32(x))
         .collect();
-    MeshDef { name, vertices, indices }
+    MeshDef {
+        name,
+        vertices,
+        indices,
+    }
 }
 
 fn parse_cursor_grab(s: &str) -> Option<bool> {
@@ -430,11 +553,12 @@ pub fn decode_render_frame(bytes: &[u8]) -> Result<RenderFrame, eetf::DecodeErro
         ))
     })?;
 
-    let commands: Vec<DrawCommand> = get_vec(map_get(map, "commands").unwrap_or(&Term::from(List::nil())))
-        .unwrap_or_default()
-        .iter()
-        .filter_map(|t| get_map(t).and_then(parse_draw_command))
-        .collect();
+    let commands: Vec<DrawCommand> =
+        get_vec(map_get(map, "commands").unwrap_or(&Term::from(List::nil())))
+            .unwrap_or_default()
+            .iter()
+            .filter_map(|t| get_map(t).and_then(parse_draw_command))
+            .collect();
 
     let camera = map_get(map, "camera")
         .and_then(|t| get_map(t))
@@ -455,11 +579,12 @@ pub fn decode_render_frame(bytes: &[u8]) -> Result<RenderFrame, eetf::DecodeErro
         .map(|t| parse_ui_node(t))
         .collect();
 
-    let mesh_definitions: Vec<MeshDef> = get_vec(map_get(map, "mesh_definitions").unwrap_or(&Term::from(List::nil())))
-        .unwrap_or_default()
-        .iter()
-        .filter_map(|t| get_map(t).map(parse_mesh_def))
-        .collect();
+    let mesh_definitions: Vec<MeshDef> =
+        get_vec(map_get(map, "mesh_definitions").unwrap_or(&Term::from(List::nil())))
+            .unwrap_or_default()
+            .iter()
+            .filter_map(|t| get_map(t).map(parse_mesh_def))
+            .collect();
 
     let cursor_grab = map_get(map, "cursor_grab")
         .and_then(term_to_str)
