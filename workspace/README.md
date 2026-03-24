@@ -12,9 +12,12 @@
 - `6_merging`: マージ最終判断
 - `7_done`: 完了
 
-## 推奨フロー
+## フロー概要
 
-`1_backlog -> 2_todo -> 3_Inprogress -> 4_human_review -> (5_rework -> 3_Inprogress)* -> 6_merging -> 7_done`
+- **メインフロー**: `1_backlog` -> `2_todo` -> `3_Inprogress` -> `4_human_review` -> `6_merging` -> `7_done`
+- **手戻りフロー（レビュー差し戻し）**: `4_human_review` -> `5_rework` -> `3_Inprogress`
+- **手戻りフロー（レビュー却下）**: `4_human_review` -> `1_backlog`
+- **手戻りフロー（マージ前差し戻し）**: `6_merging` -> `5_rework`
 
 ## 運用ルール（最小）
 
