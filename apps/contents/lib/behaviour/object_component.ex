@@ -11,7 +11,7 @@ defmodule Contents.Behaviour.ObjectComponent do
   本 Behaviour を実装していないモジュールが含まれる場合に `function_exported?/3` で
   スキップできるようにするため。実装側では `run/2` を提供することを推奨する。
 
-  設計: docs/plan/current/struct-node-component-object-linkage-plan.md
+  設計: workspace/2_todo/struct-node-component-object-linkage-plan.md
   """
 
   @type object :: Contents.Objects.Core.Struct.t()

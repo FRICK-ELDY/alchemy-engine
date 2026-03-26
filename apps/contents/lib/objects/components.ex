@@ -6,7 +6,7 @@ defmodule Contents.Objects.Components do
   単一 Object の場合は `run_components/2` を使用する。
   contents 層の build_frame / update 等から利用する。
 
-  設計: docs/plan/current/struct-node-component-object-linkage-plan.md
+  設計: workspace/2_todo/struct-node-component-object-linkage-plan.md
   """
 
   alias Contents.Objects.Core.Struct, as: ObjectStruct
