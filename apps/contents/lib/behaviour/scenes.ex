@@ -9,7 +9,7 @@ defmodule Contents.Behaviour.Scenes do
   - **着地点参照（任意）**: ユーザーが Scene に降り立つ際のフォーカス対象となる Object への参照（例: `landing_object`）。必須ではなく、必要に応じて state に持つ。root_object 必須は廃止。
   - **遷移管理**: init/update/render_type により SceneStack と連携。
 
-  参照: docs/architecture/scene-and-object.md, docs/plan/current/scene-origin-and-landing-reference-plan.md
+  参照: docs/architecture/scene-and-object.md, workspace/2_todo/scene-origin-and-landing-reference-plan.md
   """
 
   @doc false

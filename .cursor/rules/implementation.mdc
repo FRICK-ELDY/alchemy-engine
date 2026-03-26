@@ -8,7 +8,7 @@ alwaysApply: true
 ## 保証の原則（プログラミングの自論）
 
 - 何を保証して、何を保証しないかを明確にする
-- 参照: [contents-defines-rust-executes.md](/docs/plan/contents-defines-rust-executes.md) — レイヤー別責務・定義 vs 実行の詳細
+- 参照: [contents-defines-rust-executes.md](/workspace/1_backlog/contents-defines-rust-executes.md) — レイヤー別責務・定義 vs 実行の詳細
 - 依存関係を利用するとき、何が保証され、何が保証されないかを明確に知っておく
 - プロジェクト単位で何を保証するか保証しないかを明確にする
 - フォルダ単位で何を保証するか保証しないかを明確にする

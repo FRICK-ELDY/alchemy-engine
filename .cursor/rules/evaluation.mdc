@@ -233,7 +233,7 @@ alwaysApply: false
 2. `docs/evaluation/specific-weaknesses.md` — マイナス点の詳細一覧（日本語）
 3. `docs/evaluation/specific-proposals.md` — 提案（0点）の詳細一覧（日本語）
 4. `docs/evaluation/evaluation-YYYY-MM-DD.md` — 当日の総合評価レポート（日本語）
-5. `docs/task/improvement-plan.md` — マイナス点に基づく改善提案書（日本語）
+5. `workspace/0_reference/improvement-plan.md` — マイナス点に基づく改善提案書（日本語）
 
 ### ドキュメントの書き方
 

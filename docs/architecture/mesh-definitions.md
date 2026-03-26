@@ -1,7 +1,7 @@
 # メッシュ定義一覧（P3-1）
 
 > 作成日: 2026-03-07  
-> 出典: [contents-defines-rust-executes.md](../plan/backlog/contents-defines-rust-executes.md) P3-1  
+> 出典: [contents-defines-rust-executes.md](../../workspace/1_backlog/contents-defines-rust-executes.md) P3-1  
 > 目的: 現行の 3D メッシュ（Box3D / GridPlane / Skybox）の頂点・インデックス定義を列挙する
 
 ---
@@ -141,4 +141,4 @@ for i in 0..n:
 | `native/render/src/lib.rs` | MeshVertex / MeshDef 定義 |
 | `native/render/src/renderer/pipeline_3d.rs` | メッシュ生成・描画（P3 以降 Elixir 定義を優先、未登録時フォールバック） |
 | `docs/architecture/draw-command-spec.md` | DrawCommand タグ・フィールド仕様 |
-| `docs/plan/backlog/contents-defines-rust-executes.md` | P3 メッシュ Elixir 移行計画 |
+| `workspace/1_backlog/contents-defines-rust-executes.md` | P3 メッシュ Elixir 移行計画 |

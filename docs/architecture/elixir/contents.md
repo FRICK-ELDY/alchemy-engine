@@ -125,7 +125,7 @@ stateDiagram-v2
 | `Content.SimpleBox3D` | Phase R-6 動作検証用 3D ゲーム | - |
 | `Content.BulletHell3D` | 3D 弾幕避けゲーム | - |
 | `Content.RollingBall` | 玉転がしゲーム | - |
-| `Content.CanvasTest` | 描画テスト用（DrawCommand・UiCanvas・CanvasUI 動作検証） | [docs/task/canvas-test-design.md](../../task/canvas-test-design.md) |
+| `Content.CanvasTest` | 描画テスト用（DrawCommand・UiCanvas・CanvasUI 動作検証） | [workspace/7_done/canvas-test-design.md](../../../workspace/7_done/canvas-test-design.md) |
 | `Content.FormulaTest` | Formula エンジン検証（Elixir→Rust NIF VM→Elixir フロー、Input / Render コンポーネント） | - |
 
 **補助モジュール**
