@@ -37,5 +37,5 @@
 ## 4. 関連
 
 - 実装ルール: 定義 vs 実行の分離（Elixir = 定義、Rust = 定義に基づく実行）。Render は「実行」のみ。
-- 計画: `workspace/2_todo/rendering-unification-plan.md`（描画統一）と整合させる。
+- 計画: `workspace/7_done/rendering-unification-plan.md`（描画統一）と整合させる。
 
