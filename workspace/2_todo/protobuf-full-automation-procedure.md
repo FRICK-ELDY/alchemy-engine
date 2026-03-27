@@ -1,5 +1,6 @@
 # Protobuf 完全自動化 — 実施手順書
 
+> **状態**: 作業中（生成パイプラインの本実装・手書きコードの廃止は未完了。ワイヤ上の protobuf 移行完了とは別タスク）。  
 > 目的: `proto/*.proto` を**唯一の契約**とし、Rust（`prost`）と Elixir（`protobuf`）のコードを **生成物で揃える**。手書き `Message` / 手書き `use Protobuf` を廃止する。  
 > 対象読者: 本リポジトリでスキーマと生成パイプラインを触る開発者。  
 > 公開向けの短い概要: [docs/architecture/protobuf-migration.md](../../docs/architecture/protobuf-migration.md)
@@ -212,6 +213,6 @@ mix alchemy.gen_proto
 
 ## 8. 参照
 
-- [protobuf-migration-plan.md](./protobuf-migration-plan.md) — 移行フェーズ・バックログ
+- [protobuf-migration-plan.md](../7_done/protobuf-migration-plan.md) — 移行フェーズ・バックログ（主経路の移行は完了）
 - [docs/architecture/protobuf-migration.md](../../docs/architecture/protobuf-migration.md) — 公開向け概要
 - [development.md](../../development.md) — 開発ガイド（生成エントリは `mix alchemy.gen_proto`）

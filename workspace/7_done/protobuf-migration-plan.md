@@ -6,7 +6,7 @@
 
 **公開向けの概要**（`docs` からリンクする先）: [docs/architecture/protobuf-migration.md](../../docs/architecture/protobuf-migration.md)。本ファイルは作業用バックログであり、`development.md` 等の `docs` 配下から **`workspace/` へのリンクは張らない**方針とする。
 
-**コード生成の完全自動化**（Rust / Elixir）: [protobuf-full-automation-procedure.md](./protobuf-full-automation-procedure.md)
+**コード生成の完全自動化**（Rust / Elixir・**未完了**）: [protobuf-full-automation-procedure.md](../2_todo/protobuf-full-automation-procedure.md)
 
 ---
 
@@ -232,4 +232,4 @@
 - Elixir `Network.Proto` は手書き（`protobuf` 0.16）。oneof は `oneof :name, N` と各 `field ..., oneof: N` が必須。
 - Rust / `proto/*.proto` / Elixir の三箇所をスキーマ変更時に同期すること。
 - `config/config.exs` の `:server, :current` は protobuf 移行と無関係。コンテンツ切替は別 PR で扱う。
-
+- **P5 以降のフォローアップ**（`client_info` の MessagePack、`bert_encode` 名、NIF msgpack、UDP）: [protobuf-migration-p5-serialization-followups.md](../2_todo/protobuf-migration-p5-serialization-followups.md)
