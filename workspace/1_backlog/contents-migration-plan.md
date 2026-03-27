@@ -48,7 +48,7 @@
 
 ### 2.1 各コンテンツで行うこと
 
-1. **Scene の origin と着地点参照**: Scene の state に **origin**（空間の原点）を持ち、必要に応じて着地点となる Object への参照（例: `landing_object`）を持つ。root_object 必須は廃止。既存コンテンツは移行対象外のため root_object を残したままでも許容。参照: [scene-and-object.md](../../docs/architecture/scene-and-object.md), [scene-origin-and-landing-reference-plan.md](../2_todo/scene-origin-and-landing-reference-plan.md)
+1. **Scene の origin と着地点参照**: Scene の state に **origin**（空間の原点）を持ち、必要に応じて着地点となる Object への参照（例: `landing_object`）を持つ。root_object 必須は廃止。既存コンテンツは移行対象外のため root_object を残したままでも許容。参照: [scene-and-object.md](../../docs/architecture/scene-and-object.md), [scene-origin-and-landing-reference-plan.md](../7_done/scene-origin-and-landing-reference-plan.md)
 2. **Object 階層の導入**: シーン state に「空間の実体」を `Contents.Objects.Core.Struct` で表現
 3. **Component の二重化解消**: `Core.Component`（エンジン用）と `Contents.Behaviour.Components`（新アーキテクチャ）の役割を整理
   - 当面: 既存 `Core.Component` を維持しつつ、内部で新 Object/Node を参照
