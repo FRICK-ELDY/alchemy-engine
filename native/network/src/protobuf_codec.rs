@@ -29,6 +29,12 @@ struct ClientInfoMessage {
     pub family: String,
 }
 
+#[derive(Clone, PartialEq, Message)]
+struct RenderFrameEnvelope {
+    #[prost(bytes = "vec", tag = "1")]
+    pub payload: Vec<u8>,
+}
+
 pub fn encode_movement(dx: f32, dy: f32) -> Result<Vec<u8>, prost::EncodeError> {
     let msg = MovementMessage { dx, dy };
     let mut out = Vec::new();
@@ -54,4 +60,18 @@ pub fn encode_client_info(info: &ClientInfo) -> Result<Vec<u8>, prost::EncodeErr
     let mut out = Vec::new();
     msg.encode(&mut out)?;
     Ok(out)
+}
+
+pub fn encode_render_frame_envelope(payload: &[u8]) -> Result<Vec<u8>, prost::EncodeError> {
+    let msg = RenderFrameEnvelope {
+        payload: payload.to_vec(),
+    };
+    let mut out = Vec::new();
+    msg.encode(&mut out)?;
+    Ok(out)
+}
+
+pub fn decode_render_frame_envelope(bytes: &[u8]) -> Result<Vec<u8>, prost::DecodeError> {
+    let msg = RenderFrameEnvelope::decode(bytes)?;
+    Ok(msg.payload)
 }

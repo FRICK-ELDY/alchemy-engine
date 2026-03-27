@@ -16,6 +16,7 @@ use crate::physics::physics::rng::SimpleRng;
 use crate::physics::physics::spatial_hash::CollisionWorld;
 use crate::physics::weapon::WeaponSlot;
 use crate::physics::world::{GameWorld, GameWorldInner, PlayerState};
+use prost::Message;
 use rustler::types::list::ListIterator;
 use rustler::TermType;
 use rustler::{Atom, Binary, NifResult, ResourceArc, Term};
@@ -23,6 +24,12 @@ use std::sync::RwLock;
 
 use crate::physics::entity_params::DEFAULT_PARTICLE_COLOR;
 use crate::{ok, BulletWorld, EnemyWorld, ParticleWorld};
+
+#[derive(Clone, PartialEq, Message)]
+struct FrameInjectionEnvelope {
+    #[prost(bytes = "vec", tag = "1")]
+    payload: Vec<u8>,
+}
 
 #[rustler::nif]
 pub fn create_world() -> ResourceArc<GameWorld> {
@@ -365,9 +372,17 @@ pub fn set_frame_injection_binary(
     binary: Binary,
 ) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
-    apply_injection_from_bert(&mut w, binary.as_slice())
+    let payload = decode_injection_payload(binary.as_slice());
+    apply_injection_from_bert(&mut w, payload.as_slice())
         .map_err(|e| rustler::Error::Term(Box::new(e.to_string())))?;
     Ok(ok())
+}
+
+fn decode_injection_payload(bytes: &[u8]) -> Vec<u8> {
+    match FrameInjectionEnvelope::decode(bytes) {
+        Ok(env) if !env.payload.is_empty() => env.payload,
+        _ => bytes.to_vec(),
+    }
 }
 
 fn apply_special_entity_snapshot(w: &mut GameWorldInner, snapshot: Term) {

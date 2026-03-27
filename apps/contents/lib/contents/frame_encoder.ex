@@ -31,7 +31,9 @@ defmodule Content.FrameEncoder do
       }
       |> maybe_put_cursor_grab(cursor_grab)
 
-    :erlang.term_to_binary(frame)
+    term_bin = :erlang.term_to_binary(frame)
+    envelope = %Network.Proto.RenderFrameEnvelope{payload: term_bin}
+    Network.Proto.RenderFrameEnvelope.encode(envelope)
   end
 
   defp maybe_put_cursor_grab(frame, :release), do: Map.put(frame, "cursor_grab", "release")
@@ -271,7 +273,9 @@ defmodule Content.FrameEncoder do
   """
   @spec encode_injection_map(map()) :: {:ok, binary()} | {:error, term()}
   def encode_injection_map(injection) when is_map(injection) and map_size(injection) == 0 do
-    {:ok, :erlang.term_to_binary(%{})}
+    term_bin = :erlang.term_to_binary(%{})
+    envelope = %Network.Proto.FrameInjectionEnvelope{payload: term_bin}
+    {:ok, Network.Proto.FrameInjectionEnvelope.encode(envelope)}
   end
 
   def encode_injection_map(injection) when is_map(injection) do
@@ -293,7 +297,9 @@ defmodule Content.FrameEncoder do
         end
       end)
 
-    {:ok, :erlang.term_to_binary(frame)}
+    term_bin = :erlang.term_to_binary(frame)
+    envelope = %Network.Proto.FrameInjectionEnvelope{payload: term_bin}
+    {:ok, Network.Proto.FrameInjectionEnvelope.encode(envelope)}
   rescue
     e -> {:error, e}
   end

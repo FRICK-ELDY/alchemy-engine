@@ -3439,6 +3439,7 @@ dependencies = [
  "env_logger",
  "log",
  "num-traits",
+ "prost",
  "rayon",
  "rmp-serde",
  "rustc-hash 2.1.1",

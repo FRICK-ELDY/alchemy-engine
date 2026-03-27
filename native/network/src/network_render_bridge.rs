@@ -53,7 +53,7 @@ impl NetworkRenderBridge {
         let recv_handle = {
             let frame_count_clone = Arc::clone(&frame_count);
             session.spawn_subscriber(&sub_key, shutdown_clone, move |bytes| {
-                match bert_decode::decode_render_frame(&bytes) {
+                match decode_render_frame_with_fallback(&bytes) {
                     Ok(frame) => {
                         let prev = frame_count_clone.fetch_add(1, Ordering::Relaxed);
                         if prev == 0 {
@@ -130,6 +130,15 @@ impl NetworkRenderBridge {
             log::warn!("action publish failed: {e}");
         }
     }
+}
+
+fn decode_render_frame_with_fallback(
+    bytes: &[u8],
+) -> Result<RenderFrame, Box<dyn std::error::Error + Send + Sync>> {
+    if let Ok(inner) = crate::protobuf_codec::decode_render_frame_envelope(bytes) {
+        return bert_decode::decode_render_frame(&inner).map_err(|e| e.into());
+    }
+    bert_decode::decode_render_frame(bytes).map_err(|e| e.into())
 }
 
 impl Drop for NetworkRenderBridge {
