@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  verify:
+    name: Verify (Elixir + Rust + Protobuf toolchain)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system deps
+        run: sudo apt-get update -q && sudo apt-get install -y libasound2-dev
+
+      - name: Setup protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: "27.x"
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.19"
+          otp-version: "28"
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ci-${{ runner.os }}-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            ci-${{ runner.os }}-
+
+      - name: CI equivalent checks
+        run: mix alchemy.ci

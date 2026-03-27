@@ -184,11 +184,11 @@ protoc \
 
 ## 6. 検証チェックリスト
 
-- [ ] `proto/` のみを編集し、`cargo build` / `mix compile` が通る。
+- [x] `proto/` のみを編集し、`cargo build` / `mix compile` が通る。
 - [x] 手書き `prost` 構造体が該当メッセージから消えている。
 - [x] 手書き `use Protobuf` の該当メッセージが消えている。
-- [ ] Zenoh / NIF の結合テストまたは手動で、フレーム・入力・injection が従来どおり動く。
-- [ ] CI で `protoc` が利用可能。
+- [x] Zenoh / NIF の結合テストまたは手動で、フレーム・入力・injection が従来どおり動く。
+- [x] CI で `protoc` が利用可能。
 - [x] `development.md` には手順を書かず、**本書と `docs/architecture/protobuf-migration.md` に集約**する。
 - [x] **`mix alchemy.gen.proto`** が Elixir / Rust の生成をまとめて実行する（または明確にサブステップを表示する）。
 
