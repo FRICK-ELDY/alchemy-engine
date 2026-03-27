@@ -814,35 +814,29 @@ defmodule Contents.Events.Game do
     content = current_content()
     runner = content.flow_runner(state.room_id)
 
-    cond do
-      is_nil(runner) ->
-        :ok
+    if is_nil(runner) do
+      :ok
+    else
+      playing_state = Contents.Scenes.Stack.get_scene_state(runner, content.playing_scene()) || %{}
+      weapon_levels = Map.get(playing_state, :weapon_levels)
 
-      function_exported?(content, :weapon_slots_for_nif, 2) ->
-        playing_state = Contents.Scenes.Stack.get_scene_state(runner, content.playing_scene()) || %{}
-        weapon_levels = Map.get(playing_state, :weapon_levels)
-        weapon_cooldowns = Map.get(playing_state, :weapon_cooldowns, %{})
+      if is_map(weapon_levels) do
+        cond do
+          function_exported?(content, :weapon_slots_for_nif, 2) ->
+            weapon_cooldowns = Map.get(playing_state, :weapon_cooldowns, %{})
+            slots = content.weapon_slots_for_nif(weapon_levels, weapon_cooldowns)
+            do_set_weapon_slots(state.world_ref, slots)
 
-        if is_map(weapon_levels) do
-          slots = content.weapon_slots_for_nif(weapon_levels, weapon_cooldowns)
-          do_set_weapon_slots(state.world_ref, slots)
-        else
-          :ok
+          function_exported?(content, :weapon_slots_for_nif, 1) ->
+            slots = content.weapon_slots_for_nif(weapon_levels)
+            do_set_weapon_slots(state.world_ref, slots)
+
+          true ->
+            :ok
         end
-
-      function_exported?(content, :weapon_slots_for_nif, 1) ->
-        playing_state = Contents.Scenes.Stack.get_scene_state(runner, content.playing_scene()) || %{}
-        weapon_levels = Map.get(playing_state, :weapon_levels)
-
-        if is_map(weapon_levels) do
-          slots = content.weapon_slots_for_nif(weapon_levels)
-          do_set_weapon_slots(state.world_ref, slots)
-        else
-          :ok
-        end
-
-      true ->
+      else
         :ok
+      end
     end
   end
 
