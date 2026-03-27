@@ -105,7 +105,7 @@ impl NetworkRenderBridge {
     }
 
     fn publish_movement(&self, dx: f32, dy: f32) {
-        let payload = match crate::bert_encode::encode_movement(dx, dy) {
+        let payload = match crate::protobuf_codec::encode_movement(dx, dy) {
             Ok(p) => p,
             Err(e) => {
                 log::warn!("movement serialize error: {e}");
@@ -118,7 +118,7 @@ impl NetworkRenderBridge {
     }
 
     fn publish_action(&self, name: &str) {
-        let payload = match crate::bert_encode::encode_action(name) {
+        let payload = match crate::protobuf_codec::encode_action(name) {
             Ok(p) => p,
             Err(e) => {
                 log::warn!("action serialize error: {e}");
