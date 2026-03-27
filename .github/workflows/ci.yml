@@ -1,56 +1,179 @@
 name: CI
-
 on:
   push:
     branches: ["**"]
   pull_request:
 
+# 複合アクションと各ジョブで共通参照（バージョンはここだけ更新）
+env:
+  ELIXIR_VERSION: "1.19"
+  OTP_VERSION: "28"
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  verify:
-    name: Verify (Elixir + Rust + Protobuf toolchain)
+  # ─────────────────────────────────────────────
+  # [A] Rust: フォーマット + Clippy（警告ゼロ強制）
+  # ─────────────────────────────────────────────
+  rust-check:
+    name: "Rust — fmt & clippy"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install system deps
-        run: sudo apt-get update -q && sudo apt-get install -y libasound2-dev
-
-      - name: Setup protoc
-        uses: arduino/setup-protoc@v3
+      - uses: ./.github/actions/alchemy-ci-setup
         with:
-          version: "27.x"
+          protoc-source: apt
+          rust-components: "rustfmt, clippy"
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: cargo fmt
+        run: cargo fmt --manifest-path native/Cargo.toml --all -- --check
 
-      - uses: erlef/setup-beam@v1
+      - name: cargo clippy
+        run: >
+          cargo clippy --manifest-path native/Cargo.toml --workspace
+          --exclude launcher
+          -- -D warnings
+
+  # ─────────────────────────────────────────────
+  # [B] Rust: ユニットテスト（nif/physics）
+  # ─────────────────────────────────────────────
+  rust-test:
+    name: "Rust — unit tests"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/alchemy-ci-setup
         with:
-          elixir-version: "1.19"
-          otp-version: "28"
+          protoc-source: apt
 
-      - uses: Swatinem/rust-cache@v2
+      - name: cargo test (nif/physics)
+        run: cargo test --manifest-path native/Cargo.toml -p nif
+
+  # ─────────────────────────────────────────────
+  # Protobuf: Elixir 生成物と proto の整合（生成後 mix format してから diff）
+  # ─────────────────────────────────────────────
+  proto-verify:
+    name: "Protobuf — codegen up to date"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/alchemy-ci-setup
         with:
-          workspaces: native
+          protoc-source: arduino
+          with-beam: "true"
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
 
       - uses: actions/cache@v4
         with:
           path: |
             deps
             _build
-          key: ci-${{ runner.os }}-${{ hashFiles('mix.lock') }}
+          key: proto-verify-${{ runner.os }}-${{ hashFiles('mix.lock') }}
           restore-keys: |
-            ci-${{ runner.os }}-
+            proto-verify-${{ runner.os }}-
 
       - run: mix deps.get
 
       - name: Install protoc-gen-elixir
         run: mix escript.install hex protobuf --force
 
-      # 生成物がコミット済みと `proto/` に整合しているか（手動生成の取りこぼし防止）
       - name: Verify protobuf codegen is up to date
         run: |
           export PATH="$HOME/.mix/escripts:$PATH"
           mix alchemy.gen.proto
+          mix format "apps/network/lib/network/proto/generated/**/*.ex"
           git diff --exit-code -- apps/network/lib/network/proto/generated/
 
-      - name: CI equivalent checks
-        run: mix alchemy.ci
+  # ─────────────────────────────────────────────
+  # [C] Elixir: コンパイル + フォーマット + Credo
+  # ─────────────────────────────────────────────
+  elixir-check:
+    name: "Elixir — compile & credo"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/alchemy-ci-setup
+        with:
+          protoc-source: arduino
+          with-beam: "true"
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: elixir-check-${{ runner.os }}-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            elixir-check-${{ runner.os }}-
+
+      - run: mix deps.get
+      - run: mix compile --warnings-as-errors
+      - run: mix format --check-formatted
+      - run: mix credo --strict
+        env:
+          MIX_ENV: dev
+
+  # ─────────────────────────────────────────────
+  # [D] Elixir: NIF 込み mix test
+  # ─────────────────────────────────────────────
+  elixir-test:
+    name: "Elixir — mix test (with NIF)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/alchemy-ci-setup
+        with:
+          protoc-source: arduino
+          with-beam: "true"
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - uses: actions/cache@v4
+        with:
+          path: deps
+          key: elixir-test-deps-${{ runner.os }}-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            elixir-test-deps-${{ runner.os }}-
+
+      - run: mix deps.get
+      - run: mix compile --warnings-as-errors
+        env:
+          MIX_ENV: test
+      - run: mix test
+        env:
+          MIX_ENV: test
+
+  # ─────────────────────────────────────────────
+  # [E] ベンチマーク回帰（main の push のみ）
+  # ─────────────────────────────────────────────
+  bench-regression:
+    name: "Rust — bench regression"
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/alchemy-ci-setup
+        with:
+          protoc-source: apt
+
+      - name: cargo bench
+        run: >
+          cargo bench
+          --manifest-path native/Cargo.toml
+          -p nif
+          -- --output-format bencher
+          | tee bench_output.txt
+
+      - uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: cargo
+          output-file-path: bench_output.txt
+          fail-on-alert: true
+          alert-threshold: "110%"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true

@@ -188,7 +188,10 @@ fn ui_canvas_pb(c: pb::UiCanvas) -> UiCanvas {
 fn ui_node_pb(n: pb::UiNode) -> UiNode {
     UiNode {
         rect: n.rect.map(ui_rect_pb).unwrap_or_default(),
-        component: n.component.map(ui_component_pb).unwrap_or(UiComponent::Separator),
+        component: n
+            .component
+            .map(ui_component_pb)
+            .unwrap_or(UiComponent::Separator),
         children: n.children.into_iter().map(ui_node_pb).collect(),
     }
 }

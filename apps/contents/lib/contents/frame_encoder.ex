@@ -49,11 +49,15 @@ defmodule Content.FrameEncoder do
 
   defp command_to_pb({:player_sprite, x, y, frame}) do
     %Alchemy.Render.DrawCommand{
-      kind: {:player_sprite, %Alchemy.Render.PlayerSprite{x: pb_float(x), y: pb_float(y), frame: frame}}
+      kind:
+        {:player_sprite,
+         %Alchemy.Render.PlayerSprite{x: pb_float(x), y: pb_float(y), frame: frame}}
     }
   end
 
-  defp command_to_pb({:sprite_raw, x, y, width, height, {{uv_ox, uv_oy}, {uv_sx, uv_sy}, {r, g, b, a}}}) do
+  defp command_to_pb(
+         {:sprite_raw, x, y, width, height, {{uv_ox, uv_oy}, {uv_sx, uv_sy}, {r, g, b, a}}}
+       ) do
     %Alchemy.Render.DrawCommand{
       kind:
         {:sprite_raw,
@@ -95,7 +99,12 @@ defmodule Content.FrameEncoder do
     %Alchemy.Render.DrawCommand{
       kind:
         {:obstacle,
-         %Alchemy.Render.ObstacleCmd{x: pb_float(x), y: pb_float(y), radius: pb_float(radius), kind: kind}}
+         %Alchemy.Render.ObstacleCmd{
+           x: pb_float(x),
+           y: pb_float(y),
+           radius: pb_float(radius),
+           kind: kind
+         }}
     }
   end
 
@@ -308,7 +317,9 @@ defmodule Content.FrameEncoder do
   end
 
   defp ui_component_to_pb({:spacing, amount}) do
-    %Alchemy.Render.UiComponent{kind: {:spacing, %Alchemy.Render.UiSpacing{amount: pb_float(amount)}}}
+    %Alchemy.Render.UiComponent{
+      kind: {:spacing, %Alchemy.Render.UiSpacing{amount: pb_float(amount)}}
+    }
   end
 
   defp ui_component_to_pb(
@@ -331,7 +342,9 @@ defmodule Content.FrameEncoder do
 
   defp ui_component_to_pb({:screen_flash, {r, g, b, a}}) do
     %Alchemy.Render.UiComponent{
-      kind: {:screen_flash, %Alchemy.Render.UiScreenFlash{color: color_tuple_to_pb_list({r, g, b, a})}}
+      kind:
+        {:screen_flash,
+         %Alchemy.Render.UiScreenFlash{color: color_tuple_to_pb_list({r, g, b, a})}}
     }
   end
 
