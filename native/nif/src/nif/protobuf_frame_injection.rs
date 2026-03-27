@@ -3,6 +3,11 @@
 use crate::physics::weapon::WeaponSlot;
 use crate::physics::world::{GameWorldInner, SpecialEntitySnapshot};
 use prost::Message;
+use std::cmp::min;
+
+/// 不正な kind_id で巨大ベクタ確保を避けるための上限。
+/// 実運用で必要になれば params 側の実 ID 範囲に合わせて見直す。
+const ENEMY_DAMAGE_KIND_ID_MAX: usize = 4095;
 
 /// `uint32` → `WeaponSlot.kind_id` 用 `u8`。255 超は `u8::MAX` に飽和し警告ログを出す。
 fn u32_to_u8_clamped(field: &'static str, v: u32) -> u8 {
@@ -137,7 +142,8 @@ pub fn apply_injection_from_pb(
         w.player_invincible_timer_injected = v.y;
     }
     if let Some(v) = inj.elapsed_seconds {
-        // GameWorldInner は f32（物理ステップと同じ）。protobuf では double のまま受け、ここで丸める。
+        // GameWorldInner は f32（物理ステップと同じ）。
+        // protobuf では double のまま受けるため、ここで f32 へ丸める（巨大値では精度低下しうる仕様）。
         w.elapsed_seconds = v as f32;
     }
     if let Some(list) = inj.weapon_slots {
@@ -163,10 +169,21 @@ pub fn apply_injection_from_pb(
                 .map(|p| p.kind_id as usize)
                 .max()
                 .unwrap_or(0);
+            let clamped_max_id = min(max_id, ENEMY_DAMAGE_KIND_ID_MAX);
+            if max_id > ENEMY_DAMAGE_KIND_ID_MAX {
+                log::warn!(
+                    "protobuf_frame_injection: enemy_damage_this_frame kind_id {} exceeds cap {}, clamping",
+                    max_id,
+                    ENEMY_DAMAGE_KIND_ID_MAX
+                );
+            }
             w.enemy_damage_this_frame.clear();
-            w.enemy_damage_this_frame.resize(max_id + 1, 0.0);
+            w.enemy_damage_this_frame.resize(clamped_max_id + 1, 0.0);
             for p in ed.pairs {
-                w.enemy_damage_this_frame[p.kind_id as usize] = p.damage;
+                let i = p.kind_id as usize;
+                if i <= ENEMY_DAMAGE_KIND_ID_MAX {
+                    w.enemy_damage_this_frame[i] = p.damage;
+                }
             }
         }
     }

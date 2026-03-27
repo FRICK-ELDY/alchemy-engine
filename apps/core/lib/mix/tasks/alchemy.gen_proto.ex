@@ -20,7 +20,9 @@ defmodule Mix.Tasks.Alchemy.GenProto do
   @impl Mix.Task
   def run(_args) do
     Mix.shell().info("")
-    Mix.shell().info("[alchemy.gen_proto] Protobuf 生成の公式エントリ（実装は手順書に沿って本タスクへ集約予定）。")
+    Mix.shell().info(
+      "[alchemy.gen_proto] Protobuf 生成の公式エントリ（現在は案内のみ / NO-OP。実装は手順書に沿って本タスクへ集約予定）。"
+    )
     Mix.shell().info("手順書: workspace/2_todo/protobuf-full-automation-procedure.md")
     Mix.shell().info("")
   end

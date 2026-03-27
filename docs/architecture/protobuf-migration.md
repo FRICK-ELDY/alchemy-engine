@@ -12,6 +12,7 @@ Zenoh 経由のペイロードを Erlang term（ETF）から **Protocol Buffers*
 
 - **フレーム・入力・injection** はワイヤ上 protobuf のみ。`client_info` は protobuf 主経路で、失敗時のみ MessagePack へフォールバックする。UDP の `term_to_binary` や MessagePack / `bert_encode` 名の整理などのフォローアップは、作業用ツリー `workspace/2_todo/protobuf-migration-p5-serialization-followups.md` をリポジトリ内で検索（本 `docs` からは `workspace/` へリンクしない方針のためパス記載のみ）。
 - レガシー ETF の map 形は [erlang-term-schema.md](./erlang-term-schema.md) に記載（参照・デバッグ用）。
+- `native/network` のフレーム受信は `decode_pb_render_frame` のみ。**サーバーとデスクトップクライアントは同時更新**を前提とし、片側のみ更新した構成はサポートしない。
 
 ## 開発者向け
 
