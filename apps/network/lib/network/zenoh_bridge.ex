@@ -7,6 +7,8 @@ defmodule Network.ZenohBridge do
   - client_info subscribe: `contents/room/*/client/info` → `:client_info` ETS に保存
   - 受信した入力は `Contents.Events.Game` へ `{:move_input, dx, dy}` / `{:ui_action, name}` で配送
 
+  入力ペイロードの解釈は **protobuf**（movement / action）。`client_info` のみ protobuf 失敗時に MessagePack を試す。
+
   設定: `config :network, :zenoh_enabled, true` で有効化。
   """
 
@@ -185,65 +187,38 @@ defmodule Network.ZenohBridge do
   end
 
   defp handle_movement(room_id, payload) do
-    term = :erlang.binary_to_term(payload, [:safe])
-
-    case term do
-      %{"dx" => dx, "dy" => dy} when is_number(dx) and is_number(dy) ->
-        forward_move_input(room_id, dx * 1.0, dy * 1.0)
-
-      map when is_map(map) ->
-        dx = map |> Map.get("dx", Map.get(map, :dx, 0)) |> to_float()
-        dy = map |> Map.get("dy", Map.get(map, :dy, 0)) |> to_float()
+    case decode_movement(payload) do
+      {:ok, {dx, dy}} ->
         forward_move_input(room_id, dx, dy)
 
-      other ->
-        Logger.warning(
-          "[input:ZenohBridge] handle_movement unexpected format: #{inspect(other, limit: 5)}"
-        )
+      :error ->
+        Logger.warning("[input:ZenohBridge] handle_movement decode error room=#{room_id}")
     end
-  rescue
-    e ->
-      Logger.warning(
-        "[input:ZenohBridge] handle_movement binary_to_term error: #{inspect(e)} room=#{room_id}"
-      )
+  end
+
+  defp decode_movement(payload) do
+    case try_decode_movement_protobuf(payload) do
+      {:ok, {dx, dy}} -> {:ok, {dx * 1.0, dy * 1.0}}
+      {:error, _} -> :error
+    end
   end
 
   defp handle_action(room_id, payload) do
-    term = :erlang.binary_to_term(payload, [:safe])
-
-    case term do
-      %{"name" => name} when is_binary(name) ->
+    case decode_action(payload) do
+      {:ok, name} ->
         forward_ui_action(room_id, name)
 
-      map when is_map(map) ->
-        case Map.get(map, "name") || Map.get(map, :name) do
-          name when is_binary(name) ->
-            forward_ui_action(room_id, name)
-
-          name when is_atom(name) ->
-            forward_ui_action(room_id, Atom.to_string(name))
-
-          _ ->
-            Logger.warning(
-              "[input:ZenohBridge] Invalid action payload (missing name) room=#{room_id}"
-            )
-        end
-
-      other ->
-        Logger.warning(
-          "[input:ZenohBridge] Invalid action payload room=#{room_id} format=#{inspect(other, limit: 3)}"
-        )
+      :error ->
+        Logger.warning("[input:ZenohBridge] Invalid action payload room=#{room_id}")
     end
-  rescue
-    e ->
-      Logger.warning(
-        "[input:ZenohBridge] action binary_to_term error: #{inspect(e)} room=#{room_id}"
-      )
   end
 
-  defp to_float(v) when is_float(v), do: v
-  defp to_float(v) when is_integer(v), do: v * 1.0
-  defp to_float(_), do: 0.0
+  defp decode_action(payload) do
+    case try_decode_action_protobuf(payload) do
+      {:ok, name} when is_binary(name) -> {:ok, name}
+      {:error, _} -> :error
+    end
+  end
 
   defp forward_move_input(room_id, dx, dy) do
     room_key = room_id_for_registry(room_id)
@@ -339,10 +314,68 @@ defmodule Network.ZenohBridge do
   end
 
   defp decode_client_info(payload) when is_binary(payload) and byte_size(payload) > 0 do
-    Msgpax.unpack(payload)
+    case try_decode_client_info_protobuf(payload) do
+      {:ok, info} ->
+        {:ok, info}
+
+      {:error, _} ->
+        Msgpax.unpack(payload)
+    end
   end
 
   defp decode_client_info(_), do: :error
+
+  defp try_decode_movement_protobuf(payload) when is_binary(payload) do
+    case Network.Proto.Movement.decode(payload) do
+      %Network.Proto.Movement{dx: dx, dy: dy} when is_number(dx) and is_number(dy) ->
+        {:ok, {dx, dy}}
+
+      _ ->
+        {:error, :invalid_protobuf_movement}
+    end
+  rescue
+    e ->
+      Logger.debug(
+        "[input:ZenohBridge] movement protobuf decode failed: #{Exception.message(e)}"
+      )
+
+      {:error, :invalid_protobuf_movement}
+  end
+
+  defp try_decode_action_protobuf(payload) when is_binary(payload) do
+    case Network.Proto.Action.decode(payload) do
+      %Network.Proto.Action{name: name} when is_binary(name) and byte_size(name) > 0 ->
+        {:ok, name}
+
+      _ ->
+        {:error, :invalid_protobuf_action}
+    end
+  rescue
+    e ->
+      Logger.debug(
+        "[input:ZenohBridge] action protobuf decode failed: #{Exception.message(e)}"
+      )
+
+      {:error, :invalid_protobuf_action}
+  end
+
+  defp try_decode_client_info_protobuf(payload) when is_binary(payload) do
+    case Network.Proto.ClientInfo.decode(payload) do
+      %Network.Proto.ClientInfo{os: os, arch: arch, family: family}
+      when is_binary(os) and is_binary(arch) and is_binary(family) ->
+        {:ok, %{"os" => os, "arch" => arch, "family" => family}}
+
+      _ ->
+        {:error, :invalid_protobuf_client_info}
+    end
+  rescue
+    e ->
+      Logger.debug(
+        "[ZenohBridge] client_info protobuf decode failed, will try MessagePack: #{Exception.message(e)}"
+      )
+
+      {:error, :invalid_protobuf_client_info}
+  end
 
   defp normalize_client_info(%{os: o, arch: a, family: f}) do
     with {:ok, os} <- safe_to_string(o),

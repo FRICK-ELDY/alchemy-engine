@@ -34,7 +34,8 @@ defmodule Network.MixProject do
       {:plug_cowboy, "~> 2.7"},
       {:libcluster, "~> 3.5"},
       {:zenohex, "~> 0.7.2"},
-      {:msgpax, "~> 2.4"}
+      {:msgpax, "~> 2.4"},
+      {:protobuf, "~> 0.16"}
     ]
   end
 end

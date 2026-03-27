@@ -1,11 +1,13 @@
 # ポリシー: Zenoh フレーム直列化形式 — Erlang term 採用
 
 > 作成日: 2026-03-08  
-> ステータス: 採用
+> ステータス: 採用（歴史的記録）
+
+> **2026-03 更新**: 本書は ETF を主形式とした当初の採用理由の記録である。**現在の主経路は protobuf**（`proto/render_frame.proto`、Elixir `Network.Proto.RenderFrame`、Rust `prost`）。ETF は移行期のフォールバックとして残存する。契約と手順は [erlang-term-schema.md](../../architecture/erlang-term-schema.md) および [protobuf-migration.md](../../architecture/protobuf-migration.md) を参照。
 
 ---
 
-## 1. 方針
+## 1. 方針（当初）
 
 Zenoh によるサーバー→クライアントの RenderFrame 配信において、**Erlang term 形式**（`:erlang.term_to_binary/1`）を用いる。
 

@@ -1,0 +1,242 @@
+syntax = "proto3";
+
+package alchemy.render;
+
+// レガシー: ETF を bytes で包んでいた形式（クライアントは後方互換で解釈）
+message RenderFrameEnvelope {
+  bytes payload = 1;
+}
+
+// Zenoh 配信用のネイティブ RenderFrame（ETF 廃止後の本体）
+message RenderFrame {
+  repeated DrawCommand commands = 1;
+  CameraParams camera = 2;
+  UiCanvas ui = 3;
+  repeated MeshDef mesh_definitions = 4;
+  optional CursorGrabKind cursor_grab = 5;
+}
+
+enum CursorGrabKind {
+  CURSOR_GRAB_UNSPECIFIED = 0;
+  CURSOR_GRAB_GRAB = 1;
+  CURSOR_GRAB_RELEASE = 2;
+}
+
+message DrawCommand {
+  oneof kind {
+    PlayerSprite player_sprite = 1;
+    SpriteRaw sprite_raw = 2;
+    ParticleCmd particle = 3;
+    ItemCmd item = 4;
+    ObstacleCmd obstacle = 5;
+    Box3dCmd box_3d = 6;
+    GridPlaneCmd grid_plane = 7;
+    GridPlaneVertsCmd grid_plane_verts = 8;
+    SkyboxCmd skybox = 9;
+  }
+}
+
+message PlayerSprite {
+  float x = 1;
+  float y = 2;
+  uint32 frame = 3;
+}
+
+message SpriteRaw {
+  float x = 1;
+  float y = 2;
+  float width = 3;
+  float height = 4;
+  repeated float uv_offset = 5;
+  repeated float uv_size = 6;
+  repeated float color_tint = 7;
+}
+
+message ParticleCmd {
+  float x = 1;
+  float y = 2;
+  float r = 3;
+  float g = 4;
+  float b = 5;
+  float alpha = 6;
+  float size = 7;
+}
+
+message ItemCmd {
+  float x = 1;
+  float y = 2;
+  uint32 kind = 3;
+}
+
+message ObstacleCmd {
+  float x = 1;
+  float y = 2;
+  float radius = 3;
+  uint32 kind = 4;
+}
+
+message Box3dCmd {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+  float half_w = 4;
+  float half_h = 5;
+  float half_d = 6;
+  repeated float color = 7;
+}
+
+message GridPlaneCmd {
+  float size = 1;
+  uint32 divisions = 2;
+  repeated float color = 3;
+}
+
+message GridPlaneVertsCmd {
+  repeated MeshVertex vertices = 1;
+}
+
+message SkyboxCmd {
+  repeated float top_color = 1;
+  repeated float bottom_color = 2;
+}
+
+message MeshVertex {
+  repeated float position = 1;
+  repeated float color = 2;
+}
+
+message MeshDef {
+  string name = 1;
+  repeated MeshVertex vertices = 2;
+  repeated uint32 indices = 3;
+}
+
+message CameraParams {
+  oneof kind {
+    Camera2d camera_2d = 1;
+    Camera3d camera_3d = 2;
+  }
+}
+
+message Camera2d {
+  float offset_x = 1;
+  float offset_y = 2;
+}
+
+message Camera3d {
+  repeated float eye = 1;
+  repeated float target = 2;
+  repeated float up = 3;
+  float fov_deg = 4;
+  float near = 5;
+  float far = 6;
+}
+
+message UiCanvas {
+  repeated UiNode nodes = 1;
+}
+
+message UiNode {
+  UiRect rect = 1;
+  UiComponent component = 2;
+  repeated UiNode children = 3;
+}
+
+message UiRect {
+  string anchor = 1;
+  repeated float offset = 2;
+  oneof size {
+    UiSizeWrap wrap = 3;
+    UiSizeFixed fixed = 4;
+  }
+}
+
+message UiSizeWrap {}
+
+message UiSizeFixed {
+  float w = 1;
+  float h = 2;
+}
+
+message UiComponent {
+  oneof kind {
+    UiSeparator separator = 1;
+    UiVerticalLayout vertical_layout = 2;
+    UiHorizontalLayout horizontal_layout = 3;
+    UiRectStyle rect = 4;
+    UiText text = 5;
+    UiButton button = 6;
+    UiProgressBar progress_bar = 7;
+    UiSpacing spacing = 8;
+    UiWorldText world_text = 9;
+    UiScreenFlash screen_flash = 10;
+  }
+}
+
+message UiSeparator {}
+
+message UiVerticalLayout {
+  float spacing = 1;
+  repeated float padding = 2;
+}
+
+message UiHorizontalLayout {
+  float spacing = 1;
+  repeated float padding = 2;
+}
+
+message UiRectStyle {
+  repeated float color = 1;
+  float corner_radius = 2;
+  optional UiBorder border = 3;
+}
+
+message UiBorder {
+  repeated float color = 1;
+  float width = 2;
+}
+
+message UiText {
+  string text = 1;
+  repeated float color = 2;
+  float size = 3;
+  bool bold = 4;
+}
+
+message UiButton {
+  string label = 1;
+  string action = 2;
+  repeated float color = 3;
+  float min_width = 4;
+  float min_height = 5;
+}
+
+message UiProgressBar {
+  float value = 1;
+  float max = 2;
+  float width = 3;
+  float height = 4;
+  repeated float fg_color_high = 5;
+  repeated float fg_color_mid = 6;
+  repeated float fg_color_low = 7;
+  repeated float bg_color = 8;
+  float corner_radius = 9;
+}
+
+message UiSpacing {
+  float amount = 1;
+}
+
+message UiWorldText {
+  float world_x = 1;
+  float world_y = 2;
+  float world_z = 3;
+  string text = 4;
+  repeated float color = 5;
+  float lifetime = 6;
+  float max_lifetime = 7;
+}
+
+message UiScreenFlash {
+  repeated float color = 1;
+}

@@ -129,8 +129,16 @@ elixir --name b@127.0.0.1 -S mix run
 | ビルド | `elixir -S mix alchemy.build` | VRAlchemy クライアントをビルド |
 | CI 相当 | `elixir -S mix alchemy.ci` | ローカル CI チェック |
 | Credo | `elixir -S mix alchemy.credo` | Elixir 静的解析 |
+| Protobuf 生成 | `elixir -S mix alchemy.gen_proto` | `.proto` から Elixir/Rust 生成（公式エントリ。詳細は `workspace/2_todo/protobuf-full-automation-procedure.md`） |
 
 CI の詳細は [docs/warranty/ci.md](./docs/warranty/ci.md) を参照。
+
+## Protobuf（`.proto`）
+
+スキーマの単一ソースはリポジトリ直下の **`proto/*.proto`**。生成物の更新は **`mix alchemy.gen_proto`** を公式エントリとする（実装は段階的に同タスクへ集約）。ツール導入、`build.rs`、CI、生成物の置き方の詳細は、作業用ツリー `workspace/2_todo/protobuf-full-automation-procedure.md` に書く。
+
+- 公開向けの短い概要: [docs/architecture/protobuf-migration.md](./docs/architecture/protobuf-migration.md)
+- ワイヤ形式とレガシー ETF: [docs/architecture/erlang-term-schema.md](./docs/architecture/erlang-term-schema.md)
 
 ## クライアントビルド
 
@@ -141,7 +149,7 @@ elixir -S mix alchemy.build --release    # リリースビルド
 
 ## 関連ドキュメント
 
+- [Protobuf 移行（概要）](./docs/architecture/protobuf-migration.md)
 - [ビジョンと設計思想](./docs/vision.md)
-- [クライアント・サーバー分離手順](./workspace/7_done/client-server-separation-procedure.md)（未実施は [client-server-separation-future.md](./workspace/0_reference/client-server-separation-future.md)）
-- [ランチャー課題・設計](./workspace/0_reference/improvement-plan.md#i-g-ランチャーlauncherの課題)
+- クライアント・サーバー分離・ランチャー設計: [README.md](./README.md) の Architecture 付近を参照（作業用ツリー配下の文書へのリンクは張らない）
 - [クライアント exe のビルド・クロスコンパイル](./docs/cross-compile.md)
