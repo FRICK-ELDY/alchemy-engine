@@ -2,6 +2,20 @@
 //! `proto/render_frame.proto` とフィールド番号を一致させる。
 
 use prost::Message;
+
+/// proto は `uint32`、`render::DrawCommand` の frame / kind は `u8`。255 超は `u8::MAX` に飽和し警告ログを出す。
+fn u32_to_u8_clamped(field: &'static str, v: u32) -> u8 {
+    if v > u8::MAX as u32 {
+        log::warn!(
+            "protobuf_render_frame: {} value {} exceeds u8::MAX, clamping",
+            field,
+            v
+        );
+        u8::MAX
+    } else {
+        v as u8
+    }
+}
 use render::{
     CameraParams, DrawCommand, MeshDef, MeshVertex, RenderFrame, UiAnchor, UiCanvas, UiComponent,
     UiNode, UiRect, UiSize,
@@ -427,6 +441,7 @@ pub fn decode_pb_render_frame(bytes: &[u8]) -> Result<RenderFrame, prost::Decode
 }
 
 fn pb_into_render_frame(pb: PbRenderFrame) -> RenderFrame {
+    // kind が空の DrawCommandPb は filter_map で落ちる（クライアント不整合時はコマンド欠落として表れる）
     let commands: Vec<DrawCommand> = pb.commands.into_iter().filter_map(draw_cmd_pb).collect();
     let camera = pb
         .camera
@@ -459,7 +474,7 @@ fn draw_cmd_pb(cmd: DrawCommandPb) -> Option<DrawCommand> {
         PlayerSprite(p) => DrawCommand::PlayerSprite {
             x: p.x,
             y: p.y,
-            frame: p.frame as u8,
+            frame: u32_to_u8_clamped("player_sprite.frame", p.frame),
         },
         SpriteRaw(s) => DrawCommand::SpriteRaw {
             x: s.x,
@@ -482,13 +497,13 @@ fn draw_cmd_pb(cmd: DrawCommandPb) -> Option<DrawCommand> {
         Item(i) => DrawCommand::Item {
             x: i.x,
             y: i.y,
-            kind: i.kind as u8,
+            kind: u32_to_u8_clamped("item.kind", i.kind),
         },
         Obstacle(o) => DrawCommand::Obstacle {
             x: o.x,
             y: o.y,
             radius: o.radius,
-            kind: o.kind as u8,
+            kind: u32_to_u8_clamped("obstacle.kind", o.kind),
         },
         Box3d(b) => DrawCommand::Box3D {
             x: b.x,

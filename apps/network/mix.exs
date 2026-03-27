@@ -35,7 +35,7 @@ defmodule Network.MixProject do
       {:libcluster, "~> 3.5"},
       {:zenohex, "~> 0.7.2"},
       {:msgpax, "~> 2.4"},
-      {:protobuf, "~> 0.15"}
+      {:protobuf, "~> 0.16"}
     ]
   end
 end

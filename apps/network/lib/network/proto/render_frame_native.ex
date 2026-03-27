@@ -1,4 +1,5 @@
-# RenderFrame ネイティブ protobuf（proto/render_frame.proto と対応）
+# RenderFrame ネイティブ protobuf（proto/render_frame.proto と対応）。
+# 手書きのため、スキーマ変更時は proto / native の prost 定義 / 本モジュールの三箇所を揃えること。
 defmodule Network.Proto.RenderFrame do
   @moduledoc false
   use Protobuf, syntax: :proto3

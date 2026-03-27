@@ -366,7 +366,10 @@ pub fn set_frame_injection_binary(
 ) -> NifResult<Atom> {
     let mut w = world.0.write().map_err(|_| lock_poisoned_err())?;
     let payload = binary.as_slice();
-    if super::protobuf_frame_injection::apply_injection_from_pb(&mut w, payload).is_ok() {
+    // 空バイト列は prost の「空メッセージ」として成功しうるため、ここでは protobuf 経路を試さず ETF へ回す。
+    if !payload.is_empty()
+        && super::protobuf_frame_injection::apply_injection_from_pb(&mut w, payload).is_ok()
+    {
         return Ok(ok());
     }
     let inner = super::protobuf_frame_injection::decode_injection_payload(payload);

@@ -7,6 +7,8 @@ defmodule Network.ZenohBridge do
   - client_info subscribe: `contents/room/*/client/info` → `:client_info` ETS に保存
   - 受信した入力は `Contents.Events.Game` へ `{:move_input, dx, dy}` / `{:ui_action, name}` で配送
 
+  入力ペイロードの解釈は **protobuf 優先**し、失敗時に ETF（movement/action）または MessagePack（client_info）へフォールバックする。
+
   設定: `config :network, :zenoh_enabled, true` で有効化。
   """
 
@@ -340,7 +342,12 @@ defmodule Network.ZenohBridge do
         {:error, :invalid_protobuf_movement}
     end
   rescue
-    _ -> {:error, :invalid_protobuf_movement}
+    e ->
+      Logger.debug(
+        "[input:ZenohBridge] movement protobuf decode failed, will try ETF: #{Exception.message(e)}"
+      )
+
+      {:error, :invalid_protobuf_movement}
   end
 
   defp try_decode_movement_etf(payload) when is_binary(payload) do
@@ -371,7 +378,12 @@ defmodule Network.ZenohBridge do
         {:error, :invalid_protobuf_action}
     end
   rescue
-    _ -> {:error, :invalid_protobuf_action}
+    e ->
+      Logger.debug(
+        "[input:ZenohBridge] action protobuf decode failed, will try ETF: #{Exception.message(e)}"
+      )
+
+      {:error, :invalid_protobuf_action}
   end
 
   defp try_decode_action_etf(payload) when is_binary(payload) do
@@ -405,7 +417,12 @@ defmodule Network.ZenohBridge do
         {:error, :invalid_protobuf_client_info}
     end
   rescue
-    _ -> {:error, :invalid_protobuf_client_info}
+    e ->
+      Logger.debug(
+        "[ZenohBridge] client_info protobuf decode failed, will try MessagePack: #{Exception.message(e)}"
+      )
+
+      {:error, :invalid_protobuf_client_info}
   end
 
   defp normalize_client_info(%{os: o, arch: a, family: f}) do

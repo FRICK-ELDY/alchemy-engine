@@ -123,6 +123,7 @@ pub fn apply_injection_from_pb(
         w.player_invincible_timer_injected = v.y;
     }
     if let Some(v) = inj.elapsed_seconds {
+        // GameWorldInner は f32（物理ステップと同じ）。protobuf では double のまま受け、ここで丸める。
         w.elapsed_seconds = v as f32;
     }
     if let Some(list) = inj.weapon_slots {

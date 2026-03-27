@@ -1,6 +1,7 @@
 //! protobuf エンコード/デコード（段階移行用）。
 //!
-//! 現時点では movement/action/client_info のみを protobuf 化する。
+//! movement / action / client_info のメッセージに加え、レガシー ETF を包む
+//! `RenderFrameEnvelope`（`proto/render_frame.proto`）の encode/decode もここに置く。
 
 use prost::Message;
 use shared::ClientInfo;
