@@ -3,8 +3,8 @@
 > このドキュメントは現在の弱点を整理し、各課題に対する具体的な改善方針を定義する。
 > 優先度・影響範囲・作業ステップを明記することで、改善作業を体系的に進めることを目的とする。
 >
-> 最新の評価: [evaluation-2026-03-08.md](../../evaluation/evaluation-2026-03-08.md)  
-> プラス点: [specific-strengths.md](../../evaluation/specific-strengths.md) / マイナス点: [specific-weaknesses.md](../../evaluation/specific-weaknesses.md) / 提案: [specific-proposals.md](../../evaluation/specific-proposals.md)
+> 最新の評価: [evaluation-2026-03-28.md](../../docs/evaluation/evaluation-2026-03-28.md)  
+> プラス点: [specific-strengths.md](../../docs/evaluation/specific-strengths.md) / マイナス点: [specific-weaknesses.md](../../docs/evaluation/specific-weaknesses.md) / 提案: [specific-proposals.md](../../docs/evaluation/specific-proposals.md)
 
 ---
 
@@ -21,8 +21,8 @@
 | Elixir 並行性・分散 | 3/10 | WebSocket 認証は実装済み。分散ノード間フェイルオーバーは未実装 |
 | Elixir ビヘイビア活用 | 7/10 | — |
 | アーキテクチャ（ビジョン一致度） | 7/10 | — |
-| テスト | 6/10 | SceneStack・GameEvents のテストがゼロ。プロパティ/E2E もゼロ |
-| **総合** | **7/10** | |
+| テスト | 6/10 | `Contents.Scenes.Stack` と `Contents.Events.Game` の直接ユニットが不足。Network 経由の統合はあり。プロパティ/E2E も限定的 |
+| **総合** | **7.5/10** | 採点式総合スコア +82 点（[evaluation-2026-03-28.md](../../docs/evaluation/evaluation-2026-03-28.md)） |
 
 ---
 
@@ -54,13 +54,13 @@ Elixir を選んだ最大の根拠である「OTP による耐障害性」「軽
 
 **問題**
 
-Rust 側には `chase_ai.rs`・`spatial_hash.rs` 等に単体テストが存在するが、Elixir 側（`GameEvents`・`Contents.SceneStack`・各シーン・コンポーネント）のテストがほぼ存在しない。
+Rust 側には `chase_ai.rs`・`spatial_hash.rs` 等に単体テストが存在する。Elixir 側は VampireSurvivor 向け・公式・ネットワーク統合テストが増えた一方、`Contents.Scenes.Stack` と `Contents.Events.Game` の**中核状態機械の直接テスト**がまだ薄い。
 
 **改善方針**
 
-- `Contents.SceneStack` のシーン遷移ロジックを `ExUnit` でテストする
-- `GameContent.VampireSurvivor.Scenes.Playing.update/2` の純粋関数部分（EXP 計算・レベルアップ判定）を単体テストする
-- `GameEngine.EventBus` のサブスクライバー配信をテストする
+- `Contents.Scenes.Stack` のシーン遷移ロジックを `ExUnit` でテストする
+- `Content.VampireSurvivor.Playing` 内の純粋関数（EXP・レベルアップ判定など）の網羅を続ける
+- `Core.EventBus` のサブスクライバー配信（既存テストの拡張）と、`Contents.Events.Game` のバックプレッシャー境界のユニットテストを検討する
 
 **影響ファイル**
 

@@ -1,6 +1,6 @@
 # AlchemyEngine — プラス点 詳細一覧
 
-> 最終更新: 2026-03-23（evaluation-2026-03-23 に基づく）
+> 最終更新: 2026-03-28（evaluation-2026-03-28 に基づく）
 
 ## 採点基準
 
@@ -18,17 +18,17 @@
 
 ### ✅ プラス点
 
-- **ContentBehaviour のオプショナルコールバック設計** `+5`
-  > `@optional_callbacks` で7つのコールバックを明示的に宣言し、`function_exported?/3` による実行時分岐を排除している。`AsteroidArena` が `level_up_scene/0`・`boss_alert_scene/0` を実装しないことで、エンジンコアがこれらの概念を持たなくても2コンテンツが共存できることを実証している。Godot の `_process` / `_physics_process` オーバーライドと同等の柔軟性をElixirのBehaviourで実現した設計は、同規模の個人プロジェクトでは見たことがないレベル。
-  > 対象ファイル: `apps/core/lib/core/content_behaviour.ex`
+- **Contents.Behaviour.Content のオプショナルコールバック設計** `+5`
+  > `@optional_callbacks` で武器・ボス関連コールバックを明示し、`function_exported?/3` による実行時分岐を排除している。`Content.AsteroidArena` が `level_up_scene/0`・`boss_alert_scene/0` を実装しないことで、エンジンがこれらの概念を持たなくても複数コンテンツが共存できることを実証している。Godot の `_process` / `_physics_process` オーバーライドと同等の柔軟性を Elixir の Behaviour で実現した設計は、同規模の個人プロジェクトでは稀である。
+  > 対象ファイル: `apps/contents/lib/behaviour/content.ex`
 
 - **バックプレッシャー設計（整合性維持とスキップの明確な分離）** `+5`
   > GCポーズ等で2秒以上遅延した場合（メッセージキュー深度 > 120）に、`on_frame_event`（スコア・HP・レベルアップ）とシーン遷移はスキップせず、入力・物理AI・`on_nif_sync`・ログはスキップする。「何を守り、何を捨てるか」の設計判断が明示的にコードに記述されており、Bevy の `FixedUpdate` スケジューラや Phoenix LiveView の差分更新と同等の思想を独自実装している。
-  > 対象ファイル: `apps/contents/lib/contents/game_events.ex`（L194-291）
+  > 対象ファイル: `apps/contents/lib/events/game.ex`
 
 - **SSoT 整合性チェック（SSOT CHECK）** `+4`
   > 60フレームごとに `get_full_game_state` でRust側のスコア・キルカウントとElixir側の値を比較し、乖離があれば `[SSOT CHECK]` ログを出力する仕組みを `diagnostics.ex` に実装。Elixir = SSoT という設計原則を実行時に自動検証する機構は、プロダクションレベルのゲームエンジンでも珍しい。
-  > 対象ファイル: `apps/contents/lib/contents/game_events/diagnostics.ex`（L94-110）
+  > 対象ファイル: `apps/contents/lib/events/game/diagnostics.ex`
 
 - **SaveManager の HMAC 付きセーブデータ** `+2`
   > セーブデータに HMAC-SHA256 署名を付与し、改ざん検出を実装。個人プロジェクトのゲームエンジンでセキュリティを考慮した設計は評価できる。
@@ -58,7 +58,7 @@
 
 - **GameEvents による SSoT とイベント駆動の一貫性** `+4`
   > Rust 60Hz ループ → `{:frame_events, events}` 受信 → コンポーネントの `on_frame_event/2` に委譲。エンジンはディスパッチのみ行いゲームロジックを知らない設計。NIF 注入は `on_nif_sync/1` でコンポーネントが担当。
-  > 対象ファイル: `apps/contents/lib/contents/game_events.ex`
+  > 対象ファイル: `apps/contents/lib/events/game.ex`
 
 - **AsteroidArena による ContentBehaviour の実証** `+4`
   > VampireSurvivorとは異なる「武器・ボス・レベルアップのないシューター」として実装することで、エンジンコアがコンテンツ固有の概念を持たなくても動作することを実証している。`SplitComponent` が小惑星分裂ロジックを担い、`on_event({:entity_removed, ...})` で処理する設計は、コンポーネントシステムの柔軟性を示している。
@@ -97,7 +97,7 @@
 ### ✅ プラス点
 
 - **Application 起動シーケンスの堅牢性** `+2`
-  > `Registry`・`SceneStack`・`InputHandler`・`EventBus`・`RoomSupervisor` 等を依存順に起動し、`start_room(:main)` 失敗時は raise で起動を停止する設計。子プロセスの起動順が明確。
+  > `Registry`・`FormulaStore.LocalBackend`・`Contents.Scenes.Stack`・`EventBus`・`RoomSupervisor`・`StressMonitor`・`Stats`・`Telemetry` を `one_for_one` で起動し、`start_room(:main)` 失敗時は raise で起動を停止する設計。子プロセスの起動順が明確。
   > 対象ファイル: `apps/server/lib/server/application.ex`
 
 - **環境別設定の分離（config.exs / runtime.exs）** `+1`
@@ -270,12 +270,16 @@
 
 ### ✅ プラス点
 
-- **mix alchemy.ci と GitHub Actions の設計思想の一致** `+3`
-  > `mix alchemy.ci` が GitHub Actions の各ジョブ（A/B/C/D）と1:1対応。`check` オプションでフォーマット+Lint のみの軽量実行も可能。cargo fmt / clippy / mix compile / format / credo / test を一括実行し、エラーゼロで通過することを確認済み。
+- **mix alchemy.ci と GitHub Actions の主要ジョブの対応** `+3`
+  > `mix alchemy.ci` が Rust fmt/clippy/test（nif）と Elixir compile/format/credo/test を一括実行し、GHA の rust-check / rust-test / elixir-check / elixir-test と実質対応。`check` オプションでテスト省略も可能。2026-03-28 時点で Windows 上で `RESULT: ALL PASSED` を確認済み。
   > 対象ファイル: `apps/core/lib/mix/tasks/alchemy.ci.ex`, `.github/workflows/ci.yml`
 
+- **PR 向け CI と Protobuf 生成物検証** `+2`
+  > `on: pull_request` により PR 上でも同一パイプラインが走る。`proto-verify` ジョブで `mix alchemy.gen.proto` 後の生成物 diff を検証し、Elixir 側の protobuf ドリフトを検出する。
+  > 対象ファイル: `.github/workflows/ci.yml`
+
 - **ベンチマーク回帰テスト（main push 時）** `+3`
-  > bench-regression ジョブが main push 時に `cargo bench -p physics` を実行し、前回比+10%超でCIをブロック。
+  > bench-regression ジョブが main push 時に `cargo bench -p nif` を実行し、github-action-benchmark で前回比 110% 超をアラート。
   > 対象ファイル: `.github/workflows/ci.yml`
 
 - **README と development.md による起動手順の明確化** `+2`
@@ -290,7 +294,7 @@
 
 - **Telemetry イベントの発行** `+2`
   > `[:game, :frame_dropped]`・`[:game, :session_end]`・`[:game, :boss_spawn]`・`[:game, :level_up]` など、主要なゲームイベントで telemetry を実行。
-  > 対象ファイル: `apps/contents/lib/contents/game_events.ex`, `apps/contents/lib/contents/game_events/diagnostics.ex`
+  > 対象ファイル: `apps/contents/lib/events/game.ex`, `apps/contents/lib/events/game/diagnostics.ex`
 
 ---
 

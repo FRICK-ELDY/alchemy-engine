@@ -1,6 +1,6 @@
 # AlchemyEngine — 提案（0点）詳細一覧
 
-> 最終更新: 2026-03-23（evaluation-2026-03-23 に基づく）
+> 最終更新: 2026-03-28（evaluation-2026-03-28 に基づく）
 
 ## 採点基準
 
@@ -135,8 +135,8 @@
 
 ### CI・セキュリティ
 
-- **pull_request トリガーの追加** `0`
-  > `.github/workflows/ci.yml` に `pull_request:` を追加し、PR作成・更新時にCIが自動実行されるようにする。PRマージ前の品質保証が有効化される。
+- **mix alchemy.ci に proto-verify 相当を追加** `0`
+  > `mix alchemy.gen.proto` と `mix format` 後に生成物の diff を検証するステップをローカル CI に含め、GHA の `proto-verify` と同等のチェックを push 前に実行できるようにする。
 
 - **mix audit / cargo audit の CI 組み込み** `0`
   > `mix_audit` と `cargo audit` をCIジョブに追加する。依存パッケージの脆弱性を自動検出し、セキュリティリスクを早期に発見できる。
