@@ -4,6 +4,20 @@ use crate::physics::weapon::WeaponSlot;
 use crate::physics::world::{GameWorldInner, SpecialEntitySnapshot};
 use prost::Message;
 
+/// `uint32` → `WeaponSlot.kind_id` 用 `u8`。255 超は `u8::MAX` に飽和し警告ログを出す。
+fn u32_to_u8_clamped(field: &'static str, v: u32) -> u8 {
+    if v > u8::MAX as u32 {
+        log::warn!(
+            "protobuf_frame_injection: {} value {} exceeds u8::MAX, clamping",
+            field,
+            v
+        );
+        u8::MAX
+    } else {
+        v as u8
+    }
+}
+
 /// レガシー: ETF を bytes で包んでいた Zenoh/NIF 用エンベロープ
 #[derive(Clone, PartialEq, Message)]
 pub struct FrameInjectionEnvelopePb {
@@ -131,7 +145,7 @@ pub fn apply_injection_from_pb(
             .slots
             .into_iter()
             .map(|s| WeaponSlot {
-                kind_id: s.kind_id as u8,
+                kind_id: u32_to_u8_clamped("weapon_slot.kind_id", s.kind_id),
                 level: s.level,
                 cooldown_timer: s.cooldown,
                 cooldown_sec: s.cooldown_sec,
@@ -143,19 +157,16 @@ pub fn apply_injection_from_pb(
         if ed.pairs.is_empty() {
             w.enemy_damage_this_frame.clear();
         } else {
-            let mut max_id: usize = 0;
-            let mut damage_map: Vec<(usize, f32)> = Vec::new();
-            for p in &ed.pairs {
-                let i = p.kind_id as usize;
-                max_id = max_id.max(i);
-                damage_map.push((i, p.damage));
-            }
+            let max_id = ed
+                .pairs
+                .iter()
+                .map(|p| p.kind_id as usize)
+                .max()
+                .unwrap_or(0);
+            w.enemy_damage_this_frame.clear();
             w.enemy_damage_this_frame.resize(max_id + 1, 0.0);
-            w.enemy_damage_this_frame.fill(0.0);
-            for (i, damage) in damage_map {
-                if i < w.enemy_damage_this_frame.len() {
-                    w.enemy_damage_this_frame[i] = damage;
-                }
+            for p in ed.pairs {
+                w.enemy_damage_this_frame[p.kind_id as usize] = p.damage;
             }
         }
     }

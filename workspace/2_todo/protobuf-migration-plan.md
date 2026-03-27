@@ -4,6 +4,10 @@
 > 目的: Zenoh 通信で使用中の Erlang term（ETF）を段階的に廃止し、protobuf に統一する。  
 > 対象: フレーム配信、入力（movement/action）、frame injection、client_info
 
+**公開向けの概要**（`docs` からリンクする先）: [docs/architecture/protobuf-migration.md](../../docs/architecture/protobuf-migration.md)。本ファイルは作業用バックログであり、`development.md` 等の `docs` 配下から **`workspace/` へのリンクは張らない**方針とする。
+
+**コード生成の完全自動化**（Rust / Elixir）: [protobuf-full-automation-procedure.md](./protobuf-full-automation-procedure.md)
+
 ---
 
 ## 1. 背景

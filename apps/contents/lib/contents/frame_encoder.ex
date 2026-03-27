@@ -37,9 +37,19 @@ defmodule Content.FrameEncoder do
   defp maybe_put_cursor_grab_pb(f, :release), do: struct!(f, cursor_grab: 2)
   defp maybe_put_cursor_grab_pb(f, _), do: f
 
+  defp pb_float(n), do: n * 1.0
+
+  defp color_tuple_to_pb_list({r, g, b, a}) do
+    [pb_float(r), pb_float(g), pb_float(b), pb_float(a)]
+  end
+
+  defp vec2_to_pb_list({a, b}), do: [pb_float(a), pb_float(b)]
+
+  defp vec3_to_pb_list({a, b, c}), do: [pb_float(a), pb_float(b), pb_float(c)]
+
   defp command_to_pb({:player_sprite, x, y, frame}) do
     %Network.Proto.DrawCommand{
-      kind: {:player_sprite, %Network.Proto.PlayerSprite{x: x * 1.0, y: y * 1.0, frame: frame}}
+      kind: {:player_sprite, %Network.Proto.PlayerSprite{x: pb_float(x), y: pb_float(y), frame: frame}}
     }
   end
 
@@ -48,13 +58,13 @@ defmodule Content.FrameEncoder do
       kind:
         {:sprite_raw,
          %Network.Proto.SpriteRaw{
-           x: x * 1.0,
-           y: y * 1.0,
-           width: width * 1.0,
-           height: height * 1.0,
-           uv_offset: [uv_ox * 1.0, uv_oy * 1.0],
-           uv_size: [uv_sx * 1.0, uv_sy * 1.0],
-           color_tint: [r * 1.0, g * 1.0, b * 1.0, a * 1.0]
+           x: pb_float(x),
+           y: pb_float(y),
+           width: pb_float(width),
+           height: pb_float(height),
+           uv_offset: vec2_to_pb_list({uv_ox, uv_oy}),
+           uv_size: vec2_to_pb_list({uv_sx, uv_sy}),
+           color_tint: color_tuple_to_pb_list({r, g, b, a})
          }}
     }
   end
@@ -64,20 +74,20 @@ defmodule Content.FrameEncoder do
       kind:
         {:particle,
          %Network.Proto.ParticleCmd{
-           x: x * 1.0,
-           y: y * 1.0,
-           r: r * 1.0,
-           g: g * 1.0,
-           b: b * 1.0,
-           alpha: alpha * 1.0,
-           size: size * 1.0
+           x: pb_float(x),
+           y: pb_float(y),
+           r: pb_float(r),
+           g: pb_float(g),
+           b: pb_float(b),
+           alpha: pb_float(alpha),
+           size: pb_float(size)
          }}
     }
   end
 
   defp command_to_pb({:item, x, y, kind}) do
     %Network.Proto.DrawCommand{
-      kind: {:item, %Network.Proto.ItemCmd{x: x * 1.0, y: y * 1.0, kind: kind}}
+      kind: {:item, %Network.Proto.ItemCmd{x: pb_float(x), y: pb_float(y), kind: kind}}
     }
   end
 
@@ -85,7 +95,7 @@ defmodule Content.FrameEncoder do
     %Network.Proto.DrawCommand{
       kind:
         {:obstacle,
-         %Network.Proto.ObstacleCmd{x: x * 1.0, y: y * 1.0, radius: radius * 1.0, kind: kind}}
+         %Network.Proto.ObstacleCmd{x: pb_float(x), y: pb_float(y), radius: pb_float(radius), kind: kind}}
     }
   end
 
@@ -94,13 +104,13 @@ defmodule Content.FrameEncoder do
       kind:
         {:box_3d,
          %Network.Proto.Box3dCmd{
-           x: x * 1.0,
-           y: y * 1.0,
-           z: z * 1.0,
-           half_w: half_w * 1.0,
-           half_h: half_h * 1.0,
-           half_d: half_d * 1.0,
-           color: [r * 1.0, g * 1.0, b * 1.0, a * 1.0]
+           x: pb_float(x),
+           y: pb_float(y),
+           z: pb_float(z),
+           half_w: pb_float(half_w),
+           half_h: pb_float(half_h),
+           half_d: pb_float(half_d),
+           color: color_tuple_to_pb_list({r, g, b, a})
          }}
     }
   end
@@ -110,9 +120,9 @@ defmodule Content.FrameEncoder do
       kind:
         {:grid_plane,
          %Network.Proto.GridPlaneCmd{
-           size: size * 1.0,
+           size: pb_float(size),
            divisions: divisions,
-           color: [r * 1.0, g * 1.0, b * 1.0, a * 1.0]
+           color: color_tuple_to_pb_list({r, g, b, a})
          }}
     }
   end
@@ -121,8 +131,8 @@ defmodule Content.FrameEncoder do
     verts =
       Enum.map(vertices, fn {{px, py, pz}, {cr, cg, cb, ca}} ->
         %Network.Proto.MeshVertexMsg{
-          position: [px * 1.0, py * 1.0, pz * 1.0],
-          color: [cr * 1.0, cg * 1.0, cb * 1.0, ca * 1.0]
+          position: vec3_to_pb_list({px, py, pz}),
+          color: color_tuple_to_pb_list({cr, cg, cb, ca})
         }
       end)
 
@@ -136,8 +146,8 @@ defmodule Content.FrameEncoder do
       kind:
         {:skybox,
          %Network.Proto.SkyboxCmd{
-           top_color: [tr * 1.0, tg * 1.0, tb * 1.0, ta * 1.0],
-           bottom_color: [br * 1.0, bg * 1.0, bb * 1.0, ba * 1.0]
+           top_color: color_tuple_to_pb_list({tr, tg, tb, ta}),
+           bottom_color: color_tuple_to_pb_list({br, bg, bb, ba})
          }}
     }
   end
@@ -151,7 +161,7 @@ defmodule Content.FrameEncoder do
     %Network.Proto.CameraParams{
       kind:
         {:camera_2d,
-         %Network.Proto.Camera2d{offset_x: offset_x * 1.0, offset_y: offset_y * 1.0}}
+         %Network.Proto.Camera2d{offset_x: pb_float(offset_x), offset_y: pb_float(offset_y)}}
     }
   end
 
@@ -160,12 +170,12 @@ defmodule Content.FrameEncoder do
       kind:
         {:camera_3d,
          %Network.Proto.Camera3d{
-           eye: [ex * 1.0, ey * 1.0, ez * 1.0],
-           target: [tx * 1.0, ty * 1.0, tz * 1.0],
-           up: [ux * 1.0, uy * 1.0, uz * 1.0],
-           fov_deg: fov_deg * 1.0,
-           near: near * 1.0,
-           far: far * 1.0
+           eye: vec3_to_pb_list({ex, ey, ez}),
+           target: vec3_to_pb_list({tx, ty, tz}),
+           up: vec3_to_pb_list({ux, uy, uz}),
+           fov_deg: pb_float(fov_deg),
+           near: pb_float(near),
+           far: pb_float(far)
          }}
     }
   end
@@ -188,12 +198,12 @@ defmodule Content.FrameEncoder do
     size_pb =
       case size do
         :wrap -> {:wrap, %Network.Proto.UiSizeWrap{}}
-        {:fixed, w, h} -> {:fixed, %Network.Proto.UiSizeFixed{w: w * 1.0, h: h * 1.0}}
+        {:fixed, w, h} -> {:fixed, %Network.Proto.UiSizeFixed{w: pb_float(w), h: pb_float(h)}}
       end
 
     %Network.Proto.UiRect{
       anchor: anchor_str,
-      offset: [ox * 1.0, oy * 1.0],
+      offset: vec2_to_pb_list({ox, oy}),
       size: size_pb
     }
   end
@@ -207,8 +217,8 @@ defmodule Content.FrameEncoder do
       kind:
         {:vertical_layout,
          %Network.Proto.UiVerticalLayout{
-           spacing: spacing * 1.0,
-           padding: [pl * 1.0, pt * 1.0, pr * 1.0, pb * 1.0]
+           spacing: pb_float(spacing),
+           padding: color_tuple_to_pb_list({pl, pt, pr, pb})
          }}
     }
   end
@@ -218,8 +228,8 @@ defmodule Content.FrameEncoder do
       kind:
         {:horizontal_layout,
          %Network.Proto.UiHorizontalLayout{
-           spacing: spacing * 1.0,
-           padding: [pl * 1.0, pt * 1.0, pr * 1.0, pb * 1.0]
+           spacing: pb_float(spacing),
+           padding: color_tuple_to_pb_list({pl, pt, pr, pb})
          }}
     }
   end
@@ -232,8 +242,8 @@ defmodule Content.FrameEncoder do
 
         {{br, bg, bb, ba}, w} ->
           %Network.Proto.UiBorder{
-            color: [br * 1.0, bg * 1.0, bb * 1.0, ba * 1.0],
-            width: w * 1.0
+            color: color_tuple_to_pb_list({br, bg, bb, ba}),
+            width: pb_float(w)
           }
       end
 
@@ -241,8 +251,8 @@ defmodule Content.FrameEncoder do
       kind:
         {:rect,
          %Network.Proto.UiRectStyle{
-           color: [r * 1.0, g * 1.0, b * 1.0, a * 1.0],
-           corner_radius: corner_radius * 1.0,
+           color: color_tuple_to_pb_list({r, g, b, a}),
+           corner_radius: pb_float(corner_radius),
            border: border_pb
          }}
     }
@@ -254,8 +264,8 @@ defmodule Content.FrameEncoder do
         {:text,
          %Network.Proto.UiText{
            text: text,
-           color: [r * 1.0, g * 1.0, b * 1.0, a * 1.0],
-           size: size * 1.0,
+           color: color_tuple_to_pb_list({r, g, b, a}),
+           size: pb_float(size),
            bold: bold
          }}
     }
@@ -268,9 +278,9 @@ defmodule Content.FrameEncoder do
          %Network.Proto.UiButton{
            label: label,
            action: action,
-           color: [r * 1.0, g * 1.0, b * 1.0, a * 1.0],
-           min_width: min_width * 1.0,
-           min_height: min_height * 1.0
+           color: color_tuple_to_pb_list({r, g, b, a}),
+           min_width: pb_float(min_width),
+           min_height: pb_float(min_height)
          }}
     }
   end
@@ -284,21 +294,21 @@ defmodule Content.FrameEncoder do
       kind:
         {:progress_bar,
          %Network.Proto.UiProgressBar{
-           value: value * 1.0,
-           max: max * 1.0,
-           width: width * 1.0,
-           height: height * 1.0,
-           fg_color_high: [fhr * 1.0, fhg * 1.0, fhb * 1.0, fha * 1.0],
-           fg_color_mid: [fmr * 1.0, fmg * 1.0, fmb * 1.0, fma * 1.0],
-           fg_color_low: [flr * 1.0, flg * 1.0, flb * 1.0, fla * 1.0],
-           bg_color: [bgr * 1.0, bgg * 1.0, bgb * 1.0, bga * 1.0],
-           corner_radius: corner_radius * 1.0
+           value: pb_float(value),
+           max: pb_float(max),
+           width: pb_float(width),
+           height: pb_float(height),
+           fg_color_high: color_tuple_to_pb_list({fhr, fhg, fhb, fha}),
+           fg_color_mid: color_tuple_to_pb_list({fmr, fmg, fmb, fma}),
+           fg_color_low: color_tuple_to_pb_list({flr, flg, flb, fla}),
+           bg_color: color_tuple_to_pb_list({bgr, bgg, bgb, bga}),
+           corner_radius: pb_float(corner_radius)
          }}
     }
   end
 
   defp ui_component_to_pb({:spacing, amount}) do
-    %Network.Proto.UiComponent{kind: {:spacing, %Network.Proto.UiSpacing{amount: amount * 1.0}}}
+    %Network.Proto.UiComponent{kind: {:spacing, %Network.Proto.UiSpacing{amount: pb_float(amount)}}}
   end
 
   defp ui_component_to_pb(
@@ -308,20 +318,20 @@ defmodule Content.FrameEncoder do
       kind:
         {:world_text,
          %Network.Proto.UiWorldText{
-           world_x: world_x * 1.0,
-           world_y: world_y * 1.0,
-           world_z: world_z * 1.0,
+           world_x: pb_float(world_x),
+           world_y: pb_float(world_y),
+           world_z: pb_float(world_z),
            text: text,
-           color: [r * 1.0, g * 1.0, b * 1.0, a * 1.0],
-           lifetime: lifetime * 1.0,
-           max_lifetime: max_lifetime * 1.0
+           color: color_tuple_to_pb_list({r, g, b, a}),
+           lifetime: pb_float(lifetime),
+           max_lifetime: pb_float(max_lifetime)
          }}
     }
   end
 
   defp ui_component_to_pb({:screen_flash, {r, g, b, a}}) do
     %Network.Proto.UiComponent{
-      kind: {:screen_flash, %Network.Proto.UiScreenFlash{color: [r * 1.0, g * 1.0, b * 1.0, a * 1.0]}}
+      kind: {:screen_flash, %Network.Proto.UiScreenFlash{color: color_tuple_to_pb_list({r, g, b, a})}}
     }
   end
 
@@ -331,8 +341,8 @@ defmodule Content.FrameEncoder do
     verts =
       Enum.map(vertices, fn {{px, py, pz}, {cr, cg, cb, ca}} ->
         %Network.Proto.MeshVertexMsg{
-          position: [px * 1.0, py * 1.0, pz * 1.0],
-          color: [cr * 1.0, cg * 1.0, cb * 1.0, ca * 1.0]
+          position: vec3_to_pb_list({px, py, pz}),
+          color: color_tuple_to_pb_list({cr, cg, cb, ca})
         }
       end)
 
@@ -374,19 +384,19 @@ defmodule Content.FrameEncoder do
   defp put_injection_pb_field("player_input", {dx, dy}, acc) do
     {:ok,
      struct!(acc,
-       player_input: %Network.Proto.Vec2f{x: dx * 1.0, y: dy * 1.0}
+       player_input: %Network.Proto.Vec2f{x: pb_float(dx), y: pb_float(dy)}
      )}
   end
 
   defp put_injection_pb_field("player_snapshot", {hp, inv}, acc) do
     {:ok,
      struct!(acc,
-       player_snapshot: %Network.Proto.Vec2f{x: hp * 1.0, y: inv * 1.0}
+       player_snapshot: %Network.Proto.Vec2f{x: pb_float(hp), y: pb_float(inv)}
      )}
   end
 
   defp put_injection_pb_field("elapsed_seconds", v, acc) when is_number(v) do
-    {:ok, struct!(acc, elapsed_seconds: v * 1.0)}
+    {:ok, struct!(acc, elapsed_seconds: pb_float(v))}
   end
 
   defp put_injection_pb_field("weapon_slots", slots, acc) when is_list(slots) do
@@ -395,8 +405,8 @@ defmodule Content.FrameEncoder do
         %Network.Proto.WeaponSlot{
           kind_id: k,
           level: l,
-          cooldown: c * 1.0,
-          cooldown_sec: cs * 1.0,
+          cooldown: pb_float(c),
+          cooldown_sec: pb_float(cs),
           precomputed_damage: pd
         }
       end)
@@ -407,7 +417,7 @@ defmodule Content.FrameEncoder do
   defp put_injection_pb_field("enemy_damage_this_frame", list, acc) when is_list(list) do
     pairs =
       Enum.map(list, fn {k, d} ->
-        %Network.Proto.EnemyDamagePair{kind_id: k, damage: d * 1.0}
+        %Network.Proto.EnemyDamagePair{kind_id: k, damage: pb_float(d)}
       end)
 
     {:ok,
@@ -432,10 +442,10 @@ defmodule Content.FrameEncoder do
          state:
            {:alive,
             %Network.Proto.SpecialAlive{
-              x: x * 1.0,
-              y: y * 1.0,
-              radius: radius * 1.0,
-              damage: damage * 1.0,
+              x: pb_float(x),
+              y: pb_float(y),
+              radius: pb_float(radius),
+              damage: pb_float(damage),
               invincible: inv
             }}
        }

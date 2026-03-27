@@ -366,7 +366,12 @@ defmodule Network.ZenohBridge do
         {:error, :invalid_etf_movement}
     end
   rescue
-    _ -> {:error, :invalid_etf_movement}
+    e ->
+      Logger.debug(
+        "[input:ZenohBridge] movement ETF decode failed, will reject: #{Exception.message(e)}"
+      )
+
+      {:error, :invalid_etf_movement}
   end
 
   defp try_decode_action_protobuf(payload) when is_binary(payload) do
@@ -404,7 +409,12 @@ defmodule Network.ZenohBridge do
         {:error, :invalid_etf_action}
     end
   rescue
-    _ -> {:error, :invalid_etf_action}
+    e ->
+      Logger.debug(
+        "[input:ZenohBridge] action ETF decode failed, will reject: #{Exception.message(e)}"
+      )
+
+      {:error, :invalid_etf_action}
   end
 
   defp try_decode_client_info_protobuf(payload) when is_binary(payload) do
