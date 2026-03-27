@@ -15,7 +15,7 @@
 |:---|:---|:---|
 | Rust | `protobuf_codec.rs` 等に手書き `prost::Message` | `prost-build` + `build.rs` で `.proto` から生成 |
 | Elixir | `render_frame_native.ex` 等に手書き DSL | `protoc` + `protoc-gen-elixir` で `.ex` を生成 |
-| 契約 | `proto/*.proto` と二重管理 | **`proto/*.proto` のみ**を編集し、**`mix alchemy.gen_proto`** で生成物を更新する |
+| 契約 | `proto/*.proto` と二重管理 | **`proto/*.proto` のみ**を編集し、**`mix alchemy.gen.proto`** で生成物を更新する |
 
 ### 1.2 前提ツール
 
@@ -65,7 +65,7 @@ package alchemy.render;
 
 ### 2.3 単一の生成エントリ（必須）
 
-**リポジトリルートで `mix alchemy.gen_proto`** を唯一のエントリとする（`apps/core/lib/mix/tasks/alchemy.gen_proto.ex`）。
+**リポジトリルートで `mix alchemy.gen.proto`** を唯一のエントリとする（`apps/core/lib/mix/tasks/alchemy.gen.proto.ex`）。
 
 - Elixir の `protoc` 呼び出しと、Rust 側で `prost-build` を走らせる `cargo build` のトリガーを **このタスク内**にまとめる。
 - OS 差のある **`scripts/gen_proto.sh` / `.ps1` は置かない**（PATH・改行コードのばらつきで事故りやすいため）。
@@ -186,11 +186,11 @@ protoc \
 
 - [ ] `proto/` のみを編集し、`cargo build` / `mix compile` が通る。
 - [ ] 手書き `prost` 構造体が該当メッセージから消えている。
-- [ ] 手書き `use Protobuf` の該当メッセージが消えている。
+- [x] 手書き `use Protobuf` の該当メッセージが消えている。
 - [ ] Zenoh / NIF の結合テストまたは手動で、フレーム・入力・injection が従来どおり動く。
 - [ ] CI で `protoc` が利用可能。
-- [ ] `development.md` には手順を書かず、**本書と `docs/architecture/protobuf-migration.md` に集約**する。
-- [ ] **`mix alchemy.gen_proto`** が Elixir / Rust の生成をまとめて実行する（または明確にサブステップを表示する）。
+- [x] `development.md` には手順を書かず、**本書と `docs/architecture/protobuf-migration.md` に集約**する。
+- [x] **`mix alchemy.gen.proto`** が Elixir / Rust の生成をまとめて実行する（または明確にサブステップを表示する）。
 
 ---
 
@@ -199,7 +199,7 @@ protoc \
 リポジトリルートで次を実行する。
 
 ```bash
-mix alchemy.gen_proto
+mix alchemy.gen.proto
 ```
 
 この Mix タスクが次を担う（実装は本タスクに順次追加する）。
@@ -215,4 +215,4 @@ mix alchemy.gen_proto
 
 - [protobuf-migration-plan.md](../7_done/protobuf-migration-plan.md) — 移行フェーズ・バックログ（主経路の移行は完了）
 - [docs/architecture/protobuf-migration.md](../../docs/architecture/protobuf-migration.md) — 公開向け概要
-- [development.md](../../development.md) — 開発ガイド（生成エントリは `mix alchemy.gen_proto`）
+- [development.md](../../development.md) — 開発ガイド（生成エントリは `mix alchemy.gen.proto`）

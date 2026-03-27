@@ -76,10 +76,82 @@ defmodule Network.UDPTest do
     end
 
     test ":frame パケットをエンコード・デコードできる" do
-      events = [{:player_moved, 1.0, 2.0}, {:score_updated, 100}]
-      packet = {:frame, 6, events}
+      frame_payload = <<0x08, 0x96, 0x01, 0x12, 0x03, "abc">>
+      packet = {:frame, 6, frame_payload}
       assert {:ok, bin} = Protocol.encode(packet)
-      assert {:ok, {:frame, 6, ^events}} = Protocol.decode(bin)
+      assert {:ok, {:frame, 6, ^frame_payload}} = Protocol.decode(bin)
+    end
+
+    test ":frame は RenderFrame struct からもエンコードできる" do
+      render_frame = %Alchemy.Render.RenderFrame{
+        commands: [
+          %Alchemy.Render.DrawCommand{
+            kind:
+              {:sprite_raw,
+               %Alchemy.Render.SpriteRaw{
+                 x: 10.0,
+                 y: 20.0,
+                 width: 30.0,
+                 height: 40.0
+               }}
+          }
+        ],
+        camera: %Alchemy.Render.CameraParams{
+          kind: {:camera_2d, %Alchemy.Render.Camera2d{offset_x: 1.0, offset_y: -2.0}}
+        },
+        ui: %Alchemy.Render.UiCanvas{
+          nodes: [
+            %Alchemy.Render.UiNode{
+              rect: %Alchemy.Render.UiRect{
+                anchor: "top_left",
+                offset: [8.0, 16.0],
+                size: {:fixed, %Alchemy.Render.UiSizeFixed{w: 120.0, h: 32.0}}
+              },
+              component: %Alchemy.Render.UiComponent{
+                kind: {:text, %Alchemy.Render.UiText{text: "HP", color: [1.0, 1.0, 1.0, 1.0], size: 16.0}}
+              },
+              children: []
+            }
+          ]
+        },
+        mesh_definitions: []
+      }
+
+      assert {:ok, bin} = Protocol.encode({:frame, 6, render_frame})
+      assert {:ok, {:frame, 6, frame_payload}} = Protocol.decode(bin)
+      assert {:ok, decoded} = Protocol.decode_frame_payload_as_render_frame(frame_payload)
+
+      assert %Alchemy.Render.CameraParams{
+               kind: {:camera_2d, %Alchemy.Render.Camera2d{offset_x: 1.0, offset_y: -2.0}}
+             } = decoded.camera
+
+      assert [
+               %Alchemy.Render.DrawCommand{
+                 kind:
+                   {:sprite_raw,
+                    %Alchemy.Render.SpriteRaw{
+                      x: 10.0,
+                      y: 20.0,
+                      width: 30.0,
+                      height: 40.0
+                    }}
+               }
+             ] = decoded.commands
+
+      assert [
+               %Alchemy.Render.UiNode{
+                 rect: %Alchemy.Render.UiRect{
+                   anchor: "top_left",
+                   offset: [8.0, 16.0],
+                   size: {:fixed, %Alchemy.Render.UiSizeFixed{w: 120.0, h: 32.0}}
+                 },
+                 component: %Alchemy.Render.UiComponent{
+                   kind:
+                     {:text,
+                      %Alchemy.Render.UiText{text: "HP", color: [1.0, 1.0, 1.0, 1.0], size: 16.0}}
+                 }
+               }
+             ] = decoded.ui.nodes
     end
 
     test ":ping パケットをエンコード・デコードできる" do
@@ -109,20 +181,24 @@ defmodule Network.UDPTest do
     end
   end
 
-  describe "Protocol.compress_events / decompress_events" do
-    test "イベントリストを圧縮・展開できる" do
-      events = Enum.map(1..50, fn i -> {:event, i, i * 1.0} end)
-      assert {:ok, compressed} = Protocol.compress_events(events)
-      assert {:ok, ^events} = Protocol.decompress_events(compressed)
+  describe "Protocol.compress_frame_payload / decompress_frame_payload" do
+    test "frame payload を圧縮・展開できる" do
+      frame_payload = :binary.copy(<<1, 2, 3, 4, 5>>, 100)
+      assert {:ok, compressed} = Protocol.compress_frame_payload(frame_payload)
+      assert {:ok, ^frame_payload} = Protocol.decompress_frame_payload(compressed)
     end
 
-    test "空リストを圧縮・展開できる" do
-      assert {:ok, compressed} = Protocol.compress_events([])
-      assert {:ok, []} = Protocol.decompress_events(compressed)
+    test "空バイナリを圧縮・展開できる" do
+      assert {:ok, compressed} = Protocol.compress_frame_payload(<<>>)
+      assert {:ok, <<>>} = Protocol.decompress_frame_payload(compressed)
+    end
+
+    test "binary 以外は :invalid_frame_payload を返す" do
+      assert {:error, :invalid_frame_payload} = Protocol.compress_frame_payload([:not, :binary])
     end
 
     test "不正なバイナリは :error を返す" do
-      assert :error = Protocol.decompress_events(<<0xDE, 0xAD, 0xBE, 0xEF>>)
+      assert :error = Protocol.decompress_frame_payload(<<0xDE, 0xAD, 0xBE, 0xEF>>)
     end
   end
 
@@ -278,10 +354,36 @@ defmodule Network.UDPTest do
       :ok = send_packet(sock, server_port, Protocol.encode({:join, 1, room_id}))
       {:ok, {:join_ack, 1, _}} = recv_packet(sock)
 
-      events = [:event_a, :event_b]
-      Network.UDP.broadcast_frame(room_id, events)
+      frame_payload = <<1, 2, 3, 4>>
+      Network.UDP.broadcast_frame(room_id, frame_payload)
 
-      assert {:ok, {:frame, _seq, ^events}} = recv_packet(sock, 1000)
+      assert {:ok, {:frame, _seq, ^frame_payload}} = recv_packet(sock, 1000)
+    end
+
+    test "broadcast_frame は RenderFrame struct でも送信できる", %{server_port: server_port} do
+      room_id = "udp_frame_struct_#{System.unique_integer([:positive])}"
+      on_exit(fn -> Network.Local.unregister_room(room_id) end)
+
+      sock = open_client()
+      on_exit(fn -> close_client(sock) end)
+
+      :ok = send_packet(sock, server_port, Protocol.encode({:join, 1, room_id}))
+      {:ok, {:join_ack, 1, _}} = recv_packet(sock)
+
+      render_frame = %Alchemy.Render.RenderFrame{
+        commands: [],
+        camera: %Alchemy.Render.CameraParams{
+          kind: {:camera_2d, %Alchemy.Render.Camera2d{offset_x: 0.25, offset_y: 0.5}}
+        },
+        ui: %Alchemy.Render.UiCanvas{nodes: []},
+        mesh_definitions: []
+      }
+
+      Network.UDP.broadcast_frame(room_id, render_frame)
+
+      assert {:ok, {:frame, _seq, frame_payload}} = recv_packet(sock, 1000)
+      assert {:ok, decoded} = Protocol.decode_frame_payload_as_render_frame(frame_payload)
+      assert %Alchemy.Render.RenderFrame{} = decoded
     end
 
     test "別ルームのクライアントにはフレームが届かない", %{server_port: server_port} do
@@ -308,10 +410,11 @@ defmodule Network.UDPTest do
       {:ok, {:join_ack, 2, _}} = recv_packet(sock_b)
 
       # room_a にのみブロードキャスト
-      Network.UDP.broadcast_frame(room_a, [:only_for_a])
+      frame_payload = <<5, 6, 7>>
+      Network.UDP.broadcast_frame(room_a, frame_payload)
 
       # sock_a は受信できる
-      assert {:ok, {:frame, _seq, [:only_for_a]}} = recv_packet(sock_a, 500)
+      assert {:ok, {:frame, _seq, ^frame_payload}} = recv_packet(sock_a, 500)
 
       # sock_b は受信しない
       assert {:error, :timeout} = recv_packet(sock_b, 200)

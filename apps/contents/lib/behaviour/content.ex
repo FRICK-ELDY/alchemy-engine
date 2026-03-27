@@ -148,7 +148,7 @@ defmodule Contents.Behaviour.Content do
 
   playing_state は現在の playing シーンの state。context は on_nif_sync の context。
   context には :current_scene が含まれる（現在表示中のシーン種別）。
-  戻り値は `Content.MessagePackEncoder.encode_frame/4` に渡す形式の
+  戻り値は `Content.FrameEncoder.encode_frame/4` に渡す形式の
   `{commands, camera, ui}`。未実装の Content では Render が描画をスキップする。
   """
   @callback build_frame(playing_state :: map(), context :: map()) ::

@@ -7,7 +7,7 @@ defmodule Contents.Components.Category.Shader.Skybox do
   @doc """
   指定の上色・下色で Skybox 描画コマンド用のタプルを返す。
 
-  戻り値は Content.MessagePackEncoder の skybox 句で期待する形式:
+  戻り値は Content.FrameEncoder の skybox 句で期待する形式:
   `{:skybox, {tr, tg, tb, ta}, {br, bg, bb, ba}}`
   """
   @spec skybox_command({float(), float(), float(), float()}, {float(), float(), float(), float()}) ::

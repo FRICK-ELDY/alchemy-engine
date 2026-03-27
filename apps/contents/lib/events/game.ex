@@ -177,8 +177,7 @@ defmodule Contents.Events.Game do
   # ── インフォ: 移動入力 ────────────────────────────────────────────
 
   def handle_info({:move_input, dx, dy}, state) do
-    # set_player_input は maybe_set_input_and_broadcast でフレームごとに ETS から読んで行う。
-    # ここではコンポーネントへのディスパッチのみ（InputComponent 等がシーン state を更新する）。
+    # 入力の正規化・配信のみ行う。NIF 反映は maybe_set_input_and_broadcast で一本化する。
 
     now = now_ms()
     context = build_context(state, now, now - state.start_ms, flow_runner(state))
@@ -536,20 +535,30 @@ defmodule Contents.Events.Game do
     # process_transition は state を変更せず返すのみ。副作用（GenServer.call による push/replace/pop）のみ行う。
     _state = process_transition(result, state, now, content, runner)
 
+    Process.put(:frame_injection, %{})
+
+    maybe_set_input_and_broadcast(
+      state,
+      scene_type,
+      opts.physics_scenes,
+      if(throttled?, do: [], else: events),
+      context
+    )
+
+    # gameplay に必要な注入は throttled 時でも維持する。
+    dispatch_nif_sync_to_components(context)
+    apply_frame_injection(state)
+
     unless throttled? do
-      apply_frame_side_effects(state, scene_type, events, context, opts)
+      apply_frame_noncritical_side_effects(state, scene_type, opts)
     end
 
     {:noreply, %{state | last_tick: now, frame_count: state.frame_count + 1}}
   end
 
-  defp apply_frame_side_effects(state, scene_type, events, context, opts) do
-    Process.put(:frame_injection, %{})
-
-    maybe_set_input_and_broadcast(state, scene_type, opts.physics_scenes, events, context)
-    dispatch_nif_sync_to_components(context)
+  # 重い処理（ネットワーク publish / 診断キャッシュ）は遅延時にスキップ可能。
+  defp apply_frame_noncritical_side_effects(state, scene_type, opts) do
     maybe_publish_zenoh_frame(state)
-    apply_frame_injection(state)
     Diagnostics.maybe_log_and_cache(state, scene_type, opts.elapsed, opts.content, opts.runner)
   end
 
@@ -615,9 +624,8 @@ defmodule Contents.Events.Game do
         Contents.ComponentList.local_user_input_module() || Contents.LocalUserComponent
 
       {dx, dy} = local_mod.get_move_vector(state.room_id)
-
-      inj = Process.get(:frame_injection, %{})
-      Process.put(:frame_injection, Map.put(inj, :player_input, {dx * 1.0, dy * 1.0}))
+      maybe_set_player_input_direct(state.world_ref, dx, dy)
+      maybe_set_weapon_slots_direct(state)
 
       run_component_physics_callbacks(context)
 
@@ -789,4 +797,56 @@ defmodule Contents.Events.Game do
   defp now_ms, do: System.monotonic_time(:millisecond)
 
   defp current_content, do: Core.Config.current()
+
+  defp maybe_set_player_input_direct(world_ref, dx, dy) when is_number(dx) and is_number(dy) do
+    case Core.NifBridge.set_player_input(world_ref, dx * 1.0, dy * 1.0) do
+      {:error, reason} ->
+        Logger.debug("[Events.Game] set_player_input failed: #{inspect(reason)}")
+
+      _ ->
+        :ok
+    end
+  end
+
+  # VampireSurvivor など武器スロット注入が必須のコンテンツ向けフォールバック。
+  # frame_injection が遅延・欠落しても、毎フレーム直接 NIF 側に同期する。
+  defp maybe_set_weapon_slots_direct(state) do
+    content = current_content()
+    runner = content.flow_runner(state.room_id)
+
+    if is_nil(runner) do
+      :ok
+    else
+      playing_state = Contents.Scenes.Stack.get_scene_state(runner, content.playing_scene()) || %{}
+      weapon_levels = Map.get(playing_state, :weapon_levels)
+
+      if is_map(weapon_levels) do
+        cond do
+          function_exported?(content, :weapon_slots_for_nif, 2) ->
+            weapon_cooldowns = Map.get(playing_state, :weapon_cooldowns, %{})
+            slots = content.weapon_slots_for_nif(weapon_levels, weapon_cooldowns)
+            do_set_weapon_slots(state.world_ref, slots)
+
+          function_exported?(content, :weapon_slots_for_nif, 1) ->
+            slots = content.weapon_slots_for_nif(weapon_levels)
+            do_set_weapon_slots(state.world_ref, slots)
+
+          true ->
+            :ok
+        end
+      else
+        :ok
+      end
+    end
+  end
+
+  defp do_set_weapon_slots(world_ref, slots) when is_list(slots) do
+    case Core.NifBridge.set_weapon_slots(world_ref, slots) do
+      {:error, reason} ->
+        Logger.debug("[Events.Game] set_weapon_slots failed: #{inspect(reason)}")
+
+      _ ->
+        :ok
+    end
+  end
 end

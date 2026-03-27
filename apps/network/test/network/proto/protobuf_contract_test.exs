@@ -4,42 +4,42 @@ defmodule Network.Proto.ProtobufContractTest do
 
   describe "Zenoh 主要経路の protobuf 契約（encode → decode）" do
     test "Movement" do
-      msg = %Network.Proto.Movement{dx: 0.25, dy: -0.75}
-      bin = Network.Proto.Movement.encode(msg)
+      msg = %Alchemy.Input.Movement{dx: 0.25, dy: -0.75}
+      bin = Alchemy.Input.Movement.encode(msg)
       assert byte_size(bin) > 0
 
-      assert %Network.Proto.Movement{dx: dx, dy: dy} = Network.Proto.Movement.decode(bin)
+      assert %Alchemy.Input.Movement{dx: dx, dy: dy} = Alchemy.Input.Movement.decode(bin)
       assert_in_delta dx, 0.25, 1.0e-5
       assert_in_delta dy, -0.75, 1.0e-5
     end
 
     test "Action" do
-      msg = %Network.Proto.Action{name: "pause"}
-      bin = Network.Proto.Action.encode(msg)
+      msg = %Alchemy.Input.Action{name: "pause"}
+      bin = Alchemy.Input.Action.encode(msg)
       assert byte_size(bin) > 0
 
-      assert %Network.Proto.Action{name: "pause"} = Network.Proto.Action.decode(bin)
+      assert %Alchemy.Input.Action{name: "pause"} = Alchemy.Input.Action.decode(bin)
     end
 
     test "ClientInfo" do
-      msg = %Network.Proto.ClientInfo{os: "win32", arch: "x86_64", family: "windows"}
-      bin = Network.Proto.ClientInfo.encode(msg)
+      msg = %Alchemy.Client.ClientInfo{os: "win32", arch: "x86_64", family: "windows"}
+      bin = Alchemy.Client.ClientInfo.encode(msg)
       assert byte_size(bin) > 0
 
-      assert %Network.Proto.ClientInfo{os: "win32", arch: "x86_64", family: "windows"} =
-               Network.Proto.ClientInfo.decode(bin)
+      assert %Alchemy.Client.ClientInfo{os: "win32", arch: "x86_64", family: "windows"} =
+               Alchemy.Client.ClientInfo.decode(bin)
     end
 
     test "FrameInjection（Vec2f 付き）" do
-      msg = %Network.Proto.FrameInjection{
-        player_input: %Network.Proto.Vec2f{x: 1.0, y: 2.0}
+      msg = %Alchemy.Frame.FrameInjection{
+        player_input: %Alchemy.Frame.Vec2f{x: 1.0, y: 2.0}
       }
 
-      bin = Network.Proto.FrameInjection.encode(msg)
+      bin = Alchemy.Frame.FrameInjection.encode(msg)
       assert byte_size(bin) > 0
 
-      decoded = Network.Proto.FrameInjection.decode(bin)
-      assert %Network.Proto.Vec2f{x: 1.0, y: 2.0} = decoded.player_input
+      decoded = Alchemy.Frame.FrameInjection.decode(bin)
+      assert %Alchemy.Frame.Vec2f{x: 1.0, y: 2.0} = decoded.player_input
     end
   end
 end

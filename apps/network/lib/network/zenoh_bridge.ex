@@ -7,7 +7,7 @@ defmodule Network.ZenohBridge do
   - client_info subscribe: `contents/room/*/client/info` → `:client_info` ETS に保存
   - 受信した入力は `Contents.Events.Game` へ `{:move_input, dx, dy}` / `{:ui_action, name}` で配送
 
-  入力ペイロードの解釈は **protobuf**（movement / action）。`client_info` のみ protobuf 失敗時に MessagePack を試す。
+  入力ペイロードの解釈は **protobuf**（movement / action / client_info）。
 
   設定: `config :network, :zenoh_enabled, true` で有効化。
   """
@@ -319,15 +319,15 @@ defmodule Network.ZenohBridge do
         {:ok, info}
 
       {:error, _} ->
-        Msgpax.unpack(payload)
+        :error
     end
   end
 
   defp decode_client_info(_), do: :error
 
   defp try_decode_movement_protobuf(payload) when is_binary(payload) do
-    case Network.Proto.Movement.decode(payload) do
-      %Network.Proto.Movement{dx: dx, dy: dy} when is_number(dx) and is_number(dy) ->
+    case Alchemy.Input.Movement.decode(payload) do
+      %Alchemy.Input.Movement{dx: dx, dy: dy} when is_number(dx) and is_number(dy) ->
         {:ok, {dx, dy}}
 
       _ ->
@@ -343,8 +343,8 @@ defmodule Network.ZenohBridge do
   end
 
   defp try_decode_action_protobuf(payload) when is_binary(payload) do
-    case Network.Proto.Action.decode(payload) do
-      %Network.Proto.Action{name: name} when is_binary(name) and byte_size(name) > 0 ->
+    case Alchemy.Input.Action.decode(payload) do
+      %Alchemy.Input.Action{name: name} when is_binary(name) and byte_size(name) > 0 ->
         {:ok, name}
 
       _ ->
@@ -360,8 +360,8 @@ defmodule Network.ZenohBridge do
   end
 
   defp try_decode_client_info_protobuf(payload) when is_binary(payload) do
-    case Network.Proto.ClientInfo.decode(payload) do
-      %Network.Proto.ClientInfo{os: os, arch: arch, family: family}
+    case Alchemy.Client.ClientInfo.decode(payload) do
+      %Alchemy.Client.ClientInfo{os: os, arch: arch, family: family}
       when is_binary(os) and is_binary(arch) and is_binary(family) ->
         {:ok, %{"os" => os, "arch" => arch, "family" => family}}
 
@@ -371,7 +371,7 @@ defmodule Network.ZenohBridge do
   rescue
     e ->
       Logger.debug(
-        "[ZenohBridge] client_info protobuf decode failed, will try MessagePack: #{Exception.message(e)}"
+        "[ZenohBridge] client_info protobuf decode failed: #{Exception.message(e)}"
       )
 
       {:error, :invalid_protobuf_client_info}

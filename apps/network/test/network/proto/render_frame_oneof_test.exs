@@ -3,10 +3,10 @@ defmodule Network.Proto.RenderFrameOneofTest do
   use ExUnit.Case, async: true
 
   test "DrawCommand protobuf encodes sprite_raw oneof (regression: protobuf 0.16 explicit oneof)" do
-    cmd = %Network.Proto.DrawCommand{
+    cmd = %Alchemy.Render.DrawCommand{
       kind:
         {:sprite_raw,
-         %Network.Proto.SpriteRaw{
+         %Alchemy.Render.SpriteRaw{
            x: 1.0,
            y: 2.0,
            width: 3.0,
