@@ -19,8 +19,14 @@ jobs:
       - uses: actions/checkout@v4
 
       # audio が cpal → alsa-sys を依存するため ALSA 開発ヘッダが必要
+      # nif の prost-build が protoc を要求（clippy でもビルドが走る）
       - name: install system deps
-        run: sudo apt-get update -q && sudo apt-get install -y libasound2-dev
+        run: sudo apt-get update -q && sudo apt-get install -y libasound2-dev protobuf-compiler
+
+      - name: Export PROTOC for prost-build
+        run: |
+          command -v protoc
+          echo "PROTOC=$(command -v protoc)" >> $GITHUB_ENV
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -50,9 +56,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # nif → audio → cpal → alsa-sys のビルドに必要
+      # nif → audio → cpal → alsa-sys のビルドに必要（prost-build にも protoc が要る）
       - name: install system deps
-        run: sudo apt-get update -q && sudo apt-get install -y libasound2-dev
+        run: sudo apt-get update -q && sudo apt-get install -y libasound2-dev protobuf-compiler
+
+      - name: Export PROTOC for prost-build
+        run: |
+          command -v protoc
+          echo "PROTOC=$(command -v protoc)" >> $GITHUB_ENV
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -73,6 +84,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # libasound2-dev: NIF / cpal。protoc は setup-protoc（27.x）で入れる
       - name: Install system deps
         run: sudo apt-get update -q && sudo apt-get install -y libasound2-dev
 
@@ -82,6 +94,11 @@ jobs:
           version: "27.x"
           # GitHub API の未認証レート制限回避（共有ランナー IP では頻発しうる）
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Export PROTOC for prost-build
+        run: |
+          command -v protoc
+          echo "PROTOC=$(command -v protoc)" >> $GITHUB_ENV
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -128,6 +145,19 @@ jobs:
       - name: install system deps
         run: sudo apt-get update -q && sudo apt-get install -y libasound2-dev
 
+      # prost-build は子プロセスで PATH が効かないことがあるため、PROTOC を明示（proto-verify と同じ 27.x）
+      - name: Setup protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: "27.x"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Export PROTOC for prost-build / Rustler
+        run: |
+          command -v protoc
+          protoc --version
+          echo "PROTOC=$(command -v protoc)" >> $GITHUB_ENV
+
       - uses: dtolnay/rust-toolchain@stable
 
       - uses: Swatinem/rust-cache@v2
@@ -165,9 +195,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # NIF ビルドで audio (cpal → alsa-sys) が必要とする ALSA 開発ヘッダ
       - name: install system deps
         run: sudo apt-get update -q && sudo apt-get install -y libasound2-dev
+
+      - name: Setup protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: "27.x"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Export PROTOC for prost-build / Rustler
+        run: |
+          command -v protoc
+          protoc --version
+          echo "PROTOC=$(command -v protoc)" >> $GITHUB_ENV
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -209,7 +250,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: install system deps
-        run: sudo apt-get update -q && sudo apt-get install -y libasound2-dev
+        run: sudo apt-get update -q && sudo apt-get install -y libasound2-dev protobuf-compiler
+
+      - name: Export PROTOC for prost-build
+        run: |
+          command -v protoc
+          echo "PROTOC=$(command -v protoc)" >> $GITHUB_ENV
 
       - uses: dtolnay/rust-toolchain@stable
 
