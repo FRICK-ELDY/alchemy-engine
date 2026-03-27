@@ -217,8 +217,16 @@
 
 ## 10. 完了判定
 
-- [ ] render frame / movement / action / frame injection / client_info が protobuf で稼働
-- [ ] ETF 依存コードが主要経路から削除済み
-- [ ] 契約テストと統合テストが通過
-- [ ] ドキュメントと実装が一致
+- [x] render frame / movement / action / frame injection / client_info が protobuf で稼働（主要経路）
+- [ ] ETF 依存コードが主要経路から削除済み（デュアルデコード期間中はフォールバックとして維持）
+- [ ] 契約テストと統合テストが通過（ネットワーク protobuf の単体テストは `apps/network/test/network/proto/render_frame_oneof_test.exs`）
+- [x] ドキュメントと実装が一致（`docs/architecture/erlang-term-schema.md` を protobuf 前提に更新済み）
+
+---
+
+## 11. 実施状況メモ（2026-03）
+
+- Elixir `Network.Proto` は手書き（`protobuf` 0.16）。oneof は `oneof :name, N` と各 `field ..., oneof: N` が必須。
+- Rust / `proto/*.proto` / Elixir の三箇所をスキーマ変更時に同期すること。
+- `config/config.exs` の `:server, :current` は protobuf 移行と無関係。コンテンツ切替は別 PR で扱う。
 
