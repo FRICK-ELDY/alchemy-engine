@@ -7,7 +7,7 @@ defmodule Network.ZenohBridge do
   - client_info subscribe: `contents/room/*/client/info` → `:client_info` ETS に保存
   - 受信した入力は `Contents.Events.Game` へ `{:move_input, dx, dy}` / `{:ui_action, name}` で配送
 
-  入力ペイロードの解釈は **protobuf**（movement / action）。`client_info` のみ protobuf 失敗時に MessagePack を試す。
+  入力ペイロードの解釈は **protobuf**（movement / action / client_info）。
 
   設定: `config :network, :zenoh_enabled, true` で有効化。
   """
@@ -319,7 +319,7 @@ defmodule Network.ZenohBridge do
         {:ok, info}
 
       {:error, _} ->
-        Msgpax.unpack(payload)
+        :error
     end
   end
 
@@ -371,7 +371,7 @@ defmodule Network.ZenohBridge do
   rescue
     e ->
       Logger.debug(
-        "[ZenohBridge] client_info protobuf decode failed, will try MessagePack: #{Exception.message(e)}"
+        "[ZenohBridge] client_info protobuf decode failed: #{Exception.message(e)}"
       )
 
       {:error, :invalid_protobuf_client_info}

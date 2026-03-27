@@ -44,6 +44,7 @@ defmodule Network.UDP do
   use GenServer
   require Logger
 
+  alias Network.Proto.RenderFrame
   alias Network.UDP.Protocol
 
   @default_port 4001
@@ -90,9 +91,13 @@ defmodule Network.UDP do
   指定ルームに接続している全クライアントにフレームイベントを送信する。
   `GameEvents` から `{:frame_events, events}` を受け取ったときに呼ばれる想定。
   """
-  @spec broadcast_frame(String.t(), list()) :: :ok
-  def broadcast_frame(room_id, events) do
-    GenServer.cast(__MODULE__, {:broadcast_frame, room_id, events})
+  @spec broadcast_frame(String.t(), binary() | RenderFrame.t()) :: :ok
+  def broadcast_frame(room_id, %RenderFrame{} = render_frame) do
+    broadcast_frame(room_id, RenderFrame.encode(render_frame))
+  end
+
+  def broadcast_frame(room_id, frame_payload) when is_binary(frame_payload) do
+    GenServer.cast(__MODULE__, {:broadcast_frame, room_id, frame_payload})
   end
 
   # ── GenServer コールバック ───────────────────────────────────────────
@@ -121,10 +126,10 @@ defmodule Network.UDP do
   end
 
   @impl true
-  def handle_cast({:broadcast_frame, room_id, events}, state) do
+  def handle_cast({:broadcast_frame, room_id, frame_payload}, state) do
     {seq, new_state} = next_seq(state)
 
-    case Protocol.encode({:frame, seq, events}) do
+    case Protocol.encode({:frame, seq, frame_payload}) do
       {:ok, packet} ->
         state.sessions
         |> Enum.filter(fn {_key, session} -> session.room_id == room_id end)

@@ -1,4 +1,6 @@
 defmodule Network.UDP.Protocol do
+  alias Network.Proto.RenderFrame
+
   @moduledoc """
   UDP パケットのエンコード・デコードとデルタ圧縮。
 
@@ -30,8 +32,7 @@ defmodule Network.UDP.Protocol do
 
   ## デルタ圧縮
 
-  `:frame` パケットのペイロードは zlib で圧縮した Erlang term バイナリ。
-  クライアントは直前のフレームとの差分のみを受け取ることで帯域を節約する。
+  `:frame` パケットのペイロードは zlib で圧縮したフレームバイナリ（protobuf想定）。
   現フェーズでは全フレームデータを送信し、差分計算はフェーズ4以降で実装する。
   """
 
@@ -45,13 +46,15 @@ defmodule Network.UDP.Protocol do
   @type_pong 0x08
   @type_error 0x09
 
+  @type frame_payload :: binary() | RenderFrame.t()
+
   @type packet ::
           {:join, seq :: non_neg_integer(), room_id :: String.t()}
           | {:join_ack, seq :: non_neg_integer(), room_id :: String.t()}
           | {:leave, seq :: non_neg_integer(), room_id :: String.t()}
           | {:input, seq :: non_neg_integer(), dx :: float(), dy :: float()}
           | {:action, seq :: non_neg_integer(), name :: String.t()}
-          | {:frame, seq :: non_neg_integer(), events :: list()}
+          | {:frame, seq :: non_neg_integer(), frame_payload :: frame_payload()}
           | {:ping, seq :: non_neg_integer()}
           | {:pong, seq :: non_neg_integer(), ts :: integer()}
           | {:error, seq :: non_neg_integer(), reason :: String.t()}
@@ -59,7 +62,7 @@ defmodule Network.UDP.Protocol do
   @doc """
   パケットをバイナリにエンコードする。
 
-  `:frame` パケットの圧縮に失敗した場合は `{:error, term()}` を返す。
+  `:frame` パケットの圧縮に失敗した場合、または payload が binary でない場合は `{:error, term()}` を返す。
   それ以外のパケット種別は常に `{:ok, binary()}` を返す。
   """
   @spec encode(packet()) :: {:ok, binary()} | {:error, term()}
@@ -86,8 +89,12 @@ defmodule Network.UDP.Protocol do
     {:ok, <<@type_action, seq::32, name::binary>>}
   end
 
-  def encode({:frame, seq, events}) do
-    case compress_events(events) do
+  def encode({:frame, seq, %RenderFrame{} = render_frame}) do
+    encode({:frame, seq, RenderFrame.encode(render_frame)})
+  end
+
+  def encode({:frame, seq, frame_payload}) do
+    case compress_frame_payload(frame_payload) do
       {:ok, compressed} -> {:ok, <<@type_frame, seq::32, compressed::binary>>}
       {:error, _} = err -> err
     end
@@ -131,8 +138,8 @@ defmodule Network.UDP.Protocol do
   end
 
   def decode(<<@type_frame, seq::32, compressed::binary>>) do
-    case decompress_events(compressed) do
-      {:ok, events} -> {:ok, {:frame, seq, events}}
+    case decompress_frame_payload(compressed) do
+      {:ok, frame_payload} -> {:ok, {:frame, seq, frame_payload}}
       :error -> {:error, :invalid_packet}
     end
   end
@@ -154,29 +161,36 @@ defmodule Network.UDP.Protocol do
   # ── デルタ圧縮 ──────────────────────────────────────────────────────
 
   @doc """
-  イベントリストを zlib で圧縮した binary に変換する。
-
-  現フェーズでは全イベントを送信する（差分計算なし）。
-  Erlang term_to_binary + zlib deflate の組み合わせで
-  繰り返しパターンの多いゲームイベントを効率的に圧縮する。
-
-  圧縮に失敗した場合は `{:error, reason}` を返す。
+  フレーム payload(binary) を zlib で圧縮する。
+  圧縮に失敗した場合、または payload が binary でない場合は `{:error, reason}` を返す。
   """
-  @spec compress_events(list()) :: {:ok, binary()} | {:error, term()}
-  def compress_events(events) do
-    {:ok, events |> :erlang.term_to_binary() |> :zlib.compress()}
+  @spec compress_frame_payload(binary()) :: {:ok, binary()} | {:error, term()}
+  def compress_frame_payload(frame_payload) when is_binary(frame_payload) do
+    {:ok, :zlib.compress(frame_payload)}
   rescue
     e -> {:error, e}
   end
 
+  def compress_frame_payload(_), do: {:error, :invalid_frame_payload}
+
   @doc """
-  `compress_events/1` で圧縮したバイナリを復元する。
+  `compress_frame_payload/1` で圧縮したバイナリを復元する。
   """
-  @spec decompress_events(binary()) :: {:ok, list()} | :error
-  def decompress_events(compressed) do
-    decompressed = :zlib.uncompress(compressed)
-    {:ok, :erlang.binary_to_term(decompressed, [:safe])}
+  @spec decompress_frame_payload(binary()) :: {:ok, binary()} | :error
+  def decompress_frame_payload(compressed) do
+    {:ok, :zlib.uncompress(compressed)}
   rescue
     _ -> :error
+  end
+
+  @doc """
+  UDP `:frame` payload を `Network.Proto.RenderFrame` としてデコードする。
+  """
+  @spec decode_frame_payload_as_render_frame(binary()) ::
+          {:ok, RenderFrame.t()} | {:error, term()}
+  def decode_frame_payload_as_render_frame(frame_payload) when is_binary(frame_payload) do
+    {:ok, RenderFrame.decode(frame_payload)}
+  rescue
+    e -> {:error, e}
   end
 end

@@ -4,7 +4,7 @@
 > 目的: Zenoh 通信で使用中の Erlang term（ETF）を段階的に廃止し、protobuf に統一する。  
 > 対象: フレーム配信、入力（movement/action）、frame injection、client_info
 
-**公開向けの概要**（`docs` からリンクする先）: [docs/architecture/protobuf-migration.md](../../docs/architecture/protobuf-migration.md)。本ファイルは作業用バックログであり、`development.md` 等の `docs` 配下から **`workspace/` へのリンクは張らない**方針とする。
+**公開向けの概要**（`docs` からリンクする先）: [docs/architecture/protobuf-migration.md](../../docs/architecture/protobuf-migration.md)。本ファイルは作業用バックログであり、`development.md` 等の `docs` 配下から `**workspace/` へのリンクは張らない**方針とする。
 
 **コード生成の完全自動化**（Rust / Elixir・**未完了**）: [protobuf-full-automation-procedure.md](../2_todo/protobuf-full-automation-procedure.md)
 
@@ -23,11 +23,11 @@
 ### 2.1 ゴール
 
 1. Zenoh 経由の主要ペイロードを protobuf 化する
-   - server -> client: render frame
-   - client -> server: movement / action
-   - contents -> nif: frame injection
-   - client_info
-2. ETF デコード/エンコード経路（`bert_*`）を廃止する
+  - server -> client: render frame
+  - client -> server: movement / action
+  - contents -> nif: frame injection
+  - client_info
+2. ETF デコード/エンコード経路（`bert_`*）を廃止する
 3. スキーマの単一ソース（`.proto`）を確立する
 4. ドキュメントを protobuf 前提に更新する
 
@@ -189,12 +189,14 @@
 
 ## 7. リスクと対策
 
-| リスク | 内容 | 対策 |
-|:---|:---|:---|
-| スキーマ不整合 | Elixir/Rust で型差異が出る | fixture 契約テストを CI 化 |
-| 可変長データ不備 | commands/ui で decode 失敗 | 段階導入 + フォールバック維持 |
-| 互換破壊 | フィールド変更で古いクライアントが壊れる | field 番号予約ポリシーを固定 |
-| 移行長期化 | ETF/Protobuf 二重保守が増える | フェーズ期限と削除条件を明確化 |
+
+| リスク      | 内容                      | 対策                  |
+| -------- | ----------------------- | ------------------- |
+| スキーマ不整合  | Elixir/Rust で型差異が出る     | fixture 契約テストを CI 化 |
+| 可変長データ不備 | commands/ui で decode 失敗 | 段階導入 + フォールバック維持    |
+| 互換破壊     | フィールド変更で古いクライアントが壊れる    | field 番号予約ポリシーを固定   |
+| 移行長期化    | ETF/Protobuf 二重保守が増える   | フェーズ期限と削除条件を明確化     |
+
 
 ---
 
@@ -219,10 +221,10 @@
 
 ## 10. 完了判定
 
-- [x] render frame / movement / action / frame injection / client_info が protobuf で稼働（主要経路）
-- [x] ETF 依存コードが主要経路から削除済み（Zenoh フレーム・入力・`set_frame_injection_binary` は protobuf のみ。`client_info` は protobuf 優先のまま MessagePack フォールバックを維持）
-- [x] 契約テストと統合テストが通過（`mix test` 全件、`apps/network/test/network/proto/protobuf_contract_test.exs` を追加）
-- [x] ドキュメントと実装が一致（`docs/architecture/erlang-term-schema.md` を protobuf 前提に更新済み）
+- render frame / movement / action / frame injection / client_info が protobuf で稼働（主要経路）
+- ETF 依存コードが主要経路から削除済み（Zenoh フレーム・入力・`set_frame_injection_binary` は protobuf のみ。`client_info` は protobuf 優先のまま MessagePack フォールバックを維持）
+- 契約テストと統合テストが通過（`mix test` 全件、`apps/network/test/network/proto/protobuf_contract_test.exs` を追加）
+- ドキュメントと実装が一致（`docs/architecture/erlang-term-schema.md` を protobuf 前提に更新済み）
 
 ---
 
@@ -233,3 +235,4 @@
 - Rust / `proto/*.proto` / Elixir の三箇所をスキーマ変更時に同期すること。
 - `config/config.exs` の `:server, :current` は protobuf 移行と無関係。コンテンツ切替は別 PR で扱う。
 - **P5 以降のフォローアップ**（`client_info` の MessagePack、`bert_encode` 名、NIF msgpack、UDP）: [protobuf-migration-p5-serialization-followups.md](../2_todo/protobuf-migration-p5-serialization-followups.md)
+
