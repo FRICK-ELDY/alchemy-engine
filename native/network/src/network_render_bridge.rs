@@ -90,7 +90,7 @@ impl NetworkRenderBridge {
 
     fn publish_client_info(&self, room_id: &str) {
         let info = ClientInfo::current();
-        let payload = match rmp_serde::to_vec(&info) {
+        let payload = match crate::protobuf_codec::encode_client_info(&info) {
             Ok(p) => p,
             Err(e) => {
                 log::warn!("client info serialize error: {e}");

@@ -8,6 +8,7 @@ pub mod bert_encode;
 pub mod common;
 pub mod network_render_bridge;
 pub mod platform;
+pub mod protobuf_codec;
 
 pub use common::*;
 pub use network_render_bridge::NetworkRenderBridge;

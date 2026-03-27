@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package alchemy.render;
+
+// 段階移行用の初期定義。
+// 現時点の実装では frame 本体は ETF を利用し、protobuf 移行は P1 で対応する。
+message RenderFrameEnvelope {
+  bytes payload = 1;
+}

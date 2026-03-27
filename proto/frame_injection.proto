@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package alchemy.frame;
+
+// 段階移行用の初期定義。
+// 現時点の実装では injection 本体は ETF を利用し、protobuf 移行は P3 で対応する。
+message FrameInjectionEnvelope {
+  bytes payload = 1;
+}
