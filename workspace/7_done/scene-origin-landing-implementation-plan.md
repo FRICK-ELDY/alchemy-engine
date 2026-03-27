@@ -1,7 +1,7 @@
 # Scene の origin・着地点・トップレベル子の実装計画
 
 > 作成日: 2026-03-16  
-> 参照: [scene-origin-and-landing-reference-plan.md](./scene-origin-and-landing-reference-plan.md), [scene-and-object.md](../../docs/architecture/scene-and-object.md)  
+> 参照: [scene-origin-and-landing-reference-plan.md](../2_todo/scene-origin-and-landing-reference-plan.md), [scene-and-object.md](../../docs/architecture/scene-and-object.md)  
 > 目的: Scene の state 型と Stack で origin / 着地点参照 / トップレベル Object を扱えるようにし、FormulaTest.Playing を root_object から origin + landing_object + children に移行する。
 
 ---
@@ -10,7 +10,7 @@
 
 ### 1.1 前提
 
-- [scene-origin-and-landing-reference-plan.md](./scene-origin-and-landing-reference-plan.md) の Phase 1〜3 は完了済み。ドキュメント上は「origin を Scene が持ち、着地点は参照のみ」に統一されている。
+- [scene-origin-and-landing-reference-plan.md](../2_todo/scene-origin-and-landing-reference-plan.md) の Phase 1〜3 は完了済み。ドキュメント上は「origin を Scene が持ち、着地点は参照のみ」に統一されている。
 - 本計画は同計画書の **Phase 4（将来のコード変更）** を実施するための実施計画である。
 
 ### 1.2 スコープ
@@ -102,12 +102,12 @@ Phase 1（Scene state 型・ヘルパー）
 
 ## 5. 完了条件
 
-- [ ] Scene state の推奨型（または doc）と、必要に応じたヘルパー（例: `origin_from_state/1`）が定義されている
-- [ ] Stack の @moduledoc が、scene state に origin / landing_object / children を持つ規約を参照している（および必要なら get_current_origin 等の API が追加されている）
-- [ ] FormulaTest.Playing の state が `origin` + `landing_object` + `children` に移行され、`root_object` / `child_object` が削除されている
-- [ ] FormulaTest の起動と HUD 表示・Quit が従来通り動作する
-- [ ] Contents.Behaviour.Content の scene_init @doc が origin / landing_object / children 推奨に更新されている
-- [ ] scene-origin-and-landing-reference-plan.md の Phase 4 に本実施計画書への参照が追加されている
+- [x] Scene state の推奨型（または doc）と、必要に応じたヘルパー（例: `origin_from_state/1`）が定義されている
+- [x] Stack の @moduledoc が、scene state に origin / landing_object / children を持つ規約を参照している（および必要なら get_current_origin 等の API が追加されている）
+- [x] FormulaTest.Playing の state が `origin` + `landing_object` + `children` に移行され、`root_object` / `child_object` が削除されている
+- [x] FormulaTest の起動と HUD 表示・Quit が従来通り動作する
+- [x] Contents.Behaviour.Content の scene_init @doc が origin / landing_object / children 推奨に更新されている
+- [x] scene-origin-and-landing-reference-plan.md の Phase 4 に本実施計画書への参照が追加されている
 
 ---
 
@@ -115,6 +115,6 @@ Phase 1（Scene state 型・ヘルパー）
 
 | ドキュメント | 役割 |
 |--------------|------|
-| [scene-origin-and-landing-reference-plan.md](./scene-origin-and-landing-reference-plan.md) | 方針と用語。Phase 4 で本計画に委譲。 |
+| [scene-origin-and-landing-reference-plan.md](../2_todo/scene-origin-and-landing-reference-plan.md) | 方針と用語。Phase 4 で本計画に委譲。 |
 | [scene-and-object.md](../../docs/architecture/scene-and-object.md) | Scene の責務と state 規約（origin・着地点参照）。 |
 | [contents-migration-plan.md](../1_backlog/contents-migration-plan.md) | 既存コンテンツ移行の共通パターン。 |
