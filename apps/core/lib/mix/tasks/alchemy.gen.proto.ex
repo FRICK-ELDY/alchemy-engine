@@ -25,6 +25,7 @@ defmodule Mix.Tasks.Alchemy.Gen.Proto do
     native_manifest = Path.join(root, "native/Cargo.toml")
     protoc = System.get_env("PROTOC") || "protoc"
     proto_files = discover_proto_files!(proto_dir)
+
     temp_out =
       Path.join([root, ".tmp", "alchemy-gen-proto-#{System.unique_integer([:positive])}"])
 

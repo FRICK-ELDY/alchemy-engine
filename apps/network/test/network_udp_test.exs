@@ -108,7 +108,9 @@ defmodule Network.UDPTest do
                 size: {:fixed, %Alchemy.Render.UiSizeFixed{w: 120.0, h: 32.0}}
               },
               component: %Alchemy.Render.UiComponent{
-                kind: {:text, %Alchemy.Render.UiText{text: "HP", color: [1.0, 1.0, 1.0, 1.0], size: 16.0}}
+                kind:
+                  {:text,
+                   %Alchemy.Render.UiText{text: "HP", color: [1.0, 1.0, 1.0, 1.0], size: 16.0}}
               },
               children: []
             }

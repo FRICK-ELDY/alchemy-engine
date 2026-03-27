@@ -335,9 +335,7 @@ defmodule Network.ZenohBridge do
     end
   rescue
     e ->
-      Logger.debug(
-        "[input:ZenohBridge] movement protobuf decode failed: #{Exception.message(e)}"
-      )
+      Logger.debug("[input:ZenohBridge] movement protobuf decode failed: #{Exception.message(e)}")
 
       {:error, :invalid_protobuf_movement}
   end
@@ -352,9 +350,7 @@ defmodule Network.ZenohBridge do
     end
   rescue
     e ->
-      Logger.debug(
-        "[input:ZenohBridge] action protobuf decode failed: #{Exception.message(e)}"
-      )
+      Logger.debug("[input:ZenohBridge] action protobuf decode failed: #{Exception.message(e)}")
 
       {:error, :invalid_protobuf_action}
   end
@@ -370,9 +366,7 @@ defmodule Network.ZenohBridge do
     end
   rescue
     e ->
-      Logger.debug(
-        "[ZenohBridge] client_info protobuf decode failed: #{Exception.message(e)}"
-      )
+      Logger.debug("[ZenohBridge] client_info protobuf decode failed: #{Exception.message(e)}")
 
       {:error, :invalid_protobuf_client_info}
   end

@@ -7,9 +7,9 @@ defmodule Alchemy.Render.CursorGrabKind do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :CURSOR_GRAB_UNSPECIFIED, 0
-  field :CURSOR_GRAB_GRAB, 1
-  field :CURSOR_GRAB_RELEASE, 2
+  field(:CURSOR_GRAB_UNSPECIFIED, 0)
+  field(:CURSOR_GRAB_GRAB, 1)
+  field(:CURSOR_GRAB_RELEASE, 2)
 end
 
 defmodule Alchemy.Render.RenderFrameEnvelope do
@@ -20,7 +20,7 @@ defmodule Alchemy.Render.RenderFrameEnvelope do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :payload, 1, type: :bytes
+  field(:payload, 1, type: :bytes)
 end
 
 defmodule Alchemy.Render.RenderFrame do
@@ -31,20 +31,22 @@ defmodule Alchemy.Render.RenderFrame do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :commands, 1, repeated: true, type: Alchemy.Render.DrawCommand
-  field :camera, 2, type: Alchemy.Render.CameraParams
-  field :ui, 3, type: Alchemy.Render.UiCanvas
+  field(:commands, 1, repeated: true, type: Alchemy.Render.DrawCommand)
+  field(:camera, 2, type: Alchemy.Render.CameraParams)
+  field(:ui, 3, type: Alchemy.Render.UiCanvas)
 
-  field :mesh_definitions, 4,
+  field(:mesh_definitions, 4,
     repeated: true,
     type: Alchemy.Render.MeshDef,
     json_name: "meshDefinitions"
+  )
 
-  field :cursor_grab, 5,
+  field(:cursor_grab, 5,
     proto3_optional: true,
     type: Alchemy.Render.CursorGrabKind,
     json_name: "cursorGrab",
     enum: true
+  )
 end
 
 defmodule Alchemy.Render.DrawCommand do
@@ -55,22 +57,23 @@ defmodule Alchemy.Render.DrawCommand do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  oneof :kind, 0
+  oneof(:kind, 0)
 
-  field :player_sprite, 1, type: Alchemy.Render.PlayerSprite, json_name: "playerSprite", oneof: 0
-  field :sprite_raw, 2, type: Alchemy.Render.SpriteRaw, json_name: "spriteRaw", oneof: 0
-  field :particle, 3, type: Alchemy.Render.ParticleCmd, oneof: 0
-  field :item, 4, type: Alchemy.Render.ItemCmd, oneof: 0
-  field :obstacle, 5, type: Alchemy.Render.ObstacleCmd, oneof: 0
-  field :box_3d, 6, type: Alchemy.Render.Box3dCmd, json_name: "box3d", oneof: 0
-  field :grid_plane, 7, type: Alchemy.Render.GridPlaneCmd, json_name: "gridPlane", oneof: 0
+  field(:player_sprite, 1, type: Alchemy.Render.PlayerSprite, json_name: "playerSprite", oneof: 0)
+  field(:sprite_raw, 2, type: Alchemy.Render.SpriteRaw, json_name: "spriteRaw", oneof: 0)
+  field(:particle, 3, type: Alchemy.Render.ParticleCmd, oneof: 0)
+  field(:item, 4, type: Alchemy.Render.ItemCmd, oneof: 0)
+  field(:obstacle, 5, type: Alchemy.Render.ObstacleCmd, oneof: 0)
+  field(:box_3d, 6, type: Alchemy.Render.Box3dCmd, json_name: "box3d", oneof: 0)
+  field(:grid_plane, 7, type: Alchemy.Render.GridPlaneCmd, json_name: "gridPlane", oneof: 0)
 
-  field :grid_plane_verts, 8,
+  field(:grid_plane_verts, 8,
     type: Alchemy.Render.GridPlaneVertsCmd,
     json_name: "gridPlaneVerts",
     oneof: 0
+  )
 
-  field :skybox, 9, type: Alchemy.Render.SkyboxCmd, oneof: 0
+  field(:skybox, 9, type: Alchemy.Render.SkyboxCmd, oneof: 0)
 end
 
 defmodule Alchemy.Render.PlayerSprite do
@@ -81,9 +84,9 @@ defmodule Alchemy.Render.PlayerSprite do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :x, 1, type: :float
-  field :y, 2, type: :float
-  field :frame, 3, type: :uint32
+  field(:x, 1, type: :float)
+  field(:y, 2, type: :float)
+  field(:frame, 3, type: :uint32)
 end
 
 defmodule Alchemy.Render.SpriteRaw do
@@ -94,13 +97,13 @@ defmodule Alchemy.Render.SpriteRaw do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :x, 1, type: :float
-  field :y, 2, type: :float
-  field :width, 3, type: :float
-  field :height, 4, type: :float
-  field :uv_offset, 5, repeated: true, type: :float, json_name: "uvOffset"
-  field :uv_size, 6, repeated: true, type: :float, json_name: "uvSize"
-  field :color_tint, 7, repeated: true, type: :float, json_name: "colorTint"
+  field(:x, 1, type: :float)
+  field(:y, 2, type: :float)
+  field(:width, 3, type: :float)
+  field(:height, 4, type: :float)
+  field(:uv_offset, 5, repeated: true, type: :float, json_name: "uvOffset")
+  field(:uv_size, 6, repeated: true, type: :float, json_name: "uvSize")
+  field(:color_tint, 7, repeated: true, type: :float, json_name: "colorTint")
 end
 
 defmodule Alchemy.Render.ParticleCmd do
@@ -111,13 +114,13 @@ defmodule Alchemy.Render.ParticleCmd do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :x, 1, type: :float
-  field :y, 2, type: :float
-  field :r, 3, type: :float
-  field :g, 4, type: :float
-  field :b, 5, type: :float
-  field :alpha, 6, type: :float
-  field :size, 7, type: :float
+  field(:x, 1, type: :float)
+  field(:y, 2, type: :float)
+  field(:r, 3, type: :float)
+  field(:g, 4, type: :float)
+  field(:b, 5, type: :float)
+  field(:alpha, 6, type: :float)
+  field(:size, 7, type: :float)
 end
 
 defmodule Alchemy.Render.ItemCmd do
@@ -128,9 +131,9 @@ defmodule Alchemy.Render.ItemCmd do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :x, 1, type: :float
-  field :y, 2, type: :float
-  field :kind, 3, type: :uint32
+  field(:x, 1, type: :float)
+  field(:y, 2, type: :float)
+  field(:kind, 3, type: :uint32)
 end
 
 defmodule Alchemy.Render.ObstacleCmd do
@@ -141,10 +144,10 @@ defmodule Alchemy.Render.ObstacleCmd do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :x, 1, type: :float
-  field :y, 2, type: :float
-  field :radius, 3, type: :float
-  field :kind, 4, type: :uint32
+  field(:x, 1, type: :float)
+  field(:y, 2, type: :float)
+  field(:radius, 3, type: :float)
+  field(:kind, 4, type: :uint32)
 end
 
 defmodule Alchemy.Render.Box3dCmd do
@@ -155,13 +158,13 @@ defmodule Alchemy.Render.Box3dCmd do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :x, 1, type: :float
-  field :y, 2, type: :float
-  field :z, 3, type: :float
-  field :half_w, 4, type: :float, json_name: "halfW"
-  field :half_h, 5, type: :float, json_name: "halfH"
-  field :half_d, 6, type: :float, json_name: "halfD"
-  field :color, 7, repeated: true, type: :float
+  field(:x, 1, type: :float)
+  field(:y, 2, type: :float)
+  field(:z, 3, type: :float)
+  field(:half_w, 4, type: :float, json_name: "halfW")
+  field(:half_h, 5, type: :float, json_name: "halfH")
+  field(:half_d, 6, type: :float, json_name: "halfD")
+  field(:color, 7, repeated: true, type: :float)
 end
 
 defmodule Alchemy.Render.GridPlaneCmd do
@@ -172,9 +175,9 @@ defmodule Alchemy.Render.GridPlaneCmd do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :size, 1, type: :float
-  field :divisions, 2, type: :uint32
-  field :color, 3, repeated: true, type: :float
+  field(:size, 1, type: :float)
+  field(:divisions, 2, type: :uint32)
+  field(:color, 3, repeated: true, type: :float)
 end
 
 defmodule Alchemy.Render.GridPlaneVertsCmd do
@@ -185,7 +188,7 @@ defmodule Alchemy.Render.GridPlaneVertsCmd do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :vertices, 1, repeated: true, type: Alchemy.Render.MeshVertex
+  field(:vertices, 1, repeated: true, type: Alchemy.Render.MeshVertex)
 end
 
 defmodule Alchemy.Render.SkyboxCmd do
@@ -196,8 +199,8 @@ defmodule Alchemy.Render.SkyboxCmd do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :top_color, 1, repeated: true, type: :float, json_name: "topColor"
-  field :bottom_color, 2, repeated: true, type: :float, json_name: "bottomColor"
+  field(:top_color, 1, repeated: true, type: :float, json_name: "topColor")
+  field(:bottom_color, 2, repeated: true, type: :float, json_name: "bottomColor")
 end
 
 defmodule Alchemy.Render.MeshVertex do
@@ -208,8 +211,8 @@ defmodule Alchemy.Render.MeshVertex do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :position, 1, repeated: true, type: :float
-  field :color, 2, repeated: true, type: :float
+  field(:position, 1, repeated: true, type: :float)
+  field(:color, 2, repeated: true, type: :float)
 end
 
 defmodule Alchemy.Render.MeshDef do
@@ -220,9 +223,9 @@ defmodule Alchemy.Render.MeshDef do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :name, 1, type: :string
-  field :vertices, 2, repeated: true, type: Alchemy.Render.MeshVertex
-  field :indices, 3, repeated: true, type: :uint32
+  field(:name, 1, type: :string)
+  field(:vertices, 2, repeated: true, type: Alchemy.Render.MeshVertex)
+  field(:indices, 3, repeated: true, type: :uint32)
 end
 
 defmodule Alchemy.Render.CameraParams do
@@ -233,10 +236,10 @@ defmodule Alchemy.Render.CameraParams do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  oneof :kind, 0
+  oneof(:kind, 0)
 
-  field :camera_2d, 1, type: Alchemy.Render.Camera2d, json_name: "camera2d", oneof: 0
-  field :camera_3d, 2, type: Alchemy.Render.Camera3d, json_name: "camera3d", oneof: 0
+  field(:camera_2d, 1, type: Alchemy.Render.Camera2d, json_name: "camera2d", oneof: 0)
+  field(:camera_3d, 2, type: Alchemy.Render.Camera3d, json_name: "camera3d", oneof: 0)
 end
 
 defmodule Alchemy.Render.Camera2d do
@@ -247,8 +250,8 @@ defmodule Alchemy.Render.Camera2d do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :offset_x, 1, type: :float, json_name: "offsetX"
-  field :offset_y, 2, type: :float, json_name: "offsetY"
+  field(:offset_x, 1, type: :float, json_name: "offsetX")
+  field(:offset_y, 2, type: :float, json_name: "offsetY")
 end
 
 defmodule Alchemy.Render.Camera3d do
@@ -259,12 +262,12 @@ defmodule Alchemy.Render.Camera3d do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :eye, 1, repeated: true, type: :float
-  field :target, 2, repeated: true, type: :float
-  field :up, 3, repeated: true, type: :float
-  field :fov_deg, 4, type: :float, json_name: "fovDeg"
-  field :near, 5, type: :float
-  field :far, 6, type: :float
+  field(:eye, 1, repeated: true, type: :float)
+  field(:target, 2, repeated: true, type: :float)
+  field(:up, 3, repeated: true, type: :float)
+  field(:fov_deg, 4, type: :float, json_name: "fovDeg")
+  field(:near, 5, type: :float)
+  field(:far, 6, type: :float)
 end
 
 defmodule Alchemy.Render.UiCanvas do
@@ -275,7 +278,7 @@ defmodule Alchemy.Render.UiCanvas do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :nodes, 1, repeated: true, type: Alchemy.Render.UiNode
+  field(:nodes, 1, repeated: true, type: Alchemy.Render.UiNode)
 end
 
 defmodule Alchemy.Render.UiNode do
@@ -286,9 +289,9 @@ defmodule Alchemy.Render.UiNode do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :rect, 1, type: Alchemy.Render.UiRect
-  field :component, 2, type: Alchemy.Render.UiComponent
-  field :children, 3, repeated: true, type: Alchemy.Render.UiNode
+  field(:rect, 1, type: Alchemy.Render.UiRect)
+  field(:component, 2, type: Alchemy.Render.UiComponent)
+  field(:children, 3, repeated: true, type: Alchemy.Render.UiNode)
 end
 
 defmodule Alchemy.Render.UiRect do
@@ -299,12 +302,12 @@ defmodule Alchemy.Render.UiRect do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  oneof :size, 0
+  oneof(:size, 0)
 
-  field :anchor, 1, type: :string
-  field :offset, 2, repeated: true, type: :float
-  field :wrap, 3, type: Alchemy.Render.UiSizeWrap, oneof: 0
-  field :fixed, 4, type: Alchemy.Render.UiSizeFixed, oneof: 0
+  field(:anchor, 1, type: :string)
+  field(:offset, 2, repeated: true, type: :float)
+  field(:wrap, 3, type: Alchemy.Render.UiSizeWrap, oneof: 0)
+  field(:fixed, 4, type: Alchemy.Render.UiSizeFixed, oneof: 0)
 end
 
 defmodule Alchemy.Render.UiSizeWrap do
@@ -324,8 +327,8 @@ defmodule Alchemy.Render.UiSizeFixed do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :w, 1, type: :float
-  field :h, 2, type: :float
+  field(:w, 1, type: :float)
+  field(:h, 2, type: :float)
 end
 
 defmodule Alchemy.Render.UiComponent do
@@ -336,27 +339,29 @@ defmodule Alchemy.Render.UiComponent do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  oneof :kind, 0
+  oneof(:kind, 0)
 
-  field :separator, 1, type: Alchemy.Render.UiSeparator, oneof: 0
+  field(:separator, 1, type: Alchemy.Render.UiSeparator, oneof: 0)
 
-  field :vertical_layout, 2,
+  field(:vertical_layout, 2,
     type: Alchemy.Render.UiVerticalLayout,
     json_name: "verticalLayout",
     oneof: 0
+  )
 
-  field :horizontal_layout, 3,
+  field(:horizontal_layout, 3,
     type: Alchemy.Render.UiHorizontalLayout,
     json_name: "horizontalLayout",
     oneof: 0
+  )
 
-  field :rect, 4, type: Alchemy.Render.UiRectStyle, oneof: 0
-  field :text, 5, type: Alchemy.Render.UiText, oneof: 0
-  field :button, 6, type: Alchemy.Render.UiButton, oneof: 0
-  field :progress_bar, 7, type: Alchemy.Render.UiProgressBar, json_name: "progressBar", oneof: 0
-  field :spacing, 8, type: Alchemy.Render.UiSpacing, oneof: 0
-  field :world_text, 9, type: Alchemy.Render.UiWorldText, json_name: "worldText", oneof: 0
-  field :screen_flash, 10, type: Alchemy.Render.UiScreenFlash, json_name: "screenFlash", oneof: 0
+  field(:rect, 4, type: Alchemy.Render.UiRectStyle, oneof: 0)
+  field(:text, 5, type: Alchemy.Render.UiText, oneof: 0)
+  field(:button, 6, type: Alchemy.Render.UiButton, oneof: 0)
+  field(:progress_bar, 7, type: Alchemy.Render.UiProgressBar, json_name: "progressBar", oneof: 0)
+  field(:spacing, 8, type: Alchemy.Render.UiSpacing, oneof: 0)
+  field(:world_text, 9, type: Alchemy.Render.UiWorldText, json_name: "worldText", oneof: 0)
+  field(:screen_flash, 10, type: Alchemy.Render.UiScreenFlash, json_name: "screenFlash", oneof: 0)
 end
 
 defmodule Alchemy.Render.UiSeparator do
@@ -376,8 +381,8 @@ defmodule Alchemy.Render.UiVerticalLayout do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :spacing, 1, type: :float
-  field :padding, 2, repeated: true, type: :float
+  field(:spacing, 1, type: :float)
+  field(:padding, 2, repeated: true, type: :float)
 end
 
 defmodule Alchemy.Render.UiHorizontalLayout do
@@ -388,8 +393,8 @@ defmodule Alchemy.Render.UiHorizontalLayout do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :spacing, 1, type: :float
-  field :padding, 2, repeated: true, type: :float
+  field(:spacing, 1, type: :float)
+  field(:padding, 2, repeated: true, type: :float)
 end
 
 defmodule Alchemy.Render.UiRectStyle do
@@ -400,9 +405,9 @@ defmodule Alchemy.Render.UiRectStyle do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :color, 1, repeated: true, type: :float
-  field :corner_radius, 2, type: :float, json_name: "cornerRadius"
-  field :border, 3, proto3_optional: true, type: Alchemy.Render.UiBorder
+  field(:color, 1, repeated: true, type: :float)
+  field(:corner_radius, 2, type: :float, json_name: "cornerRadius")
+  field(:border, 3, proto3_optional: true, type: Alchemy.Render.UiBorder)
 end
 
 defmodule Alchemy.Render.UiBorder do
@@ -413,8 +418,8 @@ defmodule Alchemy.Render.UiBorder do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :color, 1, repeated: true, type: :float
-  field :width, 2, type: :float
+  field(:color, 1, repeated: true, type: :float)
+  field(:width, 2, type: :float)
 end
 
 defmodule Alchemy.Render.UiText do
@@ -425,10 +430,10 @@ defmodule Alchemy.Render.UiText do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :text, 1, type: :string
-  field :color, 2, repeated: true, type: :float
-  field :size, 3, type: :float
-  field :bold, 4, type: :bool
+  field(:text, 1, type: :string)
+  field(:color, 2, repeated: true, type: :float)
+  field(:size, 3, type: :float)
+  field(:bold, 4, type: :bool)
 end
 
 defmodule Alchemy.Render.UiButton do
@@ -439,11 +444,11 @@ defmodule Alchemy.Render.UiButton do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :label, 1, type: :string
-  field :action, 2, type: :string
-  field :color, 3, repeated: true, type: :float
-  field :min_width, 4, type: :float, json_name: "minWidth"
-  field :min_height, 5, type: :float, json_name: "minHeight"
+  field(:label, 1, type: :string)
+  field(:action, 2, type: :string)
+  field(:color, 3, repeated: true, type: :float)
+  field(:min_width, 4, type: :float, json_name: "minWidth")
+  field(:min_height, 5, type: :float, json_name: "minHeight")
 end
 
 defmodule Alchemy.Render.UiProgressBar do
@@ -454,15 +459,15 @@ defmodule Alchemy.Render.UiProgressBar do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :value, 1, type: :float
-  field :max, 2, type: :float
-  field :width, 3, type: :float
-  field :height, 4, type: :float
-  field :fg_color_high, 5, repeated: true, type: :float, json_name: "fgColorHigh"
-  field :fg_color_mid, 6, repeated: true, type: :float, json_name: "fgColorMid"
-  field :fg_color_low, 7, repeated: true, type: :float, json_name: "fgColorLow"
-  field :bg_color, 8, repeated: true, type: :float, json_name: "bgColor"
-  field :corner_radius, 9, type: :float, json_name: "cornerRadius"
+  field(:value, 1, type: :float)
+  field(:max, 2, type: :float)
+  field(:width, 3, type: :float)
+  field(:height, 4, type: :float)
+  field(:fg_color_high, 5, repeated: true, type: :float, json_name: "fgColorHigh")
+  field(:fg_color_mid, 6, repeated: true, type: :float, json_name: "fgColorMid")
+  field(:fg_color_low, 7, repeated: true, type: :float, json_name: "fgColorLow")
+  field(:bg_color, 8, repeated: true, type: :float, json_name: "bgColor")
+  field(:corner_radius, 9, type: :float, json_name: "cornerRadius")
 end
 
 defmodule Alchemy.Render.UiSpacing do
@@ -473,7 +478,7 @@ defmodule Alchemy.Render.UiSpacing do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :amount, 1, type: :float
+  field(:amount, 1, type: :float)
 end
 
 defmodule Alchemy.Render.UiWorldText do
@@ -484,13 +489,13 @@ defmodule Alchemy.Render.UiWorldText do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :world_x, 1, type: :float, json_name: "worldX"
-  field :world_y, 2, type: :float, json_name: "worldY"
-  field :world_z, 3, type: :float, json_name: "worldZ"
-  field :text, 4, type: :string
-  field :color, 5, repeated: true, type: :float
-  field :lifetime, 6, type: :float
-  field :max_lifetime, 7, type: :float, json_name: "maxLifetime"
+  field(:world_x, 1, type: :float, json_name: "worldX")
+  field(:world_y, 2, type: :float, json_name: "worldY")
+  field(:world_z, 3, type: :float, json_name: "worldZ")
+  field(:text, 4, type: :string)
+  field(:color, 5, repeated: true, type: :float)
+  field(:lifetime, 6, type: :float)
+  field(:max_lifetime, 7, type: :float, json_name: "maxLifetime")
 end
 
 defmodule Alchemy.Render.UiScreenFlash do
@@ -501,5 +506,5 @@ defmodule Alchemy.Render.UiScreenFlash do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field :color, 1, repeated: true, type: :float
+  field(:color, 1, repeated: true, type: :float)
 end
