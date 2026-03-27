@@ -1,5 +1,6 @@
 //! `proto/frame_injection.proto` に対応する injection 適用（prost）
 
+use crate::pb;
 use crate::physics::weapon::WeaponSlot;
 use crate::physics::world::{GameWorldInner, SpecialEntitySnapshot};
 use prost::Message;
@@ -24,116 +25,18 @@ fn u32_to_u8_clamped(field: &'static str, v: u32) -> u8 {
     }
 }
 
-/// レガシー: ETF を bytes で包んでいた Zenoh/NIF 用エンベロープ
-#[derive(Clone, PartialEq, Message)]
-pub struct FrameInjectionEnvelopePb {
-    #[prost(bytes = "vec", tag = "1")]
-    pub payload: Vec<u8>,
-}
-
 pub fn decode_injection_payload(bytes: &[u8]) -> Cow<'_, [u8]> {
-    match FrameInjectionEnvelopePb::decode(bytes) {
+    match pb::FrameInjectionEnvelope::decode(bytes) {
         Ok(env) => Cow::Owned(env.payload),
         Err(_) => Cow::Borrowed(bytes),
     }
-}
-
-#[derive(Clone, PartialEq, Message)]
-pub struct FrameInjectionPb {
-    #[prost(message, optional, tag = "1")]
-    pub player_input: Option<Vec2fPb>,
-    #[prost(message, optional, tag = "2")]
-    pub player_snapshot: Option<Vec2fPb>,
-    #[prost(double, optional, tag = "3")]
-    pub elapsed_seconds: Option<f64>,
-    #[prost(message, optional, tag = "4")]
-    pub weapon_slots: Option<WeaponSlotsListPb>,
-    #[prost(message, optional, tag = "5")]
-    pub enemy_damage_this_frame: Option<EnemyDamageListPb>,
-    #[prost(message, optional, tag = "6")]
-    pub special_entity_snapshot: Option<SpecialEntitySnapshotPb>,
-}
-
-#[derive(Clone, PartialEq, Message)]
-pub struct Vec2fPb {
-    #[prost(float, tag = "1")]
-    pub x: f32,
-    #[prost(float, tag = "2")]
-    pub y: f32,
-}
-
-#[derive(Clone, PartialEq, Message)]
-pub struct WeaponSlotsListPb {
-    #[prost(message, repeated, tag = "1")]
-    pub slots: Vec<WeaponSlotPb>,
-}
-
-#[derive(Clone, PartialEq, Message)]
-pub struct WeaponSlotPb {
-    #[prost(uint32, tag = "1")]
-    pub kind_id: u32,
-    #[prost(uint32, tag = "2")]
-    pub level: u32,
-    #[prost(float, tag = "3")]
-    pub cooldown: f32,
-    #[prost(float, tag = "4")]
-    pub cooldown_sec: f32,
-    #[prost(int32, tag = "5")]
-    pub precomputed_damage: i32,
-}
-
-#[derive(Clone, PartialEq, Message)]
-pub struct EnemyDamageListPb {
-    #[prost(message, repeated, tag = "1")]
-    pub pairs: Vec<EnemyDamagePairPb>,
-}
-
-#[derive(Clone, PartialEq, Message)]
-pub struct EnemyDamagePairPb {
-    #[prost(uint32, tag = "1")]
-    pub kind_id: u32,
-    #[prost(float, tag = "2")]
-    pub damage: f32,
-}
-
-#[derive(Clone, PartialEq, Message)]
-pub struct SpecialEntitySnapshotPb {
-    #[prost(oneof = "special_entity_pb::State", tags = "1,2")]
-    pub state: Option<special_entity_pb::State>,
-}
-
-pub mod special_entity_pb {
-    #[derive(Clone, PartialEq, prost::Oneof)]
-    pub enum State {
-        #[prost(message, tag = "1")]
-        None(super::SpecialNonePb),
-        #[prost(message, tag = "2")]
-        Alive(super::SpecialAlivePb),
-    }
-}
-
-#[derive(Clone, PartialEq, Message)]
-pub struct SpecialNonePb {}
-
-#[derive(Clone, PartialEq, Message)]
-pub struct SpecialAlivePb {
-    #[prost(float, tag = "1")]
-    pub x: f32,
-    #[prost(float, tag = "2")]
-    pub y: f32,
-    #[prost(float, tag = "3")]
-    pub radius: f32,
-    #[prost(float, tag = "4")]
-    pub damage: f32,
-    #[prost(bool, tag = "5")]
-    pub invincible: bool,
 }
 
 pub fn apply_injection_from_pb(
     w: &mut GameWorldInner,
     bytes: &[u8],
 ) -> Result<(), prost::DecodeError> {
-    let inj = FrameInjectionPb::decode(bytes)?;
+    let inj = pb::FrameInjection::decode(bytes)?;
     if let Some(v) = inj.player_input {
         w.player.input_dx = v.x;
         w.player.input_dy = v.y;
@@ -190,10 +93,10 @@ pub fn apply_injection_from_pb(
     }
     if let Some(snap) = inj.special_entity_snapshot {
         match snap.state {
-            Some(special_entity_pb::State::None(_)) | None => {
+            Some(pb::special_entity_snapshot::State::None(_)) | None => {
                 w.special_entity_snapshot = None;
             }
-            Some(special_entity_pb::State::Alive(a)) => {
+            Some(pb::special_entity_snapshot::State::Alive(a)) => {
                 w.special_entity_snapshot = Some(SpecialEntitySnapshot {
                     x: a.x,
                     y: a.y,

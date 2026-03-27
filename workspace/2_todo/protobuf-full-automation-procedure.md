@@ -185,7 +185,7 @@ protoc \
 ## 6. 検証チェックリスト
 
 - [ ] `proto/` のみを編集し、`cargo build` / `mix compile` が通る。
-- [ ] 手書き `prost` 構造体が該当メッセージから消えている。
+- [x] 手書き `prost` 構造体が該当メッセージから消えている。
 - [x] 手書き `use Protobuf` の該当メッセージが消えている。
 - [ ] Zenoh / NIF の結合テストまたは手動で、フレーム・入力・injection が従来どおり動く。
 - [ ] CI で `protoc` が利用可能。

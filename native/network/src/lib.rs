@@ -5,6 +5,12 @@
 
 pub mod common;
 pub mod network_render_bridge;
+pub mod pb {
+    include!(concat!(env!("OUT_DIR"), "/alchemy.render.rs"));
+    include!(concat!(env!("OUT_DIR"), "/alchemy.input.rs"));
+    include!(concat!(env!("OUT_DIR"), "/alchemy.frame.rs"));
+    include!(concat!(env!("OUT_DIR"), "/alchemy.client.rs"));
+}
 pub mod platform;
 pub mod protobuf_codec;
 pub mod protobuf_render_frame;
