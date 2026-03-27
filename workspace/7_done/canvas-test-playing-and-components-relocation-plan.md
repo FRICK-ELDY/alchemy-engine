@@ -182,5 +182,5 @@ apps/contents/lib/
 
 ## 6. 参照
 
-- [contents-components-reorganization-procedure.md](./contents-components-reorganization-procedure.md) — 共有コンポーネント再配置の手順・方針
+- [contents-components-reorganization-procedure.md](../1_backlog/contents-components-reorganization-procedure.md) — 共有コンポーネント再配置の手順・方針
 - [contents-migration-plan.md](../1_backlog/contents-migration-plan.md) — 既存コンテンツ移行プラン（Phase 2 CanvasTest 完了済み）

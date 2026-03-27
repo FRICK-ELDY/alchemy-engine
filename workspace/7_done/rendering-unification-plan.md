@@ -144,5 +144,5 @@ apps/contents/lib/
 
 ## 6. 参照
 
-- [canvas-test-playing-and-components-relocation-plan.md](../2_todo/canvas-test-playing-and-components-relocation-plan.md) — 定義を Playing に集約する方針
+- [canvas-test-playing-and-components-relocation-plan.md](./canvas-test-playing-and-components-relocation-plan.md) — 定義を Playing に集約する方針
 - [contents-components-reorganization-procedure.md](../2_todo/contents-components-reorganization-procedure.md) — コンポーネント再配置の手順
