@@ -80,6 +80,8 @@ jobs:
         uses: arduino/setup-protoc@v3
         with:
           version: "27.x"
+          # GitHub API の未認証レート制限回避（共有ランナー IP では頻発しうる）
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: dtolnay/rust-toolchain@stable
 
