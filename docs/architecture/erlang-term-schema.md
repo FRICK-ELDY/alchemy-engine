@@ -4,7 +4,7 @@
 > 最終更新: 2026-03-27  
 > ポリシー（歴史的経緯）: [zenoh-frame-serialization.md](../policy-as-code/why_adopted/zenoh-frame-serialization.md)
 >
-> **現在の主経路**: フレーム・injection は **protobuf**（`proto/render_frame.proto`, `proto/frame_injection.proto`）。Elixir は `Network.Proto.*`、Rust は `prost` デコード。本章は **ETF フォールバック**および旧手順の参照用。
+> **現在の主経路**: フレーム・injection は **protobuf** のみ（`proto/render_frame.proto`, `proto/frame_injection.proto`）。Elixir は `Network.Proto.*`、Rust は `prost` デコード。本章の ETF 記述は **旧バイナリ形式の参照・デバッグ用**（ワイヤ上では用いない）。
 >
 > MessagePack 形式は [messagepack-schema.md](messagepack-schema.md) を参照（レガシー参照用）。
 
@@ -12,9 +12,9 @@
 
 ## 1. 概要
 
-**運用上の既定**: Zenoh フレームは `Content.FrameEncoder.encode_frame/4` が **`Network.Proto.RenderFrame`** のバイナリを出力する。Rust `network_render_bridge` は **protobuf を先に解釈**し、失敗時に `RenderFrameEnvelope` 包み ETF → 生 ETF の順でフォールバックする。
+**運用上の既定**: Zenoh フレームは `Content.FrameEncoder.encode_frame/4` が **`Network.Proto.RenderFrame`** のバイナリを出力する。Rust `network_render_bridge` は **`protobuf_render_frame::decode_pb_render_frame` のみ**（ETF フォールバックなし）。
 
-以下の各節は、まだ **ETF（`:erlang.term_to_binary/1`）** として送受信される場合の map 構造である。Elixir の `Content.FrameEncoder`（レガシー経路）と Rust `network::bert_decode` / eetf が同一の形を扱う。
+以下の各節は、歴史的に **ETF（`:erlang.term_to_binary/1`）** で表現していた map 構造の参照である。現行ワイヤでは使用しない。
 
 ## 2. トップレベル構造
 
@@ -55,17 +55,15 @@
 
 `Content.FrameEncoder.encode_injection_map/1` は **`Network.Proto.FrameInjection`** を `Protobuf.encode/1` したバイナリを返す（スキーマ: `proto/frame_injection.proto`）。
 
-### 7.2 NIF `set_frame_injection_binary` の解釈順
+### 7.2 NIF `set_frame_injection_binary` の解釈
 
-1. **ペイロードが空でない**場合、まず **ネイティブ `FrameInjection` protobuf** として適用（`native/nif` の `apply_injection_from_pb`）。
-2. 失敗時、**`FrameInjectionEnvelope`**（`bytes payload`）で包まれたバイナリなら内側の ETF を取り出し、`apply_injection_from_bert`。
-3. それ以外は **生 ETF** として bert デコード。
+1. 空バイト列は **エラー**（誤った空 protobuf 成功を避ける）。
+2. **`FrameInjectionEnvelope`**（`bytes payload`）としてデコードできる場合は内側 bytes のみ取り出す。
+3. 得られた bytes を **`FrameInjection` protobuf** として `apply_injection_from_pb` で適用する（ETF 経路なし）。
 
-空バイト列 `<<>>` は (1) を試さず、(2)(3) へ回す（誤って「空の protobuf 成功」とならないようにする）。
+### 7.3 レガシー ETF スキーマ（参照のみ）
 
-### 7.3 レガシー ETF スキーマ（bert 経路）
-
-フォールバックで解釈される map。存在するキーのみ pack する（オプショナルキー）。
+旧 bert デコードが想定していた map。存在するキーのみ pack する（オプショナルキー）。
 [messagepack-schema.md](messagepack-schema.md) §7 と構造は同一。
 
 | キー | 型 | 説明 |
@@ -77,12 +75,9 @@
 | "enemy_damage_this_frame" | `[[kind_id, damage], ...]` | 敵接触ダメージ |
 | "special_entity_snapshot" | map | `%{"t" => "none"}` または `%{"t" => "alive", ...}` |
 
-- Rust: `nif::decode::bert_injection::apply_injection_from_bert`
-
 ## 8. 参照
 
 - `Content.FrameEncoder` — フレーム・injection の protobuf エンコード
 - `proto/render_frame.proto`, `proto/frame_injection.proto` — 契約スキーマ
-- `network::protobuf_render_frame` / `network_render_bridge` — Rust 側フレーム protobuf デコードとフォールバック
-- `network::bert_decode::decode_render_frame` — ETF フォールバック用（eetf）
-- `nif::decode::bert_injection::apply_injection_from_bert` — injection ETF フォールバック
+- `network::protobuf_render_frame` / `network_render_bridge` — Rust 側フレーム protobuf デコード
+- `nif::protobuf_frame_injection` — injection protobuf デコード

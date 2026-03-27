@@ -7,7 +7,7 @@ defmodule Network.ZenohBridge do
   - client_info subscribe: `contents/room/*/client/info` → `:client_info` ETS に保存
   - 受信した入力は `Contents.Events.Game` へ `{:move_input, dx, dy}` / `{:ui_action, name}` で配送
 
-  入力ペイロードの解釈は **protobuf 優先**し、失敗時に ETF（movement/action）または MessagePack（client_info）へフォールバックする。
+  入力ペイロードの解釈は **protobuf**（movement / action）。`client_info` のみ protobuf 失敗時に MessagePack を試す。
 
   設定: `config :network, :zenoh_enabled, true` で有効化。
   """
@@ -197,11 +197,9 @@ defmodule Network.ZenohBridge do
   end
 
   defp decode_movement(payload) do
-    with {:error, _} <- try_decode_movement_protobuf(payload),
-         {:error, _} <- try_decode_movement_etf(payload) do
-      :error
-    else
+    case try_decode_movement_protobuf(payload) do
       {:ok, {dx, dy}} -> {:ok, {dx * 1.0, dy * 1.0}}
+      {:error, _} -> :error
     end
   end
 
@@ -216,17 +214,11 @@ defmodule Network.ZenohBridge do
   end
 
   defp decode_action(payload) do
-    with {:error, _} <- try_decode_action_protobuf(payload),
-         {:error, _} <- try_decode_action_etf(payload) do
-      :error
-    else
+    case try_decode_action_protobuf(payload) do
       {:ok, name} when is_binary(name) -> {:ok, name}
+      {:error, _} -> :error
     end
   end
-
-  defp to_float(v) when is_float(v), do: v
-  defp to_float(v) when is_integer(v), do: v * 1.0
-  defp to_float(_), do: 0.0
 
   defp forward_move_input(room_id, dx, dy) do
     room_key = room_id_for_registry(room_id)
@@ -344,34 +336,10 @@ defmodule Network.ZenohBridge do
   rescue
     e ->
       Logger.debug(
-        "[input:ZenohBridge] movement protobuf decode failed, will try ETF: #{Exception.message(e)}"
+        "[input:ZenohBridge] movement protobuf decode failed: #{Exception.message(e)}"
       )
 
       {:error, :invalid_protobuf_movement}
-  end
-
-  defp try_decode_movement_etf(payload) when is_binary(payload) do
-    term = :erlang.binary_to_term(payload, [:safe])
-
-    case term do
-      %{"dx" => dx, "dy" => dy} when is_number(dx) and is_number(dy) ->
-        {:ok, {dx, dy}}
-
-      map when is_map(map) ->
-        dx = map |> Map.get("dx", Map.get(map, :dx, 0)) |> to_float()
-        dy = map |> Map.get("dy", Map.get(map, :dy, 0)) |> to_float()
-        {:ok, {dx, dy}}
-
-      _ ->
-        {:error, :invalid_etf_movement}
-    end
-  rescue
-    e ->
-      Logger.debug(
-        "[input:ZenohBridge] movement ETF decode failed, will reject: #{Exception.message(e)}"
-      )
-
-      {:error, :invalid_etf_movement}
   end
 
   defp try_decode_action_protobuf(payload) when is_binary(payload) do
@@ -385,36 +353,10 @@ defmodule Network.ZenohBridge do
   rescue
     e ->
       Logger.debug(
-        "[input:ZenohBridge] action protobuf decode failed, will try ETF: #{Exception.message(e)}"
+        "[input:ZenohBridge] action protobuf decode failed: #{Exception.message(e)}"
       )
 
       {:error, :invalid_protobuf_action}
-  end
-
-  defp try_decode_action_etf(payload) when is_binary(payload) do
-    term = :erlang.binary_to_term(payload, [:safe])
-
-    case term do
-      %{"name" => name} when is_binary(name) ->
-        {:ok, name}
-
-      map when is_map(map) ->
-        case Map.get(map, "name") || Map.get(map, :name) do
-          name when is_binary(name) -> {:ok, name}
-          name when is_atom(name) -> {:ok, Atom.to_string(name)}
-          _ -> {:error, :invalid_etf_action}
-        end
-
-      _ ->
-        {:error, :invalid_etf_action}
-    end
-  rescue
-    e ->
-      Logger.debug(
-        "[input:ZenohBridge] action ETF decode failed, will reject: #{Exception.message(e)}"
-      )
-
-      {:error, :invalid_etf_action}
   end
 
   defp try_decode_client_info_protobuf(payload) when is_binary(payload) do

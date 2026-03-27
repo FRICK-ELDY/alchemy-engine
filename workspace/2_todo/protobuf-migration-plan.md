@@ -12,7 +12,7 @@
 
 ## 1. 背景
 
-- 現状は `Content.FrameEncoder` と `native/network` の `bert_decode` を中心に ETF を利用している
+- ワイヤ上の主経路は protobuf に統一済み（旧 `bert_decode` / `bert_injection` は除去）
 - ETF は Elixir 内では高速だが、長期的なスキーマ進化と言語間契約管理を protobuf に統一したい
 - 既存の MessagePack レガシーが一部残存しているため、移行時に併せて整理する
 
@@ -45,10 +45,8 @@
 
 - `apps/contents/lib/contents/frame_encoder.ex`
 - `apps/contents/lib/events/game.ex`
-- `native/network/src/bert_decode.rs`
-- `native/network/src/bert_encode.rs`
+- `native/network/src/bert_encode.rs`（movement/action の protobuf エンコード互換名）
 - `native/network/src/network_render_bridge.rs`
-- `native/nif/src/nif/decode/bert_injection.rs`
 - `native/nif/src/nif/world_nif.rs`
 - `docs/architecture/erlang-term-schema.md`
 - `docs/policy-as-code/why_adopted/zenoh-frame-serialization.md`
@@ -222,14 +220,15 @@
 ## 10. 完了判定
 
 - [x] render frame / movement / action / frame injection / client_info が protobuf で稼働（主要経路）
-- [ ] ETF 依存コードが主要経路から削除済み（デュアルデコード期間中はフォールバックとして維持）
-- [ ] 契約テストと統合テストが通過（ネットワーク protobuf の単体テストは `apps/network/test/network/proto/render_frame_oneof_test.exs`）
+- [x] ETF 依存コードが主要経路から削除済み（Zenoh フレーム・入力・`set_frame_injection_binary` は protobuf のみ。`client_info` は protobuf 優先のまま MessagePack フォールバックを維持）
+- [x] 契約テストと統合テストが通過（`mix test` 全件、`apps/network/test/network/proto/protobuf_contract_test.exs` を追加）
 - [x] ドキュメントと実装が一致（`docs/architecture/erlang-term-schema.md` を protobuf 前提に更新済み）
 
 ---
 
 ## 11. 実施状況メモ（2026-03）
 
+- 主要経路の ETF 削除: `native/network` から `bert_decode`（eetf）を除去、`network_render_bridge` は protobuf のみ。NIF は `bert_injection` を削除し `set_frame_injection_binary` は protobuf のみ。`ZenohBridge` の movement/action は ETF フォールバックを除去。
 - Elixir `Network.Proto` は手書き（`protobuf` 0.16）。oneof は `oneof :name, N` と各 `field ..., oneof: N` が必須。
 - Rust / `proto/*.proto` / Elixir の三箇所をスキーマ変更時に同期すること。
 - `config/config.exs` の `:server, :current` は protobuf 移行と無関係。コンテンツ切替は別 PR で扱う。

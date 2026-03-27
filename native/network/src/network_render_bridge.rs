@@ -3,7 +3,6 @@
 //! クライアント exe 用。サーバーと分離された別プロセスで動作する。
 //! Zenoh 通信は platform/desktop.rs の ClientSession を経由する。
 
-use crate::bert_decode;
 use crate::{action_key, client_info_key, frame_key, movement_key, ClientInfo, ClientSession};
 use render::window::{KeyCode, KeyState, RenderBridge};
 use render::RenderFrame;
@@ -53,7 +52,7 @@ impl NetworkRenderBridge {
         let recv_handle = {
             let frame_count_clone = Arc::clone(&frame_count);
             session.spawn_subscriber(&sub_key, shutdown_clone, move |bytes| {
-                match decode_render_frame_with_fallback(&bytes) {
+                match decode_render_frame_from_zenoh(&bytes) {
                     Ok(frame) => {
                         let prev = frame_count_clone.fetch_add(1, Ordering::Relaxed);
                         if prev == 0 {
@@ -132,16 +131,10 @@ impl NetworkRenderBridge {
     }
 }
 
-fn decode_render_frame_with_fallback(
+fn decode_render_frame_from_zenoh(
     bytes: &[u8],
 ) -> Result<RenderFrame, Box<dyn std::error::Error + Send + Sync>> {
-    if let Ok(frame) = crate::protobuf_render_frame::decode_pb_render_frame(bytes) {
-        return Ok(frame);
-    }
-    if let Ok(inner) = crate::protobuf_codec::decode_render_frame_envelope(bytes) {
-        return bert_decode::decode_render_frame(&inner).map_err(|e| e.into());
-    }
-    bert_decode::decode_render_frame(bytes).map_err(|e| e.into())
+    crate::protobuf_render_frame::decode_pb_render_frame(bytes).map_err(|e| e.into())
 }
 
 impl Drop for NetworkRenderBridge {
