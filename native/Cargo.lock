@@ -3369,7 +3369,6 @@ dependencies = [
  "num-traits",
  "prost",
  "render",
- "rmp-serde",
  "serde",
  "shared",
  "zenoh",
@@ -3392,10 +3391,8 @@ dependencies = [
  "num-traits",
  "prost",
  "rayon",
- "rmp-serde",
  "rustc-hash 2.1.1",
  "rustler",
- "serde",
 ]
 
 [[package]]
@@ -4951,25 +4948,6 @@ checksum = "8d3e7aa0a681b232e7cd7f856a53b10603df88ca74b79a8d8088845185492e35"
 dependencies = [
  "array-init",
  "crossbeam",
-]
-
-[[package]]
-name = "rmp"
-version = "0.8.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ba8be72d372b2c9b35542551678538b562e7cf86c3315773cae48dfbfe7790c"
-dependencies = [
- "num-traits",
-]
-
-[[package]]
-name = "rmp-serde"
-version = "1.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72f81bee8c8ef9b577d1681a70ebbc962c232461e397b22c208c43c04b67a155"
-dependencies = [
- "rmp",
- "serde",
 ]
 
 [[package]]
