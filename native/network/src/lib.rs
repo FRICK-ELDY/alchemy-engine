@@ -9,6 +9,7 @@ pub mod common;
 pub mod network_render_bridge;
 pub mod platform;
 pub mod protobuf_codec;
+pub mod protobuf_render_frame;
 
 pub use common::*;
 pub use network_render_bridge::NetworkRenderBridge;

@@ -135,6 +135,9 @@ impl NetworkRenderBridge {
 fn decode_render_frame_with_fallback(
     bytes: &[u8],
 ) -> Result<RenderFrame, Box<dyn std::error::Error + Send + Sync>> {
+    if let Ok(frame) = crate::protobuf_render_frame::decode_pb_render_frame(bytes) {
+        return Ok(frame);
+    }
     if let Ok(inner) = crate::protobuf_codec::decode_render_frame_envelope(bytes) {
         return bert_decode::decode_render_frame(&inner).map_err(|e| e.into());
     }

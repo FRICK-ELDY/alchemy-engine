@@ -8,6 +8,7 @@ mod formula_nif;
 mod game_loop_nif;
 mod load;
 mod push_tick_nif;
+mod protobuf_frame_injection;
 mod read_nif;
 mod save_nif;
 mod util;
