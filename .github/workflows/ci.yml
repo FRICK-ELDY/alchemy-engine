@@ -4,6 +4,11 @@ on:
     branches: ["**"]
   pull_request:
 
+# 複合アクションと各ジョブで共通参照（バージョンはここだけ更新）
+env:
+  ELIXIR_VERSION: "1.19"
+  OTP_VERSION: "28"
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -17,24 +22,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      # audio が cpal → alsa-sys を依存するため ALSA 開発ヘッダが必要
-      # nif の prost-build が protoc を要求（clippy でもビルドが走る）
-      - name: install system deps
-        run: sudo apt-get update -q && sudo apt-get install -y libasound2-dev protobuf-compiler
-
-      - name: Export PROTOC for prost-build
-        run: |
-          command -v protoc
-          echo "PROTOC=$(command -v protoc)" >> $GITHUB_ENV
-
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: ./.github/actions/alchemy-ci-setup
         with:
-          components: rustfmt, clippy
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: native
+          protoc-source: apt
+          rust-components: "rustfmt, clippy"
 
       - name: cargo fmt
         run: cargo fmt --manifest-path native/Cargo.toml --all -- --check
@@ -47,69 +38,33 @@ jobs:
 
   # ─────────────────────────────────────────────
   # [B] Rust: ユニットテスト（nif/physics）
-  #   render / audio は GPU・音声デバイスが必要なため除外
-  #   nif の physics モジュール内テストを実行
   # ─────────────────────────────────────────────
   rust-test:
     name: "Rust — unit tests"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      # nif → audio → cpal → alsa-sys のビルドに必要（prost-build にも protoc が要る）
-      - name: install system deps
-        run: sudo apt-get update -q && sudo apt-get install -y libasound2-dev protobuf-compiler
-
-      - name: Export PROTOC for prost-build
-        run: |
-          command -v protoc
-          echo "PROTOC=$(command -v protoc)" >> $GITHUB_ENV
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - uses: Swatinem/rust-cache@v2
+      - uses: ./.github/actions/alchemy-ci-setup
         with:
-          workspaces: native
+          protoc-source: apt
 
       - name: cargo test (nif/physics)
         run: cargo test --manifest-path native/Cargo.toml -p nif
 
   # ─────────────────────────────────────────────
-  # Protobuf: Elixir 生成物が proto と整合しているか（旧単一 verify ジョブ相当）
-  #   protoc 素出力は mix format と一致しないため、生成後に mix format してから diff する
+  # Protobuf: Elixir 生成物と proto の整合（生成後 mix format してから diff）
   # ─────────────────────────────────────────────
   proto-verify:
     name: "Protobuf — codegen up to date"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      # libasound2-dev: NIF / cpal。protoc は setup-protoc（27.x）で入れる
-      - name: Install system deps
-        run: sudo apt-get update -q && sudo apt-get install -y libasound2-dev
-
-      - name: Setup protoc
-        uses: arduino/setup-protoc@v3
+      - uses: ./.github/actions/alchemy-ci-setup
         with:
-          version: "27.x"
-          # GitHub API の未認証レート制限回避（共有ランナー IP では頻発しうる）
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Export PROTOC for prost-build
-        run: |
-          command -v protoc
-          echo "PROTOC=$(command -v protoc)" >> $GITHUB_ENV
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - uses: erlef/setup-beam@v1
-        with:
-          elixir-version: "1.19"
-          otp-version: "28"
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: native
+          protoc-source: arduino
+          with-beam: "true"
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
 
       - uses: actions/cache@v4
         with:
@@ -140,34 +95,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      # mix compile が NIF（audio → cpal → alsa-sys）をビルドするため必要
-      - name: install system deps
-        run: sudo apt-get update -q && sudo apt-get install -y libasound2-dev
-
-      # prost-build は子プロセスで PATH が効かないことがあるため、PROTOC を明示（proto-verify と同じ 27.x）
-      - name: Setup protoc
-        uses: arduino/setup-protoc@v3
+      - uses: ./.github/actions/alchemy-ci-setup
         with:
-          version: "27.x"
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Export PROTOC for prost-build / Rustler
-        run: |
-          command -v protoc
-          protoc --version
-          echo "PROTOC=$(command -v protoc)" >> $GITHUB_ENV
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: native
-
-      - uses: erlef/setup-beam@v1
-        with:
-          elixir-version: "1.19"
-          otp-version: "28"
+          protoc-source: arduino
+          with-beam: "true"
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
 
       - uses: actions/cache@v4
         with:
@@ -186,43 +119,20 @@ jobs:
           MIX_ENV: dev
 
   # ─────────────────────────────────────────────
-  # [D] Elixir: NIF ビルド込み統合テスト
-  #   Rust キャッシュが効けば NIF 再ビルドをスキップ
+  # [D] Elixir: NIF 込み mix test
   # ─────────────────────────────────────────────
   elixir-test:
     name: "Elixir — mix test (with NIF)"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: install system deps
-        run: sudo apt-get update -q && sudo apt-get install -y libasound2-dev
-
-      - name: Setup protoc
-        uses: arduino/setup-protoc@v3
+      - uses: ./.github/actions/alchemy-ci-setup
         with:
-          version: "27.x"
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          protoc-source: arduino
+          with-beam: "true"
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
 
-      - name: Export PROTOC for prost-build / Rustler
-        run: |
-          command -v protoc
-          protoc --version
-          echo "PROTOC=$(command -v protoc)" >> $GITHUB_ENV
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      # Rust ビルドキャッシュ（NIF コンパイル時間を大幅短縮）
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: native
-
-      - uses: erlef/setup-beam@v1
-        with:
-          elixir-version: "1.19"
-          otp-version: "28"
-
-      # deps のみキャッシュ（_build は毎回ビルドし NIF 配置を確実にする）
       - uses: actions/cache@v4
         with:
           path: deps
@@ -239,8 +149,7 @@ jobs:
           MIX_ENV: test
 
   # ─────────────────────────────────────────────
-  # [E] ベンチマーク回帰チェック（main ブランチへの push のみ）
-  #   前回比 +10% 以上の劣化でブロック
+  # [E] ベンチマーク回帰（main の push のみ）
   # ─────────────────────────────────────────────
   bench-regression:
     name: "Rust — bench regression"
@@ -248,20 +157,9 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
-
-      - name: install system deps
-        run: sudo apt-get update -q && sudo apt-get install -y libasound2-dev protobuf-compiler
-
-      - name: Export PROTOC for prost-build
-        run: |
-          command -v protoc
-          echo "PROTOC=$(command -v protoc)" >> $GITHUB_ENV
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - uses: Swatinem/rust-cache@v2
+      - uses: ./.github/actions/alchemy-ci-setup
         with:
-          workspaces: native
+          protoc-source: apt
 
       - name: cargo bench
         run: >
