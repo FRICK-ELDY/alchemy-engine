@@ -7,7 +7,7 @@
 - **GameEvents** — メインゲームループ GenServer（contents 層）
 - **SceneStack** — シーンスタック管理、SceneBehaviour コールバック
 - **FrameBroadcaster** — Zenoh フレーム配信（Process.put → ZenohBridge）
-- **MessagePackEncoder** — RenderFrame の MessagePack エンコード
+- **FrameEncoder** — RenderFrame の protobuf エンコード
 - Component 群: LocalUserComponent, TelemetryComponent, MenuComponent 等
 
 ## コンテンツ一覧

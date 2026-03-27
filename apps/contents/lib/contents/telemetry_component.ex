@@ -3,7 +3,7 @@ defmodule Contents.TelemetryComponent do
   LocalUserComponent の入力状態を表示用に整形して返すコンポーネント。
 
   keyboard / mouse（x, y, delta）を LocalUserComponent から取得し、
-  `get_input_state/1` で表示用フォーマットとして返す。P5-2 の MessagePack 検証やデバッグに利用する。
+  `get_input_state/1` で表示用フォーマットとして返す。入力同期の検証やデバッグに利用する。
 
   ## 表示フォーマット例
 

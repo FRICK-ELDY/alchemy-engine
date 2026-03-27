@@ -76,7 +76,7 @@ defmodule Contents.Components.Category.Procedural.Meshes.Box do
   @doc """
   指定位置・半サイズ・色で Box3D 描画コマンド用のタプルを返す。
 
-  戻り値は Content.MessagePackEncoder の box_3d 句で期待する形式:
+  戻り値は Content.FrameEncoder の box_3d 句で期待する形式:
   `{:box_3d, x, y, z, half_w, half_h, {half_d, r, g, b, a}}`
   """
   def box_3d_command(x, y, z, half_w, half_h, half_d, {r, g, b, a}) do

@@ -27,7 +27,7 @@ defmodule Core.NifBridge do
   # injection_map: オプショナルキーを持つ map。存在するキーのみ適用。
   def set_frame_injection(_world, _injection_map), do: :erlang.nif_error(:nif_not_loaded)
 
-  # P5: MessagePack バイナリ形式の set_frame_injection。decode オーバーヘッド削減。
+  # P5: protobuf バイナリ形式の set_frame_injection。decode オーバーヘッド削減。
   def set_frame_injection_binary(_world, _binary), do: :erlang.nif_error(:nif_not_loaded)
   def spawn_enemies(_world, _kind, _count), do: :erlang.nif_error(:nif_not_loaded)
   # Phase 3-B: 指定座標リストに敵をスポーンする NIF
