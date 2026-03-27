@@ -28,7 +28,12 @@ fn u32_to_u8_clamped(field: &'static str, v: u32) -> u8 {
 pub fn decode_injection_payload(bytes: &[u8]) -> Cow<'_, [u8]> {
     match pb::FrameInjectionEnvelope::decode(bytes) {
         Ok(env) => Cow::Owned(env.payload),
-        Err(_) => Cow::Borrowed(bytes),
+        Err(e) => {
+            log::debug!(
+                "protobuf_frame_injection: FrameInjectionEnvelope decode failed ({e}); treating payload as raw FrameInjection bytes (legacy / non-envelope)"
+            );
+            Cow::Borrowed(bytes)
+        }
     }
 }
 

@@ -8,7 +8,7 @@ defmodule Mix.Tasks.Alchemy.Gen.Proto do
   ## 実装状況
 
   生成ロジックは段階的に本モジュールへ追加する。詳細・契約・CI 要件は
-  `workspace/2_todo/protobuf-full-automation-procedure.md` を参照。
+  `workspace/7_done/protobuf-full-automation-procedure.md` を参照。
 
   ## 使用例（予定）
 
@@ -35,7 +35,7 @@ defmodule Mix.Tasks.Alchemy.Gen.Proto do
     File.mkdir_p!(temp_out)
 
     try do
-      run_step!(
+      run_step_or_raise!(
         "protoc --elixir_out",
         protoc,
         protoc_args(proto_dir, temp_out, proto_files),
@@ -45,11 +45,19 @@ defmodule Mix.Tasks.Alchemy.Gen.Proto do
 
       replace_generated_files!(temp_out, elixir_out)
 
-      # Rust 側は build.rs 導入後、この cargo build が prost-build 生成のトリガーになる。
-      run_step!(
-        "cargo build -p network",
+      # prost-build は各クレートの build.rs で走る。`network` と `nif` の両方をビルドして取りこぼしを防ぐ。
+      run_step_or_raise!(
+        "cargo build -p network -p nif",
         "cargo",
-        ["build", "--manifest-path", native_manifest, "-p", "network"],
+        [
+          "build",
+          "--manifest-path",
+          native_manifest,
+          "-p",
+          "network",
+          "-p",
+          "nif"
+        ],
         root
       )
     after
@@ -123,7 +131,9 @@ defmodule Mix.Tasks.Alchemy.Gen.Proto do
     end
   end
 
-  defp run_step!(label, cmd, args, root, opts \\ []) do
+  # `System.halt/1` は VM を即終了するため `try` の `after` が走らず一時ディレクトリが残る。
+  # 失敗時は `Mix.raise/1` で例外にし、`after` で必ずクリーンアップする。
+  defp run_step_or_raise!(label, cmd, args, root, opts \\ []) do
     Mix.shell().info("")
     Mix.shell().info("[STEP] #{label}")
     env = Keyword.get(opts, :env, [])
@@ -138,7 +148,7 @@ defmodule Mix.Tasks.Alchemy.Gen.Proto do
 
       {out, code} ->
         Mix.shell().error(out)
-        System.halt(code)
+        Mix.raise("#{label} が失敗しました (exit #{code})")
     end
   end
 end

@@ -27,7 +27,7 @@ pub fn decode_pb_render_frame(bytes: &[u8]) -> Result<RenderFrame, prost::Decode
 }
 
 fn pb_into_render_frame(pb: pb::RenderFrame) -> RenderFrame {
-    // kind が空の DrawCommandPb は filter_map で落ちる（クライアント不整合時はコマンド欠落として表れる）
+    // `kind` が空の要素は捨てる（不正ワイヤではコマンドが静かに欠落する。意図的な設計なら監視ログで補う）。
     let commands: Vec<DrawCommand> = pb.commands.into_iter().filter_map(draw_cmd_pb).collect();
     let camera = pb
         .camera

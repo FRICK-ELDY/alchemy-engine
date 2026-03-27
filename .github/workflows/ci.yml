@@ -40,5 +40,17 @@ jobs:
           restore-keys: |
             ci-${{ runner.os }}-
 
+      - run: mix deps.get
+
+      - name: Install protoc-gen-elixir
+        run: mix escript.install hex protobuf --force
+
+      # 生成物がコミット済みと `proto/` に整合しているか（手動生成の取りこぼし防止）
+      - name: Verify protobuf codegen is up to date
+        run: |
+          export PATH="$HOME/.mix/escripts:$PATH"
+          mix alchemy.gen.proto
+          git diff --exit-code -- apps/network/lib/network/proto/generated/
+
       - name: CI equivalent checks
         run: mix alchemy.ci
