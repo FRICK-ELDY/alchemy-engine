@@ -84,18 +84,74 @@ defmodule Network.UDPTest do
 
     test ":frame は RenderFrame struct からもエンコードできる" do
       render_frame = %Network.Proto.RenderFrame{
-        commands: [],
+        commands: [
+          %Network.Proto.DrawCommand{
+            kind:
+              {:sprite_raw,
+               %Network.Proto.SpriteRaw{
+                 x: 10.0,
+                 y: 20.0,
+                 width: 30.0,
+                 height: 40.0
+               }}
+          }
+        ],
         camera: %Network.Proto.CameraParams{
           kind: {:camera_2d, %Network.Proto.Camera2d{offset_x: 1.0, offset_y: -2.0}}
         },
-        ui: %Network.Proto.UiCanvas{nodes: []},
+        ui: %Network.Proto.UiCanvas{
+          nodes: [
+            %Network.Proto.UiNode{
+              rect: %Network.Proto.UiRect{
+                anchor: "top_left",
+                offset: [8.0, 16.0],
+                size: {:fixed, %Network.Proto.UiSizeFixed{w: 120.0, h: 32.0}}
+              },
+              component: %Network.Proto.UiComponent{
+                kind: {:text, %Network.Proto.UiText{text: "HP", color: [1.0, 1.0, 1.0, 1.0], size: 16.0}}
+              },
+              children: []
+            }
+          ]
+        },
         mesh_definitions: []
       }
 
       assert {:ok, bin} = Protocol.encode({:frame, 6, render_frame})
       assert {:ok, {:frame, 6, frame_payload}} = Protocol.decode(bin)
       assert {:ok, decoded} = Protocol.decode_frame_payload_as_render_frame(frame_payload)
-      assert %Network.Proto.RenderFrame{} = decoded
+
+      assert %Network.Proto.CameraParams{
+               kind: {:camera_2d, %Network.Proto.Camera2d{offset_x: 1.0, offset_y: -2.0}}
+             } = decoded.camera
+
+      assert [
+               %Network.Proto.DrawCommand{
+                 kind:
+                   {:sprite_raw,
+                    %Network.Proto.SpriteRaw{
+                      x: 10.0,
+                      y: 20.0,
+                      width: 30.0,
+                      height: 40.0
+                    }}
+               }
+             ] = decoded.commands
+
+      assert [
+               %Network.Proto.UiNode{
+                 rect: %Network.Proto.UiRect{
+                   anchor: "top_left",
+                   offset: [8.0, 16.0],
+                   size: {:fixed, %Network.Proto.UiSizeFixed{w: 120.0, h: 32.0}}
+                 },
+                 component: %Network.Proto.UiComponent{
+                   kind:
+                     {:text,
+                      %Network.Proto.UiText{text: "HP", color: [1.0, 1.0, 1.0, 1.0], size: 16.0}}
+                 }
+               }
+             ] = decoded.ui.nodes
     end
 
     test ":ping パケットをエンコード・デコードできる" do
