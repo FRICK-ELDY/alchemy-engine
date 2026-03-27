@@ -371,7 +371,7 @@ pub fn set_frame_injection_binary(
         )));
     }
     let inner = super::protobuf_frame_injection::decode_injection_payload(payload);
-    super::protobuf_frame_injection::apply_injection_from_pb(&mut w, inner.as_slice()).map_err(
+    super::protobuf_frame_injection::apply_injection_from_pb(&mut w, &inner).map_err(
         |e| {
             rustler::Error::Term(Box::new(format!("protobuf frame injection decode: {}", e)))
         },

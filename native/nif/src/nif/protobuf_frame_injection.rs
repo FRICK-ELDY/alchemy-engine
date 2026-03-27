@@ -3,6 +3,7 @@
 use crate::physics::weapon::WeaponSlot;
 use crate::physics::world::{GameWorldInner, SpecialEntitySnapshot};
 use prost::Message;
+use std::borrow::Cow;
 use std::cmp::min;
 
 /// 不正な kind_id で巨大ベクタ確保を避けるための上限。
@@ -30,10 +31,10 @@ pub struct FrameInjectionEnvelopePb {
     pub payload: Vec<u8>,
 }
 
-pub fn decode_injection_payload(bytes: &[u8]) -> Vec<u8> {
+pub fn decode_injection_payload(bytes: &[u8]) -> Cow<'_, [u8]> {
     match FrameInjectionEnvelopePb::decode(bytes) {
-        Ok(env) if !env.payload.is_empty() => env.payload,
-        _ => bytes.to_vec(),
+        Ok(env) => Cow::Owned(env.payload),
+        Err(_) => Cow::Borrowed(bytes),
     }
 }
 
