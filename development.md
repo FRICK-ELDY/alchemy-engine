@@ -131,13 +131,13 @@ elixir --name b@127.0.0.1 -S mix run
 | ビルド | `elixir -S mix alchemy.build` | VRAlchemy クライアントをビルド |
 | CI 相当 | `elixir -S mix alchemy.ci` | ローカル CI チェック |
 | Credo | `elixir -S mix alchemy.credo` | Elixir 静的解析 |
-| Protobuf 生成 | `elixir -S mix alchemy.gen_proto` | `.proto` から Elixir/Rust 生成（公式エントリ。詳細は `workspace/2_todo/protobuf-full-automation-procedure.md`） |
+| Protobuf 生成 | `elixir -S mix alchemy.gen.proto` | `.proto` から Elixir/Rust 生成（公式エントリ。詳細は `workspace/2_todo/protobuf-full-automation-procedure.md`） |
 
 CI の詳細は [docs/warranty/ci.md](./docs/warranty/ci.md) を参照。
 
 ## Protobuf（`.proto`）
 
-スキーマの単一ソースはリポジトリ直下の **`proto/*.proto`**。生成物の更新は **`mix alchemy.gen_proto`** を公式エントリとする（実装は段階的に同タスクへ集約）。ツール導入、`build.rs`、CI、生成物の置き方の詳細は、作業用ツリー `workspace/2_todo/protobuf-full-automation-procedure.md` に書く。
+スキーマの単一ソースはリポジトリ直下の **`proto/*.proto`**。生成物の更新は **`mix alchemy.gen.proto`** を公式エントリとする（実装は段階的に同タスクへ集約）。ツール導入、`build.rs`、CI、生成物の置き方の詳細は、作業用ツリー `workspace/2_todo/protobuf-full-automation-procedure.md` に書く。
 
 - 公開向けの短い概要: [docs/architecture/protobuf-migration.md](./docs/architecture/protobuf-migration.md)
 - ワイヤ形式とレガシー ETF: [docs/architecture/erlang-term-schema.md](./docs/architecture/erlang-term-schema.md)

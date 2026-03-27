@@ -16,7 +16,7 @@ Zenoh 経由のペイロードを Erlang term（ETF）から **Protocol Buffers*
 
 ## 開発者向け
 
-- **生成の公式エントリ**: リポジトリルートで `mix alchemy.gen_proto`（実装は段階的に追加）。
+- **生成の公式エントリ**: リポジトリルートで `mix alchemy.gen.proto`（実装は段階的に追加）。
 - **完全自動化**の手順・ツール・CI: リポジトリ内 `workspace/2_todo/protobuf-full-automation-procedure.md`（本 `docs` からはリンクしない。パスはリポジトリで検索）。
 - 開発ガイドの入口: [development.md](../../development.md)
 

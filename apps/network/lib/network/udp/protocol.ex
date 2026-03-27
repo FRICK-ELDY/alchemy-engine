@@ -1,5 +1,5 @@
 defmodule Network.UDP.Protocol do
-  alias Network.Proto.RenderFrame
+  alias Alchemy.Render.RenderFrame
 
   @moduledoc """
   UDP パケットのエンコード・デコードとデルタ圧縮。
@@ -184,7 +184,7 @@ defmodule Network.UDP.Protocol do
   end
 
   @doc """
-  UDP `:frame` payload を `Network.Proto.RenderFrame` としてデコードする。
+  UDP `:frame` payload を `Alchemy.Render.RenderFrame` としてデコードする。
   """
   @spec decode_frame_payload_as_render_frame(binary()) ::
           {:ok, RenderFrame.t()} | {:error, term()}

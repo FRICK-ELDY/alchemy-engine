@@ -14,7 +14,7 @@ defmodule Network.ZenohBridgeTest do
   describe "handle_info/2 client_info decode path" do
     test "valid protobuf payload is stored in ETS" do
       payload =
-        Network.Proto.ClientInfo.encode(%Network.Proto.ClientInfo{
+        Alchemy.Client.ClientInfo.encode(%Alchemy.Client.ClientInfo{
           os: "win32",
           arch: "x86_64",
           family: "windows"

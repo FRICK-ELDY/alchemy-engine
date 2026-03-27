@@ -801,7 +801,7 @@ defmodule Contents.Events.Game do
   defp maybe_set_player_input_direct(world_ref, dx, dy) when is_number(dx) and is_number(dy) do
     case Core.NifBridge.set_player_input(world_ref, dx * 1.0, dy * 1.0) do
       {:error, reason} ->
-        Logger.debug("[Events.Game] set_player_input failed: #{inspect(reason)}")
+        Logger.warn("[Events.Game] set_player_input failed: #{inspect(reason)}")
 
       _ ->
         :ok
@@ -843,7 +843,7 @@ defmodule Contents.Events.Game do
   defp do_set_weapon_slots(world_ref, slots) when is_list(slots) do
     case Core.NifBridge.set_weapon_slots(world_ref, slots) do
       {:error, reason} ->
-        Logger.debug("[Events.Game] set_weapon_slots failed: #{inspect(reason)}")
+        Logger.warn("[Events.Game] set_weapon_slots failed: #{inspect(reason)}")
 
       _ ->
         :ok

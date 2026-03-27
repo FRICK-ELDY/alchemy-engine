@@ -44,7 +44,7 @@ defmodule Network.UDP do
   use GenServer
   require Logger
 
-  alias Network.Proto.RenderFrame
+  alias Alchemy.Render.RenderFrame
   alias Network.UDP.Protocol
 
   @default_port 4001

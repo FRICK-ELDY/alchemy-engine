@@ -83,12 +83,12 @@ defmodule Network.UDPTest do
     end
 
     test ":frame は RenderFrame struct からもエンコードできる" do
-      render_frame = %Network.Proto.RenderFrame{
+      render_frame = %Alchemy.Render.RenderFrame{
         commands: [
-          %Network.Proto.DrawCommand{
+          %Alchemy.Render.DrawCommand{
             kind:
               {:sprite_raw,
-               %Network.Proto.SpriteRaw{
+               %Alchemy.Render.SpriteRaw{
                  x: 10.0,
                  y: 20.0,
                  width: 30.0,
@@ -96,19 +96,19 @@ defmodule Network.UDPTest do
                }}
           }
         ],
-        camera: %Network.Proto.CameraParams{
-          kind: {:camera_2d, %Network.Proto.Camera2d{offset_x: 1.0, offset_y: -2.0}}
+        camera: %Alchemy.Render.CameraParams{
+          kind: {:camera_2d, %Alchemy.Render.Camera2d{offset_x: 1.0, offset_y: -2.0}}
         },
-        ui: %Network.Proto.UiCanvas{
+        ui: %Alchemy.Render.UiCanvas{
           nodes: [
-            %Network.Proto.UiNode{
-              rect: %Network.Proto.UiRect{
+            %Alchemy.Render.UiNode{
+              rect: %Alchemy.Render.UiRect{
                 anchor: "top_left",
                 offset: [8.0, 16.0],
-                size: {:fixed, %Network.Proto.UiSizeFixed{w: 120.0, h: 32.0}}
+                size: {:fixed, %Alchemy.Render.UiSizeFixed{w: 120.0, h: 32.0}}
               },
-              component: %Network.Proto.UiComponent{
-                kind: {:text, %Network.Proto.UiText{text: "HP", color: [1.0, 1.0, 1.0, 1.0], size: 16.0}}
+              component: %Alchemy.Render.UiComponent{
+                kind: {:text, %Alchemy.Render.UiText{text: "HP", color: [1.0, 1.0, 1.0, 1.0], size: 16.0}}
               },
               children: []
             }
@@ -121,15 +121,15 @@ defmodule Network.UDPTest do
       assert {:ok, {:frame, 6, frame_payload}} = Protocol.decode(bin)
       assert {:ok, decoded} = Protocol.decode_frame_payload_as_render_frame(frame_payload)
 
-      assert %Network.Proto.CameraParams{
-               kind: {:camera_2d, %Network.Proto.Camera2d{offset_x: 1.0, offset_y: -2.0}}
+      assert %Alchemy.Render.CameraParams{
+               kind: {:camera_2d, %Alchemy.Render.Camera2d{offset_x: 1.0, offset_y: -2.0}}
              } = decoded.camera
 
       assert [
-               %Network.Proto.DrawCommand{
+               %Alchemy.Render.DrawCommand{
                  kind:
                    {:sprite_raw,
-                    %Network.Proto.SpriteRaw{
+                    %Alchemy.Render.SpriteRaw{
                       x: 10.0,
                       y: 20.0,
                       width: 30.0,
@@ -139,16 +139,16 @@ defmodule Network.UDPTest do
              ] = decoded.commands
 
       assert [
-               %Network.Proto.UiNode{
-                 rect: %Network.Proto.UiRect{
+               %Alchemy.Render.UiNode{
+                 rect: %Alchemy.Render.UiRect{
                    anchor: "top_left",
                    offset: [8.0, 16.0],
-                   size: {:fixed, %Network.Proto.UiSizeFixed{w: 120.0, h: 32.0}}
+                   size: {:fixed, %Alchemy.Render.UiSizeFixed{w: 120.0, h: 32.0}}
                  },
-                 component: %Network.Proto.UiComponent{
+                 component: %Alchemy.Render.UiComponent{
                    kind:
                      {:text,
-                      %Network.Proto.UiText{text: "HP", color: [1.0, 1.0, 1.0, 1.0], size: 16.0}}
+                      %Alchemy.Render.UiText{text: "HP", color: [1.0, 1.0, 1.0, 1.0], size: 16.0}}
                  }
                }
              ] = decoded.ui.nodes
@@ -370,12 +370,12 @@ defmodule Network.UDPTest do
       :ok = send_packet(sock, server_port, Protocol.encode({:join, 1, room_id}))
       {:ok, {:join_ack, 1, _}} = recv_packet(sock)
 
-      render_frame = %Network.Proto.RenderFrame{
+      render_frame = %Alchemy.Render.RenderFrame{
         commands: [],
-        camera: %Network.Proto.CameraParams{
-          kind: {:camera_2d, %Network.Proto.Camera2d{offset_x: 0.25, offset_y: 0.5}}
+        camera: %Alchemy.Render.CameraParams{
+          kind: {:camera_2d, %Alchemy.Render.Camera2d{offset_x: 0.25, offset_y: 0.5}}
         },
-        ui: %Network.Proto.UiCanvas{nodes: []},
+        ui: %Alchemy.Render.UiCanvas{nodes: []},
         mesh_definitions: []
       }
 
@@ -383,7 +383,7 @@ defmodule Network.UDPTest do
 
       assert {:ok, {:frame, _seq, frame_payload}} = recv_packet(sock, 1000)
       assert {:ok, decoded} = Protocol.decode_frame_payload_as_render_frame(frame_payload)
-      assert %Network.Proto.RenderFrame{} = decoded
+      assert %Alchemy.Render.RenderFrame{} = decoded
     end
 
     test "別ルームのクライアントにはフレームが届かない", %{server_port: server_port} do

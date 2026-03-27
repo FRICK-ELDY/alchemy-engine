@@ -326,8 +326,8 @@ defmodule Network.ZenohBridge do
   defp decode_client_info(_), do: :error
 
   defp try_decode_movement_protobuf(payload) when is_binary(payload) do
-    case Network.Proto.Movement.decode(payload) do
-      %Network.Proto.Movement{dx: dx, dy: dy} when is_number(dx) and is_number(dy) ->
+    case Alchemy.Input.Movement.decode(payload) do
+      %Alchemy.Input.Movement{dx: dx, dy: dy} when is_number(dx) and is_number(dy) ->
         {:ok, {dx, dy}}
 
       _ ->
@@ -343,8 +343,8 @@ defmodule Network.ZenohBridge do
   end
 
   defp try_decode_action_protobuf(payload) when is_binary(payload) do
-    case Network.Proto.Action.decode(payload) do
-      %Network.Proto.Action{name: name} when is_binary(name) and byte_size(name) > 0 ->
+    case Alchemy.Input.Action.decode(payload) do
+      %Alchemy.Input.Action{name: name} when is_binary(name) and byte_size(name) > 0 ->
         {:ok, name}
 
       _ ->
@@ -360,8 +360,8 @@ defmodule Network.ZenohBridge do
   end
 
   defp try_decode_client_info_protobuf(payload) when is_binary(payload) do
-    case Network.Proto.ClientInfo.decode(payload) do
-      %Network.Proto.ClientInfo{os: os, arch: arch, family: family}
+    case Alchemy.Client.ClientInfo.decode(payload) do
+      %Alchemy.Client.ClientInfo{os: os, arch: arch, family: family}
       when is_binary(os) and is_binary(arch) and is_binary(family) ->
         {:ok, %{"os" => os, "arch" => arch, "family" => family}}
 

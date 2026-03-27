@@ -87,6 +87,9 @@ mod formula;
 mod lock_metrics;
 mod nif;
 pub mod physics;
+pub mod pb {
+    include!(concat!(env!("OUT_DIR"), "/alchemy.frame.rs"));
+}
 
 pub use crate::physics::game_logic::{
     find_nearest_enemy, find_nearest_enemy_spatial, find_nearest_enemy_spatial_excluding,
