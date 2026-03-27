@@ -1,6 +1,6 @@
 # AlchemyEngine — マイナス点 詳細一覧
 
-> 最終更新: 2026-03-23（evaluation-2026-03-23 に基づく）
+> 最終更新: 2026-03-28（evaluation-2026-03-28 に基づく）
 
 ## 採点基準
 
@@ -20,19 +20,19 @@
 
 - **boss_dash_end の専用 handle_info 節（汎用化の余地）** `-1`
   > `handle_info({:boss_dash_end, _}, state)` は `dispatch_to_components(:on_engine_message, [msg, context])` を呼ぶ設計に改善済み。しかし新規エンジンメッセージ種別を追加するたびに `GameEvents` に専用節を追加する必要があり、完全な汎用化には至っていない。
-  > 対象ファイル: `apps/contents/lib/contents/game_events.ex`（L343-347）
+  > 対象ファイル: `apps/contents/lib/events/game.ex`
 
 - **SaveManager の HMAC シークレットがデフォルト値でハードコード** `-2`
   > `hmac_secret/0` のデフォルト値 `"alchemy-engine-save-secret-v1"` が `save_manager.ex` と `config.exs` に公開されており、環境変数未設定時はセーブデータ改ざん検証が実質的に無効化される。本番では `SAVE_HMAC_SECRET` で上書きできるが、強制機構がない。
   > 対象ファイル: `apps/core/lib/core/save_manager.ex`（L187-188）, `config/config.exs`（L52）
 
-- **Contents.SceneStack・GameEvents のテストがゼロ** `-3`
-  > シーン遷移・フレームループの中核ロジックが未検証。リファクタリングの安全網が不足している。
-  > 対象ファイル: `apps/core/test/`, `apps/contents/test/`
+- **Contents.Scenes.Stack と Contents.Events.Game の直接テスト不足** `-3`
+  > シーンスタックの push/pop/replace と、`Contents.Events.Game` のバックプレッシャー・フレームループの中核は、`apps/core` / `apps/contents` にユニットテストがない。`Network` 系テストはイベント到達を検証するが、状態機械の網羅的な安全網は不足している。
+  > 対象ファイル: `apps/contents/lib/scenes/stack.ex`, `apps/contents/lib/events/game.ex`, `apps/core/test/`, `apps/contents/test/`
 
 - **セーブ対象データの収集責務が未定義** `-2`
   > `SaveManager.save_session/1` は Rust スナップショットのみ保存。`score`, `kill_count`, `level`, `weapon_levels`, `boss_state` など Elixir 側 Playing state がセーブに含まれない。
-  > 対象ファイル: `apps/core/lib/core/save_manager.ex`, `apps/contents/lib/contents/game_events.ex`
+  > 対象ファイル: `apps/core/lib/core/save_manager.ex`, `apps/contents/lib/events/game.ex`
 
 ---
 
@@ -46,7 +46,7 @@
 
 - **Diagnostics がコンテンツ固有の知識を持っている** `-2`
   > `Contents.Events.Game.Diagnostics.do_log_and_cache/3` が `playing_state` の `:enemies` / `:bullets` キーを直接参照。Rust ECS を使わないコンテンツ向けの補完だが、エンジン層がコンテンツ固有の構造を知っている。
-  > 対象ファイル: `apps/contents/lib/contents/game_events/diagnostics.ex`（L58-66）
+  > 対象ファイル: `apps/contents/lib/events/game/diagnostics.ex`
 
 - **LevelComponent のアイテムドロップロジックの重複** `-2`
   > `on_frame_event({:enemy_killed, ...})` と `on_event({:entity_removed, ...})` の両方でアイテムドロップ処理が実装されており、同一の敵撃破に対して両方が呼ばれる可能性がある。`@drop_magnet_threshold`・`@drop_potion_threshold` が両箇所で使われているが、イベントの対応関係がコードから読み取りにくい。
@@ -194,7 +194,7 @@
 
 - **[:game, :session_end] が metrics/0 に未登録** `-2`
   > `diagnostics.ex` で `[:game, :session_end]` イベントが発火されているが、`telemetry.ex` の `metrics/0` に登録されていない。`ConsoleReporter` に表示されず、セッション終了時の統計が可観測性ツールに流れない。
-  > 対象ファイル: `apps/core/lib/core/telemetry.ex`, `apps/contents/lib/contents/game_events/diagnostics.ex`
+  > 対象ファイル: `apps/core/lib/core/telemetry.ex`, `apps/contents/lib/events/game/diagnostics.ex`
 
 - **:telemetry.attach の呼び出しがゼロ（外部監視ツールへの接続口なし）** `-2`
   > `ConsoleReporter` のみで外部監視ツール（Prometheus・Grafana等）への接続口がない。本番環境でのパフォーマンス監視が `ConsoleReporter` の出力を目視確認するしかない。
@@ -202,7 +202,7 @@
 
 - **NIF パニック時のゲームループ再起動ロジックが未実装** `-2`
   > NIF がパニックすると BEAM VM ごと落ちる。`NifResult` で捕捉可能なエラーはあるが、完全な回復フロー（ルーム再起動・状態復元）は未整備。
-  > 対象ファイル: `apps/core/`, `apps/contents/lib/contents/game_events.ex`
+  > 対象ファイル: `apps/core/`, `apps/contents/lib/events/game.ex`
 
 ---
 
@@ -224,9 +224,9 @@
 
 ### ❌ マイナス点
 
-- **CI の pull_request トリガーが未設定** `-2`
-  > `.github/workflows/ci.yml` が `push` イベントのみをトリガーとしており、`pull_request:` イベントが未設定。PRへの自動チェックが走らず、PRマージ前の品質保証が機能しない。
-  > 対象ファイル: `.github/workflows/ci.yml`
+- **ローカル CI が proto-verify を含まない** `-1`
+  > `mix alchemy.ci` は Rust / Elixir の fmt・lint・test までをカバーするが、GitHub Actions の `proto-verify`（`mix alchemy.gen.proto` 後の `git diff`）はローカルタスクに含まれない。生成物のドリフトは push 前に気づきにくい。
+  > 対象ファイル: `apps/core/lib/mix/tasks/alchemy.ci.ex`, `.github/workflows/ci.yml`
 
 - **bench-regression のローカル実行スクリプトが存在しない** `-1`
   > `mix alchemy.ci` がジョブA〜Dと1:1対応しているが、ジョブE（bench-regression）のローカル実行スクリプトが存在しない。ベンチマーク回帰をローカルで確認する手段がない。
