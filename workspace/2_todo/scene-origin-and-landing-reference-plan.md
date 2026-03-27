@@ -57,7 +57,7 @@
 ### Phase 4: コード実装（別計画で実施）
 
 - Scene の state 型や Stack が origin / children（トップレベル Object リスト）を扱う実装、および FormulaTest.Playing の root_object 置き換えは、実施計画書に委譲する。
-- 実施計画: [scene-origin-landing-implementation-plan.md](./scene-origin-landing-implementation-plan.md) に委譲（コード実装は同実施計画書に従う）。
+- 実施計画: [scene-origin-landing-implementation-plan.md](../7_done/scene-origin-landing-implementation-plan.md) に委譲（コード実装は同実施計画書に従う）。
 
 ---
 
