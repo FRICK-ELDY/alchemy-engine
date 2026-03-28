@@ -44,7 +44,7 @@ graph TD
     SAVE[save_nif.rs<br/>セーブ/ロード]
     EVENTS[events.rs<br/>FrameEvent → Elixir アトム変換]
     UTIL[util.rs<br/>ユーティリティ]
-    DECODE[decode/<br/>msgpack_injection<br/>set_frame_injection 用]
+    DECODE[decode/<br/>（予約・拡張用）]
     XR[xr_nif.rs<br/>OpenXR VR ブリッジ<br/>feature=xr]
     FORMULA[formula_nif.rs<br/>Formula VM 評価 NIF]
     FORMULA_MOD[formula/<br/>VM・オペコード・Value]
@@ -114,6 +114,12 @@ graph TD
 | `is_player_dead(world)` | 死亡判定 |
 | `get_render_entities(world)` | 描画用エンティティスナップショット（Phase R-2 以前のレガシー等） |
 
+**`render_frame_nif.rs`（P5: RenderFrame protobuf）:**
+
+| NIF 関数 | 説明 |
+|:---|:---|
+| `push_render_frame_binary(world, binary)` | `Content.FrameEncoder` と同一スキーマの protobuf を `render_frame_proto::decode_pb_render_frame` でデコードし成功すれば `:ok`（**本番ゲームループの毎フレーム必須ではない**。CI・開発時の契約検証・オプトインのデバッグ向け。NIF は `wgpu` 等をリンクせず `render_frame_proto`（prost）のみ。描画バッファへは書き込まない） |
+
 **`formula_nif.rs`（Formula VM 評価）:**
 
 Elixir の FormulaGraph から生成したバイトコードを Rust 側 VM で実行。`formula/` モジュール（vm.rs, opcode, value, decode）が VM 実装を提供。`Core.Formula` / `Content.FormulaTest` が利用。
@@ -133,7 +139,7 @@ NIF ローダー。パニックフック（debug 時）・GameWorld / GameLoopCo
 | `pause_physics(control)` | 物理演算を一時停止 |
 | `resume_physics(control)` | 物理演算を再開 |
 
-描画は Elixir の Render コンポーネントが `FrameBroadcaster.put` で Zenoh へ配信し、`app`（VRAlchemy）が `network` 経由で受信する。nif は描画系に依存しない。
+描画は Elixir の Render コンポーネントが `FrameBroadcaster.put` で Zenoh へ配信し、`app`（VRAlchemy）が `network` 経由で受信する。NIF は GPU 描画スタック（`render` クレート）に依存しない。
 
 ---
 

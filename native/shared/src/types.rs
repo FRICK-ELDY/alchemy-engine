@@ -1,7 +1,7 @@
 //! #[repr(C)] 構造体（Elixir との共通規格）
 //!
 //! Zero-Copy のため bytemuck::Pod + Zeroable を導出。
-//! 既存の DrawCommand, RenderFrame 等は段階的に移行予定。
+//! 描画フレーム契約型は `render_frame` モジュールへ移行済み。
 
 use bytemuck::{Pod, Zeroable};
 use serde::Serialize;

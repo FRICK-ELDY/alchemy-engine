@@ -16,5 +16,5 @@ wgpu を用いた共通レンダラー。プラットフォームを問わず同
 
 ## 依存
 
-- `nif`（一部定数参照）
-- `shared`
+- `shared`（`RenderFrame` 契約型・背景クリア色など）
+- `render_frame_proto` — `proto/render_frame.proto` のデコード（`decode_pb_render_frame`）。NIF は `render` ではなくこのクレートのみを引く

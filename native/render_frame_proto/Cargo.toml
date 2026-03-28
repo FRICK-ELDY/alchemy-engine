@@ -1,0 +1,13 @@
+[package]
+name = "render_frame_proto"
+version = "0.1.0"
+edition = "2021"
+description = "proto/render_frame.proto → shared::render_frame::RenderFrame（prost のみ。NIF / ネットワーク薄層向け）"
+
+[dependencies]
+log = "0.4"
+prost = "0.14"
+shared = { path = "../shared" }
+
+[build-dependencies]
+prost-build = "0.14"

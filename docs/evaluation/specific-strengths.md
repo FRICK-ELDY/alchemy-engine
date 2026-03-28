@@ -120,9 +120,9 @@
 
 ### ✅ プラス点
 
-- **MessagePack デコードの網羅性** `+4`
-  > DrawCommand, CameraParams, UiCanvas, MeshDef, UiComponent 等を MessagePack から RenderFrame へ変換。UiAnchor の未知値フォールバック、VertexWire 変換が実装されている。
-  > 対象ファイル: `native/network/src/msgpack_decode.rs`
+- **Protobuf フレームデコードの網羅性** `+4`
+  > DrawCommand, CameraParams, UiCanvas, MeshDef, UiComponent 等を `decode_pb_render_frame` で RenderFrame へ変換。UiAnchor の未知値フォールバック等が実装されている。
+  > 実装: `native/render_frame_proto/src/protobuf_render_frame.rs`。`network` は `native/network/src/protobuf_render_frame.rs` から `render` 経由で同関数を再エクスポート。契約 golden: `native/network/tests/render_frame_e2e_contract.rs`。
 
 - **NetworkRenderBridge による RenderBridge 実装** `+2`
   > Zenoh 購読スレッド・frame_buffer・keys_held 管理。put_drop で CongestionControl::Drop。ClientInfo の発行。

@@ -2,7 +2,7 @@
 
 ## 概要
 
-`contents` はゲームコンテンツ（VampireSurvivor / AsteroidArena / SimpleBox3D / BulletHell3D / RollingBall / CanvasTest / FormulaTest）の実装と、シーン管理・メインゲームループのディスパッチを担当します。エンジン本体（[core](./core.md)）はゲームロジックを知らず、`Contents.Behaviour.Content` で定義されたインターフェースに従ってコンポーネントへ委譲します。描画は Zenoh 専用。Render コンポーネントが DrawCommand・Camera・UiCanvas を組み立て、`Content.MessagePackEncoder` で MessagePack にエンコードし、`FrameBroadcaster.put(room_id, frame_binary)` で Zenoh へ publish する。
+`contents` はゲームコンテンツ（VampireSurvivor / AsteroidArena / SimpleBox3D / BulletHell3D / RollingBall / CanvasTest / FormulaTest）の実装と、シーン管理・メインゲームループのディスパッチを担当します。エンジン本体（[core](./core.md)）はゲームロジックを知らず、`Contents.Behaviour.Content` で定義されたインターフェースに従ってコンポーネントへ委譲します。描画は Zenoh 専用。Render コンポーネントが DrawCommand・Camera・UiCanvas を組み立て、`Content.FrameEncoder.encode_frame/5` で protobuf（`proto/render_frame.proto`）にし、`FrameBroadcaster.put(room_id, frame_binary)` で Zenoh へ publish する。
 
 使用するコンテンツは `config/config.exs` の `config :server, :current, ...` で指定します（既定値は `Content.VampireSurvivor`）。
 
@@ -134,7 +134,7 @@ stateDiagram-v2
 |:---|:---|
 | `Contents.ComponentList` | コンポーネント解決。LocalUserComponent・TelemetryComponent を自動注入 |
 | `Contents.FrameBroadcaster` | Zenoh フレーム配信。`put(room_id, frame_binary)` で Process.put → GameEvents が ZenohBridge に配送 |
-| `Content.MessagePackEncoder` | RenderFrame の MessagePack エンコード |
+| `Content.FrameEncoder` | RenderFrame の protobuf エンコード（`Alchemy.Render.RenderFrame`） |
 
 ---
 

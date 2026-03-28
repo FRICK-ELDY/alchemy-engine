@@ -122,7 +122,7 @@ flowchart TB
 | `Contents.ComponentList` | コンポーネントリスト解決（LocalUser, Telemetry 注入） |
 | `Core.Config` | 現在のコンテンツ取得（config :server, :current） |
 | `Core.RoomRegistry` | ルーム・イベントハンドラ登録 |
-| `Content.MessagePackEncoder` | frame の MessagePack エンコード |
+| `Content.FrameEncoder` | frame の protobuf エンコード |
 | `Contents.FrameBroadcaster` | frame をクライアントへ配信 |
 | `Contents.Components.Category.Procedural.Meshes.Grid` | グリッド平面の頂点生成 |
 
@@ -258,7 +258,7 @@ sequenceDiagram
     participant SS as SceneStack
     participant Playing as Scenes.Playing
     participant RC as RenderComponent
-    participant MP as MessagePackEncoder
+    participant FE as FrameEncoder
     participant FB as FrameBroadcaster
 
     Rust->>GE: {:frame_events, events}
@@ -269,7 +269,7 @@ sequenceDiagram
     GE->>RC: on_nif_sync(context)
     RC->>SS: get_scene_state(Playing)
     SS-->>RC: state
-    RC->>MP: encode_frame(commands, camera, ui)
+    RC->>FE: encode_frame(commands, camera, ui)
     RC->>FB: put(room_id, frame_binary)
 ```
 
@@ -364,7 +364,7 @@ flowchart TB
     end
 
     subgraph output["出力"]
-        MP["MessagePackEncoder"]
+        FE["FrameEncoder"]
         FB["FrameBroadcaster"]
     end
 
@@ -374,8 +374,8 @@ flowchart TB
     SS --> UP
     GE --> RC
     GE --> IC
-    RC --> MP
-    MP --> FB
+    RC --> FE
+    FE --> FB
     IC --> SS
 ```
 

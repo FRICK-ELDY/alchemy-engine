@@ -21,7 +21,7 @@
 | 役割 | 配置 | 責務 |
 |:---|:---|:---|
 | **定義** | `apps/contents/lib/contents` | 現在の Content の playing state と context から **commands / camera / ui** を組み立てる。各コンテンツ（またはその Playing）が「何を描くか」を決める。 |
-| **実行** | `apps/contents/lib/components/category/rendering` | **単一モジュール**が、現在 Content から frame データを取得し、MessagePack エンコード・FrameBroadcaster 送信・cursor_grab リセットまでを行う。 |
+| **実行** | `apps/contents/lib/components/category/rendering` | **単一モジュール**が、現在 Content から frame データを取得し、protobuf エンコード（`FrameEncoder`）・FrameBroadcaster 送信・cursor_grab リセットまでを行う。 |
 
 - **定義**: 各 Content がオプショナルコールバック `build_frame(playing_state, context)` を実装し、`{commands, camera, ui}` を返す。実装は Content モジュールにまとめてもよいし、Playing に `build_frame/2` を置き Content が委譲してもよい。
 - **実行**: `Contents.Components.Category.Rendering.Render` のみ残す。`on_nif_sync` で playing_state を取得 → `content.build_frame(state, context)` を呼ぶ → 返り値を `encode_frame` して `FrameBroadcaster.put` → cursor_grab のリセット処理。`build_frame` 未実装の Content の場合は描画しない（no-op またはスキップ）。
@@ -35,7 +35,7 @@
 - **オプショナルコールバック**: `build_frame(playing_state, context) :: {commands, camera, ui}`
   - `playing_state`: 現在の playing シーンの state（`Contents.Scenes.Stack.get_scene_state` の返り値）
   - `context`: `on_nif_sync` に渡される context（`room_id`, `tick_ms` 等）
-  - 戻り値: `{commands, camera, ui}` — いずれも `Content.MessagePackEncoder.encode_frame/4` に渡す形式
+  - 戻り値: `{commands, camera, ui}` — いずれも `Content.FrameEncoder.encode_frame/5` に渡す形式
 
 - **実装場所**
   - **Content.CanvasTest**: `build_frame/2` を実装。内部で `Content.CanvasTest.Playing.render_defaults/0` を参照し、現行 `Rendering.Render` の `build_commands` / `build_camera` / `build_ui` に相当する処理を行う。実装は `Content.CanvasTest` に持つか、`Content.CanvasTest.Playing.build_frame/2` に持って Content が委譲するかは任意。
@@ -52,7 +52,7 @@
     3. `playing_state = get_scene_state(runner, content.playing_scene())`（無い場合は `%{}`）
     4. `function_exported?(content, :build_frame, 2)` が false なら `:ok` で終了（描画スキップ）
     5. `{commands, camera, ui} = content.build_frame(playing_state, context)`
-    6. `frame_binary = Content.MessagePackEncoder.encode_frame(commands, camera, ui, [])`
+    6. `frame_binary = Content.FrameEncoder.encode_frame(commands, camera, ui, mesh_definitions, cursor_grab)`
     7. `Contents.FrameBroadcaster.put(context.room_id, frame_binary)`
     8. `cursor_grab_request` が `:no_change` でなければ、従来どおり state を更新してリセット
 

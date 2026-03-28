@@ -106,7 +106,7 @@ alchemy-engine/
 │   │       │   ├── scene_behaviour.ex     # シーンコールバック定義
 │   │       │   ├── frame_broadcaster.ex   # Zenoh フレーム配信（Process.put → ZenohBridge）
 │   │       │   ├── component_list.ex      # コンポーネント解決（LocalUserComponent / TelemetryComponent 注入）
-│   │       │   ├── message_pack_encoder.ex# Content.MessagePackEncoder（RenderFrame の MessagePack エンコード）
+│   │       │   ├── frame_encoder.ex         # Content.FrameEncoder（RenderFrame の protobuf エンコード）
 │   │       │   ├── local_user_component.ex# ローカル入力共通コンポーネント
 │   │       │   ├── telemetry_component.ex # 入力状態参照用（全コンテンツに注入）
 │   │       │   ├── menu_component.ex      # メニュー UI 共通コンポーネント
@@ -279,7 +279,7 @@ sequenceDiagram
 
 ### 4. 描画命令の Zenoh 配信
 
-Elixir 側（contents）の Render コンポーネントが DrawCommand リスト・CameraParams・UiCanvas を組み立て、`Content.MessagePackEncoder` で MessagePack にエンコードし、`FrameBroadcaster.put(room_id, frame_binary)` で Zenoh へ publish する。`Network.ZenohBridge` が受信し、`app`（VRAlchemy exe）が subscribe して描画する。ローカル描画は廃止済み（Zenoh 専用）。
+Elixir 側（contents）の Render コンポーネントが DrawCommand リスト・CameraParams・UiCanvas を組み立て、`Content.FrameEncoder.encode_frame/5` で protobuf（`proto/render_frame.proto`）にし、`FrameBroadcaster.put(room_id, frame_binary)` で Zenoh へ publish する。`Network.ZenohBridge` が受信し、`app`（VRAlchemy exe）が subscribe して描画する。ローカル描画は廃止済み（Zenoh 専用）。
 
 ### 5. Contents.Behaviour.Content + Component による拡張設計
 

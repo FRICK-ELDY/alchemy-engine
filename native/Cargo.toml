@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "shared",
+    "render_frame_proto",
     "network",
     "audio",
     "render",

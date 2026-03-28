@@ -3,6 +3,8 @@
 > 元計画: [env-and-serialization-migration-plan.md](../1_backlog/env-and-serialization-migration-plan.md)  
 > 実施完了: 2026-03 頃  
 > 本ドキュメント: 実施済みの §1, §2（フェーズ A/B/C）を記録。
+>
+> **追記（2026-03-28）**: 以降の開発では Zenoh フレーム・入力・injection のワイヤ形式は **protobuf** に統一済み（[protobuf-migration.md](../../docs/architecture/protobuf-migration.md)）。以下 §2 は当時の作業ログであり、現行実装の唯一の真実ではない。
 
 ---
 
@@ -28,7 +30,7 @@
 
 ---
 
-## 2. MessagePack → Erlang term 直列化移行 ✅
+## 2. MessagePack → Erlang term 直列化移行 ✅（歴史的。現行ワイヤは protobuf）
 
 ### 2.1 フェーズ A: フレーム配信・受信の Erlang term 化
 
@@ -68,4 +70,4 @@
 
 - [zenoh-frame-serialization.md](../../policy-as-code/why_adopted/zenoh-frame-serialization.md)
 - [erlang-term-schema.md](../../docs/architecture/erlang-term-schema.md)
-- [messagepack-schema.md](../../docs/architecture/messagepack-schema.md)
+- [protobuf-migration.md](../../docs/architecture/protobuf-migration.md)

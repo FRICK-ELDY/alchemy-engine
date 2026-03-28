@@ -29,6 +29,9 @@ defmodule Core.NifBridge do
 
   # P5: protobuf バイナリ形式の set_frame_injection。decode オーバーヘッド削減。
   def set_frame_injection_binary(_world, _binary), do: :erlang.nif_error(:nif_not_loaded)
+
+  # P5: RenderFrame protobuf（`Content.FrameEncoder` と同一スキーマ）のデコード検証用。NIF は描画を持たない。
+  def push_render_frame_binary(_world, _binary), do: :erlang.nif_error(:nif_not_loaded)
   def spawn_enemies(_world, _kind, _count), do: :erlang.nif_error(:nif_not_loaded)
   # Phase 3-B: 指定座標リストに敵をスポーンする NIF
   def spawn_enemies_at(_world, _kind, _positions), do: :erlang.nif_error(:nif_not_loaded)

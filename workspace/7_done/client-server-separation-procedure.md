@@ -209,10 +209,10 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 
 | 項目 | 形式 | 説明 |
 |:---|:---|:---|
-| commands | MessagePack | Elixir の RenderComponent が生成する DrawCommand リスト。トップレベル構造は [messagepack-schema.md](../../docs/architecture/messagepack-schema.md) を参照 |
-| camera | MessagePack | Camera2D / Camera3D のパラメータ。同上 |
-| ui | MessagePack | UI キャンバス。同上 |
-| mesh_definitions | MessagePack | メッシュ定義リスト。同上 |
+| commands | protobuf | Elixir の RenderComponent が生成する DrawCommand リスト。スキーマは [draw-command-spec.md](../../docs/architecture/draw-command-spec.md)、`proto/render_frame.proto` |
+| camera | protobuf | Camera2D / Camera3D。同上 |
+| ui | protobuf | UI キャンバス。同上 |
+| mesh_definitions | protobuf | メッシュ定義リスト。同上 |
 | player_interp | optional | prev/curr tick_ms, prev/curr pos（クライアント側補間用） |
 | frame_id | u32 | フレーム識別 |
 
@@ -323,6 +323,6 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 - [Zenohex](https://github.com/biyooon-ex/zenohex) — Elixir API for Zenoh
 - [contents-defines-rust-executes.md](../1_backlog/contents-defines-rust-executes.md) — 定義 vs 実行の分離方針
 - [draw-command-spec.md](../../architecture/draw-command-spec.md) — DrawCommand スキーマ
-- [messagepack-schema.md](../../architecture/messagepack-schema.md) — バイナリ形式
+- [zenoh-protocol-spec.md](../../docs/architecture/zenoh-protocol-spec.md) — Zenoh ペイロード（protobuf）
 - [contents-to-physics-bottlenecks.md](../../architecture/contents-to-physics-bottlenecks.md) — データフロー・ボトルネック
 - [implementation.mdc](../../.cursor/rules/implementation.mdc) — 層間インターフェース設計
