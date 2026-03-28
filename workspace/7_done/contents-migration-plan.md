@@ -1,7 +1,7 @@
 # 既存コンテンツ移行プラン
 
 > 作成日: 2026-03-12  
-> 参照: [docs/architecture/fix_contents.md](../../docs/architecture/fix_contents.md), [fix-contents-implementation-procedure.md](../7_done/fix-contents-implementation-procedure.md)  
+> 参照: [docs/architecture/fix_contents.md](../../docs/architecture/fix_contents.md), [fix-contents-implementation-procedure.md](fix-contents-implementation-procedure.md)  
 > 目的: `lib/contents/` 配下の既存コンテンツを、新アーキテクチャ（structs / nodes / components / objects）へ順次移行する。
 >
 > **方針**: 移行後も `Core.ContentBehaviour` の契約を維持し、既存エンジン（GameEvents, SceneStack）から透過的に動作する。内部実装のみを新アーキテクチャに置き換える。
@@ -48,7 +48,7 @@
 
 ### 2.1 各コンテンツで行うこと
 
-1. **Scene の origin と着地点参照**: Scene の state に **origin**（空間の原点）を持ち、必要に応じて着地点となる Object への参照（例: `landing_object`）を持つ。root_object 必須は廃止。既存コンテンツは移行対象外のため root_object を残したままでも許容。参照: [scene-and-object.md](../../docs/architecture/scene-and-object.md), [scene-origin-and-landing-reference-plan.md](../7_done/scene-origin-and-landing-reference-plan.md)
+1. **Scene の origin と着地点参照**: Scene の state に **origin**（空間の原点）を持ち、必要に応じて着地点となる Object への参照（例: `landing_object`）を持つ。root_object 必須は廃止。既存コンテンツは移行対象外のため root_object を残したままでも許容。参照: [scene-and-object.md](../../docs/architecture/scene-and-object.md), [scene-origin-and-landing-reference-plan.md](scene-origin-and-landing-reference-plan.md)
 2. **Object 階層の導入**: シーン state に「空間の実体」を `Contents.Objects.Core.Struct` で表現
 3. **Component の二重化解消**: `Core.Component`（エンジン用）と `Contents.Behaviour.Components`（新アーキテクチャ）の役割を整理
   - 当面: 既存 `Core.Component` を維持しつつ、内部で新 Object/Node を参照
@@ -263,7 +263,7 @@
 
 - **構成変更**: `scenes/` を廃止し、`title.ex`, `stage_clear.ex`, `playing.ex`, `game_over.ex`, `ending.ex` を `rolling_ball/` 直下に配置。モジュール名を `Content.RollingBall.Title` / `Content.RollingBall.Playing` 等に変更。
 - **共有コンポーネントへ移行**: SpawnComponent, PhysicsComponent, RenderComponent を削除。`Contents.Components.Category.Spawner`（world_size）、`Contents.Components.Category.Device.Mouse`（move_input）、`Contents.Components.Category.Device.Keyboard`（ui_action 汎用化）、`Contents.Components.Category.Rendering.Render` を使用。
-- **ui_action_handlers**: Content が `ui_action_handlers/0` を実装すると、`__start__`・`__next_stage__`・`__back_to_title__` 等を Keyboard が Content 指定の scene_type にディスパッチ。Device.Keyboard を拡張。
+- **ui_action_handlers**: Content が `ui_action_handlers/0` を実装すると、`__start_`_・`__next_stage__`・`__back_to_title__` 等を Keyboard が Content 指定の scene_type にディスパッチ。Device.Keyboard を拡張。
 - **StageData を Playing に内包**: `StageData` モジュールを廃止し、ステージ定義を `Playing` 内の `get_stage_data/1`・`floor_tiles/1`・`hole_positions/1` に統合。
 - **Object 階層**: ボールを `Contents.Objects.Core.Struct`（ball_object）で表現。`transform.position` で座標を保持。物理計算は Object の transform を更新する形に変更。
 - **build_frame**: `Content.RollingBall.Playing.build_frame/2` に描画ロジックを集約。Rendering.Render が Content.build_frame 経由で呼ぶ。
@@ -329,6 +329,6 @@
 
 - [fix_contents.md](../../docs/architecture/fix_contents.md) — アーキテクチャ概要
 - [scene-and-object.md](../../docs/architecture/scene-and-object.md) — Scene と Object の責務、Scene state の規約（origin・着地点参照）
-- [scene-concept-addition-plan.md](../7_done/scene-concept-addition-plan.md) — Scene 概念の追加プラン（完了）
-- [fix-contents-implementation-procedure.md](../7_done/fix-contents-implementation-procedure.md) — 骨格実装手順
+- [scene-concept-addition-plan.md](scene-concept-addition-plan.md) — Scene 概念の追加プラン（完了）
+- [fix-contents-implementation-procedure.md](fix-contents-implementation-procedure.md) — 骨格実装手順
 

@@ -1,7 +1,7 @@
 # 案B: シーン種別＝atom・実装＝コンテンツ 実施手順書
 
 > 作成日: 2026-03-15  
-> 参照: [scene-and-object.md](../../docs/architecture/scene-and-object.md), [contents-migration-plan.md](../1_backlog/contents-migration-plan.md)  
+> 参照: [scene-and-object.md](../../docs/architecture/scene-and-object.md), [contents-migration-plan.md](contents-migration-plan.md)  
 > 目的: シーンを「モジュール」ではなく**種別（atom）**で扱い、**コンテンツ**が `scene_init/2` / `scene_update/3` / `scene_render_type/1` で実装する方式に移行する。  
 > 結果として「Contents.Scenes.Playing」は概念（`:playing`）としてのみ存在し、`Content.VampireSurvivor` 等が「:playing をこう実装する」と明確になる。
 

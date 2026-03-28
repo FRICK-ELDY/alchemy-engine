@@ -1,7 +1,7 @@
 # PhysicsEntity 責務の設計検討
 
 > 作成日: 2026-03-19  
-> 参照: [contents-migration-plan.md](./contents-migration-plan.md) Phase 5, [physics_entity.ex](../../../apps/contents/lib/components/category/physics_entity.ex)  
+> 参照: [contents-migration-plan.md](../7_done/contents-migration-plan.md) Phase 5, [physics_entity.ex](../../../apps/contents/lib/components/category/physics_entity.ex)  
 > 目的: PhysicsEntity の責務範囲を決定する。player_snapshot 注入・player_damaged ハンドリングを共有コンポーネントに持たせるか、AsteroidArena 専用コンポーネントに持たせるかの設計判断を検討する。
 
 ---
