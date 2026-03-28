@@ -3399,8 +3399,10 @@ dependencies = [
  "prost",
  "prost-build",
  "rayon",
+ "render_frame_proto",
  "rustc-hash 2.1.1",
  "rustler",
+ "shared",
 ]
 
 [[package]]
@@ -4886,10 +4888,21 @@ dependencies = [
  "egui-winit",
  "image",
  "log",
- "nif",
  "pollster 0.3.0",
+ "render_frame_proto",
+ "shared",
  "wgpu",
  "winit",
+]
+
+[[package]]
+name = "render_frame_proto"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "prost",
+ "prost-build",
+ "shared",
 ]
 
 [[package]]

@@ -9,36 +9,35 @@
 
 P5 は Elixir ↔ Rust 間のデータ転送効率化を目的とする。**定義の所在**とは独立だが、定義を渡す際のオーバーヘッドを削減する。
 
-**実装済み**: P5-1（バッチ注入 API）、P5-3（decode 最適化）、P5-4（get_render_entities ダブルバッファ）
+**実装済み**: P5-1（バッチ注入 API）、P5-2（フレームの Protobuf）、P5-3（decode 最適化）、P5-4（get_render_entities ダブルバッファ）
 
 ---
 
-## 2. P5-2: MessagePack バイナリ形式（未実装）
+## 2. P5-2: フレームの Protobuf バイナリ形式
 
-### 2.1 採用形式: MessagePack
+### 2.1 採用形式
 
-バイナリ化には **MessagePack** を採用する。
+バイナリ化には **Protobuf** を採用する。
 
-| 項目     | 内容                         |
-| ------ | -------------------------- |
-| メリット   | 既存ライブラリ、型情報、言語間の互換性      |
-| Elixir | msgpax                      |
-| Rust   | rmp-serde / rmp 等             |
+| 項目   | 内容 |
+| ------ | ---- |
+| スキーマ | `proto/render_frame.proto`（SSoT） |
+| Elixir | `Content.FrameEncoder` → `Alchemy.Render.RenderFrame.encode/1` |
+| Rust   | `render_frame_proto::decode_pb_render_frame`（`prost`） |
 
 ### 2.2 適用対象
 
-- **push_render_frame**: DrawCommand リスト・UiCanvas・CameraParams・MeshDef を MessagePack バイナリで渡す
-- **set_frame_injection**（将来）: injection_map を MessagePack 化。[set-frame-injection-messagepack-design.md](set-frame-injection-messagepack-design.md) 参照
+- **Zenoh フレーム配信**: `FrameBroadcaster.put` → `Network.ZenohBridge.publish_frame` のペイロード
+- **NIF 契約検証**: `push_render_frame_binary`（デコード成功で `:ok`。NIF 層は描画を持たない）
 
 ### 2.3 実装方針
 
-1. **エンコード**: Elixir 側（contents）で msgpax によりバイナリ化
-2. **デコード**: Rust 側（render_frame_nif）で rmp-serde によりバイナリから構造体へ変換
-3. **型マッピング**: DrawCommand 仕様（`docs/architecture/draw-command-spec.md`）に基づき Elixir ↔ Rust でスキーマを揃える
-4. **後方互換**: タプル形式パスは残し、コンテンツごとに MessagePack パスへ段階移行
+1. **エンコード**: Elixir 側（contents）で protobuf にシリアライズ
+2. **デコード**: Rust 側（`native/render_frame_proto`）で `decode_pb_render_frame`
+3. **型マッピング**: [draw-command-spec.md](draw-command-spec.md) と `.proto` のフィールド番号を整合させる
 
-### 2.4 留意点
+### 2.4 関連
 
-- msgpax の依存追加（mix.exs）
-- rmp-serde / rmp の依存追加（Cargo.toml）
-- スキーマ変更時は Elixir・Rust 両方の型マッピングを更新する必要あり
+- [draw-command-spec.md](draw-command-spec.md)
+- [protobuf-migration.md](protobuf-migration.md)
+- [workspace/7_done/p5-transfer-protobuf-implementation-plan.md](../../workspace/7_done/p5-transfer-protobuf-implementation-plan.md)

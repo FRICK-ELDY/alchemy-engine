@@ -1,3 +1,7 @@
+//! **役割（E2E 契約の SSoT）**: Elixir `Content.FrameEncoder.encode_frame/5` と Rust `decode_pb_render_frame`
+//! の意味的一致を、**同一 golden バイト列**で網羅検証する。フィールド・数値の詳細アサートはここに集約し、
+//! `render_frame_proto` クレートのテストはデコード層の薄いスモークに留める（重複メンテを避ける）。
+
 use network::protobuf_render_frame::decode_pb_render_frame;
 use render::{CameraParams, DrawCommand, UiComponent};
 

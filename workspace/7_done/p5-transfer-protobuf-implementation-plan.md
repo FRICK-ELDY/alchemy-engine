@@ -1,13 +1,21 @@
 # P5 転送効率化 — Protobuf 採用の実施プラン
 
-> 出典: [contents-defines-rust-executes.md](../1_backlog/contents-defines-rust-executes.md) セクション 2（P5）  
-> 方針差分: バックログ／一部設計ドキュメントでは **MessagePack** が言及されているが、本プランでは **Protobuf でエンコード（Elixir）・デコード（Rust）** する。既存の `proto/render_frame.proto`、`Content.FrameEncoder`、`native/network` の `decode_pb_render_frame`、`set_frame_injection_binary`（`FrameInjection`）と同じスタックに揃える。
+> **ステータス**: 完了（`workspace/2_todo` → `workspace/7_done` に移動済み）。  
+> 出典: [contents-defines-rust-executes.md](../1_backlog/contents-defines-rust-executes.md)（旧セクション 2・P5）  
+> **Protobuf でエンコード（Elixir）・デコード（Rust）** する。`proto/render_frame.proto`、`Content.FrameEncoder`、`render` / `network` の `decode_pb_render_frame`、`set_frame_injection_binary`（`FrameInjection`）と同じスタック。
+
+---
+
+## 0. アーキテクチャ上の前提（採用しないもの）
+
+- **NIF 層は描画を持たない。** 描画は `render` クレート（デスクトップクライアント等）と Zenoh 経路が担当する。
+- **ローカル NIF 内の `RenderFrameBuffer` への書き込み・「NIF だけで描画」は復活させない**（過去設計の名残をプランから除外する）。
 
 ---
 
 ## 1. 目的
 
-- Elixir（contents）↔ Rust（NIF / render）間の **描画フレーム転送**をバイナリ化し、デコードコストとペイロードサイズを抑える。
+- Elixir（contents）から送出する **描画フレームのバイト列**を Protobuf に統一し、Rust 側のデコードコストとペイロードサイズを抑える（実際の描画パスは Zenoh / `render`）。
 - **スキーマの単一情報源**を `.proto` に置き、Elixir・Rust で同じバイト列契約を共有する（ネットワーク経路の `Alchemy.Render.RenderFrame` と整合可能にする）。
 
 ---
@@ -17,7 +25,7 @@
 | ID | バックログの内容 | 本プランでの位置づけ |
 |----|------------------|----------------------|
 | **P5-1** | `set_frame_injection` バッチ API | 実装済み（バックログ記載どおり）。本プランでは触れない。 |
-| **P5-2** | DrawCommand・メッシュ定義のバイナリ形式 | **Protobuf**（`render_frame.proto` 拡張・`FrameEncoder`・NIF 側デコード）で実装する。MessagePack は採用しない。 |
+| **P5-2** | DrawCommand・メッシュ定義のバイナリ形式 | **Protobuf**（`render_frame.proto` 拡張・`FrameEncoder`・NIF 側デコード検証）。 |
 | **P5-3** | `push_render_frame` の decode オーバーヘッド低減 | ターム逐次デコードから **バイナリ＋prost デコード**への移行、または既存バイナリ経路の最適化・計測。設計書 [p5-transfer-optimization-design.md](../../docs/architecture/p5-transfer-optimization-design.md) では一部「実装済み」とあるため、**現状コードと突合し、残差があれば追記タスク化**する。 |
 | **P5-4** | `get_render_entities` の O(n) コピー削減 | `render_snapshot.rs` 等の **ダブルバッファ／事前構築**と突合。未達・回帰があれば継続タスクとする。 |
 
@@ -30,7 +38,7 @@
 1. **Elixir**: `apps/contents/lib/contents/frame_encoder.ex` — 既に `Alchemy.Render.RenderFrame.encode/1`（protobuf）。
 2. **Rust（ネットワーク）**: `native/network/src/protobuf_render_frame.rs` — `decode_pb_render_frame`（prost）。
 3. **NIF**: `set_frame_injection_binary` — `FrameInjection` の protobuf デコード（`native/nif/src/nif/protobuf_frame_injection.rs`）。
-4. **設計ドキュメント**: [messagepack-schema.md](../../docs/architecture/messagepack-schema.md) は MessagePack 前提。**本プラン完了時に Protobuf へ差し替えまたは「廃止・参照先変更」**を検討する（別コミット可）。
+4. **設計ドキュメント**: [draw-command-spec.md](../../docs/architecture/draw-command-spec.md)・[zenoh-protocol-spec.md](../../docs/architecture/zenoh-protocol-spec.md) を参照する。
 
 ---
 
@@ -56,7 +64,7 @@
    - 既存のタームベース `push_render_frame` を残しつつ、**バイナリ専用 NIF**（例: `push_render_frame_binary`）を追加するか、既存関数に `binary | term` を判別させるかを決める。後方互換は [p5-transfer-optimization-design.md §2.4](../../docs/architecture/p5-transfer-optimization-design.md) の意図に沿う。
 
 2. **デコード**
-   - 受け取った `binary` を `decode_pb_render_frame` 相当で `RenderFrame` にし、`RenderFrameBuffer` へ書き込む（既存のタームデコードパスとの処理共通化）。
+   - 受け取った `binary` を `decode_pb_render_frame` で `RenderFrame` に変換できることを確認する（契約検証・テスト用）。**NIF 内への描画バッファ書き込みは行わない**（§0）。
 
 3. **計測**
    - フレームあたりのデコード時間・割り当てバイト数を、移行前後で比較（簡易ログまたはベンチ）。
@@ -81,9 +89,9 @@
 | 項目 | 目安 |
 |------|------|
 | proto / Elixir / Rust 生成・依存整理 | 1.5〜3 日 |
-| NIF バイナリ経路＋RenderFrameBuffer 接続 | 2〜4 日 |
+| NIF バイナリ経路（デコード検証まで） | 2〜4 日 |
 | 計測・微調整・P5-4 確認 | 1〜3 日 |
-| ドキュメント追随（MessagePack 記述の整理） | 0.5〜1 日 |
+| ドキュメント追随（protobuf への統一） | 0.5〜1 日 |
 
 ---
 
@@ -97,8 +105,6 @@
 
 ---
 
-## 8. 次のアクション（`2_todo` から `3_Inprogress` へ移すとき）
+## 8. ステータス
 
-1. 上記「3. 現状のたたき台」を実際のブランチで確認し、**既存の protobuf 経路で足りる差分**を箇条書きにする。  
-2. フェーズ A の `.proto` 変更が必要かどうかを決める（変更なしで NIF 接続のみの場合もありうる）。  
-3. フェーズ B の NIF シグネチャを決め、`Core.NifBridge` / `App.NifBridge` のスタブを更新する。
+本プランの実施は完了。フォローアップ（計測・P5-4 の継続確認など）は任意。

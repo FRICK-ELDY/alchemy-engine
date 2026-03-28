@@ -18,14 +18,13 @@
 
 ---
 
-## 2. フレーム直列化は Erlang term を用いる
+## 2. フレーム直列化は protobuf のみ
 
-**やってはいけないこと**: Zenoh 経由のサーバー→クライアント RenderFrame 配信に MessagePack を用いること。
+**方針**: Zenoh 経由のサーバー→クライアント **RenderFrame** は `proto/render_frame.proto` に基づく **protobuf** のみ。スキーマ外のバイナリ形式で配信しない。
 
 **理由**:
 
-- `term_to_binary` は C 実装の BIF で最も高速
-- 60Hz フルフレームのエンコード負荷を抑えたい
-- 本プロジェクトの採用方針に反する（[zenoh-frame-serialization.md](./why_adopted/zenoh-frame-serialization.md)）
+- スキーマの単一情報源と Elixir / Rust の契約整合が取りやすい
+- [zenoh-frame-serialization.md](./why_adopted/zenoh-frame-serialization.md)、[protobuf-migration.md](../architecture/protobuf-migration.md) の方針に従う
 
-**やるべきこと**: `:erlang.term_to_binary(frame_term, [:compressed])` を用い、クライアント側では `bert` 等でデコードする。
+**やるべきこと**: `Content.FrameEncoder` で protobuf バイナリを生成し、クライアント（Rust）は `decode_pb_render_frame` でデコードする。

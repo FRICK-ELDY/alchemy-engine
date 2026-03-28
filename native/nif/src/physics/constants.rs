@@ -7,13 +7,8 @@
 //! - **未整理**: 敵ごとに異なる場合は entity_params 経由を推奨。現状はデフォルト値として維持。
 
 // ─── 背景色（エンジン固定）───
-// Background clear color (dark purple)
-#[allow(dead_code)]
-pub const BG_R: f64 = 0.05;
-#[allow(dead_code)]
-pub const BG_G: f64 = 0.02;
-#[allow(dead_code)]
-pub const BG_B: f64 = 0.10;
+// Background clear color (dark purple) — SSoT: `shared::engine_color`
+pub use shared::engine_color::{BG_B, BG_G, BG_R};
 
 // ─── 解像度（エンジン固定）───
 // Window resolution

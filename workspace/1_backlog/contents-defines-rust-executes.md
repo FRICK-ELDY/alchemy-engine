@@ -36,28 +36,9 @@
 
 ---
 
-## 2. 残タスク（フェーズ）
+## 2. 課題
 
-### P5: 転送効率化（バイナリ・バッチ） 【優先度: 中・中期】
-
-contents-to-physics-bottlenecks の改善案と連携。P5-1（`set_frame_injection` バッチ API）は実装済み。
-
-
-| タスク  | 内容                                             | 影響ファイル                        |
-| ---- | ---------------------------------------------- | ----------------------------- |
-| P5-2 | DrawCommand・メッシュ定義のバイナリ形式（MessagePack / 自前）を検討 | `decode/`, `nif`              |
-| P5-3 | `push_render_frame` の decode オーバーヘッド低減         | `render_frame_nif`, `decode/` |
-| P5-4 | `get_render_entities` の O(n) コピー削減（差分更新・プール等）  | `read_nif`, `physics`         |
-
-
-**工数目安**: 5〜12 日  
-**参照**: [contents-to-physics-bottlenecks.md](../../architecture/contents-to-physics-bottlenecks.md) セクション 6、[p5-transfer-optimization-design.md](../../architecture/p5-transfer-optimization-design.md)
-
----
-
-## 3. 課題
-
-### 3.1 シェーダー
+### 2.1 シェーダー
 
 
 | 課題                       | 内容                                                                                                 |
@@ -68,18 +49,18 @@ contents-to-physics-bottlenecks の改善案と連携。P5-1（`set_frame_inject
 | **Path Traversal 対策の実装** | [shader-path-traversal-design.md](../../architecture/shader-path-traversal-design.md) Phase 1〜2 参照 |
 
 
-### 3.2 転送・その他
+### 2.2 転送・その他
 
 
 | 課題     | 内容                                                      |
 | ------ | ------------------------------------------------------- |
-| 転送効率化  | P5-2〜4: バイナリ形式、decode オーバーヘッド低減、get_render_entities 最適化 |
+| 転送効率化（継続） | `get_render_entities` の O(n) コピー削減（差分更新・プール等）、必要に応じて計測。詳細は [p5-transfer-optimization-design.md](../../architecture/p5-transfer-optimization-design.md) |
 | セキュリティ | 不信頼コンテンツ利用時のサンドボックス化                                    |
 
 
 ---
 
-## 4. 採用しない方針
+## 3. 採用しない方針
 
 
 | 方針                                      | 理由                                                               |
@@ -91,8 +72,9 @@ contents-to-physics-bottlenecks の改善案と連携。P5-1（`set_frame_inject
 
 ---
 
-## 5. 関連ドキュメント
+## 4. 関連ドキュメント
 
+- [p5-transfer-protobuf-implementation-plan.md](../7_done/p5-transfer-protobuf-implementation-plan.md) — P5 Protobuf 実施プラン（完了）
 - [implementation.mdc](../../../.cursor/rules/implementation.mdc) — 保証の原則・層間インターフェース
 - [shader-path-traversal-design.md](../../architecture/shader-path-traversal-design.md) — P4-S Path Traversal 対策設計
 - [contents-to-physics-bottlenecks.md](../../architecture/contents-to-physics-bottlenecks.md) — ボトルネック・改善案

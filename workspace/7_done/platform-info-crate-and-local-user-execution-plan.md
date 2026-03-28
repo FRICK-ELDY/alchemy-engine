@@ -1,7 +1,9 @@
 # 実行手順書: client_info 作成〜メニュー表示までの一貫フロー
 
 > 作成日: 2026-03-09  
-> 目的: クライアント情報（OS, arch 等）を `native/client` の `info` モジュールで取得し、Zenoh 経由（Erlang term 形式）で Elixir と通信、LocalUserComponent で取得、MenuComponent で全ワールドのメニューに表示する。
+> **更新（2026-03-28）**: `client_info` の Zenoh ペイロードは **protobuf** に統一済み（`protobuf_codec::encode_client_info` / `ZenohBridge`）。以下の MessagePack / Erlang term に関する記述は計画当時のメモであり、現行実装の手順書ではない。
+
+> 目的: クライアント情報（OS, arch 等）を Rust 側で取得し、Zenoh 経由で Elixir と通信、LocalUserComponent で取得、MenuComponent で全ワールドのメニューに表示する。
 
 ---
 
@@ -11,7 +13,7 @@
 | 項目         | 内容                                                                          |
 | ---------- | --------------------------------------------------------------------------- |
 | **配置**      | `native/client` クレート内の `info` モジュール（`native/client/src/info.rs`）（[env-and-serialization-migration-plan](../1_backlog/env-and-serialization-migration-plan.md) §5 参照） |
-| **通信方式**   | Zenoh + Erlang term 形式（`:erlang.term_to_binary` / `:erlang.binary_to_term`） |
+| **通信方式**   | Zenoh + **protobuf**（`client_info` スキーマ。旧 Erlang term / MessagePack の記述は下記歴史的セクションのみ） |
 | **トピック**   | `contents/room/{room_id}/client/info`（クライアント → サーバー）                    |
 | **取得先**    | `Contents.LocalUserComponent.get_client_info/1`                                |
 | **表示先**    | `Contents.MenuComponent.get_menu_ui/2` 内で OS を表示                            |

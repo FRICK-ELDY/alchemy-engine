@@ -10,6 +10,7 @@ mod load;
 mod protobuf_frame_injection;
 mod push_tick_nif;
 mod read_nif;
+mod render_frame_nif;
 mod save_nif;
 mod util;
 mod world_nif;

@@ -120,8 +120,8 @@
 
 ### ✅ プラス点
 
-- **MessagePack デコードの網羅性** `+4`
-  > DrawCommand, CameraParams, UiCanvas, MeshDef, UiComponent 等を MessagePack から RenderFrame へ変換。UiAnchor の未知値フォールバック、VertexWire 変換が実装されている。
+- **Protobuf フレームデコードの網羅性** `+4`
+  > DrawCommand, CameraParams, UiCanvas, MeshDef, UiComponent 等を `decode_pb_render_frame` で RenderFrame へ変換。UiAnchor の未知値フォールバック等が実装されている。
   > 対象ファイル: `native/network/src/msgpack_decode.rs`
 
 - **NetworkRenderBridge による RenderBridge 実装** `+2`

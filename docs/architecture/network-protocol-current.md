@@ -98,11 +98,12 @@ Channel の `handle_info({:frame_events, events}, socket)` や `Network.UDP.broa
 
 ## 4. DrawCommand の扱い
 
-**DrawCommand は現行の Channel / UDP プロトコルには含まれていない。**
+**DrawCommand は現行の Channel / UDP プロトコルには含まれていない**（物理イベントのみ）。
 
-DrawCommand は Elixir の RenderComponent が組み立て、`push_render_frame` / `push_render_frame_binary` で NIF の RenderFrameBuffer に書き込む。同一プロセス内の描画スレッドのみで使用され、ネットワークには送信されていない。
+DrawCommand は Elixir の Render コンポーネントが組み立て、`Content.FrameEncoder.encode_frame/5` で **protobuf**（`proto/render_frame.proto`）にし、`FrameBroadcaster.put` 経由で Zenoh の `game/room/{room_id}/frame` へ publish する。クライアント（Rust `app`）が subscribe して描画する。NIF 層は描画を持たない。`push_render_frame_binary` は **契約検証・オプトイン**（本番の毎フレーム必須パスではない想定）。過去の MessagePack 専用ドキュメントを参照していたブックマークは [draw-command-spec.md](draw-command-spec.md) および本節へ置き換え。
 
-Zenoh 経由のフレーム配信（フェーズ 1 以降）では、MessagePack 形式の DrawCommand を含むフレームペイロードを送信する設計。スキーマは [messagepack-schema.md](messagepack-schema.md) を参照。
+
+スキーマは [draw-command-spec.md](draw-command-spec.md)、[zenoh-protocol-spec.md](zenoh-protocol-spec.md)、[`proto/render_frame.proto`](../../proto/render_frame.proto) を参照。
 
 ---
 
@@ -110,5 +111,6 @@ Zenoh 経由のフレーム配信（フェーズ 1 以降）では、MessagePack
 
 - [Network.Channel](../../apps/network/lib/network/channel.ex)
 - [Network.UDP.Protocol](../../apps/network/lib/network/udp/protocol.ex)
-- [client-server-separation-procedure.md](../plan/completed/client-server-separation-procedure.md)（未実施項目は [client-server-separation-future.md](../plan/reference/client-server-separation-future.md)）
-- [messagepack-schema.md](messagepack-schema.md)
+- [client-server-separation-procedure.md](../../workspace/7_done/client-server-separation-procedure.md)（未実施項目は [client-server-separation-future.md](../plan/reference/client-server-separation-future.md)）
+- [zenoh-protocol-spec.md](zenoh-protocol-spec.md)
+- [draw-command-spec.md](draw-command-spec.md)

@@ -1,4 +1,4 @@
-//! Path: native/desktop_render/src/headless.rs
+//! Path: native/render/src/headless.rs
 //! Summary: ヘッドレス/オフスクリーンレンダリングモード（`headless` フィーチャー有効時のみ利用可能）
 //!
 //! ウィンドウを開かずに wgpu のオフスクリーンターゲットへ描画し、
@@ -9,7 +9,7 @@ use crate::{
     RenderFrame,
 };
 use image::{ImageBuffer, Rgba};
-use nif::physics::constants::{BG_B, BG_G, BG_R};
+use shared::engine_color::{BG_B, BG_G, BG_R};
 use wgpu::util::DeviceExt;
 
 const DEFAULT_WIDTH: u32 = 800;

@@ -4,8 +4,10 @@
 //! - Zero-Copy: bytemuck によるバイナリ直接参照
 //! - Smoothing: 20Hz 更新を 60Hz 描画用に補間
 
+pub mod engine_color;
 pub mod interp;
 pub mod predict;
+pub mod render_frame;
 pub mod store;
 pub mod types;
 

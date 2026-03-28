@@ -289,7 +289,7 @@ flowchart TB
 | 単一 RwLock | 注入データ用バッファを分離し、physics 計算と並列化可能な構造を検討。または lock-free キューでバッチ転送 |
 | 複数 write NIF | `set_frame_injection(world, snapshot)` のような **1 回の NIF で全注入データをまとめて渡す** バッチ API を検討 |
 | get_render_entities | 差分更新・オブジェクトプール・描画用ダブルバッファなど、コピー削減の設計を検討 |
-| push_render_frame decode | UiCanvas の差分更新、またはバイナリ形式（MessagePack 等）での転送を検討 |
+| push_render_frame decode | UiCanvas の差分更新、またはバイナリ形式（protobuf）での転送を検討 |
 | タイミング競合 | Rust ループと Elixir の処理順序を明確化。または「Rust が dt 進める → Elixir が NIF で注入」のフェーズ分離を固定 |
 
 ---
