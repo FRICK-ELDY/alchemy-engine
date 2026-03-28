@@ -117,4 +117,4 @@ Phase 1（Scene state 型・ヘルパー）
 |--------------|------|
 | [scene-origin-and-landing-reference-plan.md](./scene-origin-and-landing-reference-plan.md) | 方針と用語。Phase 4 で本計画に委譲。 |
 | [scene-and-object.md](../../docs/architecture/scene-and-object.md) | Scene の責務と state 規約（origin・着地点参照）。 |
-| [contents-migration-plan.md](../1_backlog/contents-migration-plan.md) | 既存コンテンツ移行の共通パターン。 |
+| [contents-migration-plan.md](contents-migration-plan.md) | 既存コンテンツ移行の共通パターン。 |

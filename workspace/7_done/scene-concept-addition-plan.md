@@ -190,7 +190,7 @@ Contents
 
 - [fix_contents.md](../../docs/architecture/fix_contents.md)
 - [formula-test-phase1-architecture.md](../../docs/architecture/formula-test-phase1-architecture.md)
-- [contents-migration-plan.md](../1_backlog/contents-migration-plan.md)
+- [contents-migration-plan.md](contents-migration-plan.md)
 - [scene-concept-phase4-future.md](../0_reference/scene-concept-phase4-future.md) — Phase 4 将来拡張の検討
 - [Contents.SceneStack](../../apps/contents/lib/contents/scene_stack.ex)
 - [Contents.SceneBehaviour](../../apps/contents/lib/contents/scene_behaviour.ex)

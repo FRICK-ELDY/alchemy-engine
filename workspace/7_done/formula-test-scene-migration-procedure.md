@@ -1,7 +1,7 @@
 # FormulaTest Playing シーン 新方式移行 実施手順書
 
 > 作成日: 2026-03-15  
-> 参照: [contents-migration-plan.md](../1_backlog/contents-migration-plan.md) Phase 1, [scene-and-object.md](../../docs/architecture/scene-and-object.md), scene-abstraction-and-engines.md（未配置）
+> 参照: [contents-migration-plan.md](contents-migration-plan.md) Phase 1, [scene-and-object.md](../../docs/architecture/scene-and-object.md), scene-abstraction-and-engines.md（未配置）
 > 目的: `Content.FormulaTest.Scenes.Playing` を `apps/contents/lib/scenes` 配下の新方式（`Contents.Scenes.FormulaTest.Playing`）へ移行し、Phase 1 のシーン配置方針に合わせる。
 
 ---
@@ -171,7 +171,7 @@ mix compile --warnings-as-errors
 
 ## 5. 参照
 
-- [contents-migration-plan.md](../1_backlog/contents-migration-plan.md) — Phase 1 概要
+- [contents-migration-plan.md](contents-migration-plan.md) — Phase 1 概要
 - [scene-and-object.md](../../docs/architecture/scene-and-object.md) — Scene の責務と root_object
 - scene-abstraction-and-engines.md（未配置）
 - [Contents.SceneBehaviour](../../../apps/contents/lib/contents/scene_behaviour.ex) — シーン契約（Scenes.Core.Behaviour を use）

@@ -1,7 +1,7 @@
 # 既存コンテンツ移行プラン
 
 > 作成日: 2026-03-12  
-> 参照: [docs/architecture/fix_contents.md](../../docs/architecture/fix_contents.md), [fix-contents-implementation-procedure.md](../7_done/fix-contents-implementation-procedure.md)  
+> 参照: [docs/architecture/fix_contents.md](../../docs/architecture/fix_contents.md), [fix-contents-implementation-procedure.md](fix-contents-implementation-procedure.md)  
 > 目的: `lib/contents/` 配下の既存コンテンツを、新アーキテクチャ（structs / nodes / components / objects）へ順次移行する。
 >
 > **方針**: 移行後も `Core.ContentBehaviour` の契約を維持し、既存エンジン（GameEvents, SceneStack）から透過的に動作する。内部実装のみを新アーキテクチャに置き換える。
@@ -48,7 +48,7 @@
 
 ### 2.1 各コンテンツで行うこと
 
-1. **Scene の origin と着地点参照**: Scene の state に **origin**（空間の原点）を持ち、必要に応じて着地点となる Object への参照（例: `landing_object`）を持つ。root_object 必須は廃止。既存コンテンツは移行対象外のため root_object を残したままでも許容。参照: [scene-and-object.md](../../docs/architecture/scene-and-object.md), [scene-origin-and-landing-reference-plan.md](../7_done/scene-origin-and-landing-reference-plan.md)
+1. **Scene の origin と着地点参照**: Scene の state に **origin**（空間の原点）を持ち、必要に応じて着地点となる Object への参照（例: `landing_object`）を持つ。root_object 必須は廃止。既存コンテンツは移行対象外のため root_object を残したままでも許容。参照: [scene-and-object.md](../../docs/architecture/scene-and-object.md), [scene-origin-and-landing-reference-plan.md](scene-origin-and-landing-reference-plan.md)
 2. **Object 階層の導入**: シーン state に「空間の実体」を `Contents.Objects.Core.Struct` で表現
 3. **Component の二重化解消**: `Core.Component`（エンジン用）と `Contents.Behaviour.Components`（新アーキテクチャ）の役割を整理
   - 当面: 既存 `Core.Component` を維持しつつ、内部で新 Object/Node を参照
@@ -329,6 +329,6 @@
 
 - [fix_contents.md](../../docs/architecture/fix_contents.md) — アーキテクチャ概要
 - [scene-and-object.md](../../docs/architecture/scene-and-object.md) — Scene と Object の責務、Scene state の規約（origin・着地点参照）
-- [scene-concept-addition-plan.md](../7_done/scene-concept-addition-plan.md) — Scene 概念の追加プラン（完了）
-- [fix-contents-implementation-procedure.md](../7_done/fix-contents-implementation-procedure.md) — 骨格実装手順
+- [scene-concept-addition-plan.md](scene-concept-addition-plan.md) — Scene 概念の追加プラン（完了）
+- [fix-contents-implementation-procedure.md](fix-contents-implementation-procedure.md) — 骨格実装手順
 

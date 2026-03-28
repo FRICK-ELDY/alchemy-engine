@@ -67,7 +67,7 @@
 |--------------|------|
 | [scene-and-object.md](../../docs/architecture/scene-and-object.md) | Scene と Object の責務。実施後は origin / 着地点参照の規約を記載。 |
 | [scene-concept-addition-plan.md](../7_done/scene-concept-addition-plan.md) | Scene 概念追加時の決定（root_object 必須化）。本計画で方針を発展させる。 |
-| [contents-migration-plan.md](../1_backlog/contents-migration-plan.md) | 新規コンテンツの共通パターン。root_object 必須 → origin + 着地点参照に更新。 |
+| [contents-migration-plan.md](contents-migration-plan.md) | 新規コンテンツの共通パターン。root_object 必須 → origin + 着地点参照に更新。 |
 
 ---
 
@@ -77,4 +77,4 @@
 - [x] docs/architecture/fix_contents.md の Scene 記述が更新されている
 - [x] Contents.Behaviour.Scenes の @moduledoc / init の @doc が新方針に更新されている
 - [x] Contents.SceneBehaviour の @moduledoc が現状の方針に更新されている
-- [x] workspace/1_backlog/contents-migration-plan.md の該当箇所が更新されている
+- [x] workspace/7_done/contents-migration-plan.md の該当箇所が更新されている
