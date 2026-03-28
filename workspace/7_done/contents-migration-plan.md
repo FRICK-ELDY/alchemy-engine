@@ -263,7 +263,7 @@
 
 - **構成変更**: `scenes/` を廃止し、`title.ex`, `stage_clear.ex`, `playing.ex`, `game_over.ex`, `ending.ex` を `rolling_ball/` 直下に配置。モジュール名を `Content.RollingBall.Title` / `Content.RollingBall.Playing` 等に変更。
 - **共有コンポーネントへ移行**: SpawnComponent, PhysicsComponent, RenderComponent を削除。`Contents.Components.Category.Spawner`（world_size）、`Contents.Components.Category.Device.Mouse`（move_input）、`Contents.Components.Category.Device.Keyboard`（ui_action 汎用化）、`Contents.Components.Category.Rendering.Render` を使用。
-- **ui_action_handlers**: Content が `ui_action_handlers/0` を実装すると、`__start_`_・`__next_stage__`・`__back_to_title__` 等を Keyboard が Content 指定の scene_type にディスパッチ。Device.Keyboard を拡張。
+- **ui_action_handlers**: Content が `ui_action_handlers/0` を実装すると、`__start__`・`__next_stage__`・`__back_to_title__` 等を Keyboard が Content 指定の scene_type にディスパッチ。Device.Keyboard を拡張。
 - **StageData を Playing に内包**: `StageData` モジュールを廃止し、ステージ定義を `Playing` 内の `get_stage_data/1`・`floor_tiles/1`・`hole_positions/1` に統合。
 - **Object 階層**: ボールを `Contents.Objects.Core.Struct`（ball_object）で表現。`transform.position` で座標を保持。物理計算は Object の transform を更新する形に変更。
 - **build_frame**: `Content.RollingBall.Playing.build_frame/2` に描画ロジックを集約。Rendering.Render が Content.build_frame 経由で呼ぶ。
