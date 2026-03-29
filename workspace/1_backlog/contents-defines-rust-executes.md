@@ -1,7 +1,7 @@
 # Contents 定義 / Rust 実行 — 方針とリファクタリング計画
 
 > 作成日: 2026-03-07  
-> 出典: NIF 層の関数型/データ指向混在の議論、[contents-to-physics-bottlenecks.md](../../architecture/contents-to-physics-bottlenecks.md)  
+> 出典: NIF 層の関数型/データ指向混在の議論、[contents-to-physics-bottlenecks.md](../../docs/architecture/contents-to-physics-bottlenecks.md)  
 > 参照: [implementation.mdc](../../../.cursor/rules/implementation.mdc)、[improvement-plan.md](../0_reference/improvement-plan.md)
 
 ---
@@ -46,7 +46,7 @@
 | **リアルタイム編集 → プレビュー**     | コンテンツ内エディタで WGSL 編集 → Apply → コンパイル結果を即確認する UX                                                     |
 | **アセット化・他コンテンツでの再利用**    | ShaderAsset スキーマ設計、名前での参照・ロード機構                                                                    |
 | **Phase 1〜2 の実装**        | 既存アーキタイプの body 差し替え → 新アーキタイプ定義可能にする                                                               |
-| **Path Traversal 対策の実装** | [shader-path-traversal-design.md](../../architecture/shader-path-traversal-design.md) Phase 1〜2 参照 |
+| **Path Traversal 対策の実装** | [shader-path-traversal-design.md](../2_todo/shader-path-traversal-design.md) Phase 1〜2 参照 |
 
 
 ### 2.2 転送・その他
@@ -54,7 +54,7 @@
 
 | 課題     | 内容                                                      |
 | ------ | ------------------------------------------------------- |
-| 転送効率化（継続） | `get_render_entities` の O(n) コピー削減（差分更新・プール等）、必要に応じて計測。詳細は [p5-transfer-optimization-design.md](../../architecture/p5-transfer-optimization-design.md) |
+| 転送効率化（継続） | `get_render_entities` の O(n) コピー削減（差分更新・プール等）、必要に応じて計測。詳細は [p5-transfer-optimization-design.md](../7_done/p5-transfer-optimization-design.md) |
 | セキュリティ | 不信頼コンテンツ利用時のサンドボックス化                                    |
 
 
@@ -76,14 +76,14 @@
 
 - [p5-transfer-protobuf-implementation-plan.md](../7_done/p5-transfer-protobuf-implementation-plan.md) — P5 Protobuf 実施プラン（完了）
 - [implementation.mdc](../../../.cursor/rules/implementation.mdc) — 保証の原則・層間インターフェース
-- [shader-path-traversal-design.md](../../architecture/shader-path-traversal-design.md) — P4-S Path Traversal 対策設計
-- [contents-to-physics-bottlenecks.md](../../architecture/contents-to-physics-bottlenecks.md) — ボトルネック・改善案
+- [shader-path-traversal-design.md](../2_todo/shader-path-traversal-design.md) — P4-S Path Traversal 対策設計
+- [contents-to-physics-bottlenecks.md](../../docs/architecture/contents-to-physics-bottlenecks.md) — ボトルネック・改善案
 - [improvement-plan.md](../0_reference/improvement-plan.md) — 全体改善計画
-- [Rust: desktop_render](../../architecture/rust/desktop/render.md) — 描画パイプライン現状
-- [Rust: nif](../../architecture/rust/nif.md) — NIF インターフェース
-- [formula-hardcode-inventory.md](../../architecture/formula-hardcode-inventory.md) — P1-1 ハードコード一覧
-- [formula-migration-evaluation.md](../../architecture/formula-migration-evaluation.md) — P1-2 武器式 Formula 移行評価
-- [formula-vm-bytecode.md](../../architecture/formula-vm-bytecode.md) — P1-3 Formula VM バイトコード仕様
-- [draw-command-spec.md](../../architecture/draw-command-spec.md) — P2-1 DrawCommand タグ・フィールド仕様（SSoT）
-- [shader-elixir-interface.md](../../architecture/shader-elixir-interface.md) — P4-2〜5 シェーダー Elixir インターフェース・アセット構成
+- [Rust: desktop_render](../../docs/architecture/rust/desktop/render.md) — 描画パイプライン現状
+- [Rust: nif](../../docs/architecture/rust/nif.md) — NIF インターフェース
+- [formula-hardcode-inventory.md](../2_todo/formula-hardcode-inventory.md) — P1-1 ハードコード一覧
+- [formula-migration-evaluation.md](../2_todo/formula-migration-evaluation.md) — P1-2 武器式 Formula 移行評価
+- [formula-vm-bytecode.md](../../docs/architecture/formula-vm-bytecode.md) — P1-3 Formula VM バイトコード仕様
+- [draw-command-spec.md](../../docs/architecture/draw-command-spec.md) — P2-1 DrawCommand タグ・フィールド仕様（SSoT）
+- [shader-elixir-interface.md](../../docs/architecture/shader-elixir-interface.md) — P4-2〜5 シェーダー Elixir インターフェース・アセット構成
 

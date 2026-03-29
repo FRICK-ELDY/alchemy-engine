@@ -26,7 +26,7 @@
 |----|------------------|----------------------|
 | **P5-1** | `set_frame_injection` バッチ API | 実装済み（バックログ記載どおり）。本プランでは触れない。 |
 | **P5-2** | DrawCommand・メッシュ定義のバイナリ形式 | **Protobuf**（`render_frame.proto` 拡張・`FrameEncoder`・NIF 側デコード検証）。 |
-| **P5-3** | `push_render_frame` の decode オーバーヘッド低減 | ターム逐次デコードから **バイナリ＋prost デコード**への移行、または既存バイナリ経路の最適化・計測。設計書 [p5-transfer-optimization-design.md](../../docs/architecture/p5-transfer-optimization-design.md) では一部「実装済み」とあるため、**現状コードと突合し、残差があれば追記タスク化**する。 |
+| **P5-3** | `push_render_frame` の decode オーバーヘッド低減 | ターム逐次デコードから **バイナリ＋prost デコード**への移行、または既存バイナリ経路の最適化・計測。設計書 [p5-transfer-optimization-design.md](./p5-transfer-optimization-design.md) では一部「実装済み」とあるため、**現状コードと突合し、残差があれば追記タスク化**する。 |
 | **P5-4** | `get_render_entities` の O(n) コピー削減 | `render_snapshot.rs` 等の **ダブルバッファ／事前構築**と突合。未達・回帰があれば継続タスクとする。 |
 
 ---
@@ -61,7 +61,7 @@
 ### フェーズ B — NIF 経路のバイナリ化（P5-2 / P5-3）
 
 1. **API 方針**
-   - 既存のタームベース `push_render_frame` を残しつつ、**バイナリ専用 NIF**（例: `push_render_frame_binary`）を追加するか、既存関数に `binary | term` を判別させるかを決める。後方互換は [p5-transfer-optimization-design.md §2.4](../../docs/architecture/p5-transfer-optimization-design.md) の意図に沿う。
+   - 既存のタームベース `push_render_frame` を残しつつ、**バイナリ専用 NIF**（例: `push_render_frame_binary`）を追加するか、既存関数に `binary | term` を判別させるかを決める。後方互換は [p5-transfer-optimization-design.md §2.4](./p5-transfer-optimization-design.md) の意図に沿う。
 
 2. **デコード**
    - 受け取った `binary` を `decode_pb_render_frame` で `RenderFrame` に変換できることを確認する（契約検証・テスト用）。**NIF 内への描画バッファ書き込みは行わない**（§0）。
@@ -98,7 +98,7 @@
 ## 7. 関連ドキュメント（作業時に参照）
 
 - [contents-defines-rust-executes.md](../1_backlog/contents-defines-rust-executes.md)
-- [p5-transfer-optimization-design.md](../../docs/architecture/p5-transfer-optimization-design.md)
+- [p5-transfer-optimization-design.md](./p5-transfer-optimization-design.md)
 - [draw-command-spec.md](../../docs/architecture/draw-command-spec.md)
 - [contents-to-physics-bottlenecks.md](../../docs/architecture/contents-to-physics-bottlenecks.md) セクション 6
 - [network-protocol-current.md](../../docs/architecture/network-protocol-current.md)（`push_render_frame` / binary の記述）

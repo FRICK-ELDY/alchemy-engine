@@ -1,7 +1,7 @@
 # 武器式の Formula 移行評価（P1-2）
 
 > 作成日: 2026-03-07  
-> 出典: [contents-defines-rust-executes.md](../plan/backlog/contents-defines-rust-executes.md) P1-2  
+> 出典: [contents-defines-rust-executes.md](../1_backlog/contents-defines-rust-executes.md) P1-2  
 > 目的: 武器ダメージ・クールダウン等の式を Formula VM に移行する余地を評価する
 
 ---
@@ -120,5 +120,5 @@ max(base_cooldown * factor, base_cooldown * 0.5)
 ## 6. 関連ドキュメント
 
 - [formula-hardcode-inventory.md](./formula-hardcode-inventory.md) — ハードコード一覧（P1-1）
-- [formula-vm-bytecode.md](./formula-vm-bytecode.md) — Formula VM バイトコード仕様（P1-3）
-- [contents-defines-rust-executes.md](../plan/backlog/contents-defines-rust-executes.md) — 方針・リファクタリング計画
+- [formula-vm-bytecode.md](../../docs/architecture/formula-vm-bytecode.md) — Formula VM バイトコード仕様（P1-3）
+- [contents-defines-rust-executes.md](../1_backlog/contents-defines-rust-executes.md) — 方針・リファクタリング計画

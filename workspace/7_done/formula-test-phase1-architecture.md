@@ -3,7 +3,7 @@
 > 作成日: 2026-03-12  
 > 更新日: 2026-03-15（Scene の位置づけを明示）  
 > 対象: Phase 1 移行後の FormulaTest が通る全アーキテクチャを記載する。  
-> 参照: [fix_contents.md](./fix_contents.md), [scene-and-object.md](./scene-and-object.md)
+> 参照: [fix_contents.md](../../docs/architecture/fix_contents.md), [scene-and-object.md](../../docs/architecture/scene-and-object.md)
 
 ---
 

@@ -1,8 +1,8 @@
 # シェーダー読み込みの Path Traversal 対策設計（P4-S）
 
 > 作成日: 2026-03-07  
-> 出典: [contents-defines-rust-executes.md](../plan/backlog/contents-defines-rust-executes.md) P4-S  
-> 参照: CWE-22 (Path Traversal)、[shader-elixir-interface.md](shader-elixir-interface.md)
+> 出典: [contents-defines-rust-executes.md](../1_backlog/contents-defines-rust-executes.md) P4-S  
+> 参照: CWE-22 (Path Traversal)、[shader-elixir-interface.md](../../docs/architecture/shader-elixir-interface.md)
 
 ---
 
@@ -115,4 +115,4 @@
 
 - [CWE-22: Improper Limitation of a Pathname to a Restricted Directory](https://cwe.mitre.org/data/definitions/22.html)
 - [std::fs::canonicalize - Rust](https://doc.rust-lang.org/std/fs/fn.canonicalize.html)
-- [shader-elixir-interface.md](shader-elixir-interface.md) — パス導出ロジック
+- [shader-elixir-interface.md](../../docs/architecture/shader-elixir-interface.md) — パス導出ロジック
