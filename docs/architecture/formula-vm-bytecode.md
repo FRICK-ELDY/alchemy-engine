@@ -245,6 +245,6 @@ Store からキーで値を読み、レジスタへ。
 
 ## 9. 関連ドキュメント
 
-- [formula-hardcode-inventory.md](./formula-hardcode-inventory.md) — ハードコード一覧（P1-1）
-- [formula-migration-evaluation.md](./formula-migration-evaluation.md) — 武器式の Formula 移行評価（P1-2）
+- [formula-hardcode-inventory.md](../../workspace/2_todo/formula-hardcode-inventory.md) — ハードコード一覧（P1-1）
+- [formula-migration-evaluation.md](../../workspace/2_todo/formula-migration-evaluation.md) — 武器式の Formula 移行評価（P1-2）
 - [contents-defines-rust-executes.md](../plan/backlog/contents-defines-rust-executes.md) — 方針・リファクタリング計画

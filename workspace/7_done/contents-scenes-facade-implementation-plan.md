@@ -162,7 +162,7 @@ apps/contents/lib/
 
 ### Phase 3: ドキュメント・コメントの更新（任意）
 
-- `docs/architecture/formula-test-phase1-architecture.md` や、シーン呼び出し方針を説明しているドキュメントに、「シーン呼び出しは Contents.Scenes ファサード経由とし、シーン定義は Content が init_arg（module + payload）で渡す」旨を追記する。
+- `workspace/7_done/formula-test-phase1-architecture.md` や、シーン呼び出し方針を説明しているドキュメントに、「シーン呼び出しは Contents.Scenes ファサード経由とし、シーン定義は Content が init_arg（module + payload）で渡す」旨を追記する。
 - 本計画書を `workspace/7_done/` へ移動するタイミングは、上記 Phase 1〜2 の完了後とする。
 
 ---

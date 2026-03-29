@@ -131,7 +131,7 @@ defmodule Contents.Scenes.FormulaTest.Playing do
 #### Step 3-2: 他コンテンツ・ドキュメントでの言及確認（任意）
 
 - コード内で `Content.FormulaTest.Scenes.Playing` を直接参照している箇所が他に無いことを確認する（本手順の Step 2 で一括更新済みの想定）。
-- ドキュメント（`docs/architecture/formula-test-phase1-architecture.md` 等）でモジュール名を記載している場合は、`Contents.Scenes.FormulaTest.Playing` に合わせて更新する。
+- ドキュメント（`workspace/7_done/formula-test-phase1-architecture.md` 等）でモジュール名を記載している場合は、`Contents.Scenes.FormulaTest.Playing` に合わせて更新する。
 
 ---
 
