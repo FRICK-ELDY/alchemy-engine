@@ -32,10 +32,10 @@
 
 トップレベル `.proto` に追加する形で、`cursor_grab` 以外に `frame_id` やプレイヤー補間用フィールドを載せる場合は、スキーマ変更と Elixir/Rust 双方の追随が必要。
 
-### 2.3 ローカル NIF との関係
+### 2.3 サーバー NIF との関係
 
-- **描画は NIF が持たない。** 実際の描画は Zenoh を subscribe するクライアント（`render`）が行う。
-- `push_render_frame_binary` NIF は同一バイト列のデコード検証用（任意）。
+- **描画はサーバー NIF が持たない。** `Core.NifBridge` は `run_formula_bytecode/3` のみ。実際の描画は Zenoh を subscribe するクライアント（Rust `app` / `render`）が行う。
+- 同一バイト列のデコード検証はクライアント側の `decode_pb_render_frame`（またはテスト）で行う。
 
 ---
 
