@@ -83,7 +83,7 @@
 
 - **描画パイプライン用の Rust**（`native/render`, `native/window`, `native/app` 等）を今後も維持するか。ゲーム NIF だけ削っても `mix` と `cargo` の二段構えは残る可能性がある。
 - **VR / XR**: NIF とは独立。入力はクライアント `native/xr` → `network` / Zenoh 経由でサーバに届き、`Contents.Events.Game` が `handle_info` で受ける。`features: ["xr"]` は歴史的な mix フック（現行 `nif` に XR コードなし）。`Core.NifBridge` moduledoc を更新済み。
-- `SimpleBox3D` 削除により `BulletHell3D` のコメント・共通化前提が古くなるため、doc とコメントの軽い更新が必要。
+- [x] `docs/architecture/overview.md`・`elixir/`・`rust/`（`nif`・`desktop_client` 等）を 2026-04 現行構成に更新。`elixir/contents/*.md` 削除コンテンツはアーカイブ注記。
 - **Formula 用 NIF を残すか否か**: 残す場合は `native/nif` の「ゲーム」と「式」の境界をコード上でも明確にする。残さない場合は `Core.Formula` の Elixir 実装を先に完了させる。
 
 ## Definition of Done（本計画書の完了）

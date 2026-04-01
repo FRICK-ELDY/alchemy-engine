@@ -1,40 +1,41 @@
 # Elixir: server — 起動プロセス
 
+> **2026-04 更新**: 起動ツリーとコンテンツ一覧の記述を現行に合わせた。
+
 ## 概要
 
-`server` は OTP Application のエントリポイントです。Supervisor ツリーを構築し、全 GenServer を起動します。
+`server` は OTP Application のエントリポイント。Supervisor ツリーで Registry、Scenes.Stack、EventBus、RoomSupervisor、`Contents.Events.Game` 等を起動する。
 
 ---
 
-## アプリケーション構成（Elixir Umbrella）
+## アプリケーション構成（Umbrella）
 
 ```mermaid
 graph LR
-    GS[server<br/>OTP Application 起動]
-    GE[core<br/>SSoT コアエンジン]
-    GC[contents<br/>VampireSurvivor / AsteroidArena 等]
-    GN[network<br/>Phoenix Channels / UDP]
+    GS[server Application]
+    GE[core]
+    GC["contents<br/>CanvasTest / BulletHell3D / FormulaTest"]
+    GN[network]
 
-    GS -->|依存| GE
-    GS -->|依存| GC
-    GC -->|依存| GE
+    GS --> GE
+    GS --> GC
+    GS --> GN
+    GC --> GE
 ```
 
 ---
 
-## `application.ex`
-
-`apps/server/lib/server/application.ex` のみ。server アプリには `server.ex` はなく、OTP Application のエントリポイントは Application ビヘイビア実装のみ。
+## `application.ex` 起動ツリー（概念）
 
 ```mermaid
 graph TD
     APP[Server.Application]
-    REG[Registry<br/>Core.RoomRegistry]
+    REG[Core.RoomRegistry]
     FS[Core.FormulaStore.LocalBackend]
     SS[Contents.Scenes.Stack]
     EB[Core.EventBus]
     RS[Core.RoomSupervisor]
-    GEV[Contents.Events.Game<br/>:main ルーム]
+    GEV[Contents.Events.Game :main]
     MON[Core.StressMonitor]
     STATS[Core.Stats]
     TEL[Core.Telemetry]
@@ -44,26 +45,28 @@ graph TD
     APP --> SS
     APP --> EB
     APP --> RS
-    RS -->|start_room :main| GEV
+    RS -->|start_room| GEV
     APP --> MON
     APP --> STATS
     APP --> TEL
 ```
 
-起動後に `Core.RoomSupervisor.start_room(:main)` を呼び出してメインルームを開始します。
+`Core.RoomSupervisor.start_room(:main)` でメインルームの `Contents.Events.Game` を起動。
 
 ---
 
 ## 設定（`config/config.exs`）
 
 ```elixir
-# 使用するコンテンツモジュールを指定する
-# 例: Content.VampireSurvivor / Content.AsteroidArena / Content.SimpleBox3D /
-# Content.BulletHell3D / Content.RollingBall / Content.CanvasTest / Content.FormulaTest
-config :server, :current, Content.VampireSurvivor
+# 第一級コンテンツのいずれか:
+#   Content.CanvasTest | Content.BulletHell3D | Content.FormulaTest
+# FormulaTest 専用エントリは config/formula_test.exs でも切替可能
+config :server, :current, Content.BulletHell3D
 config :server, :map, :plain
 config :server, :game_events_module, Contents.Events.Game
 ```
+
+実際のリポジトリの `config :server, :current` は開発都合で変えてよい。未設定時は `Core.Config` の `@default_content`（`BulletHell3D`）。
 
 ---
 
@@ -71,4 +74,3 @@ config :server, :game_events_module, Contents.Events.Game
 
 - [アーキテクチャ概要](../overview.md)
 - [core](./core.md) / [contents](./contents.md) / [network](./network.md)
-- [contents](./contents.md)

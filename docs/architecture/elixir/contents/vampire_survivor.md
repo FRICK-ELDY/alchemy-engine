@@ -1,5 +1,7 @@
 # VampireSurvivor コンテンツ仕様
 
+> **アーカイブ（2026-04）**: `Content.VampireSurvivor` はリポジトリから削除済み。以下は旧仕様の記録。
+
 ## 概要
 
 武器・ボス・レベルアップを備えた Vampire Survivor 風コンテンツ。`Content.VampireSurvivor` モジュール。
