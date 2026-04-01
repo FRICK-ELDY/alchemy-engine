@@ -69,7 +69,7 @@ graph LR
 
 ## `Contents.Events.Game` — メインゲームループ
 
-`:main` ルームでは **約 16ms の `Process.send_after`（`:elixir_frame_tick`）** で `handle_frame_events_main` を回し、コンポーネントとシーンを更新します。`world_ref` / `control_ref` は **スタブ**（`:stub`）。
+`:main` ルームでは **約 16ms の `Process.send_after`（`:elixir_frame_tick`）** で `handle_frame_events_main` を回し、コンポーネントとシーンを更新します。`world_ref` は **スタブ**（`:stub`）。旧ゲーム NIF 用の `control_ref` は保持しない。
 
 **後方互換**: `{:frame_events, events}` を受け取れるが、**Rust からの 60Hz 供給はない**。
 
@@ -89,7 +89,7 @@ flowchart TD
     MAIN --> DIAG
 ```
 
-**GenServer state（概念）**: `room_id`, `world_ref`, `control_ref`, `last_tick`, `frame_count`, `start_ms` 等（`world_ref` は実体を持たないスタブ）。
+**GenServer state（概念）**: `room_id`, `world_ref`, `last_tick`, `frame_count`, `start_ms` 等（`world_ref` は実体を持たないスタブ）。
 
 VR 入力は **`handle_info`**（`:head_pose` / `:controller_pose` / `:controller_button` 等）。**NIF 非経由**（Zenoh 等でメッセージ化）。
 

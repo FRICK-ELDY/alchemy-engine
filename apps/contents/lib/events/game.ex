@@ -20,7 +20,6 @@ defmodule Contents.Events.Game do
   @tick_ms 16
 
   @stub_world :stub
-  @stub_control :stub
 
   def start_link(opts \\ []) do
     room_id = Keyword.get(opts, :room_id, :main)
@@ -40,7 +39,6 @@ defmodule Contents.Events.Game do
     end
 
     world_ref = @stub_world
-    control_ref = @stub_control
 
     Enum.each(Contents.ComponentList.components(), fn component ->
       init_component(component, world_ref)
@@ -57,7 +55,6 @@ defmodule Contents.Events.Game do
      %{
        room_id: room_id,
        world_ref: world_ref,
-       control_ref: control_ref,
        last_tick: start_ms,
        frame_count: 0,
        start_ms: start_ms
@@ -135,7 +132,7 @@ defmodule Contents.Events.Game do
   # ── インフォ: 移動入力 ────────────────────────────────────────────
 
   def handle_info({:move_input, dx, dy}, state) do
-    # 入力の正規化・配信のみ行う。NIF 反映は maybe_set_input_and_broadcast で一本化する。
+    # コンポーネントへ配信する。移動の SSoT は各コンテンツ／LocalUser（ETS）側。
 
     now = now_ms()
     context = build_context(state, now, now - state.start_ms, flow_runner(state))
@@ -421,8 +418,7 @@ defmodule Contents.Events.Game do
     # apply_frame_injection → apply_frame_injection_binary はスタブ。protobuf 契約・将来の再配線用に温存。
     Process.put(:frame_injection, %{})
 
-    maybe_set_input_and_broadcast(
-      state,
+    maybe_run_physics_callbacks_and_broadcast_events(
       scene_type,
       opts.physics_scenes,
       if(throttled?, do: [], else: events),
@@ -497,16 +493,10 @@ defmodule Contents.Events.Game do
     end)
   end
 
-  defp maybe_set_input_and_broadcast(state, scene_type, physics_scenes, events, context) do
+  # 物理シーン中のみ on_physics_process を回し、フレームイベントを EventBus へ流す（ゲーム用 NIF への入力注入はない）。
+  defp maybe_run_physics_callbacks_and_broadcast_events(scene_type, physics_scenes, events, context) do
     if scene_type in physics_scenes do
-      local_mod =
-        Contents.ComponentList.local_user_input_module() || Contents.LocalUserComponent
-
-      {dx, dy} = local_mod.get_move_vector(state.room_id)
-      maybe_set_player_input_direct(state.world_ref, dx, dy)
-
       run_component_physics_callbacks(context)
-
       unless events == [], do: Core.EventBus.broadcast(events)
     end
 
@@ -567,7 +557,6 @@ defmodule Contents.Events.Game do
   end
 
   defp build_context(state, now, elapsed, runner) do
-    control_ref = state.control_ref
     content = current_content()
 
     # R-P2: dt = 1 フレームあたりの秒数。contents が damage_this_frame 計算に利用。
@@ -584,14 +573,12 @@ defmodule Contents.Events.Game do
       start_ms: state.start_ms,
       push_scene: fn scene_type, init_arg ->
         if runner do
-          _ = control_ref
           GenServer.call(runner, {:push, scene_type, init_arg})
         else
           :ok
         end
       end,
       pop_scene: fn ->
-        _ = control_ref
         if runner, do: GenServer.call(runner, :pop), else: :ok
       end,
       replace_scene: fn scene_type, init_arg ->
@@ -663,6 +650,4 @@ defmodule Contents.Events.Game do
   defp now_ms, do: System.monotonic_time(:millisecond)
 
   defp current_content, do: Core.Config.current()
-
-  defp maybe_set_player_input_direct(_world_ref, _dx, _dy), do: :ok
 end

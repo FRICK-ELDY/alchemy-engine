@@ -140,9 +140,8 @@ defmodule Contents.Behaviour.Content do
   - オプショナル。content が未実装の場合、Contents.ComponentList が
     Contents.LocalUserComponent をデフォルトとして使用する。
   - 実装時: 返した `module` を使用。`nil` を返した場合もデフォルトを使用。
-  - 指定モジュールの `get_move_vector/1` を呼んで player_input を取得。
-    raw_key / raw_mouse_motion / focus_lost はコンポーネントに dispatch され、
-    当該モジュールが on_event で処理する。
+  - `{:move_input, dx, dy}` 等は `Contents.Events.Game` がコンポーネントへ dispatch する。
+    必要なら各モジュールの `get_move_vector/1` や ETS をコンポーネント側から参照する。
   """
   @callback local_user_input_module() :: module() | nil
 
