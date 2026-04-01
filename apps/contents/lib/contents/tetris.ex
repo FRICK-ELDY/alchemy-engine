@@ -136,7 +136,9 @@ defmodule Content.Tetris do
 
   def ui_action_handlers do
     %{
-      "__start__" => {:title, fn s -> Map.put(s, :start, true) end}
+      "__start__" => {:title, fn s -> Map.put(s, :start, true) end},
+      # Same as Keyboard defaults; explicit so Tetris contract is obvious in one place.
+      "__retry__" => {:game_over, fn s -> Map.put(s, :retry, true) end}
     }
   end
 end

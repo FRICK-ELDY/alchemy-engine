@@ -116,7 +116,7 @@ defmodule Content.Tetris.Frame do
           {:rect, {0.0, 0.0, 0.0, 0.72}, 8.0, :none},
           [
             {:node, {:top_left, {0.0, 0.0}, :wrap},
-             {:horizontal_layout, 12.0, {10.0, 8.0, 10.0, 8.0}},
+             {:vertical_layout, 12.0, {10.0, 8.0, 10.0, 8.0}},
              [
                {:node, {:top_left, {0.0, 0.0}, :wrap},
                 {:text, "TETRIS", {0.4, 0.85, 1.0, 1.0}, 16.0, true}, []},

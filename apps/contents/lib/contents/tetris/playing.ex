@@ -70,9 +70,11 @@ defmodule Content.Tetris.Playing do
     }
   end
 
+  # Last piece in bag: pop it and immediately refill so `peek_next/1` always reads the real queue.
   defp pop_bag(bag) do
     case bag do
       [] -> pop_bag(Enum.shuffle(@pieces))
+      [a] -> {a, Enum.shuffle(@pieces)}
       [a | rest] -> {a, rest}
     end
   end
@@ -162,6 +164,7 @@ defmodule Content.Tetris.Playing do
     {grid, score_add, lines} = merge_piece(state.grid, state.current)
     new_lines_total = state.lines_cleared_total + lines
     level = 1 + div(new_lines_total, 10)
+    line_points = score_add * level
 
     drop_frames =
       max(8, @base_drop_frames - (level - 1) * 3)
@@ -173,12 +176,18 @@ defmodule Content.Tetris.Playing do
     game_over = not valid_placement?(grid, new_piece)
 
     if game_over do
-      %{state | grid: grid, score: state.score + score_add, lines_cleared_total: new_lines_total, game_over: true}
+      %{
+        state
+        | grid: grid,
+          score: state.score + line_points,
+          lines_cleared_total: new_lines_total,
+          game_over: true
+      }
     else
       %{
         state
         | grid: grid,
-          score: state.score + score_add,
+          score: state.score + line_points,
           lines_cleared_total: new_lines_total,
           level: level,
           drop_frames: drop_frames,
