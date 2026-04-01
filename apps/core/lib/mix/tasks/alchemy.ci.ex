@@ -3,11 +3,13 @@ defmodule Mix.Tasks.Alchemy.Ci do
   @moduledoc """
   GitHub Actions の CI と同等の検証をローカルで実行します。
 
+  Elixir の **警告をエラーとして扱うコンパイル**は `mix test --warnings-as-errors` に含めます（`mix compile` を別起動すると、環境によって子プロセスの `MIX_ENV` がずれ `_build/dev` へコピーしようとして失敗することがあるため）。
+
   ## 引数（filter）
 
   - なし — 全ジョブ実行
   - `rust` — Rust のみ（fmt, clippy, test）
-  - `elixir` — Elixir のみ（compile, format, credo, test）
+  - `elixir` — Elixir のみ（deps.get, format, credo, test。警告は test で `mix test --warnings-as-errors`）
   - `check` — フォーマット + Lint のみ（テストなし）
 
   ## 使用例
@@ -111,26 +113,19 @@ defmodule Mix.Tasks.Alchemy.Ci do
   defp elixir_check(failed, root, filter) when filter != "rust" do
     Mix.shell().info("")
     Mix.shell().info("========================================")
-    Mix.shell().info("  [C] Elixir — compile & credo")
+    Mix.shell().info("  [C] Elixir — deps, format & credo")
     Mix.shell().info("========================================")
 
     failed =
       failed
       |> run_step("mix deps.get", fn ->
-        System.cmd("mix", ["deps.get"], cd: root, stderr_to_stdout: true)
-      end)
-      |> run_step("mix compile", fn ->
-        System.cmd("mix", ["compile", "--warnings-as-errors"], cd: root, stderr_to_stdout: true)
+        mix_cmd(["deps.get"], root)
       end)
       |> run_step("mix format --check-formatted", fn ->
-        System.cmd("mix", ["format", "--check-formatted"], cd: root, stderr_to_stdout: true)
+        mix_cmd(["format", "--check-formatted"], root)
       end)
       |> run_step("mix credo --strict", fn ->
-        System.cmd("mix", ["credo", "--strict"],
-          cd: root,
-          stderr_to_stdout: true,
-          env: [{"MIX_ENV", "dev"}]
-        )
+        mix_cmd(["credo", "--strict"], root)
       end)
 
     failed
@@ -147,11 +142,28 @@ defmodule Mix.Tasks.Alchemy.Ci do
     Mix.shell().info("[STEP] mix test")
 
     run_step(failed, "mix test", fn ->
-      System.cmd("mix", ["test"], cd: root, stderr_to_stdout: true, env: [{"MIX_ENV", "test"}])
+      # compile --warnings-as-errors はここに含める（単独 compile は子プロセスの MIX_ENV が環境によって dev に落ちることがある）
+      mix_cmd(["test", "--warnings-as-errors"], root)
     end)
   end
 
   defp elixir_test(failed, _, _), do: failed
+
+  # MIX_ENV=test で子プロセスの mix を起動。[D] の test は GitHub elixir-test と同様。
+  defp mix_cmd(args, root) when is_list(args) do
+    System.cmd("elixir", ["-S", "mix"] ++ args,
+      cd: root,
+      stderr_to_stdout: true,
+      env: env_with(%{"MIX_ENV" => "test"})
+    )
+  end
+
+  # System.cmd の :env は「全環境の置き換え」のため、PATH 等を落とさないよう現在の環境にマージする。
+  defp env_with(overrides) when is_map(overrides) do
+    System.get_env()
+    |> Map.merge(overrides)
+    |> Map.to_list()
+  end
 
   defp run_step(failed, name, fun) do
     case fun.() do

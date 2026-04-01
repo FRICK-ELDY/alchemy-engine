@@ -112,11 +112,17 @@ jobs:
             elixir-check-${{ runner.os }}-
 
       - run: mix deps.get
+        env:
+          MIX_ENV: test
       - run: mix compile --warnings-as-errors
+        env:
+          MIX_ENV: test
       - run: mix format --check-formatted
+        env:
+          MIX_ENV: test
       - run: mix credo --strict
         env:
-          MIX_ENV: dev
+          MIX_ENV: test
 
   # ─────────────────────────────────────────────
   # [D] Elixir: NIF 込み mix test

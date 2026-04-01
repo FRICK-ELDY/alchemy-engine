@@ -30,7 +30,7 @@ defmodule Core.MixProject do
       {:rustler, "0.37.1"},
       {:telemetry, "~> 1.3"},
       {:telemetry_metrics, "~> 1.0"},
-      {:jason, "~> 1.4"},
+      {:jason, "~> 1.4"}
     ]
   end
 end
