@@ -40,7 +40,7 @@
   > シーンスタック操作 API が揃い、マルチルーム用 `room_id` 名付けと `get_scene_state` の限界注記まで含め、利用者への説明が具体的。  
   > 対象ファイル: `apps/contents/lib/scenes/stack.ex`
 
-- **Events.Game の入力・UI ディスPATCH** `+2`
+- **Events.Game の入力・UI ディスパッチ** `+2`
   > `move_input` / `ui_action` をビルドしたコンテキストでコンポーネントへ配信し、永続化系アクションはログのみで無視する分岐が明示的。  
   > 対象ファイル: `apps/contents/lib/events/game.ex`
 
