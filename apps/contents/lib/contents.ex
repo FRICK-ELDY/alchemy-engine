@@ -6,5 +6,6 @@ defmodule Content do
   - `Content.CanvasTest`   — Canvas / ワールド空間 UI デバッグ
   - `Content.BulletHell3D` — 3D 弾幕避け
   - `Content.FormulaTest`  — Formula / Nodes 検証
+  - `Content.Tetris`       — Tetris (title / play / game over)
   """
 end

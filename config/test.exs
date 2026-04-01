@@ -1,5 +1,6 @@
 import Config
 
+# `config.exs` の `config :server, :current`（既定コンテンツ）を継承する。テストだけ別コンテンツにしたい場合はここで上書きする。
 # テストでは Phoenix HTTP をリッスンしない（port 4000 の EADDRINUSE 回避。`mix test` と開発サーバー並行可）。
 config :network, Network.Endpoint, server: false
 
