@@ -15,7 +15,11 @@ defmodule Content.CanvasTest do
   - Elixir = SSoT: カメラ姿勢（位置・Yaw・Pitch）・HUD 表示フラグを Elixir 側で管理
   - Rust = 演算層: 描画・入力受信のみ担当
   - 物理エンジン（physics）は使用しない
+
+  描画種別は `scene_render_type/1` のみ（`Contents.Behaviour.Content`）。各シーンの `render_type/0` は `Contents.SceneBehaviour` の契約。
   """
+
+  @behaviour Contents.Behaviour.Content
 
   # ── コンポーネントリスト ──────────────────────────────────────────
 
@@ -28,8 +32,6 @@ defmodule Content.CanvasTest do
   end
 
   # ── シーン定義 ────────────────────────────────────────────────────
-
-  def render_type, do: :playing
 
   def flow_runner(_room_id), do: Process.whereis(Contents.Scenes.Stack)
 

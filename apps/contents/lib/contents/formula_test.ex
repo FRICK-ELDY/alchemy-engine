@@ -14,6 +14,8 @@ defmodule Content.FormulaTest do
 
   ## 起動方法
   config :server, :current, Content.FormulaTest
+
+  描画種別は `scene_render_type/1` のみ（`Contents.Behaviour.Content`）。Content 直下に `render_type/0` は置かない。
   """
 
   @behaviour Contents.Behaviour.Content
@@ -24,8 +26,6 @@ defmodule Content.FormulaTest do
       Contents.Components.Category.Rendering.Render
     ]
   end
-
-  def render_type, do: :playing
 
   def flow_runner(_room_id), do: Process.whereis(Contents.Scenes.Stack)
 

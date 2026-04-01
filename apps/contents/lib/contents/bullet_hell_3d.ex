@@ -12,6 +12,8 @@ defmodule Content.BulletHell3D do
   - 弾または敵に当たると HP -1（HP = 3）
   - HP が 0 になるとゲームオーバー
   - 時間経過とともに敵数・発射間隔がスケールアップ
+
+  描画種別は `scene_render_type/1` のみ（`Contents.Behaviour.Content` / `Contents.Scenes.Stack`）。各シーンの `render_type/0` は `Contents.SceneBehaviour` の契約。
   """
 
   @behaviour Contents.Behaviour.Content
@@ -30,8 +32,6 @@ defmodule Content.BulletHell3D do
     do: Content.BulletHell3D.Playing.build_frame(playing_state, context)
 
   # ── シーン定義 ────────────────────────────────────────────────────
-
-  def render_type, do: :playing
 
   def flow_runner(_room_id), do: Process.whereis(Contents.Scenes.Stack)
 
