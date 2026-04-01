@@ -4,7 +4,7 @@
 
 `window` クレートは **winit** によるウィンドウ生成とイベントループを担当します（The Shell）。`render` の `Renderer` を用いて描画しますが、イベントループの所有権はここにあります。
 
-- **パス**: `native/window/`
+- **パス**: `rust/client/window/`
 - **依存**: `render`, `winit`, `pollster`
 
 ---
@@ -43,7 +43,7 @@ pub fn run_desktop_loop<B: RenderBridge>(bridge: B, config: WindowConfig) -> Res
 
 ## desktop_loop.rs — イベントハンドリング
 
-`native/window/src/desktop_loop.rs` に配置。
+`rust/client/window/src/desktop_loop.rs` に配置。
 
 ### DesktopApp 構造体
 
@@ -257,15 +257,15 @@ flowchart LR
 
 | ファイル | 関数/要素 | 役割 |
 |:---|:---|:---|
-| `native/window/src/lib.rs` | `mod desktop_loop`, `pub use run_desktop_loop` | エクスポート |
-| `native/window/src/desktop_loop.rs` | `run_desktop_loop` | エントリ、EventLoop 構築・起動 |
-| `native/window/src/desktop_loop.rs` | `struct DesktopApp<B>` | アプリ状態 |
-| `native/window/src/desktop_loop.rs` | `DesktopApp::new` | 初期化 |
-| `native/window/src/desktop_loop.rs` | `set_cursor_grabbed` | カーソルグラブ切替 |
-| `native/window/src/desktop_loop.rs` | `device_event` | 生マウス移動 |
-| `native/window/src/desktop_loop.rs` | `resumed` | ウィンドウ・Renderer 生成 |
-| `native/window/src/desktop_loop.rs` | `window_event` | ウィンドウイベント分岐 |
-| `native/render/src/window.rs` | `trait RenderBridge` | ブリッジインターフェース |
+| `rust/client/window/src/lib.rs` | `mod desktop_loop`, `pub use run_desktop_loop` | エクスポート |
+| `rust/client/window/src/desktop_loop.rs` | `run_desktop_loop` | エントリ、EventLoop 構築・起動 |
+| `rust/client/window/src/desktop_loop.rs` | `struct DesktopApp<B>` | アプリ状態 |
+| `rust/client/window/src/desktop_loop.rs` | `DesktopApp::new` | 初期化 |
+| `rust/client/window/src/desktop_loop.rs` | `set_cursor_grabbed` | カーソルグラブ切替 |
+| `rust/client/window/src/desktop_loop.rs` | `device_event` | 生マウス移動 |
+| `rust/client/window/src/desktop_loop.rs` | `resumed` | ウィンドウ・Renderer 生成 |
+| `rust/client/window/src/desktop_loop.rs` | `window_event` | ウィンドウイベント分岐 |
+| `rust/client/render/src/window.rs` | `trait RenderBridge` | ブリッジインターフェース |
 
 ---
 

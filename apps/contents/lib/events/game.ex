@@ -494,7 +494,12 @@ defmodule Contents.Events.Game do
   end
 
   # 物理シーン中のみ on_physics_process を回し、フレームイベントを EventBus へ流す（ゲーム用 NIF への入力注入はない）。
-  defp maybe_run_physics_callbacks_and_broadcast_events(scene_type, physics_scenes, events, context) do
+  defp maybe_run_physics_callbacks_and_broadcast_events(
+         scene_type,
+         physics_scenes,
+         events,
+         context
+       ) do
     if scene_type in physics_scenes do
       run_component_physics_callbacks(context)
       unless events == [], do: Core.EventBus.broadcast(events)

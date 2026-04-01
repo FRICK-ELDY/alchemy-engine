@@ -34,13 +34,15 @@
    mix alchemy.setup
    ```
 
-### Rust NIF（`native/nif`）
+### Rust NIF（`rust/nif`）
 
-`mix compile` のたびに Rustler が **`native/nif` を release ビルド**し、`Core.NifBridge` にリンクします。現行 NIF は **Formula 用 `run_formula_bytecode` のみ**（ゲーム物理・ECS 用 NIF は撤去済み）。ワークスペース単体の検証例:
+`mix compile` のたびに Rustler が **`rust/nif` を release ビルド**し、`Core.NifBridge` にリンクします。現行 NIF は **Formula 用 `run_formula_bytecode` のみ**（ゲーム物理・ECS 用 NIF は撤去済み）。ワークスペース単体の検証例:
 
 ```bash
-cd native && cargo build -p nif -p app
+cd rust && cargo build -p nif -p app
 ```
+
+古いビルドキャッシュ `native/target/` が残っている場合は削除して問題ありません（現行は `rust/target/` を使用）。
 
 ## 起動方法
 

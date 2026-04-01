@@ -1,0 +1,22 @@
+[workspace]
+resolver = "2"
+members = [
+    "nif",
+    "launcher",
+    "client/shared",
+    "client/render_frame_proto",
+    "client/network",
+    "client/audio",
+    "client/render",
+    "client/window",
+    "client/xr",
+    "client/app",
+]
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

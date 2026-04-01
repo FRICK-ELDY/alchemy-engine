@@ -6,13 +6,13 @@ Zenoh 経由のペイロードを Erlang term（ETF）から **Protocol Buffers*
 
 - スキーマ定義: リポジトリ直下の **`proto/*.proto`**
 - Elixir: `apps/network/lib/network/proto/`（`use Protobuf` 手書きが多い）
-- Rust: `native/network` / `native/nif` 等（`prost`；一部手書き `Message`）
+- Rust: `rust/client/network` / `rust/nif` 等（`prost`；一部手書き `Message`）
 
 ## 現状（運用上）
 
 - **フレーム・入力・injection・client_info** はワイヤ上 protobuf のみ。旧バイナリ形式のフォールバックおよび `bert_encode` 互換名は削除済み。UDP も ETF（`term_to_binary`）ではなく protobuf payload を圧縮して送る方式に統一した。残作業は作業用ツリー `workspace/2_todo/protobuf-migration-p5-serialization-followups.md` をリポジトリ内で検索（本 `docs` からは `workspace/` へリンクしない方針のためパス記載のみ）。
 - レガシー ETF の map 形は [erlang-term-schema.md](./erlang-term-schema.md) に記載（参照・デバッグ用）。
-- `native/network` のフレーム受信は `decode_pb_render_frame` のみ。**サーバーとデスクトップクライアントは同時更新**を前提とし、片側のみ更新した構成はサポートしない（リリース運用ポリシー）。
+- `rust/client/network` のフレーム受信は `decode_pb_render_frame` のみ。**サーバーとデスクトップクライアントは同時更新**を前提とし、片側のみ更新した構成はサポートしない（リリース運用ポリシー）。
 
 ## 開発者向け
 

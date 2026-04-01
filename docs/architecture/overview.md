@@ -1,6 +1,6 @@
 # AlchemyEngine — アーキテクチャ概要
 
-> **2026-04 更新**: ゲーム用 Rust NIF（`native/nif` 内 physics / 60Hz ループ）は撤去済み。サーバ上のゲーム状態・シミュレーションは **Elixir（contents）** が主担当。`nif` は **Formula VM（`run_formula_bytecode`）のみ**。ローカルディスクセーブは未実装。
+> **2026-04 更新**: ゲーム用 Rust NIF（`rust/nif` 内 physics / 60Hz ループ）は撤去済み。サーバ上のゲーム状態・シミュレーションは **Elixir（contents）** が主担当。`nif` は **Formula VM（`run_formula_bytecode`）のみ**。ローカルディスクセーブは未実装。
 
 ## 設計思想
 
@@ -48,7 +48,7 @@ graph TB
         APP --> SH
     end
 
-    LAUNCHER[tools/launcher]
+    LAUNCHER[rust/launcher]
 
     GN -->|Zenoh frame| NETC
     NETC -->|Zenoh input| GN
@@ -68,15 +68,17 @@ alchemy-engine/
 │   ├── server/                # OTP 起動
 │   ├── contents/lib/          # 維持 3 コンテンツ + behaviour / events / scenes / components
 │   └── network/               # ZenohBridge, UDP, Phoenix …
-├── native/
+├── rust/
+│   ├── Cargo.toml             # ワークスペース（members に nif / launcher / client/*）
 │   ├── nif/                   # Rustler・Formula VM のみ（physics なし）
-│   ├── shared/                # 契約型・display（既定解像度）等
-│   ├── render_frame_proto/    # RenderFrame protobuf デコード
-│   ├── network/               # クライアント側 Zenoh
-│   ├── render/, window/       # wgpu / winit
-│   ├── app/                   # VRAlchemy（shared に解像度。nif に非依存）
-│   ├── xr/, audio/            # クライアント VR・音声
-│   └── tools/launcher/
+│   ├── launcher/              # ルーター・サーバ・クライアント起動
+│   └── client/
+│       ├── shared/            # 契約型・display（既定解像度）等
+│       ├── render_frame_proto/ # RenderFrame protobuf デコード
+│       ├── network/           # クライアント側 Zenoh
+│       ├── render/, window/   # wgpu / winit
+│       ├── app/               # VRAlchemy（nif に非依存）
+│       └── xr/, audio/        # クライアント VR・音声
 ├── proto/                     # render_frame / input 等
 └── assets/
 ```
@@ -115,7 +117,7 @@ graph TB
     APP --> XR
     APP --> AUDIO
 
-    LAUNCHER[tools/launcher]
+    LAUNCHER[rust/launcher]
 
     Note1[Elixir mix compile が nif を<br/>release ビルドして NIF ロード]
 ```
@@ -148,7 +150,7 @@ graph TB
 graph LR
     CF[Core.Formula.run/3]
     NB[Core.NifBridge<br/>run_formula_bytecode]
-    VM[native/nif formula VM]
+    VM[rust/nif formula VM]
 
     CF --> NB
     NB --> VM

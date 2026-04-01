@@ -108,8 +108,28 @@ defmodule Network.UDP do
     # UDP には TCP の TIME_WAIT がないため本番環境でも副作用はない。
     case :gen_udp.open(port, [:binary, active: true, reuseaddr: true]) do
       {:ok, socket} ->
-        Logger.info("[Network.UDP] Listening on UDP port #{port}")
-        {:ok, %{socket: socket, port: port, sessions: %{}, next_seq: 0}}
+        actual_port =
+          case port do
+            0 ->
+              case :inet.port(socket) do
+                {:ok, p} ->
+                  p
+
+                {:error, reason} ->
+                  Logger.warning(
+                    "[Network.UDP] :inet.port/1 failed after bind on port 0: #{inspect(reason)}; " <>
+                      "state.port may be incorrect"
+                  )
+
+                  port
+              end
+
+            _ ->
+              port
+          end
+
+        Logger.info("[Network.UDP] Listening on UDP port #{actual_port}")
+        {:ok, %{socket: socket, port: actual_port, sessions: %{}, next_seq: 0}}
 
       {:error, reason} ->
         {:stop, {:udp_open_failed, reason}}

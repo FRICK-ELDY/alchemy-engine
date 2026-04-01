@@ -13,7 +13,7 @@
 **DrawCommand** は Elixir 側（contents の Render コンポーネント等）が **タプル**として組み立てる描画命令リストの要素である。**サーバーからクライアントへは NIF を経由しない。** `Content.FrameEncoder.encode_frame/5` が **`Alchemy.Render.RenderFrame` の protobuf** に変換し、Zenoh 等で配信する。クライアント（Rust）は `render_frame_proto::decode_pb_render_frame` でデコードし、`render` が描画する。
 
 - **契約（SSoT）**: `proto/render_frame.proto`（protobuf）。Elixir 側の対応実装は `Content.FrameEncoder`（`command_to_pb/1` 等）。
-- **実行**: クライアント Rust（`native/render_frame_proto` → `native/shared` の `DrawCommand`、`native/render`）。`Core.NifBridge` は **`run_formula_bytecode/3` のみ**であり、DrawCommand 型や描画 NIF は持たない。
+- **実行**: クライアント Rust（`rust/client/render_frame_proto` → `rust/client/shared` の `DrawCommand`、`rust/client/render`）。`Core.NifBridge` は **`run_formula_bytecode/3` のみ**であり、DrawCommand 型や描画 NIF は持たない。
 
 ---
 
@@ -162,7 +162,7 @@
 
 ## 4. Rust 側の受け手（クライアント）
 
-ワイヤ上は **protobuf のみ**。`native/render_frame_proto` の `decode_pb_render_frame/1` が `prost` で `Alchemy.Render.RenderFrame` をデコードし、`shared::render_frame::DrawCommand` に変換する。タグ・フィールドの追加・変更は **`proto/render_frame.proto` と `Content.FrameEncoder` を先に更新**し、続いて Rust のデコードを追随する。
+ワイヤ上は **protobuf のみ**。`rust/client/render_frame_proto` の `decode_pb_render_frame/1` が `prost` で `Alchemy.Render.RenderFrame` をデコードし、`shared::render_frame::DrawCommand` に変換する。タグ・フィールドの追加・変更は **`proto/render_frame.proto` と `Content.FrameEncoder` を先に更新**し、続いて Rust のデコードを追随する。
 
 ---
 
@@ -171,4 +171,4 @@
 - [contents-defines-rust-executes.md](../plan/backlog/contents-defines-rust-executes.md) — 方針・リファクタリング計画
 - [Rust: render](rust/desktop/render.md) — 描画パイプライン（render クレート）
 - [Rust: nif](rust/nif.md) — Formula NIF（`run_formula_bytecode`）のみ
-- [`native/render_frame_proto`](../../native/render_frame_proto) — protobuf → `RenderFrame` デコード
+- [`rust/client/render_frame_proto`](../../rust/client/render_frame_proto) — protobuf → `RenderFrame` デコード

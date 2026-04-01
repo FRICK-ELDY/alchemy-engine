@@ -1,4 +1,4 @@
-## 1.ディレクトリ構成 (`native/`)
+## 1.ディレクトリ構成 (`rust/`)
 設計思想
 - Elixir (The Brain): 真実の状態（State）を管理し、論理的な判断を下す。
 - Rust (The Body): 通信（Zenoh）、計算（NIF/shared）、描画（wgpu）を担当し、高パフォーマンスに実行する。
@@ -6,83 +6,31 @@
 
 Workspace機能を利用し、役割ごとにクレート（フォルダ）を分離します。
 ```
-bin/
-├── build.bat                 # デバック・リリースビルド用スクリプト
-├── launcher.bat              # 開発用のランチャー起動
-native/
-├── Cargo.toml                # Workspace全体の管理
+rust/
+├── Cargo.toml                # Workspace 全体の管理（members: nif, launcher, client/*）
 │
-├── shared/                   # 【共通データ】Elixirとの契約、予測、補間
-│   ├── src/
-│   │   ├── lib.rs            # 全体の統合（World State）
-│   │   ├── types.rs          # #[repr(C)] 構造体（Elixirとの共通規格）
-│   │   ├── store.rs          # スナップショット保持（過去と現在）
-│   │   ├── interp.rs         # 線形補間(Lerp)ロジック（20Hz -> 60Hz）
-│   │   └── predict.rs        # 入力予測ロジック（レイテンシ対策）
+├── nif/                      # 【サーバー】Elixir NIF（現行は Formula VM のみ）
+│   └── src/ …
 │
-├── network/                  # 【通信層】Zenohによる高速トランスポート
-│   ├── src/
-│   │   ├── lib.rs            # 通信インターフェース
-│   │   ├── common.rs         # トピック管理、共通処理
-│   │   └── platform/         # 通信方式の切り替え
-│   │       ├── mod.rs        # target_os による振り分け
-│   │       ├── desktop.rs    # Zenoh Native (UDP/TCP)
-│   │       └── web.rs        # Zenoh over WebSocket (WASM)
+├── launcher/                 # ルーター・サーバ・クライアント起動（開発支援）
+│   └── src/main.rs
 │
-├── audio/                    # 【聴覚層】音の再生とマイク入力
-│   ├── src/
-│   │   ├── lib.rs            # オーディオミキサー、エンジンの初期化
-│   │   ├── common.rs         # DSP（エフェクト）、立体音響（Spatial Audio）計算
-│   │   └── platform/         # OSごとの音声ドライバ (cpal / rodio 等)
-│   │       ├── mod.rs        # target_os による切り替え
-│   │       ├── desktop.rs    # CoreAudio / WASAPI / ALSA
-│   │       ├── web.rs        # Web Audio API (WASM)
-│   │       ├── android.rs    # Oboe / AAudio
-│   │       └── ios.rs        # AudioUnit
-│
-├── render/                   # 【描画層】wgpuを用いた共通レンダラー
-│   ├── src/
-│   │   ├── lib.rs            # 外向きのレンダラーAPI
-│   │   ├── common.rs         # 共通のパイプライン、シェーダー(WGSL)管理
-│   │   └── platform/         # OSごとのSurface生成
-│   │       ├── mod.rs        # target_os による切り替え
-│   │       ├── desktop.rs    # Win / Mac / Linux
-│   │       ├── web.rs        # WASM (Canvas)
-│   │       ├── android.rs    # Vulkan / Surface
-│   │       └── ios.rs        # Metal / Layer
-│
-├── window/                   # 【窓層】winitを用いたイベント管理
-│   ├── src/
-│   │   ├── lib.rs            # ライフサイクル管理（AppHandler）
-│   │   ├── common.rs         # 入力イベントの正規化
-│   │   └── platform/         # OS固有処理（Suspend/Resume等）
-│
-├── xr/                       # 【XR層】OpenXRセッションと入力管理
-│   ├── src/
-│   │   ├── lib.rs            # セッション初期化、フレームループ管理
-│   │   ├── common.rs         # アクションマッピング（トリガー、スティック等の正規化）
-│   │   └── platform/         # ランタイム固有の初期化
-│   │       ├── mod.rs
-│   │       ├── desktop.rs    # PCVR (SteamVR, Oculus, Monado)
-│   │       └── android.rs    # Meta Quest 等の一体型 (OpenXR Mobile)
-│
-├── app/                      # 【統合層】各ターゲットのエントリポイント
-│   ├── src/
-│   │   ├── main.rs           # Desktop用 (exe/app)
-│   │   ├── lib.rs            # WASM / Mobile用
-│   │   ├── android.rs        # Android JNI
-│   │   └── ios.rs            # iOS Swiftブリッジ
-│
-├── nif/                      # 【サーバー】Elixir NIF用 Rustコード
-│   ├── src/
-│   │   ├── lib.rs            # Rustlerによる関数露出（sharedを参照）
-│   │   ├── physics.rs        # 剛体物理等の演算
-│   │   ├── ai.rs             # contents制作用のAIアシスタント
-│   │   └── audio_sync.rs     # オーケストラなどの音同期
-│
-└── tools/                    # 【開発支援】プロダクトには含まれないツール
-    └── launcher/             # ルーター、サーバー、クライアントの一括起動ツール
-        ├── src/main.rs
+└── client/
+    ├── shared/               # 【共通データ】Elixirとの契約、予測、補間
+    │   ├── src/
+    │   │   ├── lib.rs            # 全体の統合（World State）
+    │   │   ├── types.rs          # #[repr(C)] 構造体（Elixirとの共通規格）
+    │   │   ├── store.rs          # スナップショット保持（過去と現在）
+    │   │   ├── interp.rs         # 線形補間(Lerp)ロジック（20Hz -> 60Hz）
+    │   │   └── predict.rs        # 入力予測ロジック（レイテンシ対策）
+    │
+    ├── network/              # 【通信層】Zenoh 等
+    ├── audio/                # 【聴覚層】
+    ├── render_frame_proto/   # RenderFrame protobuf デコード
+    ├── render/               # 【描画層】wgpu
+    ├── window/               # 【窓層】winit
+    ├── xr/                   # 【XR層】OpenXR
+    └── app/                  # 【統合層】VRAlchemy 等（各クレートは src/ 以下に詳細）
 ```
 
 ## 2. 各レイヤーの責務と設計指針

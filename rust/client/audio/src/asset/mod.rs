@@ -24,7 +24,7 @@ macro_rules! define_assets {
 
         fn load_asset_embedded(id: AssetId) -> Vec<u8> {
             match id {
-                $(AssetId::$id => include_bytes!(concat!("../../../../", $path)).to_vec(),)*
+                $(AssetId::$id => include_bytes!(concat!("../../../../../", $path)).to_vec(),)*
             }
         }
     };

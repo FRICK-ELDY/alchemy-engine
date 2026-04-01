@@ -100,8 +100,8 @@ pub mod info;
 ### 3.3 動作確認
 
 ```bash
-cd native
-cargo build -p client
+cd rust
+cargo build -p app
 ```
 
 ---

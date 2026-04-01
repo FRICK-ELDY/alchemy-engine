@@ -6,7 +6,7 @@
 
 **RenderFrame**（DrawCommand リスト・CameraParams・UiCanvas）は Elixir 側の Render コンポーネントが `Content.FrameEncoder` で protobuf（`proto/render_frame.proto`）にし、`FrameBroadcaster.put` → `Network.ZenohBridge.publish_frame` で Zenoh へ publish する。`app`（VRAlchemy）は `network` 経由で Zenoh の `game/room/{room_id}/frame` を subscribe し、`decode_pb_render_frame` でデコードして描画する。ローカル描画（NIF 内 RenderFrameBuffer）は廃止済み（Zenoh 専用）。
 
-- **パス**: `native/render/`
+- **パス**: `rust/client/render/`
 - **依存**: `shared`, `prost`, `wgpu`, `winit`, `egui`, `bytemuck`, `image`, `pollster`, `log`
 
 ---
@@ -398,7 +398,7 @@ CI / テスト向け。`[features] headless = []` で有効化。winit ウィン
 
 | 項目 | 内容 |
 |:---|:---|
-| **パス** | `native/render/src/renderer/shaders/sprite.wgsl` または `assets/{game_id}/shaders/sprite.wgsl` |
+| **パス** | `rust/client/render/src/renderer/shaders/sprite.wgsl` または `assets/{game_id}/shaders/sprite.wgsl` |
 | **用途** | 2D スプライト描画（アトラステクスチャ、インスタンシング） |
 | **使用箇所** | `renderer/mod.rs`, `headless.rs` |
 
@@ -431,7 +431,7 @@ CI / テスト向け。`[features] headless = []` で有効化。winit ウィン
 
 | 項目 | 内容 |
 |:---|:---|
-| **パス** | `native/render/src/renderer/shaders/mesh.wgsl` または `assets/{game_id}/shaders/mesh.wgsl` |
+| **パス** | `rust/client/render/src/renderer/shaders/mesh.wgsl` または `assets/{game_id}/shaders/mesh.wgsl` |
 | **用途** | 3D メッシュ（Box3D / GridPlane / Skybox）描画 |
 | **使用箇所** | `renderer/pipeline_3d.rs` |
 

@@ -234,10 +234,10 @@ Store からキーで値を読み、レジスタへ。
 
 | レイヤー | ファイル |
 |:---|:---|
-| OpCode 定義 | `native/nif/src/formula/opcode.rs` |
-| デコード | `native/nif/src/formula/decode.rs` |
-| VM 実行 | `native/nif/src/formula/vm.rs` |
-| 値型 | `native/nif/src/formula/value.rs` |
+| OpCode 定義 | `rust/nif/src/formula/opcode.rs` |
+| デコード | `rust/nif/src/formula/decode.rs` |
+| VM 実行 | `rust/nif/src/formula/vm.rs` |
+| 値型 | `rust/nif/src/formula/value.rs` |
 | Elixir 生成 | `apps/core/lib/core/formula.ex` |
 | グラフ→バイトコード | `apps/core/lib/core/formula_graph.ex` |
 

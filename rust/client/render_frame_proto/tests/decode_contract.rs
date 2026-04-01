@@ -9,7 +9,8 @@ use render_frame_proto::decode_pb_render_frame;
 use shared::render_frame::DrawCommand;
 
 // network の E2E と同一バイト列（再生成手順は network テスト先頭コメント参照）。
-const GOLDEN_FRAME: &[u8] = include_bytes!("../../network/tests/fixtures/render_frame_elixir_golden.bin");
+const GOLDEN_FRAME: &[u8] =
+    include_bytes!("../../network/tests/fixtures/render_frame_elixir_golden.bin");
 
 #[test]
 fn golden_decodes_and_first_draw_command_matches_smoke() {

@@ -13,8 +13,8 @@
 
 use audio::AssetLoader;
 use network::NetworkRenderBridge;
-use shared::display::{SCREEN_HEIGHT, SCREEN_WIDTH};
 use render::window::{RendererInit, WindowConfig};
+use shared::display::{SCREEN_HEIGHT, SCREEN_WIDTH};
 use window::run_desktop_loop;
 
 fn main() -> Result<(), String> {

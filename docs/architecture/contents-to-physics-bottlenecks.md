@@ -1,13 +1,15 @@
-# apps/contents → native/physics データフローと技術的ボトルネック
+# apps/contents → 旧 native/physics データフローと技術的ボトルネック
 
 > **アーカイブ（2026-04）**: ゲーム用 Rust NIF（`GameWorld`・`physics_step`・60Hz ループ）は撤去済み。以下は **旧アーキテクチャ** のボトルネック分析記録。現行の経路・用語は [overview.md](overview.md) と [network-protocol-current.md](network-protocol-current.md) を参照。
 
-> 本ドキュメントは `apps/contents` から `native/physics` までのデータの流れを可視化し、
+> 本ドキュメントは `apps/contents` から旧 `native/physics` までのデータの流れを可視化し、
 > 当時技術的にボトルネックになり得る箇所を分析した。
 
 ---
 
 ## 1. 全体データフロー概要
+
+以下の図のサブグラフ名は **当時のリポジトリ配置（旧 `native/` ツリー）** を指す。現行の `rust/nif` や `rust/client/render` との **パス対応を示すものではない**。
 
 ```mermaid
 flowchart TB
@@ -24,7 +26,7 @@ flowchart TB
         GE --> NS
     end
     
-    subgraph NIF["native/nif (NIF ブリッジ)"]
+    subgraph NIF["旧 native/nif（当時の NIF ブリッジ）"]
         WN[world_nif]
         AN[action_nif]
         RN[read_nif]
@@ -32,12 +34,12 @@ flowchart TB
         GL[game_loop_nif]
     end
     
-    subgraph Physics["native/physics (Rust)"]
+    subgraph Physics["旧 native/physics (Rust)"]
         GW[(GameWorld<br/>RwLock)]
         PS[physics_step_inner]
     end
     
-    subgraph Render["native/render"]
+    subgraph Render["旧 native/render（当時のクライアント描画）"]
         RFB[(RenderFrameBuffer)]
         RB[render_bridge<br/>next_frame]
     end

@@ -15,7 +15,7 @@ fn collect_proto_files(proto_dir: &Path) -> Result<Vec<PathBuf>, Box<dyn std::er
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let proto_dir = PathBuf::from("../../proto");
+    let proto_dir = PathBuf::from("../../../proto");
     let proto_files = collect_proto_files(&proto_dir)?;
 
     for proto in &proto_files {

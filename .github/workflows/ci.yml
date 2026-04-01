@@ -28,11 +28,11 @@ jobs:
           rust-components: "rustfmt, clippy"
 
       - name: cargo fmt
-        run: cargo fmt --manifest-path native/Cargo.toml --all -- --check
+        run: cargo fmt --manifest-path rust/Cargo.toml --all -- --check
 
       - name: cargo clippy
         run: >
-          cargo clippy --manifest-path native/Cargo.toml --workspace
+          cargo clippy --manifest-path rust/Cargo.toml --workspace
           --exclude launcher
           -- -D warnings
 
@@ -49,7 +49,7 @@ jobs:
           protoc-source: apt
 
       - name: cargo test (nif/physics)
-        run: cargo test --manifest-path native/Cargo.toml -p nif
+        run: cargo test --manifest-path rust/Cargo.toml -p nif
 
   # ─────────────────────────────────────────────
   # Protobuf: Elixir 生成物と proto の整合（生成後 mix format してから diff）
@@ -112,11 +112,17 @@ jobs:
             elixir-check-${{ runner.os }}-
 
       - run: mix deps.get
+        env:
+          MIX_ENV: test
       - run: mix compile --warnings-as-errors
+        env:
+          MIX_ENV: test
       - run: mix format --check-formatted
+        env:
+          MIX_ENV: test
       - run: mix credo --strict
         env:
-          MIX_ENV: dev
+          MIX_ENV: test
 
   # ─────────────────────────────────────────────
   # [D] Elixir: NIF 込み mix test
@@ -164,7 +170,7 @@ jobs:
       - name: cargo bench
         run: >
           cargo bench
-          --manifest-path native/Cargo.toml
+          --manifest-path rust/Cargo.toml
           -p nif
           -- --output-format bencher
           | tee bench_output.txt

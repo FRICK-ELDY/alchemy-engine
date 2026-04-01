@@ -1,7 +1,9 @@
 # native 構成移行実施プラン
 
-> 基準: [fix_rust_architecture.md](../../architecture/fix_rust_architecture.md) L12-85  
-> 更新対象: [overview.md](../../architecture/overview.md) L182-193 及び関連記述
+> **2026-04 追記**: リポジトリ直下の Rust ワークスペースは **`rust/`** に移行済み（[rust-workspace-directory-restructure-plan.md](../7_done/rust-workspace-directory-restructure-plan.md)）。本書の `native/` は **2026-04 以前のクレート再編計画**として参照する。
+
+> 基準: [fix_rust_architecture.md](../../docs/architecture/fix_rust_architecture.md) L12-85  
+> 更新対象: [overview.md](../../docs/architecture/overview.md) L182-193 及び関連記述（パスは現行 `rust/` に読み替え）
 
 ---
 

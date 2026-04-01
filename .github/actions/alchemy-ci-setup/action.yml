@@ -61,7 +61,7 @@ runs:
 
     - uses: Swatinem/rust-cache@v2
       with:
-        workspaces: native
+        workspaces: rust
 
     - name: Setup BEAM
       if: inputs.with-beam == 'true'

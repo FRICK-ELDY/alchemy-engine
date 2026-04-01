@@ -13,7 +13,7 @@ defmodule Mix.Tasks.Alchemy.Launcher do
   @impl Mix.Task
   def run(_args) do
     root = File.cwd!()
-    manifest = Path.join(root, "native/Cargo.toml")
+    manifest = Path.join(root, "rust/Cargo.toml")
 
     Mix.shell().info("")
     Mix.shell().info("Launching launcher (tray)...")

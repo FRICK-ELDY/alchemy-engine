@@ -30,7 +30,7 @@ defmodule Mix.Tasks.Alchemy.Client do
     room = Keyword.get(opts, :room, "main")
 
     root = File.cwd!()
-    manifest = Path.join(root, "native/Cargo.toml")
+    manifest = Path.join(root, "rust/Cargo.toml")
 
     Mix.shell().info("")
     Mix.shell().info("Alchemy Client - connect=#{connect} room=#{room}")

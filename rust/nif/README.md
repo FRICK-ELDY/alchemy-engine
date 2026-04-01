@@ -15,7 +15,7 @@ Elixir 向け **Rustler NIF**。`mix compile` で release ビルドされ、`Cor
 
 | 側 | 役割 |
 |:---|:---|
-| **ゲームシミュレーション** | Elixir（`contents` のシーン・コンポーネント）およびクライアント描画パイプライン。`native/nif` には **含めない**。 |
+| **ゲームシミュレーション** | Elixir（`contents` のシーン・コンポーネント）およびクライアント描画パイプライン。`rust/nif` には **含めない**。 |
 | **式（Formula）** | `src/formula/` の VM と `src/nif/formula_nif.rs` の NIF エントリのみ。他用途の Rust をここに混在させない。 |
 
 **Elixir からの呼び出し**は **`Core.Formula.run/3` 等**（`apps/core/lib/core/formula.ex`）を正とし、アプリ・コンテンツから **`Core.NifBridge.run_formula_bytecode` を直接呼ばない**。NIF は Rustler のロード先として `Core.NifBridge` に載るが、公開 API の境界は `Core.Formula` に置く。
@@ -35,7 +35,7 @@ Elixir 向け **Rustler NIF**。`mix compile` で release ビルドされ、`Cor
 
 ## ワークスペース
 
-- `native/Cargo.toml` の `members` に `nif` は従来どおり含まれる
+- `rust/Cargo.toml` の `members` に `nif` が含まれる
 - デスクトップ `app` は **`nif` に依存しない**（既定解像度は `shared::display`）
 
 ## XR
