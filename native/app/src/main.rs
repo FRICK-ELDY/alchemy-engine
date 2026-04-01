@@ -9,7 +9,7 @@
 //! 環境変数:
 //!   ZENOH_CONNECT - 接続先（例: tcp/127.0.0.1:7447）。未指定時は zenoh のデフォルト
 //!   ASSETS_PATH - アセットルート（未指定時はカレントディレクトリ）
-//!   ASSETS_ID - コンテンツ別サブディレクトリ（例: vampire_survivor）で assets/{id}/ を参照
+//!   ASSETS_ID - コンテンツ別サブディレクトリ（例: bullet_hell_3d）で assets/{id}/ を参照
 
 use audio::AssetLoader;
 use network::NetworkRenderBridge;

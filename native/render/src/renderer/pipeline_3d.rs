@@ -529,7 +529,7 @@ impl Pipeline3D {
 
         // ─── P3: メッシュ定義をキャッシュに登録・削除（直前フレームと同じ場合はスキップ）────
         // コンテンツ切替時は new_key が変わるため、旧コンテンツのメッシュを削除してから新規登録する。
-        // これにより、SimpleBox3D → VampireSurvivor 等の切替時に前コンテンツのメッシュが
+        // これにより、コンテンツ切替時に前コンテンツのメッシュが
         // キャッシュに残り続けるメモリリークを防止する。
         let new_key: Vec<String> = mesh_definitions.iter().map(|d| d.name.clone()).collect();
         let need_update = self.mesh_def_cache_key.as_ref() != Some(&new_key);

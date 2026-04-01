@@ -75,9 +75,9 @@
 
 ## フェーズ 5: 検証
 
-- [ ] `mix test`（`apps/core`, `apps/contents` 中心）。
-- [ ] サーバ起動し、`CanvasTest` / `BulletHell3D` / `FormulaTest` のシーン遷移・入力・描画（および Formula 検証表示）が従来通りであること。
-- [ ] 削除したコンテンツ名で `rg` し、死んだ参照が残っていないこと。
+- [x] `mix test`（`apps/core`, `apps/contents` 中心）。
+- [x] サーバ起動し、`CanvasTest` / `BulletHell3D` / `FormulaTest` のシーン遷移・入力・描画（および Formula 検証表示）が従来通りであること（実施者確認）。
+- [x] 削除したコンテンツ名で `rg` し、**実行コード・設定に死んだ参照が無い**ことを確認（`*.ex` / `*.exs` / `config/` / `mix.exs` はゼロ。`docs/`・`workspace/` は履歴・評価メモとして残存。Rust コメント 2 箇所を現行例に修正済み）。
 
 ## リスク・未決事項
 
