@@ -69,12 +69,6 @@ defmodule Content.FormulaTest do
 
   def assets_path, do: ""
 
-  def entity_registry, do: %{weapons: %{}, enemies: %{}}
-
-  def enemy_exp_reward(_kind_id), do: 0
-
-  def score_from_exp(_exp), do: 0
-
   def context_defaults, do: %{}
 
   def wave_label(elapsed_sec) do

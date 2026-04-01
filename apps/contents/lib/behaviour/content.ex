@@ -7,7 +7,7 @@ defmodule Contents.Behaviour.Content do
   参照し、その関数（initial_scenes/0, playing_scene/0 等）を呼び出す。
 
   必須コールバックはすべてのコンテンツで実装が必要。
-  オプショナルコールバックは武器・ボスの概念を持つコンテンツのみ実装する。
+  オプショナルコールバックは、武器・ボス・敵カタログ・EXP などの概念を使うコンテンツのみ実装する。
 
   ## 設計原則
 
@@ -82,13 +82,23 @@ defmodule Contents.Behaviour.Content do
   @callback physics_scenes() :: [scene_type()]
   @callback playing_scene() :: scene_type()
   @callback game_over_scene() :: scene_type()
-  @callback entity_registry() :: map()
-  @callback enemy_exp_reward(kind_id :: non_neg_integer()) :: exp()
-  @callback score_from_exp(exp()) :: non_neg_integer()
   @callback wave_label(elapsed_sec :: float()) :: String.t()
   @callback context_defaults() :: map()
 
-  # ── オプショナルコールバック（武器・ボスの概念を持つコンテンツのみ）──
+  # ── オプショナルコールバック ───────────────────────────────────────
+
+  @doc """
+  敵・武器の kind_id とパラメータの対応表（診断・将来の同期用）。
+
+  EXP や敵種別テーブルを使わないコンテンツは未実装でよい。
+  """
+  @callback entity_registry() :: map()
+
+  @doc "敵種別ごとの撃破 EXP。EXP を使わないコンテンツは未実装でよい。"
+  @callback enemy_exp_reward(kind_id :: non_neg_integer()) :: exp()
+
+  @doc "累積 EXP から表示スコアへの換算。EXP を使わないコンテンツは未実装でよい。"
+  @callback score_from_exp(exp()) :: non_neg_integer()
 
   @doc "レベルアップシーン種別を返す（武器選択 UI を持つコンテンツのみ実装）"
   @callback level_up_scene() :: scene_type()
@@ -167,6 +177,9 @@ defmodule Contents.Behaviour.Content do
   @callback world_size() :: {width :: float(), height :: float()}
 
   @optional_callbacks [
+    entity_registry: 0,
+    enemy_exp_reward: 1,
+    score_from_exp: 1,
     build_frame: 2,
     mesh_definitions: 0,
     world_size: 0,

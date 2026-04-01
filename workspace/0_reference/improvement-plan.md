@@ -366,8 +366,8 @@ graph TD
 ### 新しいコンテンツを追加する際の手順
 
 1. `Core.Component` を実装した `SpawnComponent` を作成し、`on_ready/1` で `set_entity_params` NIF に新コンテンツのエンティティパラメータを注入する
-2. コンテンツのメインモジュールを作成し、`components/0`・`initial_scenes/0`・`physics_scenes/0`・`playing_scene/0`・`game_over_scene/0`・`entity_registry/0`・`enemy_exp_reward/1`・`score_from_exp/1`・`wave_label/1` を実装する
-3. 武器・ボスの概念を持つ場合のみ `level_up_scene/0`・`boss_alert_scene/0`・`pause_on_push?/1`・`apply_level_up_skipped/1`・`apply_weapon_selected/2`・`boss_exp_reward/1` を追加する
+2. コンテンツのメインモジュールを作成し、`Contents.Behaviour.Content` の**必須**コールバック（`components/0`・`flow_runner/1`・`scene_init/2`・`scene_update/3`・`scene_render_type/1`・`event_handler/1`・`initial_scenes/0`・`physics_scenes/0`・`playing_scene/0`・`game_over_scene/0`・`wave_label/1`・`context_defaults/0` 等。詳細は `content.ex`）を実装する
+3. 敵カタログ・EXP・スコア換算を使う場合のみ `entity_registry/0`・`enemy_exp_reward/1`・`score_from_exp/1` を追加する。武器・ボスの概念を持つ場合は `level_up_scene/0`・`boss_alert_scene/0`・`pause_on_push?/1`・`apply_level_up_skipped/1`・`apply_weapon_selected/2`・`boss_exp_reward/1` 等を追加する
 4. `config :server, :current, NewContent` を設定する
 
 （参考: `Content.AsteroidArena` が 2 つ目のコンテンツとして実装済み）

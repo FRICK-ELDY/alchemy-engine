@@ -14,6 +14,8 @@ defmodule Content.BulletHell3D do
   - 時間経過とともに敵数・発射間隔がスケールアップ
   """
 
+  @behaviour Contents.Behaviour.Content
+
   # ── コンポーネントリスト ──────────────────────────────────────────
 
   def components do

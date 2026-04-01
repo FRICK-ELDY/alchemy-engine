@@ -82,14 +82,6 @@ defmodule Content.CanvasTest do
 
   def assets_path, do: ""
 
-  # ── エンティティレジストリ（CanvasTest はエネミー・武器の概念なし）──
-
-  def entity_registry, do: %{weapons: %{}, enemies: %{}}
-
-  def enemy_exp_reward(_kind_id), do: 0
-
-  def score_from_exp(_exp), do: 0
-
   # ── コンテキストデフォルト ────────────────────────────────────────
 
   def context_defaults, do: %{}
