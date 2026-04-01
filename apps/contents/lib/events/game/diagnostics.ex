@@ -5,7 +5,7 @@ defmodule Contents.Events.Game.Diagnostics do
 
   @tick_ms 16
 
-  @doc "replace 遷移時の init_arg を構築する（ゲームオーバー時のスコア・ハイスコア付与）"
+  @doc "replace 遷移時の init_arg を構築する（ゲームオーバー時のスコア・ハイスコア欄は空リスト）"
   def build_replace_init_arg(scene_type, init_arg, elapsed, content, runner) do
     game_over_scene = content.game_over_scene()
 
@@ -19,8 +19,7 @@ defmodule Contents.Events.Game.Diagnostics do
         %{}
       )
 
-      Core.SaveManager.save_high_score(score)
-      Map.merge(init_arg || %{}, %{high_scores: Core.SaveManager.load_high_scores()})
+      Map.merge(init_arg || %{}, %{high_scores: []})
     else
       init_arg || %{}
     end
@@ -47,8 +46,7 @@ defmodule Contents.Events.Game.Diagnostics do
 
     hud_data = {player_hp, player_max_hp, score, elapsed_s}
 
-    high_scores =
-      if render_type == :game_over, do: Core.SaveManager.load_high_scores(), else: nil
+    high_scores = if render_type == :game_over, do: [], else: nil
 
     enemy_count = enemy_count_from_playing_state(playing_state)
     bullet_count = bullet_count_from_playing_state(playing_state)

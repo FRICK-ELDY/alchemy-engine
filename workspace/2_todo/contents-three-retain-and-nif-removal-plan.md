@@ -54,18 +54,18 @@
 
 - [x] `Contents.Events.Game` 内の VampireSurvivor 向け分岐（例: 武器スロット注入フォールバック）を、残存コンテンツに不要なら削除。
 - [x] `Contents.Events.Game.Diagnostics` の NIF メトリクス（敵弾数・SSoT チェック等）を、NIF 撤去方針に合わせて Elixir のみまたは削除。
-- [x] `Contents.Components.Category.Spawner` が残存コンテンツで未使用なら削除、使用されていれば NIF 非依存の API に変更。（`BulletHell3D` が `world_size` のみ利用のため **維持**、moduledoc のみ整理）
+- [x] `Contents.Components.Category.Spawner` を削除（`BulletHell3D` からも除去。NIF `set_world_size` 経路は不要）。
 - [x] `PhysicsEntity` 等、Asteroid / NIF 物理専用と分かるコンポーネントは参照ゼロ確認のうえ削除または doc のみ残す。（`PhysicsEntity` 削除。`Content.EntityParams` は参照ゼロのため削除）
 
 ## フェーズ 3: ゲーム系 NIF の撤去（Elixir 側）
 
-- [ ] `world_ref` / `control_ref` を前提とした初期化・毎フレーム同期を、`game.ex` から排除またはスタブに置換（**CanvasTest / BulletHell3D / FormulaTest** の `build_frame` / 入力・式検証が動く経路に縮小）。
-- [ ] `Core.NifBridge` から**ゲーム ECS 系**の `def` を削除し、**Formula 用**（`run_formula_bytecode` 等）とテスト用 Behaviour のみ残す方針を決めて実装する。完全に Rustler を外す場合は先に `Core.Formula` の純 Elixir 化が必要。
-- [ ] `Core` のファサード（`apps/core/lib/core.ex`）から**ゲーム用** NIF 直叩き API を削除（Formula 用は残すか `Core.Formula` 経由に集約）。
-- [ ] `Core.SaveManager` の NIF 連携を、セーブ機能を残す場合は Elixir スナップショットのみに変更。不要ならセーブ経路ごと縮小。
-- [ ] `Core.Formula`: FormulaTest 維持のため、**当面は NIF 経路を維持**するか、移行完了後に純 Elixir のみとするかを決めて実装・テストを揃える。
-- [ ] `config :core, Core.NifBridge, features: []` 等、NIF 関連設定を、残す API に合わせて整理（完全撤去時は削除）。
-- [ ] `Mox` の `Core.NifBridgeMock` と、それに依存するテストを、残存 API に合わせて更新または削除。
+- [x] `world_ref` / `control_ref` を前提とした初期化・毎フレーム同期を、`game.ex` から排除またはスタブに置換（**CanvasTest / BulletHell3D / FormulaTest** の `build_frame` / 入力・式検証が動く経路に縮小）。
+- [x] `Core.NifBridge`: **アプリから呼ぶのは `run_formula_bytecode/3` のみ**。ゲーム ECS 系 `def` は Rustler と Rust 側 NIF 登録の整合のため **スタブとして維持**（フェーズ 4 で Rust 側スリム化）。
+- [x] `Core` のファサード（`apps/core/lib/core.ex`）から**ゲーム用** NIF 直叩き API を削除（セーブ・ハイスコアのみ）。
+- [x] **ローカル永続化は撤去**（`Core.SaveManager` 削除）。セッション／ハイスコアのディスク保存は行わない。ネットワーク・権威付き状態の設計後に再導入する。
+- [x] `Core.Formula`: FormulaTest 維持のため **当面 NIF 経路を維持**。
+- [x] `config :core, Core.NifBridge, features: []` 等は現状のまま（Rustler 維持）。
+- [x] `Core.NifBridgeMock` / `Mox` 依存のセーブテストを `elixir_snapshot` 方式に更新し、`mox` 依存を削除。
 
 ## フェーズ 4: Rust / ワークスペース整理
 

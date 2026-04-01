@@ -55,12 +55,6 @@ config :server, :current, Content.BulletHell3D
 config :server, :map, :plain
 config :server, :game_events_module, Contents.Events.Game
 
-# セーブデータの HMAC 署名鍵（デフォルト値）。
-# 本番ビルド時は環境変数 SAVE_HMAC_SECRET で上書きすることを推奨する（config/runtime.exs）。
-# ローカルゲームの性質上、完全な改ざん防止は不可能だが、
-# 環境ごとに鍵を変えることで配布バイナリ間の互換性を制御できる。
-config :core, :save_hmac_secret, "alchemy-engine-save-secret-v1"
-
 # FormulaStore の synced 更新をネットワークブロードキャストする MFA。
 # 形式: {Mod, Fun, []}。apply(Mod, Fun, [room_id, event]) が呼ばれる。
 # 未設定・nil のときはブロードキャストしない。

@@ -1,15 +1,15 @@
 defmodule Contents.Events.Game do
   @moduledoc """
-  Rust からの frame_events を受信し、コンポーネントへ委譲する GenServer（イベントハンドラ。旧名 GameEvents）。
+  メインゲームループとコンポーネント委譲を行う GenServer（旧名 GameEvents）。
 
-  Rust 側が高精度 60 Hz でゲームループを駆動し、
-  Elixir は `{:frame_events, events}` を受信してイベント駆動でシーン制御を行う。
+  `:main` ルームでは Elixir タイマー（約 16ms）で `scene_update` を駆動する。
+  ゲーム用 NIF / Rust ゲームループは使わない。`{:frame_events, events}` も従来どおり受け付ける。
 
   ## 設計原則
   - エンジンはディスパッチのみ行う（ゲームロジックを知らない）
-  - ゲーム固有の状態（score, player_hp 等）はシーン state で管理する
-  - NIF 注入はコンポーネントの `on_nif_sync/1` が担う
-  - フレームイベント処理はコンポーネントの `on_frame_event/2` が担う
+  - ゲーム固有の状態はシーン state で管理する
+  - `on_nif_sync/1` は歴史的名称（毎フレームの描画パイプライン同期）
+  - `on_frame_event/2` は外部からのイベント列用
   """
 
   use GenServer
@@ -18,6 +18,9 @@ defmodule Contents.Events.Game do
   alias Contents.Events.Game.Diagnostics
 
   @tick_ms 16
+
+  @stub_world :stub
+  @stub_control :stub
 
   def start_link(opts \\ []) do
     room_id = Keyword.get(opts, :room_id, :main)
@@ -28,10 +31,6 @@ defmodule Contents.Events.Game do
   defp process_name(:main), do: __MODULE__
   defp process_name(room_id), do: {:via, Registry, {Core.RoomRegistry, room_id}}
 
-  def save_session, do: GenServer.cast(__MODULE__, :save_session)
-
-  def load_session, do: GenServer.call(__MODULE__, :load_session, 5_000)
-
   @impl true
   def init(opts) do
     room_id = Keyword.get(opts, :room_id, :main)
@@ -40,21 +39,19 @@ defmodule Contents.Events.Game do
       Core.RoomRegistry.register(:main)
     end
 
-    world_ref = Core.NifBridge.create_world()
+    world_ref = @stub_world
+    control_ref = @stub_control
 
     Enum.each(Contents.ComponentList.components(), fn component ->
       init_component(component, world_ref)
     end)
 
-    map_id = Application.get_env(:server, :map, :plain)
-    obstacles = Core.MapLoader.obstacles_for_map(map_id)
-    Core.NifBridge.set_map_obstacles(world_ref, obstacles)
+    if room_id == :main do
+      Core.FrameCache.init()
+      schedule_elixir_frame_tick()
+    end
 
-    control_ref = Core.NifBridge.create_game_loop_control()
-    if room_id == :main, do: Core.FrameCache.init()
     start_ms = now_ms()
-
-    Core.NifBridge.start_rust_game_loop(world_ref, control_ref, self())
 
     {:ok,
      %{
@@ -65,6 +62,10 @@ defmodule Contents.Events.Game do
        frame_count: 0,
        start_ms: start_ms
      }}
+  end
+
+  defp schedule_elixir_frame_tick do
+    Process.send_after(self(), :elixir_frame_tick, @tick_ms)
   end
 
   @impl true
@@ -100,51 +101,6 @@ defmodule Contents.Events.Game do
     {:noreply, state}
   end
 
-  def handle_cast(:save_session, state) do
-    weapon_slots = get_weapon_slots_for_save(state)
-    opts = [weapon_slots: weapon_slots]
-
-    case Core.SaveManager.save_session(state.world_ref, opts) do
-      :ok -> Logger.info("[SAVE] Session saved")
-      {:error, reason} -> Logger.warning("[SAVE] Failed: #{inspect(reason)}")
-    end
-
-    {:noreply, state}
-  end
-
-  # ── コール: セッションロード ────────────────────────────────────────
-
-  @impl true
-  def handle_call(:load_session, _from, state) do
-    content = current_content()
-    result = Core.SaveManager.load_session(state.world_ref)
-
-    case result do
-      {:ok, loaded_state} ->
-        case content.flow_runner(state.room_id) do
-          nil ->
-            {:reply, {:error, :flow_runner_unavailable}, state}
-
-          runner ->
-            initial_state = build_loaded_scene_state(content, loaded_state)
-
-            # Phase 5: physics_scenes() は [scene_type()]。空の場合は playing_scene() で replace。
-            # initial_state を init_arg として content.scene_init(scene_type, init_arg) に渡す。
-            scene_type_to_restore =
-              content.physics_scenes() |> List.first() || content.playing_scene()
-
-            GenServer.call(runner, {:replace, scene_type_to_restore, initial_state})
-            {:reply, :ok, state}
-        end
-
-      :no_save ->
-        {:reply, :no_save, state}
-
-      {:error, _} = err ->
-        {:reply, err, state}
-    end
-  end
-
   # ── インフォ: UI アクション ──────────────────────────────────────
 
   @impl true
@@ -152,14 +108,16 @@ defmodule Contents.Events.Game do
     new_state =
       case action do
         "__save__" ->
-          GenServer.cast(self(), :save_session)
+          Logger.info("[PERSIST] save ignored (local persistence disabled; network TBD)")
           state
 
         "__load__" ->
-          handle_ui_action_load(state)
+          Logger.info("[PERSIST] load ignored (local persistence disabled; network TBD)")
+          state
 
         "__load_confirm__" ->
-          handle_ui_action_load_confirm(state)
+          Logger.info("[PERSIST] load confirm ignored (local persistence disabled; network TBD)")
+          state
 
         "__load_cancel__" ->
           state
@@ -385,92 +343,16 @@ defmodule Contents.Events.Game do
     end
   end
 
-  # ── UI アクションハンドラ ─────────────────────────────────────────
+  # `:main` のローカル駆動（ゲーム用 NIF ループの代替）
+  def handle_info(:elixir_frame_tick, %{room_id: :main} = state) do
+    schedule_elixir_frame_tick()
 
-  defp handle_ui_action_load(state) do
-    if Core.SaveManager.has_save?() do
-      do_load_session(state)
-    else
-      Logger.info("[LOAD] No save file")
-      state
+    case handle_frame_events_main([], state, false) do
+      {:noreply, new_state} -> {:noreply, new_state}
     end
   end
 
-  defp handle_ui_action_load_confirm(state), do: do_load_session(state)
-
-  defp do_load_session(state) do
-    case Core.SaveManager.load_session(state.world_ref) do
-      {:ok, loaded_state} ->
-        content = current_content()
-
-        case content.flow_runner(state.room_id) do
-          nil ->
-            Logger.warning(
-              "[LOAD] Session loaded but flow_runner unavailable, scene not replaced"
-            )
-
-            state
-
-          runner ->
-            initial_state = build_loaded_scene_state(content, loaded_state)
-
-            # Phase 5: physics_scenes() は [scene_type()]。空の場合は playing_scene() で replace。
-            # initial_state を init_arg として content.scene_init(scene_type, init_arg) に渡す。
-            scene_type_to_restore =
-              content.physics_scenes() |> List.first() || content.playing_scene()
-
-            GenServer.call(runner, {:replace, scene_type_to_restore, initial_state})
-            state
-        end
-
-      :no_save ->
-        Logger.info("[LOAD] No save data")
-        state
-
-      {:error, reason} ->
-        Logger.warning("[LOAD] Failed: #{inspect(reason)}")
-        state
-    end
-  end
-
-  defp get_weapon_slots_for_save(state) do
-    content = current_content()
-    runner = content.flow_runner(state.room_id)
-
-    if runner && function_exported?(content, :weapon_levels_to_save_format, 1) do
-      playing_state =
-        Contents.Scenes.Stack.get_scene_state(runner, content.playing_scene()) || %{}
-
-      weapon_levels = Map.get(playing_state, :weapon_levels, %{})
-      content.weapon_levels_to_save_format(weapon_levels)
-    else
-      []
-    end
-  end
-
-  defp build_loaded_scene_state(content, loaded_state) do
-    base =
-      %{}
-      |> maybe_put(:player_hp, loaded_state["player_hp"])
-      |> maybe_put(:player_max_hp, loaded_state["player_max_hp"])
-      |> maybe_put(:elapsed_ms, elapsed_ms_from_loaded(loaded_state))
-
-    if function_exported?(content, :weapon_slots_to_levels, 1) do
-      slots = loaded_state["weapon_slots"] || []
-      weapon_levels = content.weapon_slots_to_levels(slots)
-      Map.merge(base, %{weapon_levels: weapon_levels, weapon_cooldowns: %{}})
-    else
-      base
-    end
-  end
-
-  defp maybe_put(map, _key, nil), do: map
-  defp maybe_put(map, key, val), do: Map.put(map, key, val)
-
-  defp elapsed_ms_from_loaded(%{"elapsed_seconds" => sec}) when is_number(sec),
-    do: trunc(sec * 1000)
-
-  defp elapsed_ms_from_loaded(_), do: nil
+  def handle_info(:elixir_frame_tick, state), do: {:noreply, state}
 
   # ── メインフレームループ ──────────────────────────────────────────
 
@@ -582,14 +464,9 @@ defmodule Contents.Events.Game do
     end
   end
 
-  defp apply_frame_injection_binary(state, frame_binary) do
-    case Core.NifBridge.set_frame_injection_binary(state.world_ref, frame_binary) do
-      {:error, reason} ->
-        Logger.error("[NIF ERROR] set_frame_injection_binary failed: #{inspect(reason)}")
-
-      _ ->
-        :ok
-    end
+  defp apply_frame_injection_binary(_state, _frame_binary) do
+    # ゲーム用 NIF へのフレーム注入は撤去済み。描画は Render.on_nif_sync → FrameBroadcaster 経路。
+    :ok
   end
 
   defp dispatch_frame_event_to_components(event, context) do
@@ -705,18 +582,14 @@ defmodule Contents.Events.Game do
       start_ms: state.start_ms,
       push_scene: fn scene_type, init_arg ->
         if runner do
-          if function_exported?(content, :pause_on_push?, 1) and
-               content.pause_on_push?(scene_type) do
-            Core.NifBridge.pause_physics(control_ref)
-          end
-
+          _ = control_ref
           GenServer.call(runner, {:push, scene_type, init_arg})
         else
           :ok
         end
       end,
       pop_scene: fn ->
-        Core.NifBridge.resume_physics(control_ref)
+        _ = control_ref
         if runner, do: GenServer.call(runner, :pop), else: :ok
       end,
       replace_scene: fn scene_type, init_arg ->
@@ -746,7 +619,6 @@ defmodule Contents.Events.Game do
       dispatch_event_to_components({:ui_action, "__auto_pop__", scene_state}, context)
     end
 
-    Core.NifBridge.resume_physics(state.control_ref)
     GenServer.call(runner, :pop)
     state
   end
@@ -755,16 +627,9 @@ defmodule Contents.Events.Game do
          {:transition, {:push, scene_type, init_arg}, _},
          state,
          _now,
-         content,
+         _content,
          runner
        ) do
-    should_pause =
-      function_exported?(content, :pause_on_push?, 1) and content.pause_on_push?(scene_type)
-
-    if should_pause do
-      Core.NifBridge.pause_physics(state.control_ref)
-    end
-
     GenServer.call(runner, {:push, scene_type, init_arg})
     state
   end
@@ -797,13 +662,5 @@ defmodule Contents.Events.Game do
 
   defp current_content, do: Core.Config.current()
 
-  defp maybe_set_player_input_direct(world_ref, dx, dy) when is_number(dx) and is_number(dy) do
-    case Core.NifBridge.set_player_input(world_ref, dx * 1.0, dy * 1.0) do
-      {:error, reason} ->
-        Logger.warning("[Events.Game] set_player_input failed: #{inspect(reason)}")
-
-      _ ->
-        :ok
-    end
-  end
+  defp maybe_set_player_input_direct(_world_ref, _dx, _dy), do: :ok
 end

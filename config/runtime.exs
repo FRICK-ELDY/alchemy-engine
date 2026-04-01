@@ -20,8 +20,3 @@ if secret = System.get_env("SECRET_KEY_BASE") do
   config :network, Network.Endpoint, secret_key_base: secret
 end
 
-# ── セーブデータ HMAC 署名鍵（実行時設定）────────────────────────────
-# 本番環境では必ず環境変数で上書きすること。
-if secret = System.get_env("SAVE_HMAC_SECRET") do
-  config :core, :save_hmac_secret, secret
-end

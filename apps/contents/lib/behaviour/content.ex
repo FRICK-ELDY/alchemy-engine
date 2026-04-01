@@ -161,9 +161,8 @@ defmodule Contents.Behaviour.Content do
   @callback mesh_definitions() :: list()
 
   @doc """
-  ワールドサイズを {width, height} で返す。Spawner が set_world_size に渡す。
-  physics_scenes を持つコンテンツで Spawner を使用する場合に実装する。
-  未実装の Content では Spawner は set_world_size を呼ばない。
+  ワールドサイズを {width, height} で返す。将来の物理・ワールド境界用のオプション。
+  未実装の Content ではデフォルト挙動を使う。
   """
   @callback world_size() :: {width :: float(), height :: float()}
 

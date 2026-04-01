@@ -4,6 +4,11 @@ defmodule Core.NifBridge do
   `use Rustler` により、コンパイル時に `native/nif` クレートが
   自動的にビルドされ、`.dll` がロードされる。
 
+  **フェーズ 3（Elixir 側）**: アプリ・`Core` ファサードから呼ぶのは
+  `run_formula_bytecode/3`（`Core.Formula` 経由）のみとする。
+  以下のゲーム ECS 系 `def` は **Rustler の NIF 登録とシグネチャ整合のため**残し、
+  本番 Elixir コードからは使用しない。
+
   VR 対応ビルド: `config :core, Core.NifBridge, features: ["xr"]`
   を設定すると、mix compile 時に nif に --features xr が渡される。
   """

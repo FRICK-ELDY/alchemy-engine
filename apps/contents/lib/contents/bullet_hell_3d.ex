@@ -18,15 +18,11 @@ defmodule Content.BulletHell3D do
 
   def components do
     [
-      Contents.Components.Category.Spawner,
       Contents.Components.Category.Device.Mouse,
       Contents.Components.Category.Device.Keyboard,
       Contents.Components.Category.Rendering.Render
     ]
   end
-
-  # Spawner が set_world_size に渡す（NIF ワールド寸法。ゲームロジックは Elixir 側）。
-  def world_size, do: {2048.0, 2048.0}
 
   def build_frame(playing_state, context),
     do: Content.BulletHell3D.Playing.build_frame(playing_state, context)
