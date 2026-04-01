@@ -7,7 +7,7 @@ defmodule Core.Config do
   使用する `Core.Component` モジュールのリストを返す。
   """
 
-  @default_content Content.VampireSurvivor
+  @default_content Content.BulletHell3D
 
   @doc "コンテンツモジュールを返す（`components/0` を実装したモジュール）"
   def current do

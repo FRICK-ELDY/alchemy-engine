@@ -33,7 +33,7 @@
 
 ## 主なマイナス点
 
-1. **SceneStack・GameEvents のテスト不足** — 中核ロジックの検証が不十分
+1. **Contents.Scenes.Stack・Contents.Events.Game のテスト不足** — 中核ロジックの検証が不十分
 2. **Diagnostics のコンテンツ固有知識** — `:enemies` / `:bullets` の直接参照
 3. **create_world の NifResult 未対応** — NIF 設計の一貫性の欠如
 4. **NIF パニック時の回復ロジック・分散フェイルオーバー未実装** — Elixir の耐障害性・分散の証明不足
@@ -46,7 +46,7 @@
 
 - コンポーネントの `on_save` / `on_load` コールバック
 - ContentBehaviour の `diagnostics/0` コールバック
-- SceneStack の ExUnit テスト、プロパティベーステスト、E2E テスト
+- Contents.Scenes.Stack の ExUnit テスト、プロパティベーステスト、E2E テスト
 - HudData の汎用化、render_interpolation のクライアント移行
 - mix audit / cargo audit の CI 追加
 

@@ -1,25 +1,43 @@
 # nif
 
-Elixir NIF 用 Rust コード。サーバー側で BEAM VM と Rust を橋渡しする。
+Elixir 向け **Rustler NIF**。`mix compile` で release ビルドされ、`Core.NifBridge` からロードされる。
 
-## 責務
+## 現行の責務（フェーズ 4 以降）
 
-- Rustler による NIF 関数露出
-- **physics** 内包: 60Hz ゲームループ、剛体物理、衝突判定、Chase AI 等
-- `audio` でゲーム内 SE/BGM 再生
-- `shared` の型を参照
+- **`run_formula_bytecode/3`** のみ — コンテンツ数式 VM（バイトコード実行）
+- ゲーム ECS・物理・protobuf フレーム注入・セーブ用 NIF は **削除済み**（復旧は Git 履歴の `physics/` 等を参照）
 
-## 主要モジュール
+## 方針: Formula は Rust、境界はコードで分ける
 
-- `lib.rs` — NIF エントリポイント
-- `physics/` — 物理演算、GameWorld、ゲームループ
-- `audio_sync` — 音同期（オーケストラ等）
+サーバ側 Elixir はオーケストレーションと状態管理を担い、**数値・バイトコード VM の実行は本クレート（Rust NIF）に任せる**方針とする。
+
+**「ゲーム」と「式」の境界**（過去に同一クレートに同居していたときの整理用語）は、現状では次のようにコード上で表現されている。
+
+| 側 | 役割 |
+|:---|:---|
+| **ゲームシミュレーション** | Elixir（`contents` のシーン・コンポーネント）およびクライアント描画パイプライン。`native/nif` には **含めない**。 |
+| **式（Formula）** | `src/formula/` の VM と `src/nif/formula_nif.rs` の NIF エントリのみ。他用途の Rust をここに混在させない。 |
+
+**Elixir からの呼び出し**は **`Core.Formula.run/3` 等**（`apps/core/lib/core/formula.ex`）を正とし、アプリ・コンテンツから **`Core.NifBridge.run_formula_bytecode` を直接呼ばない**。NIF は Rustler のロード先として `Core.NifBridge` に載るが、公開 API の境界は `Core.Formula` に置く。
+
+**Cargo 依存**も式実行に必要な最小限にし、描画・ゲーム用クレートを `nif` に引き込まない（境界を依存グラフでも維持する）。
+
+## ソース構成
+
+- `src/lib.rs` — `rustler::init!`（`Elixir.Core.NifBridge`）
+- `src/formula/` — VM・デコード・オペコード
+- `src/nif/formula_nif.rs` — NIF エントリ
+- `src/nif/load.rs` — ロード時の panic フック・`env_logger` 初期化（リソース型は登録しない）
 
 ## 依存
 
-- `shared`
-- `audio`
+- `rustler`, `log`, `env_logger` のみ（旧 `audio` / `render_frame_proto` / `shared` / `prost` 等は除去）
 
-## 注意
+## ワークスペース
 
-XR には依存しない。VR 入力はクライアント `app` → `xr` → `network` 経由で Elixir へ送信する。
+- `native/Cargo.toml` の `members` に `nif` は従来どおり含まれる
+- デスクトップ `app` は **`nif` に依存しない**（既定解像度は `shared::display`）
+
+## XR
+
+VR 入力はクライアント `app` → `xr` → `network` 経由で Elixir へ送る。`nif` クレートに XR 専用コードはない。

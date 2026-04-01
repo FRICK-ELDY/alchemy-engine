@@ -1,6 +1,7 @@
 # AlchemyEngine — マイナス点 詳細一覧
 
-> 最終更新: 2026-03-28（evaluation-2026-03-28 に基づく）
+> 最終更新: 2026-03-28（evaluation-2026-03-28 に基づく）  
+> **2026-04 追記**: `SaveManager` 等の記述は当時の評価として残す。現行は [architecture/overview.md](../architecture/overview.md)。
 
 ## 採点基準
 
@@ -19,7 +20,7 @@
 ### ❌ マイナス点
 
 - **boss_dash_end の専用 handle_info 節（汎用化の余地）** `-1`
-  > `handle_info({:boss_dash_end, _}, state)` は `dispatch_to_components(:on_engine_message, [msg, context])` を呼ぶ設計に改善済み。しかし新規エンジンメッセージ種別を追加するたびに `GameEvents` に専用節を追加する必要があり、完全な汎用化には至っていない。
+  > `handle_info({:boss_dash_end, _}, state)` は `dispatch_to_components(:on_engine_message, [msg, context])` を呼ぶ設計に改善済み。しかし新規エンジンメッセージ種別を追加するたびに `Contents.Events.Game` に専用節を追加する必要があり、完全な汎用化には至っていない。
   > 対象ファイル: `apps/contents/lib/events/game.ex`
 
 - **SaveManager の HMAC シークレットがデフォルト値でハードコード** `-2`

@@ -2,7 +2,7 @@
 
 ## 概要
 
-`network` は Phoenix Channels（WebSocket）・UDP トランスポート・Zenoh フレーム配信を提供します。ローカルマルチルーム管理により、OTP 隔離・同時 60Hz 実証などにも利用されます。
+`network` は Phoenix Channels（WebSocket）・UDP トランスポート・Zenoh フレーム配信を提供します。ローカルマルチルーム管理により、OTP 隔離などに利用されます。
 
 ---
 
@@ -11,9 +11,9 @@
 | モジュール | 説明 |
 |:---|:---|
 | `Network` | 公開 API。Distributed / Local / Channel / UDP へ委譲 |
-| `Network.ZenohBridge` | Zenoh フレーム publish・入力 subscribe。`config :network, :zenoh_enabled, true` で起動。`publish_frame(room_id, frame_binary)` でフレーム配信。`game/room/*/input/movement`・`game/room/*/input/action` で入力受信し、GameEvents へ配送 |
+| `Network.ZenohBridge` | Zenoh フレーム publish・入力 subscribe。`config :network, :zenoh_enabled, true` で起動。`publish_frame(room_id, frame_binary)` でフレーム配信。`game/room/*/input/movement`・`game/room/*/input/action` で入力受信し、`Contents.Events.Game` へ配送 |
 | `Network.Distributed` | 複数ノード間ルーム管理。libcluster クラスタ時は分散配置・RPC ブロードキャスト。単一ノード時は Local へ委譲 |
-| `Network.Local` | ローカルマルチルーム管理 GenServer（OTP 隔離・同時 60Hz 実証用） |
+| `Network.Local` | ローカルマルチルーム管理 GenServer（OTP 隔離） |
 | `Network.RoomToken` | Phoenix.Token によるルーム参加認証（WebSocket join 時のトークン検証） |
 | `Network.Channel` | Phoenix Channels / WebSocket チャンネル |
 | `Network.Endpoint` | Phoenix Endpoint（ポート 4000） |

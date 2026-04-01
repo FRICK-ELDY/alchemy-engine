@@ -46,24 +46,15 @@ config :network, :zenoh_enabled, Mix.env() != :test
 config :network, :zenoh_connect, "tcp/localhost:7447"
 
 # ── 使用するコンテンツを指定する。
-# Content.VampireSurvivor — ヴァンパイアサバイバークローン
-# Content.AsteroidArena   — 小惑星シューター（武器・ボスなし）
-# Content.SimpleBox3D     — シンプルな3Dゲーム（Phase R-6 動作検証用）
-# Content.BulletHell3D    — 3D 弾幕避けゲーム
-# Content.FormulaTest     — Formula エンジン検証（Elixir→Rust→Elixir）
-# Content.RollingBall     — ローリングボール迷路（Phase 6 移行済み）
+# 第一級コンテンツ（維持）:
+#   Content.CanvasTest    — Canvas / ワールド空間 UI デバッグ
+#   Content.BulletHell3D  — 3D 弾幕避け（既定）
+#   Content.FormulaTest   — Formula / Nodes 検証（`config/formula_test.exs` 参照）
 # ローカル開発・動作検証時は上記いずれかに切り替える。本番は config/runtime.exs で設定すること。
-# 注: デフォルトで VampireSurvivor を指定しているのはローカル動作確認のため。
-#     本番デプロイ時は runtime.exs で desired content に切り替える想定。
-config :server, :current, Content.VampireSurvivor
+# 既定モジュールは `Server.Application` の `Application.get_env(:server, :current, …)` フォールバックと同じにすること。
+config :server, :current, Content.BulletHell3D
 config :server, :map, :plain
 config :server, :game_events_module, Contents.Events.Game
-
-# セーブデータの HMAC 署名鍵（デフォルト値）。
-# 本番ビルド時は環境変数 SAVE_HMAC_SECRET で上書きすることを推奨する（config/runtime.exs）。
-# ローカルゲームの性質上、完全な改ざん防止は不可能だが、
-# 環境ごとに鍵を変えることで配布バイナリ間の互換性を制御できる。
-config :core, :save_hmac_secret, "alchemy-engine-save-secret-v1"
 
 # FormulaStore の synced 更新をネットワークブロードキャストする MFA。
 # 形式: {Mod, Fun, []}。apply(Mod, Fun, [room_id, event]) が呼ばれる。

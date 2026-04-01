@@ -8,7 +8,7 @@
 
 - **パス**: `native/app/`
 - **バイナリ**: VRAlchemy
-- **依存**: `network`, `render`, `window`, `xr`, `nif`, `audio`
+- **依存**: `network`, `render`, `window`, `xr`, `shared`, `audio`（**`nif` には依存しない**）
 
 ---
 
@@ -67,7 +67,7 @@ sequenceDiagram
     ZRust->>Zenoh: put game/room/{id}/input/movement
     Zenoh->>Zenohex: Sample
     Zenohex->>Server: Movement.decode → {:move_input, dx, dy}
-    Server->>Server: GameEvents
+    Server->>Server: Contents.Events.Game
 ```
 
 ---
@@ -83,7 +83,7 @@ sequenceDiagram
 
 - **movement**: `alchemy.input.Movement`（`proto/input_events.proto`）。`protobuf_codec::encode_movement`。
 - **action**: `alchemy.input.Action`。`protobuf_codec::encode_action`。
-- **サーバー**: `Network.ZenohBridge` が protobuf をデコードし `GameEvents` へ配送。
+- **サーバー**: `Network.ZenohBridge` が protobuf をデコードし `Contents.Events.Game` へ配送。
 
 ---
 
@@ -99,26 +99,21 @@ graph TB
         NETWORK[network]
         RENDER[render]
         WINDOW[window]
-        NIF[nif]
+        SHARED[shared]
         XR[xr]
         AUDIO[audio]
-    end
-
-    subgraph deps2 [下位依存の例]
-        SHARED[shared]
     end
 
     APP --> NETWORK
     APP --> RENDER
     APP --> WINDOW
-    APP --> NIF
+    APP --> SHARED
     APP --> XR
     APP --> AUDIO
     WINDOW --> RENDER
     NETWORK --> RENDER
     NETWORK --> SHARED
     RENDER --> SHARED
-    NIF --> AUDIO
 ```
 
 ---
@@ -176,7 +171,7 @@ flowchart TD
 |:---|:---|
 | `ZENOH_CONNECT` | 接続先（未指定時は zenoh デフォルト scouting） |
 | `ASSETS_PATH` | アセットルート |
-| `ASSETS_ID` | コンテンツ別サブディレクトリ（例: `vampire_survivor`）で `assets/{id}/` 参照 |
+| `ASSETS_ID` | コンテンツ別サブディレクトリ（例: `bullet_hell_3d`）で `assets/{id}/` 参照 |
 
 ### 初期化
 

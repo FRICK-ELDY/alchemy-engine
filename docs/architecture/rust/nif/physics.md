@@ -1,8 +1,12 @@
-# Rust: nif/physics — 物理演算・ECS コードベース詳細
+# Rust: nif/physics — 物理演算・ECS（アーカイブ）
 
-## 概要
+> **削除済み（2026-04）**: `native/nif/src/physics/` はリポジトリから除去された。以下は **旧構成の記録**であり、現行ビルドには存在しない。復旧・参照は Git 履歴を使う。
 
-`physics` は **nif クレート内のモジュール**（`native/nif/src/physics/`）です。60Hz 固定の物理演算・空間ハッシュ・ECS・外部注入パラメータテーブルを担当します。独立したクレートではなく、`nif` が Elixir からの NIF 経由で状態を注入・読み取ります。
+# Rust: nif/physics — 物理演算・ECS コードベース詳細（旧）
+
+## 概要（旧）
+
+`physics` は **かつて nif クレート内にあったモジュール**（`native/nif/src/physics/`）です。60Hz 固定の物理演算・空間ハッシュ・ECS・外部注入パラメータテーブルを担当していた。`nif` が Elixir からの NIF 経由で状態を注入・読み取っていた。
 
 - **パス**: `native/nif/src/physics/`
 - **親クレート**: `nif`（`rustc-hash`, `rayon`, `log` を nif の依存で利用）

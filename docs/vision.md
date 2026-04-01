@@ -28,7 +28,7 @@ AlchemyEngine が「何を保証するか」「何を保証しないか」を明
 | **ネットワーク基盤** | 複数のユーザーが同じ空間を共有できる同期の仕組み |
 | **描画の基盤** | 空間に存在するものを画面に映す仕組み |
 | **オーディオの基盤** | 空間に存在するものが音を鳴らせる仕組み（3D空間オーディオ・DSP） |
-| **時間の流れ** | 60Hz で刻まれる物理時間 |
+| **時間の流れ** | Elixir タイマー駆動の論理フレーム（目標間隔はコンテンツ設定。旧「Rust 60Hz 物理ループ」は撤去済み） |
 | **コンポーネントのライフサイクル** | `on_ready` / `on_process` / `on_physics_process` / `on_event` の呼び出しタイミング |
 
 エンジンは「敵」「武器」「EXP」「スコア」「ボス」「レベル」「地形」「スカイボックス」を知らない。
@@ -53,7 +53,7 @@ defmodule GameEngine.Component do
 
   @callback on_ready(world_ref)          :: :ok  # 初期化時（1回）
   @callback on_process(context)          :: :ok  # 毎フレーム（Elixir側）
-  @callback on_physics_process(context)  :: :ok  # 物理フレーム（60Hz）
+  @callback on_physics_process(context)  :: :ok  # 論理上の「物理」ステップ（呼び出し間隔は実装依存）
   @callback on_event(event, context)     :: :ok  # イベント発生時
 end
 ```
@@ -80,12 +80,12 @@ Elixir は定義の **SSoT（Single Source of Truth）** であり、Rust は定
 
 ### それぞれの時間と同期
 
-Elixir と Rust は **それぞれ独自の時間** を持つ。
+Elixir と Rust は **それぞれ役割が異なる**。
 
-- **Elixir の時間**: イベント駆動・プロセススケジューリングに基づく論理時間。`elapsed_ms`、シーン遷移、コンポーネントの `on_process` のタイミングなど
-- **Rust の時間**: 60Hz 物理ループに基づく物理時間。`physics_step`、`frame_id`、描画フレームなど
+- **Elixir の時間**: イベント駆動・タイマーに基づく論理時間。`elapsed_ms`、シーン遷移、コンポーネントの `on_process` / `on_frame_event` のタイミングなど。**ゲーム状態の主担当**。
+- **Rust の時間**: 描画・オーディオ・ネットワークデコードなど、クライアント／ネイティブ側のパイプライン時間。ゲーム用の **60Hz `GameWorld` 物理ループ NIF は廃止**（2026-04 時点）。数式 VM は **`run_formula_bytecode`**（Formula NIF）に限定。
 
-両者は **同期** によって一致を保つ。NIF 経由のデータ注入（`set_elapsed_seconds`、`set_player_snapshot` 等）や、フレームイベントの送受信（`drain_frame_events` → `{:frame_events, ...}`）が、その同期の仕組みである。
+コンテンツとネイティブの橋渡しは、プロトコル化されたフレーム（protobuf）・イベントタプル（後方互換の `{:frame_events, ...}` 等）・Formula 呼び出しで行う。
 
 ---
 
@@ -95,9 +95,9 @@ Elixir と Rust は **それぞれ独自の時間** を持つ。
 ユーザーは Hub から好きなコンテンツを選び、ダウンロードして遊ぶ。
 
 ```
-クリエイターA: VampireSurvivor コンテンツ → Hub
-クリエイターB: SpaceRace コンテンツ       → Hub
-クリエイターC: DungeonRPG コンテンツ      → Hub
+クリエイターA: BulletHell3D コンテンツ → Hub
+クリエイターB: FormulaTest コンテンツ  → Hub
+クリエイターC: CanvasTest コンテンツ   → Hub
 ```
 
 Hub 自体もエンジンが動かす一つのコンテンツだ。
@@ -159,17 +159,16 @@ LiveView は WebSocket 経由でクライアントへ状態を送る際、クラ
 
 ## 現在地と目指す場所
 
-### 現在（VampireSurvivor フェーズ）
+### 現在（2026-04 時点）
 
 ```
-Engine ← 物理・描画・NIF基盤（Rust）+ ゲームループ制御（Elixir）
-Content ← GameContent.VampireSurvivor（コンポーネント群）
+Engine ← Formula NIF（run_formula_bytecode）+ 描画・ネットワーク・クライアント（Rust 他）
+Content ← CanvasTest / BulletHell3D / FormulaTest 等（コンポーネント群）
 ```
 
-`config :server, :current, Content.VampireSurvivor` でコンテンツを指定する。
+`config :server, :current` でコンテンツモジュールを指定する（例: `Content.BulletHell3D`）。
 
-エンティティパラメータ（敵HP・武器クールダウン等）は `set_entity_params` NIF 経由で Rust に注入済み。
-ボスAI は Elixir 側コンポーネントで制御する。
+ゲーム用 Rust `GameWorld` / `physics_step` ループは **ない**。バランス・ルールの SSoT は Elixir（contents）を正とし、必要な数式は Formula バイトコードで実行する。
 
 ### 目指す姿
 
@@ -218,7 +217,7 @@ Hub     ← コンテンツの一覧・選択・参加
 
 **「これはエンジンの責務か？」**
 → 「どんなコンテンツにも必要か？」と問い直す。
-→ VampireSurvivor にしか必要でないなら、エンジンに置かない。
+→ 特定のサンプルコンテンツにしか必要でないなら、エンジンに置かない。
 
 **「エンジンはこの概念を知る必要があるか？」**
 → エンジンが知るべきは「エンティティが存在する」という事実だけ。
@@ -234,49 +233,31 @@ Hub     ← コンテンツの一覧・選択・参加
 
 ### Elixir 側
 
-| 現在のモジュール | 位置づけ | 移行方針 |
-|---|---|---|
-| `GameEngine.WorldBehaviour` | World 定義インターフェース | `GameEngine.Component` に統合予定 |
-| `GameEngine.RuleBehaviour` | Rule 定義インターフェース | `GameEngine.Component` に統合予定 |
-| `GameEngine.Config` | `current_world` / `current_rule` の設定解決 | `:current` キー一本に変更予定 |
-| `Contents.SceneBehaviour` | シーンインターフェース | contents 層に配置（移行済み） |
-| `Contents.Events.Game` | contents 層 | イベントディスパッチ・コンポーネントライフサイクル呼び出し（移行済み） |
-| `GameContent.VampireSurvivorWorld` | WorldBehaviour の実装 | コンポーネントに分解予定 |
-| `GameContent.VampireSurvivorRule` | RuleBehaviour の実装 | コンポーネントに分解予定 |
-| `GameContent.EntityParams` | エンティティパラメータテーブル | コンポーネントの `on_ready` に移動予定 |
-
-### Rust 側
-
-| 現在のコード | 位置づけ |
+| モジュール | 位置づけ |
 |---|---|
-| `GameWorldInner`（空間・物理） | Engine に残す |
-| `entity_params.rs`（`EntityParamTables`） | `set_entity_params` NIF で外部注入済み（ハードコード廃止） |
-| `weapon_slots`, `boss` フィールド | まだ `GameWorldInner` に残存（課題参照） |
-| `hud_*` フィールド群 | `set_hud_level_state` NIF で毎フレーム注入（描画専用） |
-| 物理演算・空間ハッシュ・衝突判定 | Engine に残す |
+| `Contents.SceneBehaviour` | シーンインターフェース（contents） |
+| `Contents.Events.Game` | ルーム単位のイベントディスパッチ・コンポーネントライフサイクル |
+| `Core.ContentBehaviour` / `Core.Component` | コンテンツ・コンポーネントの契約 |
+| `Content.*`（例: `Content.BulletHell3D`） | コンテンツ実装（`config :server, :current`） |
+
+旧 `WorldBehaviour` / `RuleBehaviour` / `GameContent.*` 系は **廃止またはコンテンツ側へ統合済み** の場合がある。詳細は [architecture/overview.md](./architecture/overview.md)。
+
+### Rust 側（2026-04）
+
+| コード | 位置づけ |
+|---|---|
+| `native/nif` | Formula VM の **`run_formula_bytecode`** のみ（ゲーム用 `GameWorld` NIF は撤去済み） |
+| `native/render` / `native/app` / `native/network` | 描画・クライアント・プロトコルデコード |
+| 旧 `native/nif` 内 `physics` / `GameWorld` | **アーカイブ**（ドキュメントのみ残る場合あり） |
 
 ---
 
-## 移行の完了状況
+## 移行の完了状況（抜粋）
 
-1. ✅ **Elixir 側の `context` からコンテンツ固有キーを除去**
-   - `weapon_levels`, `level_up_pending`, `weapon_choices` を Playing シーン `state` に移動済み
-   - エンジンが「武器」「レベルアップ」を知らない状態を実現
-
-2. ✅ **Rust コアのエンティティパラメータを外部注入化**
-   - `entity_params.rs` を `EntityParamTables` 構造体に変更し、`set_entity_params` NIF で注入
-   - `set_world_size` NIF でマップサイズも外部注入
-
-3. ✅ **ボスAI を Elixir 側に移行**
-   - ボス移動・特殊行動・アイテムドロップを Elixir 側で制御
-
-4. **`WorldBehaviour` / `RuleBehaviour` を `Component` に統合**（未着手）
-   - `GameEngine.Component` ビヘイビアを新設
-   - `GameContent.VampireSurvivor` をコンポーネント群として再構成
-   - `config :server, :current` キー一本に変更
-
-5. **残存課題**（[plan/improvement-plan.md](./plan/reference/improvement-plan.md) 参照）
-   - `GameWorldInner` の `weapon_slots`, `boss` フィールドの除去
+1. ✅ **ゲーム用 Rust NIF（`GameWorld`・60Hz ループ）は撤去**（2026-04）。メインループは Elixir（contents）。
+2. ✅ **`Contents.Events.Game` へのイベント層集約**（旧 `game_events`）。
+3. ✅ **Formula NIF に一本化**（`Core.NifBridge.run_formula_bytecode`）。
+4. 未実装・継続課題は [architecture/overview.md](./architecture/overview.md) および improvement-plan を参照。
 
 ---
 

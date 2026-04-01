@@ -2,18 +2,18 @@
 
 > 作成日: 2026-03-07  
 > 出典: [contents-defines-rust-executes.md](../plan/backlog/contents-defines-rust-executes.md) P2-1  
-> 目的: Elixir 側を SSoT（Single Source of Truth）として DrawCommand のタグ・フィールドを文書化する
+> 目的: DrawCommand のタグ・フィールド（Elixir タプル形）を文書化する。**契約の SSoT は `proto/render_frame.proto`**。本ドキュメントは人間可読な対応表と `Content.FrameEncoder` の入力形式を示す。
 >
-> **プロトコル仕様**: 本ドキュメントは [client-server-separation-procedure.md](../plan/completed/client-server-separation-procedure.md) フェーズ 1 フレームペイロードの SSoT として確定。Zenoh 経由のフレーム配信でも本仕様に従う。
+> **プロトコル仕様**: ワイヤ上のバイト列は **protobuf**（`proto/render_frame.proto`）。本ドキュメントは同じ意味論の **Elixir タプル入力**を述べる。Zenoh 経由のフレーム配信でも同じ契約を用いる（歴史的出典: [client-server-separation-procedure.md](../plan/completed/client-server-separation-procedure.md) フェーズ 1）。
 
 ---
 
 ## 1. 概要
 
-**DrawCommand** は Elixir 側（contents の RenderComponent）が組み立て、`push_render_frame` NIF 経由で Rust に渡す描画命令リストの要素である。
+**DrawCommand** は Elixir 側（contents の Render コンポーネント等）が **タプル**として組み立てる描画命令リストの要素である。**サーバーからクライアントへは NIF を経由しない。** `Content.FrameEncoder.encode_frame/5` が **`Alchemy.Render.RenderFrame` の protobuf** に変換し、Zenoh 等で配信する。クライアント（Rust）は `render_frame_proto::decode_pb_render_frame` でデコードし、`render` が描画する。
 
-- **定義**: Elixir（本ドキュメント + `Core.NifBridge.Behaviour` の `@type draw_command`）
-- **実行**: Rust（`decode/draw_command.rs` が decode、`render` が描画）
+- **契約（SSoT）**: `proto/render_frame.proto`（protobuf）。Elixir 側の対応実装は `Content.FrameEncoder`（`command_to_pb/1` 等）。
+- **実行**: クライアント Rust（`native/render_frame_proto` → `native/shared` の `DrawCommand`、`native/render`）。`Core.NifBridge` は **`run_formula_bytecode/3` のみ**であり、DrawCommand 型や描画 NIF は持たない。
 
 ---
 
@@ -160,9 +160,9 @@
 
 ---
 
-## 4. Rust 側の受け手
+## 4. Rust 側の受け手（クライアント）
 
-`native/nif/src/nif/decode/draw_command.rs` が本仕様に従って Elixir タプルを Rust の `DrawCommand` enum に decode する。Rust は **定義の受け手** であり、タグやフィールドの追加・変更は本ドキュメントを SSoT として Elixir 側で決定する。
+ワイヤ上は **protobuf のみ**。`native/render_frame_proto` の `decode_pb_render_frame/1` が `prost` で `Alchemy.Render.RenderFrame` をデコードし、`shared::render_frame::DrawCommand` に変換する。タグ・フィールドの追加・変更は **`proto/render_frame.proto` と `Content.FrameEncoder` を先に更新**し、続いて Rust のデコードを追随する。
 
 ---
 
@@ -170,4 +170,5 @@
 
 - [contents-defines-rust-executes.md](../plan/backlog/contents-defines-rust-executes.md) — 方針・リファクタリング計画
 - [Rust: render](rust/desktop/render.md) — 描画パイプライン（render クレート）
-- [Rust: nif](rust/nif.md) — NIF インターフェース
+- [Rust: nif](rust/nif.md) — Formula NIF（`run_formula_bytecode`）のみ
+- [`native/render_frame_proto`](../../native/render_frame_proto) — protobuf → `RenderFrame` デコード

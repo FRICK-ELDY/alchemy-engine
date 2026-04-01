@@ -1,6 +1,7 @@
 # AlchemyEngine — プラス点 詳細一覧
 
-> 最終更新: 2026-03-28（evaluation-2026-03-28 に基づく）
+> 最終更新: 2026-03-28（evaluation-2026-03-28 に基づく）  
+> **2026-04 追記**: `SaveManager`・ゲーム用 Rust `GameWorld`・削除済みコンテンツ名の記述は、当時の評価として残す。現行構成は [architecture/overview.md](../architecture/overview.md)。
 
 ## 採点基準
 
@@ -56,8 +57,8 @@
   > `BossSystem.check_spawn/2`・`SpawnSystem.maybe_spawn/3`・`LevelSystem.generate_weapon_choices/1` がすべて純粋関数として実装されており、副作用がない。シーン state を戻り値として返す設計により、テストが容易でリプレイ再現性が高い。Bevy の `System` 関数と同等の設計思想をElixirで実現している。
   > 対象ファイル: `apps/contents/lib/contents/vampire_survivor/boss_system.ex`, `spawn_system.ex`, `level_system.ex`
 
-- **GameEvents による SSoT とイベント駆動の一貫性** `+4`
-  > Rust 60Hz ループ → `{:frame_events, events}` 受信 → コンポーネントの `on_frame_event/2` に委譲。エンジンはディスパッチのみ行いゲームロジックを知らない設計。NIF 注入は `on_nif_sync/1` でコンポーネントが担当。
+- **Contents.Events.Game による SSoT とイベント駆動の一貫性** `+4`
+  > Elixir タイマー駆動のフレーム処理で `{:frame_events, events}` を受信し（後方互換）、コンポーネントの `on_frame_event/2` に委譲。ゲーム用 Rust 60Hz `GameWorld` ループは撤去済み（2026-04）。Formula は `run_formula_bytecode` / `Core.Formula` を経由。
   > 対象ファイル: `apps/contents/lib/events/game.ex`
 
 - **AsteroidArena による ContentBehaviour の実証** `+4`

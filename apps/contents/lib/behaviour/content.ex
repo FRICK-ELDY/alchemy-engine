@@ -7,7 +7,7 @@ defmodule Contents.Behaviour.Content do
   参照し、その関数（initial_scenes/0, playing_scene/0 等）を呼び出す。
 
   必須コールバックはすべてのコンテンツで実装が必要。
-  オプショナルコールバックは武器・ボスの概念を持つコンテンツのみ実装する。
+  オプショナルコールバックは、武器・ボス・敵カタログ・EXP などの概念を使うコンテンツのみ実装する。
 
   ## 設計原則
 
@@ -82,13 +82,23 @@ defmodule Contents.Behaviour.Content do
   @callback physics_scenes() :: [scene_type()]
   @callback playing_scene() :: scene_type()
   @callback game_over_scene() :: scene_type()
-  @callback entity_registry() :: map()
-  @callback enemy_exp_reward(kind_id :: non_neg_integer()) :: exp()
-  @callback score_from_exp(exp()) :: non_neg_integer()
   @callback wave_label(elapsed_sec :: float()) :: String.t()
   @callback context_defaults() :: map()
 
-  # ── オプショナルコールバック（武器・ボスの概念を持つコンテンツのみ）──
+  # ── オプショナルコールバック ───────────────────────────────────────
+
+  @doc """
+  敵・武器の kind_id とパラメータの対応表（診断・将来の同期用）。
+
+  EXP や敵種別テーブルを使わないコンテンツは未実装でよい。
+  """
+  @callback entity_registry() :: map()
+
+  @doc "敵種別ごとの撃破 EXP。EXP を使わないコンテンツは未実装でよい。"
+  @callback enemy_exp_reward(kind_id :: non_neg_integer()) :: exp()
+
+  @doc "累積 EXP から表示スコアへの換算。EXP を使わないコンテンツは未実装でよい。"
+  @callback score_from_exp(exp()) :: non_neg_integer()
 
   @doc "レベルアップシーン種別を返す（武器選択 UI を持つコンテンツのみ実装）"
   @callback level_up_scene() :: scene_type()
@@ -130,9 +140,8 @@ defmodule Contents.Behaviour.Content do
   - オプショナル。content が未実装の場合、Contents.ComponentList が
     Contents.LocalUserComponent をデフォルトとして使用する。
   - 実装時: 返した `module` を使用。`nil` を返した場合もデフォルトを使用。
-  - 指定モジュールの `get_move_vector/1` を呼んで player_input を取得。
-    raw_key / raw_mouse_motion / focus_lost はコンポーネントに dispatch され、
-    当該モジュールが on_event で処理する。
+  - `{:move_input, dx, dy}` 等は `Contents.Events.Game` がコンポーネントへ dispatch する。
+    必要なら各モジュールの `get_move_vector/1` や ETS をコンポーネント側から参照する。
   """
   @callback local_user_input_module() :: module() | nil
 
@@ -161,13 +170,15 @@ defmodule Contents.Behaviour.Content do
   @callback mesh_definitions() :: list()
 
   @doc """
-  ワールドサイズを {width, height} で返す。Spawner が set_world_size に渡す。
-  physics_scenes を持つコンテンツで Spawner を使用する場合に実装する。
-  未実装の Content では Spawner は set_world_size を呼ばない。
+  ワールドサイズを {width, height} で返す。将来の物理・ワールド境界用のオプション。
+  未実装の Content ではデフォルト挙動を使う。
   """
   @callback world_size() :: {width :: float(), height :: float()}
 
   @optional_callbacks [
+    entity_registry: 0,
+    enemy_exp_reward: 1,
+    score_from_exp: 1,
     build_frame: 2,
     mesh_definitions: 0,
     world_size: 0,

@@ -8,7 +8,8 @@ defmodule Server.Application do
 
   @impl true
   def start(_type, _args) do
-    content = Application.get_env(:server, :current, Content.VampireSurvivor)
+    # 第2引数フォールバックは `config/config.exs` の `config :server, :current` と揃える（設定欠落時のみ使用）。
+    content = Application.get_env(:server, :current, Content.BulletHell3D)
 
     assets_path =
       if function_exported?(content, :assets_path, 0), do: content.assets_path(), else: ""

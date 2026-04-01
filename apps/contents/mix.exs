@@ -29,8 +29,7 @@ defmodule Content.MixProject do
     [
       {:core, in_umbrella: true},
       {:decimal, "~> 2.0"},
-      {:network, in_umbrella: true},
-      {:mox, "~> 1.0", only: :test}
+      {:network, in_umbrella: true}
     ]
   end
 end

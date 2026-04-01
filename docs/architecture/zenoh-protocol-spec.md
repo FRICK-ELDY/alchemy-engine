@@ -32,10 +32,10 @@
 
 トップレベル `.proto` に追加する形で、`cursor_grab` 以外に `frame_id` やプレイヤー補間用フィールドを載せる場合は、スキーマ変更と Elixir/Rust 双方の追随が必要。
 
-### 2.3 ローカル NIF との関係
+### 2.3 サーバー NIF との関係
 
-- **描画は NIF が持たない。** 実際の描画は Zenoh を subscribe するクライアント（`render`）が行う。
-- `push_render_frame_binary` NIF は同一バイト列のデコード検証用（任意）。
+- **描画はサーバー NIF が持たない。** `Core.NifBridge` は `run_formula_bytecode/3` のみ。実際の描画は Zenoh を subscribe するクライアント（Rust `app` / `render`）が行う。
+- 同一バイト列のデコード検証はクライアント側の `decode_pb_render_frame`（またはテスト）で行う。
 
 ---
 
@@ -59,16 +59,16 @@
 
 ---
 
-## 4. Phoenix Channel / GameEvents との対応
+## 4. Phoenix Channel / Contents.Events.Game との対応
 
-| 経路                 | イベント | ペイロード例                                           | GameEvents への変換                 |
+| 経路                 | イベント | ペイロード例                                           | Contents.Events.Game への変換                 |
 | ------------------ | ---- | ------------------------------------------------ | ------------------------------- |
 | Phoenix `"input"`  | C→S  | `%{"dx" => 0.5, "dy" => -1.0}`                   | `{:move_input, 0.5, -1.0}`      |
 | Zenoh movement     | C→S  | protobuf `Movement`                             | `{:move_input, dx, dy}`         |
 | Phoenix `"action"` | C→S  | `%{"name" => "select_weapon"}`                   | `{:ui_action, "select_weapon"}` |
 | Zenoh action       | C→S  | protobuf `Action`                               | `{:ui_action, name}`            |
 
-フェーズ 3 で Zenohex subscriber が movement / action を受信したら、上記と同様の形式で `GameEvents` に `send(pid, ...)` する。
+フェーズ 3 で Zenohex subscriber が movement / action を受信したら、上記と同様の形式で `Contents.Events.Game` に `send(pid, ...)` する。
 
 ---
 

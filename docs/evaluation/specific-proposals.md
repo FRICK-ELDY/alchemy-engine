@@ -1,6 +1,7 @@
 # AlchemyEngine — 提案（0点）詳細一覧
 
-> 最終更新: 2026-03-28（evaluation-2026-03-28 に基づく）
+> 最終更新: 2026-03-28（evaluation-2026-03-28 に基づく）  
+> **2026-04 追記**: `SaveManager`・ゲーム用 Rust NIF 前提の提案は当時の文面として残す。現行は [architecture/overview.md](../architecture/overview.md)。
 
 ## 採点基準
 
@@ -20,8 +21,8 @@
   > セーブ対象データをコンポーネントが自己申告する方式。`SaveManager` が各コンポーネントから `on_save/1` を収集し、ロード時に `on_load/2` で復元。バージョン管理・戻り値型の定義が必要。
   > 参考: improvement-plan.md I-K
 
-- **GameEvents への汎用メッセージディスパッチ機構** `0`
-  > `handle_info({:boss_dash_end, world_ref}, state)` のようなコンテンツ固有メッセージを、`GameEvents` が直接処理するのではなく、アクティブなコンポーネントに転送する汎用ディスパッチ機構を完全に実装する。例: タグ付きタプル `{:engine_message, tag, payload}` を受け取り、全コンポーネントの `on_engine_message/2` に転送する。新規メッセージ種別追加時に GameEvents の変更が不要になる。
+- **Contents.Events.Game への汎用メッセージディスパッチ機構** `0`
+  > `handle_info({:boss_dash_end, world_ref}, state)` のようなコンテンツ固有メッセージを、`Contents.Events.Game` が直接処理するのではなく、アクティブなコンポーネントに転送する汎用ディスパッチ機構を完全に実装する。例: タグ付きタプル `{:engine_message, tag, payload}` を受け取り、全コンポーネントの `on_engine_message/2` に転送する。新規メッセージ種別追加時に Contents.Events.Game の変更が不要になる。
 
 - **SaveManager の HMAC シークレット強制機構** `0`
   > `Application.get_env(:core, :save_hmac_secret)` でデフォルト値を持たせず、未設定時に起動を拒否する。または `runtime.exs` で `System.fetch_env!("SAVE_HMAC_SECRET")` を使い、環境変数未設定時に明確なエラーメッセージで起動を停止する。
@@ -54,8 +55,8 @@
 
 ### 💡 提案
 
-- **分散フェイルオーバーと GameEvents → Network ブロードキャスト** `0`
-  > 分散ノード間でフェイルオーバーし、`GameEvents` からのイベントを Network 層にブロードキャストする統合。多数プレイヤー保証の実証に寄与する。
+- **分散フェイルオーバーと Contents.Events.Game → Network ブロードキャスト** `0`
+  > 分散ノード間でフェイルオーバーし、`Contents.Events.Game` からのイベントを Network 層にブロードキャストする統合。多数プレイヤー保証の実証に寄与する。
   > 参考: improvement-plan.md I-E
 
 - **分散ノード間ルーム移動の実装** `0`
@@ -127,7 +128,7 @@
 
 ### テスト戦略
 
-- **SceneStack の ExUnit テスト** `0`
+- **Contents.Scenes.Stack の ExUnit テスト** `0`
   > push / pop / replace / update_current の遷移ロジックを単体テストでカバー。`async: true` で並列実行可能に。
 
 - **E2E テスト（ゲームループの完結性検証）** `0`

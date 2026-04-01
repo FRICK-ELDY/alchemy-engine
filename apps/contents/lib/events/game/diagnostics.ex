@@ -5,7 +5,7 @@ defmodule Contents.Events.Game.Diagnostics do
 
   @tick_ms 16
 
-  @doc "replace 遷移時の init_arg を構築する（ゲームオーバー時のスコア・ハイスコア付与）"
+  @doc "replace 遷移時の init_arg を構築する（ゲームオーバー時のスコア・ハイスコア欄は空リスト）"
   def build_replace_init_arg(scene_type, init_arg, elapsed, content, runner) do
     game_over_scene = content.game_over_scene()
 
@@ -19,30 +19,26 @@ defmodule Contents.Events.Game.Diagnostics do
         %{}
       )
 
-      Core.SaveManager.save_high_score(score)
-      Map.merge(init_arg || %{}, %{high_scores: Core.SaveManager.load_high_scores()})
+      Map.merge(init_arg || %{}, %{high_scores: []})
     else
       init_arg || %{}
     end
   end
 
-  @doc "60フレームごとにフレームキャッシュ更新・ログ・スナップショット検証を行う"
+  @doc "60フレームごとにフレームキャッシュ更新・ログを行う（プレイ state ベース。NIF メトリクスは呼ばない）"
   def maybe_log_and_cache(state, _scene_type, elapsed, content, runner) do
     if state.room_id == :main and rem(state.frame_count, 60) == 0 do
       do_log_and_cache(state, elapsed, content, runner)
     end
   end
 
-  defp do_log_and_cache(state, elapsed, content, runner) do
+  defp do_log_and_cache(_state, elapsed, content, runner) do
     playing_state = get_playing_scene_state(content, runner)
     player_hp = Map.get(playing_state, :player_hp, 100.0)
     player_max_hp = Map.get(playing_state, :player_max_hp, 100.0)
     score = Map.get(playing_state, :score, 0)
     elapsed_s = elapsed / 1000.0
 
-    # 呼び出し元（handle_frame_events_main の {:ok, ...} 経路）では runner は常に non-nil。
-    # 防御的に nil 分岐を残す。nil 時は content.scene_render_type(playing_scene) で代替。
-    # 通常は :main かつ 60 フレームごとのみ呼ばれるため、実運用では nil にならない想定。
     render_type =
       if runner,
         do: GenServer.call(runner, :render_type),
@@ -50,24 +46,11 @@ defmodule Contents.Events.Game.Diagnostics do
 
     hud_data = {player_hp, player_max_hp, score, elapsed_s}
 
-    high_scores =
-      if render_type == :game_over, do: Core.SaveManager.load_high_scores(), else: nil
+    high_scores = if render_type == :game_over, do: [], else: nil
 
-    nif_enemy_count = Core.NifBridge.get_enemy_count(state.world_ref)
-    nif_bullet_count = Core.NifBridge.get_bullet_count(state.world_ref)
-    physics_ms = Core.NifBridge.get_frame_time_ms(state.world_ref)
-
-    # Rust ECS を使わないコンテンツ（BulletHell3D 等）は NIF が 0 を返すため、
-    # Playing シーン state のリストから補完する。
-    enemy_count =
-      if nif_enemy_count == 0,
-        do: playing_state |> Map.get(:enemies, []) |> length(),
-        else: nif_enemy_count
-
-    bullet_count =
-      if nif_bullet_count == 0,
-        do: playing_state |> Map.get(:bullets, []) |> length(),
-        else: nif_bullet_count
+    enemy_count = enemy_count_from_playing_state(playing_state)
+    bullet_count = bullet_count_from_playing_state(playing_state)
+    physics_ms = @tick_ms * 1.0
 
     Core.FrameCache.put(
       enemy_count,
@@ -79,7 +62,32 @@ defmodule Contents.Events.Game.Diagnostics do
     )
 
     log_tick(content, elapsed_s, render_type, enemy_count, physics_ms, playing_state)
-    maybe_snapshot_check(state, playing_state)
+  end
+
+  defp enemy_count_from_playing_state(ps) do
+    case Map.get(ps, :enemies) do
+      list when is_list(list) ->
+        length(list)
+
+      _ ->
+        case Map.get(ps, :enemy_objects) do
+          list when is_list(list) -> length(list)
+          _ -> 0
+        end
+    end
+  end
+
+  defp bullet_count_from_playing_state(ps) do
+    case Map.get(ps, :bullets) do
+      list when is_list(list) ->
+        length(list)
+
+      _ ->
+        case Map.get(ps, :bullet_objects) do
+          list when is_list(list) -> length(list)
+          _ -> 0
+        end
+    end
   end
 
   defp log_tick(content, elapsed_s, render_type, enemy_count, physics_ms, playing_state) do
@@ -109,7 +117,6 @@ defmodule Contents.Events.Game.Diagnostics do
     Enum.map_join(weapon_levels, ", ", fn {w, lv} -> "#{w}:Lv#{lv}" end)
   end
 
-  # boss_hp が負のときは想定外（デバッグ値等）。表示しない。
   defp format_boss_info(playing_state) do
     boss_hp = Map.get(playing_state, :boss_hp)
     boss_max_hp = Map.get(playing_state, :boss_max_hp)
@@ -121,30 +128,6 @@ defmodule Contents.Events.Game.Diagnostics do
     end
   end
 
-  defp maybe_snapshot_check(state, playing_state) do
-    score = Map.get(playing_state, :score, 0)
-    kill_count = Map.get(playing_state, :kill_count, 0)
-
-    {rust_score, _rust_hp, _rust_elapsed, rust_kill_count} =
-      Core.NifBridge.get_full_game_state(state.world_ref)
-
-    if rust_score != score do
-      Logger.warning(
-        "[SSOT CHECK] score mismatch: elixir=#{score} rust=#{rust_score} diff=#{score - rust_score}"
-      )
-    end
-
-    if rust_kill_count != kill_count do
-      Logger.warning(
-        "[SSOT CHECK] kill_count mismatch: elixir=#{kill_count} rust=#{rust_kill_count}"
-      )
-    end
-  rescue
-    e -> Logger.warning("[SSOT CHECK] snapshot check failed: #{inspect(e)}")
-  end
-
-  # Phase 5: runner (Contents.Scenes.Stack) は get_scene_state(server, scene_type) を受け付ける。
-  # content.playing_scene() は scene_type (例: :playing) を返すため、そのままでよい。
   defp get_playing_scene_state(content, runner) do
     if runner do
       GenServer.call(runner, {:get_scene_state, content.playing_scene()}) || %{}

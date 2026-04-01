@@ -2,7 +2,7 @@
 name = "nif"
 version = "0.1.0"
 edition = "2021"
-description = "Elixir <-> Rust NIF通信インターフェース（Rustler）"
+description = "Rustler NIF — Formula VM（run_formula_bytecode）のみ。ゲーム ECS/物理は撤去済み（フェーズ 4）。"
 
 [features]
 default = ["umbrella"]
@@ -13,17 +13,6 @@ name = "nif"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-audio = { path = "../audio" }
-render_frame_proto = { path = "../render_frame_proto" }
-shared = { path = "../shared" }
-num-traits = "0.2"
-rustc-hash = "2"
 rustler = "0.37"
-rayon = "1"
 log = "0.4"
 env_logger = "0.11"
-bincode = "1.3"
-prost = "0.14"
-
-[build-dependencies]
-prost-build = "0.14"

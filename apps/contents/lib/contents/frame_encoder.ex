@@ -362,13 +362,13 @@ defmodule Content.FrameEncoder do
     %Alchemy.Render.MeshDef{name: name_str, vertices: verts, indices: indices}
   end
 
-  # ── set_frame_injection（injection_map）protobuf エンコーダ ─────────────────
+  # ── FrameInjection（injection_map）protobuf エンコーダ ───────────────────────
 
   @doc """
   injection_map を `Alchemy.Frame.FrameInjection` にエンコードする。
 
-  set_frame_injection_binary NIF 用。map のキーは atom でも string でも可。
-  スキーマ: proto/frame_injection.proto。未対応キーはログして無視する。
+  バイナリは `Contents.Events.Game` のフレーム注入フローで参照可能。旧 NIF への受け渡しは撤去済み。
+  map のキーは atom でも string でも可。スキーマ: proto/frame_injection.proto。未対応キーはログして無視する。
   """
   @spec encode_injection_map(map()) :: {:ok, binary()} | {:error, term()}
   def encode_injection_map(injection) when is_map(injection) do

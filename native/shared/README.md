@@ -10,6 +10,7 @@ Elixir との契約・型・補間・予測を提供する基底クレート。*
 
 ## 主要モジュール
 
+- `display` — 既定ウィンドウ解像度（`SCREEN_WIDTH` / `SCREEN_HEIGHT`、デスクトップ `app` 用）
 - `types` — Elixir との共通規格となる `#[repr(C)]` 構造体
 - `store` — スナップショット保持（過去と現在）
 - `interp` — 線形補間（Lerp）ロジック

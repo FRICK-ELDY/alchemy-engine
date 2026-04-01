@@ -53,13 +53,15 @@
 
 ### 7.1 現在の送信形式（protobuf）
 
-`Content.FrameEncoder.encode_injection_map/1` は **`FrameInjection`** を `Protobuf.encode/1` したバイナリを返す（スキーマ: `proto/frame_injection.proto`）。
+`Content.FrameEncoder.encode_injection_map/1` は **`Alchemy.Frame.FrameInjection`** の protobuf バイナリを返す（スキーマ: `proto/frame_injection.proto`）。
 
-### 7.2 NIF `set_frame_injection_binary` の解釈
+### 7.2 サーバー上の適用（NIF はない）
 
-1. 空バイト列は **エラー**（誤った空 protobuf 成功を避ける）。
-2. **`FrameInjectionEnvelope`**（`bytes payload`）としてデコードできる場合は内側 bytes のみ取り出す。
-3. 得られた bytes を **`FrameInjection` protobuf** として `apply_injection_from_pb` で適用する（ETF 経路なし）。
+旧 **NIF `set_frame_injection_binary`** および Rust の **`nif::protobuf_frame_injection`** は **本ブランチでは削除済み**。
+
+`Contents.Events.Game` は `encode_injection_map/1` の結果を `apply_frame_injection_binary/2` に渡すが、**現行実装はスタブ**（`:ok` のみ。Rust NIF へバイナリを渡さない）。インジェクション map の意味論的活用は Elixir 内のコンポーネント同期・`on_nif_sync` 等に委ねる。**Rust 側に `FrameInjection` protobuf をデコードするコードは現状ない**（フレーム本体は `render_frame_proto` のみ参照）。
+
+> **メンテナンス**: `native` に `FrameInjection` 専用デコード（クレート追加・`prost` 生成等）を入れたら、本節と §8 の参照を更新すること。
 
 ### 7.3 レガシー ETF スキーマ（参照のみ）
 
@@ -78,5 +80,5 @@
 
 - `Content.FrameEncoder` — フレーム・injection の protobuf エンコード
 - `proto/render_frame.proto`, `proto/frame_injection.proto` — 契約スキーマ
-- `network::protobuf_render_frame` / `network_render_bridge` — Rust 側フレーム protobuf デコード
-- `nif::protobuf_frame_injection` — injection protobuf デコード
+- `render_frame_proto::decode_pb_render_frame` — クライアント側フレーム protobuf デコード（`native/render_frame_proto`）
+- `Contents.Events.Game` — `apply_frame_injection_binary` スタブ（`apps/contents/lib/events/game.ex`）

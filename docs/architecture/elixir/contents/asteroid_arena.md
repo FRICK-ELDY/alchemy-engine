@@ -1,5 +1,7 @@
 # AsteroidArena コンテンツ仕様
 
+> **アーカイブ（2026-04）**: `Content.AsteroidArena` はリポジトリから削除済み。以下は旧仕様の記録。
+
 ## 概要
 
 武器・ボス・レベルアップの概念を持たないシンプルなシューター。`Content.AsteroidArena` モジュール。エンジンがゲーム固有概念を持たなくても動作することを実証する設計です。
@@ -29,7 +31,7 @@ end
 
 ## Spawner（Contents.Components.Category.Spawner）
 
-ワールド初期化・エンティティ登録。VampireSurvivor と同様に `on_ready/1` でマップサイズ・エンティティパラメータを注入。
+ワールド初期化・エンティティ登録。（旧）[VampireSurvivor](./vampire_survivor.md) と同様に `on_ready/1` でマップサイズ・エンティティパラメータを注入。
 
 ---
 

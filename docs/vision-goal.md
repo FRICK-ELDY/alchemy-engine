@@ -219,7 +219,7 @@ some-studio.com から frick-eldy.com を観測する場合：
 
 ```
 Phase 1（現在）: 単一インスタンス・単一コンテンツ
-  └─ VampireSurvivor が動く
+  └─ CanvasTest / BulletHell3D / FormulaTest 等が動く
   └─ ローカルマルチルーム対応
 
 Phase 2: Hub と複数コンテンツ
