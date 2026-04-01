@@ -25,8 +25,7 @@ defmodule Content.BulletHell3D do
     ]
   end
 
-  # Spawner が set_world_size に渡す。Rust 物理エンジンの physics_step が
-  # map_size < PLAYER_SIZE でパニックしないよう十分な値を設定する。
+  # Spawner が set_world_size に渡す（NIF ワールド寸法。ゲームロジックは Elixir 側）。
   def world_size, do: {2048.0, 2048.0}
 
   def build_frame(playing_state, context),

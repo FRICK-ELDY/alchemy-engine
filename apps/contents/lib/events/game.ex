@@ -625,7 +625,6 @@ defmodule Contents.Events.Game do
 
       {dx, dy} = local_mod.get_move_vector(state.room_id)
       maybe_set_player_input_direct(state.world_ref, dx, dy)
-      maybe_set_weapon_slots_direct(state)
 
       run_component_physics_callbacks(context)
 
@@ -802,50 +801,6 @@ defmodule Contents.Events.Game do
     case Core.NifBridge.set_player_input(world_ref, dx * 1.0, dy * 1.0) do
       {:error, reason} ->
         Logger.warning("[Events.Game] set_player_input failed: #{inspect(reason)}")
-
-      _ ->
-        :ok
-    end
-  end
-
-  # 武器スロット注入コールバックを持つコンテンツ向けフォールバック（フェーズ 2 で整理予定）。
-  # frame_injection が遅延・欠落しても、毎フレーム直接 NIF 側に同期する。
-  defp maybe_set_weapon_slots_direct(state) do
-    content = current_content()
-    runner = content.flow_runner(state.room_id)
-
-    if is_nil(runner) do
-      :ok
-    else
-      playing_state =
-        Contents.Scenes.Stack.get_scene_state(runner, content.playing_scene()) || %{}
-
-      weapon_levels = Map.get(playing_state, :weapon_levels)
-
-      if is_map(weapon_levels) do
-        cond do
-          function_exported?(content, :weapon_slots_for_nif, 2) ->
-            weapon_cooldowns = Map.get(playing_state, :weapon_cooldowns, %{})
-            slots = content.weapon_slots_for_nif(weapon_levels, weapon_cooldowns)
-            do_set_weapon_slots(state.world_ref, slots)
-
-          function_exported?(content, :weapon_slots_for_nif, 1) ->
-            slots = content.weapon_slots_for_nif(weapon_levels)
-            do_set_weapon_slots(state.world_ref, slots)
-
-          true ->
-            :ok
-        end
-      else
-        :ok
-      end
-    end
-  end
-
-  defp do_set_weapon_slots(world_ref, slots) when is_list(slots) do
-    case Core.NifBridge.set_weapon_slots(world_ref, slots) do
-      {:error, reason} ->
-        Logger.warning("[Events.Game] set_weapon_slots failed: #{inspect(reason)}")
 
       _ ->
         :ok

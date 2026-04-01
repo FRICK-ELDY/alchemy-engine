@@ -2,14 +2,13 @@ defmodule Contents.Components.Category.Spawner do
   @moduledoc """
   ワールド初期化の共通コンポーネント。
 
-  Content がオプショナルコールバックを実装している場合に初期化を行う。
+  Content がオプショナルコールバックを実装している場合に NIF へ初期値を渡す。
   - `world_size/0` → `Core.NifBridge.set_world_size/3`
   - `world_params_for_nif/0` → `Core.NifBridge.set_world_params/2`（オプション）
-  - `entity_params_for_nif/0` → `Core.NifBridge.set_entity_params/5`
-    （enemies, weapons, bosses の 3 要素タプルを返すこと）
+  - `entity_params_for_nif/0` → `Core.NifBridge.set_entity_params/5`（オプション。未実装ならスキップ）
 
-  physics_scenes を持つコンテンツは、Rust 物理エンジンの physics_step が
-  map_size < PLAYER_SIZE でパニックしないよう、十分なサイズを指定すること。
+  `physics_scenes` を持つコンテンツで `world_size/0` を実装する場合、
+  Rust 側ゲームループの `physics_step` が期待するマップ寸法に合わせること。
   """
   @behaviour Core.Component
 

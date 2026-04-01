@@ -52,10 +52,10 @@
 
 ## フェーズ 2: 削除コンテンツ専用コンポーネント・イベントの整理
 
-- [ ] `Contents.Events.Game` 内の VampireSurvivor 向け分岐（例: 武器スロット注入フォールバック）を、残存コンテンツに不要なら削除。
-- [ ] `Contents.Events.Game.Diagnostics` の NIF メトリクス（敵弾数・SSoT チェック等）を、NIF 撤去方針に合わせて Elixir のみまたは削除。
-- [ ] `Contents.Components.Category.Spawner` が残存コンテンツで未使用なら削除、使用されていれば NIF 非依存の API に変更。
-- [ ] `PhysicsEntity` 等、Asteroid / NIF 物理専用と分かるコンポーネントは参照ゼロ確認のうえ削除または doc のみ残す。
+- [x] `Contents.Events.Game` 内の VampireSurvivor 向け分岐（例: 武器スロット注入フォールバック）を、残存コンテンツに不要なら削除。
+- [x] `Contents.Events.Game.Diagnostics` の NIF メトリクス（敵弾数・SSoT チェック等）を、NIF 撤去方針に合わせて Elixir のみまたは削除。
+- [x] `Contents.Components.Category.Spawner` が残存コンテンツで未使用なら削除、使用されていれば NIF 非依存の API に変更。（`BulletHell3D` が `world_size` のみ利用のため **維持**、moduledoc のみ整理）
+- [x] `PhysicsEntity` 等、Asteroid / NIF 物理専用と分かるコンポーネントは参照ゼロ確認のうえ削除または doc のみ残す。（`PhysicsEntity` 削除。`Content.EntityParams` は参照ゼロのため削除）
 
 ## フェーズ 3: ゲーム系 NIF の撤去（Elixir 側）
 
