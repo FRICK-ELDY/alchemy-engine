@@ -297,15 +297,15 @@ fn terminate_phoenix_server_sync(mut child: Child, submenu: &Submenu) {
 
 /// app の exe パスを検索。release を優先、なければ debug。
 fn find_app_exe(project_root: &Path) -> Option<PathBuf> {
-    let native_dir = project_root.join("native");
-    let release = native_dir
+    let rust_dir = project_root.join("rust");
+    let release = rust_dir
         .join("target")
         .join("release")
         .join(exe_name("VRAlchemy"));
     if release.is_file() {
         return Some(release);
     }
-    let debug = native_dir
+    let debug = rust_dir
         .join("target")
         .join("debug")
         .join(exe_name("VRAlchemy"));
@@ -345,9 +345,9 @@ fn spawn_app(project_root: &Path) -> Result<Child, String> {
     let connect = "tcp/127.0.0.1:7447";
     let room = "main";
 
-    let manifest = project_root.join("native").join("Cargo.toml");
+    let manifest = project_root.join("rust").join("Cargo.toml");
     if !manifest.is_file() {
-        return Err("native/Cargo.toml not found. Project structure may be invalid. Run the launcher from the project root.".to_string());
+        return Err("rust/Cargo.toml not found. Project structure may be invalid. Run the launcher from the project root.".to_string());
     }
 
     if let Some(exe) = find_app_exe(project_root) {

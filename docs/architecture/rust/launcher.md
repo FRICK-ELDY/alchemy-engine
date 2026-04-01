@@ -1,10 +1,10 @@
-# Rust: launcher — トレイアイコン・ zenohd / Phoenix / Client Run
+﻿# Rust: launcher — トレイアイコン・ zenohd / Phoenix / Client Run
 
 ## 概要
 
 `launcher` はトレイアイコンを表示し、メニューから **zenohd**・**Phoenix Server（mix run）**・**VRAlchemy**（app バイナリ）を起動・終了するデスクトップアプリケーションです。Check for Update で GitHub releases を確認し、acknowledgements で謝辞・ライセンスを表示します。
 
-- **パス**: `native/tools/launcher/`
+- **パス**: `rust/launcher/`
 - **依存**: tao, tray-icon, kill_tree, reqwest, rfd, semver
 
 ---
@@ -74,8 +74,8 @@ flowchart TD
 
 1. zenohd がポート 7447 で応答
 2. Phoenix Server がポート 4000 で応答
-3. `native/Cargo.toml` が存在
-4. VRAlchemy exe を `native/target/release/` または `debug/` から検出。なければ `cargo run -p app` で起動
+3. `rust/Cargo.toml` が存在
+4. VRAlchemy exe を `rust/target/release/` または `debug/` から検出。なければ `cargo run -p app` で起動
 
 起動引数: `--connect tcp/127.0.0.1:7447 --room main`
 

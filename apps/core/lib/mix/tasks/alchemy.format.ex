@@ -26,11 +26,11 @@ defmodule Mix.Tasks.Alchemy.Format do
     check? = Keyword.get(opts, :check, false)
 
     root = File.cwd!()
-    native_manifest = Path.join(root, "native/Cargo.toml")
+    rust_manifest = Path.join(root, "rust/Cargo.toml")
 
     failed =
       []
-      |> maybe_rust_fmt(root, native_manifest, filter, check?)
+      |> maybe_rust_fmt(root, rust_manifest, filter, check?)
       |> maybe_elixir_format(root, filter, check?)
 
     if failed == [] do

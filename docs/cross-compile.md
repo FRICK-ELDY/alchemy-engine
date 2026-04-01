@@ -12,11 +12,11 @@ cargo build --release -p app
 
 | プラットフォーム | 出力パス |
 |:---|:---|
-| Windows | `native/target/release/VRAlchemy.exe` |
-| Linux | `native/target/release/VRAlchemy` |
-| macOS | `native/target/release/VRAlchemy` |
+| Windows | `rust/target/release/VRAlchemy.exe` |
+| Linux | `rust/target/release/VRAlchemy` |
+| macOS | `rust/target/release/VRAlchemy` |
 
-`mix alchemy.build` または `cargo build -p app` を使用してください。`native/` ディレクトリで実行するか、`--manifest-path native/Cargo.toml` を指定してください。
+`mix alchemy.build` または `cargo build -p app` を使用してください。`rust/` ディレクトリで実行するか、`--manifest-path rust/Cargo.toml` を指定してください。
 
 ## クロスコンパイル
 
@@ -42,23 +42,23 @@ rustup target add aarch64-apple-darwin
 
 ```bash
 # Windows 向け（Linux/macOS ホストから）
-cargo build --release -p app --manifest-path native/Cargo.toml \
+cargo build --release -p app --manifest-path rust/Cargo.toml \
   --target x86_64-pc-windows-gnu
 
 # Linux 向け（macOS ホストから等）
-cargo build --release -p app --manifest-path native/Cargo.toml \
+cargo build --release -p app --manifest-path rust/Cargo.toml \
   --target x86_64-unknown-linux-gnu
 
 # macOS Intel 向け
-cargo build --release -p app --manifest-path native/Cargo.toml \
+cargo build --release -p app --manifest-path rust/Cargo.toml \
   --target x86_64-apple-darwin
 
 # macOS Apple Silicon (M1/M2 等) 向け
-cargo build --release -p app --manifest-path native/Cargo.toml \
+cargo build --release -p app --manifest-path rust/Cargo.toml \
   --target aarch64-apple-darwin
 ```
 
-出力は `native/target/<target>/release/` に生成されます。
+出力は `rust/target/<target>/release/` に生成されます。
 
 ### クロスコンパイルの注意点
 

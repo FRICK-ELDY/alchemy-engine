@@ -1,4 +1,4 @@
-# メッシュ定義一覧（P3-1）
+﻿# メッシュ定義一覧（P3-1）
 
 > 作成日: 2026-03-07  
 > 出典: [contents-defines-rust-executes.md](../../workspace/1_backlog/contents-defines-rust-executes.md) P3-1  
@@ -8,7 +8,7 @@
 
 ## 1. 共通頂点型
 
-`MeshVertex`（`native/render/src/renderer/pipeline_3d.rs`）:
+`MeshVertex`（`rust/client/render/src/renderer/pipeline_3d.rs`）:
 
 | 属性 | 型 | 説明 |
 |:---|:---|:---|
@@ -138,7 +138,7 @@ for i in 0..n:
 
 | ファイル | 役割 |
 |:---|:---|
-| `native/render/src/lib.rs` | MeshVertex / MeshDef 定義 |
-| `native/render/src/renderer/pipeline_3d.rs` | メッシュ生成・描画（P3 以降 Elixir 定義を優先、未登録時フォールバック） |
+| `rust/client/render/src/lib.rs` | MeshVertex / MeshDef 定義 |
+| `rust/client/render/src/renderer/pipeline_3d.rs` | メッシュ生成・描画（P3 以降 Elixir 定義を優先、未登録時フォールバック） |
 | `docs/architecture/draw-command-spec.md` | DrawCommand タグ・フィールド仕様 |
 | `workspace/1_backlog/contents-defines-rust-executes.md` | P3 メッシュ Elixir 移行計画 |

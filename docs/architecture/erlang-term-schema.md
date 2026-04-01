@@ -61,7 +61,7 @@
 
 `Contents.Events.Game` は `encode_injection_map/1` の結果を `apply_frame_injection_binary/2` に渡すが、**現行実装はスタブ**（`:ok` のみ。Rust NIF へバイナリを渡さない）。インジェクション map の意味論的活用は Elixir 内のコンポーネント同期・`on_nif_sync` 等に委ねる。**Rust 側に `FrameInjection` protobuf をデコードするコードは現状ない**（フレーム本体は `render_frame_proto` のみ参照）。
 
-> **メンテナンス**: `native` に `FrameInjection` 専用デコード（クレート追加・`prost` 生成等）を入れたら、本節と §8 の参照を更新すること。
+> **メンテナンス**: `rust/` 側に `FrameInjection` 専用デコード（クレート追加・`prost` 生成等）を入れたら、本節と §8 の参照を更新すること。
 
 ### 7.3 レガシー ETF スキーマ（参照のみ）
 
@@ -80,5 +80,5 @@
 
 - `Content.FrameEncoder` — フレーム・injection の protobuf エンコード
 - `proto/render_frame.proto`, `proto/frame_injection.proto` — 契約スキーマ
-- `render_frame_proto::decode_pb_render_frame` — クライアント側フレーム protobuf デコード（`native/render_frame_proto`）
+- `render_frame_proto::decode_pb_render_frame` — クライアント側フレーム protobuf デコード（`rust/client/render_frame_proto`）
 - `Contents.Events.Game` — `apply_frame_injection_binary` スタブ（`apps/contents/lib/events/game.ex`）

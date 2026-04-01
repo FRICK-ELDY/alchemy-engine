@@ -16,7 +16,7 @@
 - 重い処理を NIF に載せると、VM 全体の応答性が低下する
 - サーバー側の「数式」は Formula VM（`run_formula_bytecode`）に載せ、それ以外の重い処理は **クライアント／別プロセスの Rust** に委譲する
 
-**やるべきこと**: サーバー NIF は Formula 呼び出し・起動・軽量な境界操作に限定する。描画・入力・デコードの高頻度ループは **クライアント／`native/app` 等**の Rust で行う（[rust_client.md](./rust_client.md)）。
+**やるべきこと**: サーバー NIF は Formula 呼び出し・起動・軽量な境界操作に限定する。描画・入力・デコードの高頻度ループは **クライアント／`rust/client/app` 等**の Rust で行う（[rust_client.md](./rust_client.md)）。
 
 ---
 

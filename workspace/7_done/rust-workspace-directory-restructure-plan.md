@@ -1,6 +1,6 @@
 # Rust ディレクトリ再編 — `native/` → `rust/`（単一ワークスペース）
 
-> **状態**: 未着手（Definition of Ready 想定）  
+> **状態**: 実施済み（2026-04）  
 > **目的**: リポジトリ直下の見通しを良くし、**サーバ NIF**・**クライアント用クレート群**・**ランチャー**の役割をディレクトリ名で区別する。  
 > **方針**: **`rust/Cargo.toml` を唯一のワークスペース根**とし、`members` に `nif` / `launcher` / `client/*` クレートを**列挙**する（`Cargo.lock`・`target/` を一元化）。
 
@@ -116,11 +116,11 @@ alchemy-engine/
 
 ## 6. 完了条件（Definition of Done）
 
-- [ ] `native/` がリポジトリからなくなり、**`rust/` に一本化**されている。
-- [ ] **`rust/Cargo.toml` の `members`** が §2 と整合し、`cargo build --workspace` が通る。
-- [ ] **`Core.NifBridge`** の Rustler `path` が `rust/nif` を指す。
-- [ ] **CI 用設定**（rust-cache workspace、manifest-path）が更新されている。
-- [ ] **主要アーキテクチャドキュメント**（最低限 `overview.md` と `development.md`）が新パスを反映している。
+- [x] `native/` がリポジトリからなくなり、**`rust/` に一本化**されている。
+- [x] **`rust/Cargo.toml` の `members`** が §2 と整合し、`cargo build --workspace` が通る。
+- [x] **`Core.NifBridge`** の Rustler `path` が `rust/nif` を指す。
+- [x] **CI 用設定**（rust-cache workspace、manifest-path）が更新されている。
+- [x] **主要アーキテクチャドキュメント**（最低限 `overview.md` と `development.md`）が新パスを反映している。
 
 ---
 

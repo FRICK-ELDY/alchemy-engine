@@ -24,7 +24,7 @@ defmodule Mix.Tasks.Alchemy.Ci do
   def run(args) do
     filter = List.first(args)
     root = File.cwd!()
-    native_manifest = Path.join(root, "native/Cargo.toml")
+    rust_manifest = Path.join(root, "rust/Cargo.toml")
 
     Mix.shell().info("")
     Mix.shell().info("========================================")
@@ -34,8 +34,8 @@ defmodule Mix.Tasks.Alchemy.Ci do
 
     failed =
       []
-      |> rust_check(root, native_manifest, filter)
-      |> rust_test(root, native_manifest, filter)
+      |> rust_check(root, rust_manifest, filter)
+      |> rust_test(root, rust_manifest, filter)
       |> elixir_check(root, filter)
       |> elixir_test(root, filter)
 

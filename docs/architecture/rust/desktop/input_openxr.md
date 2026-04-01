@@ -1,10 +1,10 @@
-# Rust: xr — OpenXR 入力ブリッジ（VR）
+﻿# Rust: xr — OpenXR 入力ブリッジ（VR）
 
 ## 概要
 
 `xr` クレートは **OpenXR** を用いた VR 入力ブリッジです（The Shell for VR）。VR ヘッドセット・コントローラー・トラッカーの入力を受け取り、app が network 経由で Elixir に渡す役割を担います。
 
-- **パス**: `native/xr/`
+- **パス**: `rust/client/xr/`
 - **依存**: `log = "0.4"`, `openxr = "0.21"`（`openxr` feature 有効時）
 
 ---

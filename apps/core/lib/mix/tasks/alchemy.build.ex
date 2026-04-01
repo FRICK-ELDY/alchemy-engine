@@ -23,7 +23,7 @@ defmodule Mix.Tasks.Alchemy.Build do
     profile = if release?, do: "release", else: "debug"
 
     root = File.cwd!()
-    manifest = Path.join(root, "native/Cargo.toml")
+    manifest = Path.join(root, "rust/Cargo.toml")
 
     Mix.shell().info("")
     Mix.shell().info("Building app (VRAlchemy) (#{profile})...")

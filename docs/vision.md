@@ -246,8 +246,8 @@ Hub     ← コンテンツの一覧・選択・参加
 
 | コード | 位置づけ |
 |---|---|
-| `native/nif` | Formula VM の **`run_formula_bytecode`** のみ（ゲーム用 `GameWorld` NIF は撤去済み） |
-| `native/render` / `native/app` / `native/network` | 描画・クライアント・プロトコルデコード |
+| `rust/nif` | Formula VM の **`run_formula_bytecode`** のみ（ゲーム用 `GameWorld` NIF は撤去済み） |
+| `rust/client/render` / `rust/client/app` / `rust/client/network` | 描画・クライアント・プロトコルデコード |
 | 旧 `native/nif` 内 `physics` / `GameWorld` | **アーカイブ**（ドキュメントのみ残る場合あり） |
 
 ---

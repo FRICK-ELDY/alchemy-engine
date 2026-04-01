@@ -1,4 +1,4 @@
-# Rust: app — Zenoh 経由のデスクトップクライアント（VRAlchemy exe）
+﻿# Rust: app — Zenoh 経由のデスクトップクライアント（VRAlchemy exe）
 
 ## 概要
 
@@ -6,7 +6,7 @@
 
 ワイヤ上のフレーム・入力は **protobuf** のみ。
 
-- **パス**: `native/app/`
+- **パス**: `rust/client/app/`
 - **バイナリ**: VRAlchemy
 - **依存**: `network`, `render`, `window`, `xr`, `shared`, `audio`（**`nif` には依存しない**）
 
@@ -77,7 +77,7 @@ sequenceDiagram
 ### フレーム（サーバー → クライアント）
 
 - **Elixir**: `Content.FrameEncoder.encode_frame/5` → `Alchemy.Render.RenderFrame.encode/1`（`proto/render_frame.proto`）。
-- **Rust**: `network::protobuf_render_frame::decode_pb_render_frame`（`render_frame_proto` と同一ロジック）で `render::RenderFrame`（`shared::render_frame` 由来）に変換。実装は `native/network/src/network_render_bridge.rs` の購読コールバック。
+- **Rust**: `network::protobuf_render_frame::decode_pb_render_frame`（`render_frame_proto` と同一ロジック）で `render::RenderFrame`（`shared::render_frame` 由来）に変換。実装は `rust/client/network/src/network_render_bridge.rs` の購読コールバック。
 
 ### 入力（クライアント → サーバー）
 
@@ -124,7 +124,7 @@ graph TB
 
 ```mermaid
 flowchart TD
-    MAIN[main<br/>native/app/src/main.rs]
+    MAIN[main<br/>rust/client/app/src/main.rs]
     PARSE[parse_args]
     LOAD[アセット・シェーダー読み込み<br/>AssetLoader, sprite.wgsl, mesh.wgsl]
     BRIDGE[NetworkRenderBridge::new<br/>network クレート]
@@ -194,7 +194,7 @@ flowchart TD
 | `game/room/{room_id}/input/movement` | publish | protobuf `alchemy.input.Movement` |
 | `game/room/{room_id}/input/action` | publish | protobuf `alchemy.input.Action` |
 
-`NetworkRenderBridge` は `native/network/src/network_render_bridge.rs` に定義。`render::RenderFrame` 型を使用。
+`NetworkRenderBridge` は `rust/client/network/src/network_render_bridge.rs` に定義。`render::RenderFrame` 型を使用。
 
 ### 受信コールバック
 

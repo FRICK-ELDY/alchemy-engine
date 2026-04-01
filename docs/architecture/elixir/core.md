@@ -1,4 +1,4 @@
-# Elixir: core — SSoT コアエンジン
+﻿# Elixir: core — SSoT コアエンジン
 
 > **2026-04 更新**: `Core` ファサードは **モジュールドキュメントのみ**（セーブ・ゲーム用 NIF API は撤去）。実装モジュールは `core/` 配下に残存。
 
@@ -20,9 +20,9 @@
 
 ## `nif_bridge.ex` — Rustler（Formula のみ）
 
-`use Rustler` で `native/nif` をロード。公開 NIF は **`run_formula_bytecode/3` のみ**。旧ゲーム用 NIF 一覧・RwLock カテゴリは **該当なし**。
+`use Rustler` で `rust/nif` をロード。公開 NIF は **`run_formula_bytecode/3` のみ**。旧ゲーム用 NIF 一覧・RwLock カテゴリは **該当なし**。
 
-詳細は [Rust: nif](../rust/nif.md) と [`native/nif/README.md`](../../../native/nif/README.md)。
+詳細は [Rust: nif](../rust/nif.md) と [`rust/nif/README.md`](../../../rust/nif/README.md)。
 
 ---
 

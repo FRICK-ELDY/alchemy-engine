@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.Alchemy.Clean do
-  @shortdoc "依存関係・ビルド成果物を削除（_build, deps, native/target）"
+  @shortdoc "依存関係・ビルド成果物を削除（_build, deps, rust/target）"
   @moduledoc """
   Elixir と Rust のビルド成果物・依存関係を削除します。
 
@@ -7,7 +7,7 @@ defmodule Mix.Tasks.Alchemy.Clean do
 
   - `_build/` — Elixir ビルド
   - `deps/` — Elixir 依存関係
-  - `native/target/` — Rust ビルド
+  - `rust/target/` — Rust ビルド
 
   ## オプション
 
@@ -29,7 +29,7 @@ defmodule Mix.Tasks.Alchemy.Clean do
     dirs = [
       Path.join(root, "_build"),
       Path.join(root, "deps"),
-      Path.join(root, "native/target")
+      Path.join(root, "rust/target")
     ]
 
     existing = Enum.filter(dirs, &File.exists?/1)

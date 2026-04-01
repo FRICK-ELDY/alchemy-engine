@@ -22,7 +22,7 @@ defmodule Mix.Tasks.Alchemy.Gen.Proto do
     root = File.cwd!()
     proto_dir = Path.join(root, "proto")
     elixir_out = Path.join(root, "apps/network/lib/network/proto/generated")
-    native_manifest = Path.join(root, "native/Cargo.toml")
+    rust_manifest = Path.join(root, "rust/Cargo.toml")
     protoc = System.get_env("PROTOC") || "protoc"
     proto_files = discover_proto_files!(proto_dir)
 
@@ -53,7 +53,7 @@ defmodule Mix.Tasks.Alchemy.Gen.Proto do
         [
           "build",
           "--manifest-path",
-          native_manifest,
+          rust_manifest,
           "-p",
           "network",
           "-p",

@@ -26,11 +26,11 @@ defmodule Mix.Tasks.Alchemy.Test do
     cover? = Keyword.get(opts, :cover, false)
 
     root = File.cwd!()
-    native_manifest = Path.join(root, "native/Cargo.toml")
+    rust_manifest = Path.join(root, "rust/Cargo.toml")
 
     failed =
       []
-      |> maybe_rust_test(root, native_manifest, filter, cover?)
+      |> maybe_rust_test(root, rust_manifest, filter, cover?)
       |> maybe_elixir_test(root, filter, cover?)
 
     if failed == [] do
