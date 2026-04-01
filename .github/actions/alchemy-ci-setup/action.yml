@@ -1,0 +1,71 @@
+# 各ジョブで重複していた ALSA / protoc / Rust / rust-cache / 任意で BEAM をまとめる
+name: Alchemy CI — Ubuntu base
+description: libasound2、prost-build 用 protoc、Rust、Swatinem/rust-cache、任意で Elixir/OTP
+
+inputs:
+  protoc-source:
+    description: "apt = パッケージ protobuf-compiler。arduino = setup-protoc 27.x（Elixir ジョブと揃える）"
+    required: true
+  rust-components:
+    description: "空ならデフォルト stable。例: rustfmt,clippy"
+    required: false
+    default: ""
+  with-beam:
+    description: "true で erlef/setup-beam"
+    required: false
+    default: "false"
+  elixir-version:
+    required: false
+    default: "1.19"
+  otp-version:
+    required: false
+    default: "28"
+
+runs:
+  using: composite
+  steps:
+    - name: Install system packages (ALSA + optional apt protoc)
+      shell: bash
+      run: |
+        set -euo pipefail
+        sudo apt-get update -q
+        if [ "${{ inputs.protoc-source }}" = "apt" ]; then
+          sudo apt-get install -y libasound2-dev protobuf-compiler
+        else
+          sudo apt-get install -y libasound2-dev
+        fi
+
+    - name: Setup protoc (27.x)
+      if: inputs.protoc-source == 'arduino'
+      uses: arduino/setup-protoc@v3
+      with:
+        version: "27.x"
+        repo-token: ${{ github.token }}
+
+    - name: Export PROTOC for prost-build
+      shell: bash
+      run: |
+        command -v protoc
+        protoc --version
+        echo "PROTOC=$(command -v protoc)" >> $GITHUB_ENV
+
+    - name: Install Rust (stable)
+      if: inputs.rust-components == ''
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install Rust (stable + components)
+      if: inputs.rust-components != ''
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: ${{ inputs.rust-components }}
+
+    - uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: rust
+
+    - name: Setup BEAM
+      if: inputs.with-beam == 'true'
+      uses: erlef/setup-beam@v1
+      with:
+        elixir-version: ${{ inputs.elixir-version }}
+        otp-version: ${{ inputs.otp-version }}
