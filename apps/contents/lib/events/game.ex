@@ -808,7 +808,7 @@ defmodule Contents.Events.Game do
     end
   end
 
-  # VampireSurvivor など武器スロット注入が必須のコンテンツ向けフォールバック。
+  # 武器スロット注入コールバックを持つコンテンツ向けフォールバック（フェーズ 2 で整理予定）。
   # frame_injection が遅延・欠落しても、毎フレーム直接 NIF 側に同期する。
   defp maybe_set_weapon_slots_direct(state) do
     content = current_content()

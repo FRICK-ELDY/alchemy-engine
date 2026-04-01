@@ -10,12 +10,11 @@
 - **FrameEncoder** — RenderFrame の protobuf エンコード
 - Component 群: LocalUserComponent, TelemetryComponent, MenuComponent 等
 
-## コンテンツ一覧
+## コンテンツ一覧（第一級・維持）
 
-- `VampireSurvivor` — ヴァンパイアサバイバークローン
-- `AsteroidArena` — 小惑星シューター
-- `SimpleBox3D`, `BulletHell3D`, `RollingBall` — 動作検証用
-- `CanvasTest`, `FormulaTest` — テスト用
+- `CanvasTest` — Canvas / ワールド空間 UI デバッグ
+- `BulletHell3D` — 3D 弾幕避け（`config/config.exs` の既定）
+- `FormulaTest` — Formula / Nodes 検証（`config/formula_test.exs` で切替）
 
 ## データフロー
 

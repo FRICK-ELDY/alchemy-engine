@@ -15,7 +15,7 @@ defmodule Contents.ComponentListTest do
 
   describe "local_user_input_module/1" do
     test "local_user_input_module 未実装のコンテンツは Contents.LocalUserComponent を返す" do
-      assert Contents.ComponentList.local_user_input_module(Content.AsteroidArena) ==
+      assert Contents.ComponentList.local_user_input_module(Content.BulletHell3D) ==
                Contents.LocalUserComponent
     end
 

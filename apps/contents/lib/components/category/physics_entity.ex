@@ -8,7 +8,7 @@ defmodule Contents.Components.Category.PhysicsEntity do
   - player_snapshot → physics_scenes を持つ Content の playing_state から注入
   - player_damaged → playing_state の player_hp 減算・invincible_until_ms 設定
 
-  AsteroidArena 等、NIF 物理エンジンと連携するコンテンツで使用する。
+  NIF 物理エンジンと連携するコンテンツで使用する（残存コンテンツでは未使用。フェーズ 2 で整理予定）。
   """
   @behaviour Core.Component
 

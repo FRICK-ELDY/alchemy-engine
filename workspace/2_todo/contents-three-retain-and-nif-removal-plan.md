@@ -9,22 +9,46 @@
 
 ## フェーズ 0: インベントリ（着手前チェックリスト）
 
-- [ ] `rg` / IDE で削除モジュール名・シーンモジュールの参照を一覧化（`config/`、`apps/server/`、`apps/core/lib/core/config.ex`、`Contents.Scenes.Stack`、テスト、`docs/`）。
-- [ ] `builtin` について `workspace/1_backlog/builtin-content-future.md` を最新化し、将来の役割が一言で追える状態にする（アーキテクチャ overview 等へのリンク追記は任意）。
-- [ ] `Core.Formula.run/3` の呼び出し元を全列挙し、**FormulaTest 維持**に伴い `run_formula_bytecode` 等の経路をどう残すか（NIF 最小化 vs Elixir 化）を方針として 1 段落で書く。
-- [ ] `Contents.Events.Game` から**ゲーム ECS 系** NIF を外した後のフレーム駆動モデル（Elixir のみ tick、インジェクション経路の単純化）を 1 段落で方針化する。
+- [x] `rg` / IDE で削除モジュール名・シーンモジュールの参照を一覧化（`config/`、`apps/server/`、`apps/core/lib/core/config.ex`、`Contents.Scenes.Stack`、テスト、`docs/`）。
+- [x] `builtin` について `workspace/1_backlog/builtin-content-future.md` を最新化し、将来の役割が一言で追える状態にする（アーキテクチャ overview 等へのリンク追記は任意）。
+- [x] `Core.Formula.run/3` の呼び出し元を全列挙し、**FormulaTest 維持**に伴い `run_formula_bytecode` 等の経路をどう残すか（NIF 最小化 vs Elixir 化）を方針として 1 段落で書く。
+- [x] `Contents.Events.Game` から**ゲーム ECS 系** NIF を外した後のフレーム駆動モデル（Elixir のみ tick、インジェクション経路の単純化）を 1 段落で方針化する。
+
+### フェーズ 0 成果: 削除対象コンテンツ参照インベントリ（2026-04-01 時点）
+
+調査コマンド例: `rg -i "AsteroidArena|RollingBall|SimpleBox3D|VampireSurvivor" --glob "*.{ex,exs,md}"`
+
+| 区分 | パス（代表） | 備考 |
+|------|----------------|------|
+| **実行時設定** | `config/config.exs` | `config :server, :current, Content.BulletHell3D`（フェーズ 1 完了後） |
+| **デフォルトフォールバック** | `apps/core/lib/core/config.ex` | `@default_content Content.BulletHell3D` |
+| **OTP 起動** | `apps/server/lib/server/application.ex` | `get_env(:server, :current, Content.BulletHell3D)`、`Scenes.Stack` の `content_module` |
+| **ドキュメント例示** | `apps/contents/lib/scenes/stack.ex` | moduledoc の例は `Content.BulletHell3D` |
+| **パッケージ説明** | `apps/contents/lib/contents.ex`, `apps/contents/README.md` | 一覧・説明文の更新が必要 |
+| **ゲームイベント** | `apps/contents/lib/events/game.ex` | VampireSurvivor 向けコメント・分岐（フェーズ 2） |
+| **テスト** | `apps/contents/test/content/` | VS 専用 7 ファイルはフェーズ 1 で削除済み。`component_list_test.exs` は `Content.BulletHell3D` を使用 |
+| **ドキュメント（履歴・設計）** | `docs/architecture/elixir/contents.md`, `overview.md`, `contents/vampire_survivor.md`, `evaluation/*`, `workspace/7_done/*` 等 | フェーズ 1 のコード削除後に追随更新するか、履歴として残すかは別判断。**フェーズ 1 のブロッカーではない** |
+| **削除済み実装本体** | （同上ディレクトリ・トップ `*.ex`） | フェーズ 1 で削除済み |
+
+### フェーズ 0 成果: `Core.Formula.run/3` と `run_formula_bytecode`（方針・1 段落）
+
+`NifBridge.run_formula_bytecode/3` を呼ぶのは **`apps/core/lib/core/formula.ex` のみ**。`Core.Formula.run/3` の呼び出しは **`Core.FormulaGraph`**（グラフ実行）と **`apps/core/test/core/formula_test.exs`**（単体テスト）、および `formula.ex` の moduledoc 例示に限られる。一方 **`Content.FormulaTest`** のプレイ中検証は **`Contents.Nodes.Test.Formula.run/0`**（Nodes の `handle_sample`）であり、**現行パスでは `Core.Formula.run` を経由しない**。したがって FormulaTest を残しても「Nodes 検証」と「bytecode + NIF」の責務は分離されている。**フェーズ 3 ではゲーム ECS 用 NIF を削減しつつ、`run_formula_bytecode` は `Core.Formula` / `FormulaGraph` / core テストのためにクレート内で切り離して維持する**方針とする。純 Elixir VM への置換は必須ではなく、NIF スリム化後の後続タスクとする。
+
+### フェーズ 0 成果: `Contents.Events.Game` 撤去後のフレーム駆動（方針・1 段落）
+
+現状、`Game` GenServer は **`Core.NifBridge.create_world` / `start_rust_game_loop` / `set_frame_injection_binary` / `set_player_input` / `pause_physics`・`resume_physics`** 等で Rust 側ゲームループと同期し、描画用バイナリを NIF 経由で送っている。**ゲーム ECS 系 NIF を外した後**は、ルーム・シーンスタック・コンポーネントの更新は **Elixir 上のメッセージ／タイマー駆動の tick のみ**で完結させ、`world_ref` や `control_ref` が不要なコンテンツでは **参照を持たないか nil 安全なスタブ**にする。クライアントへ届ける **`RenderFrame` 相当のバイナリ注入**は、Rust ゲームループに依存しない **単一の書き込み経路**（現行の `set_frame_injection_binary` と同等の契約を Elixir または残存ネイティブ層で満たす）に集約し、武器スロット・敵スポーン等 **VampireSurvivor 専用の NIF 呼び出しは削除**する。
 
 ## フェーズ 1: コンテンツ削除（Elixir）
 
-- [ ] **削除対象のみ**指定ディレクトリ・トップレベル `*.ex`（各 `Content.*`）を削除（`formula_test` は対象外）。
-- [ ] `apps/contents/test/content/` 以下の**削除コンテンツ専用**テストを削除またはスキップ理由をコメント（削除推奨）。
-- [ ] デフォルトコンテンツを `Content.CanvasTest` / `Content.BulletHell3D` / `Content.FormulaTest` のいずれかに統一（開発用途に応じて切替可能ならコメントで明記）:
+- [x] **削除対象のみ**指定ディレクトリ・トップレベル `*.ex`（各 `Content.*`）を削除（`formula_test` は対象外）。
+- [x] `apps/contents/test/content/` 以下の**削除コンテンツ専用**テストを削除またはスキップ理由をコメント（削除推奨）。
+- [x] デフォルトコンテンツを `Content.CanvasTest` / `Content.BulletHell3D` / `Content.FormulaTest` のいずれかに統一（開発用途に応じて切替可能ならコメントで明記）:
   - `apps/core/lib/core/config.ex` の `@default_content`
   - `apps/server/lib/server/application.ex` の `:current`
   - `config/config.exs` のコメント・参照
   - `config/formula_test.exs` は **FormulaTest 用として維持**（`mix` の config パスから外さない）。削除コンテンツ専用 config のみ整理する。
-- [ ] `Contents.Scenes.Stack` 等のハードコードされた `Content.VampireSurvivor` を `Core.Config.current()` ベースに寄せる。
-- [ ] ルート `Content` の moduledoc（`apps/contents/lib/contents.ex`）を **維持 3 コンテンツ**に更新。
+- [x] `Contents.Scenes.Stack` の moduledoc 例を `Content.BulletHell3D` に更新（実行時は従来どおり `Application.get_env(:server, :current, ...)`）。
+- [x] ルート `Content` の moduledoc（`apps/contents/lib/contents.ex`）を **維持 3 コンテンツ**に更新。
 
 ## フェーズ 2: 削除コンテンツ専用コンポーネント・イベントの整理
 

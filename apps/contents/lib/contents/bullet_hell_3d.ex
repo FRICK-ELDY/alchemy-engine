@@ -2,7 +2,7 @@ defmodule Content.BulletHell3D do
   @moduledoc """
   3D 弾幕避けゲームコンテンツ。
 
-  SimpleBox3D の3Dパイプラインを基盤に、弾幕避けゲームプレイを追加する。
+  3D 描画パイプライン上で弾幕避けゲームプレイを実装する。
   Elixir 側で3D座標・弾・敵を管理し、Rust 物理エンジンは使用しない。
 
   ## ゲームルール

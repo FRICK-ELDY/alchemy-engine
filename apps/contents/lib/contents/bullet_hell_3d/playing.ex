@@ -9,7 +9,7 @@ defmodule Content.BulletHell3D.Playing do
   transform.position で座標を保持。弾は Object + vel のペアで管理。
 
   ## 状態フィールド
-  - `origin`          — 空間の原点 Transform（SimpleBox3D との共通 state として保持、本コンテンツでは未使用）
+  - `origin`          — 空間の原点 Transform（3D コンテンツ共通 state として保持、本コンテンツでは未使用）
   - `landing_object`  — プレイヤー Object への参照（同上）
   - `player_object`   — プレイヤー Object（Contents.Objects.Core.Struct）
   - `enemy_objects`   — 敵 Object リスト [%{id: int, object: Struct}]

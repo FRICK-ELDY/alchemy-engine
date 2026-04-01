@@ -18,12 +18,12 @@ defmodule Contents.Scenes.Stack do
 
   ## 例
 
-      # 単一ルーム（content_module 指定）
-      Contents.Scenes.Stack.start_link(content_module: Content.VampireSurvivor)
+      # 単一ルーム（content_module は通常 `config :server, :current` と同じ）
+      Contents.Scenes.Stack.start_link(content_module: Content.BulletHell3D)
 
       # マルチルーム準備（room_id 指定）
       Contents.Scenes.Stack.start_link(
-        content_module: Content.VampireSurvivor,
+        content_module: Content.BulletHell3D,
         room_id: "room-1"
       )
   """
