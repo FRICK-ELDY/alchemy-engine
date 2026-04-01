@@ -1,4 +1,4 @@
-﻿# DrawCommand タグ・フィールド仕様（SSoT）
+# DrawCommand タグ・フィールド仕様（SSoT）
 
 > 作成日: 2026-03-07  
 > 出典: [contents-defines-rust-executes.md](../plan/backlog/contents-defines-rust-executes.md) P2-1  

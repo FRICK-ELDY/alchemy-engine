@@ -1,4 +1,4 @@
-﻿# Rust: nif — Formula VM（Rustler NIF）
+# Rust: nif — Formula VM（Rustler NIF）
 
 > **2026-04**: ゲーム ECS・`physics/`・旧 NIF 群は **削除済み**。本ページは **現行構成** のみ記す。旧 physics の長文仕様は [nif/physics.md](./nif/physics.md)（**アーカイブ**）。
 

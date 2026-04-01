@@ -9,6 +9,8 @@
 
 ## 1. 全体データフロー概要
 
+以下の図のサブグラフ名は **当時のリポジトリ配置（旧 `native/` ツリー）** を指す。現行の `rust/nif` や `rust/client/render` との **パス対応を示すものではない**。
+
 ```mermaid
 flowchart TB
     subgraph Elixir["apps/contents (Elixir)"]
@@ -24,7 +26,7 @@ flowchart TB
         GE --> NS
     end
     
-    subgraph NIF["rust/nif (NIF ブリッジ)"]
+    subgraph NIF["旧 native/nif（当時の NIF ブリッジ）"]
         WN[world_nif]
         AN[action_nif]
         RN[read_nif]
@@ -37,7 +39,7 @@ flowchart TB
         PS[physics_step_inner]
     end
     
-    subgraph Render["rust/client/render"]
+    subgraph Render["旧 native/render（当時のクライアント描画）"]
         RFB[(RenderFrameBuffer)]
         RB[render_bridge<br/>next_frame]
     end

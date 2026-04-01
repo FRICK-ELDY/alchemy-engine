@@ -1,4 +1,4 @@
-﻿# Rust: app — Zenoh 経由のデスクトップクライアント（VRAlchemy exe）
+# Rust: app — Zenoh 経由のデスクトップクライアント（VRAlchemy exe）
 
 ## 概要
 

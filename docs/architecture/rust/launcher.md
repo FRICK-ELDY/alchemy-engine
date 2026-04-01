@@ -1,4 +1,4 @@
-﻿# Rust: launcher — トレイアイコン・ zenohd / Phoenix / Client Run
+# Rust: launcher — トレイアイコン・ zenohd / Phoenix / Client Run
 
 ## 概要
 

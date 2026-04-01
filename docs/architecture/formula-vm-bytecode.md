@@ -1,4 +1,4 @@
-﻿# Formula VM バイトコード仕様（P1-3）
+# Formula VM バイトコード仕様（P1-3）
 
 > 作成日: 2026-03-07  
 > 出典: [contents-defines-rust-executes.md](../plan/backlog/contents-defines-rust-executes.md) P1-3  

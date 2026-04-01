@@ -1,4 +1,4 @@
-﻿# Rust: xr — OpenXR 入力ブリッジ（VR）
+# Rust: xr — OpenXR 入力ブリッジ（VR）
 
 ## 概要
 

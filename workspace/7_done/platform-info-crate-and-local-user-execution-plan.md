@@ -101,7 +101,7 @@ pub mod info;
 
 ```bash
 cd rust
-cargo build -p client
+cargo build -p app
 ```
 
 ---

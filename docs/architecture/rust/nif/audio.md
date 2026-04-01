@@ -1,4 +1,4 @@
-﻿# Rust: audio — オーディオ管理
+# Rust: audio — オーディオ管理
 
 > **2026-04**: `rust/nif` は **`audio` に依存しない**（Formula NIF のみ）。本クレートは主に **クライアント `app`** 等から利用。
 

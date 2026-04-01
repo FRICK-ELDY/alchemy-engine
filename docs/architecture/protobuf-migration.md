@@ -1,4 +1,4 @@
-﻿# Protobuf 移行（概要）
+# Protobuf 移行（概要）
 
 Zenoh 経由のペイロードを Erlang term（ETF）から **Protocol Buffers** に揃える移行の、公開向けの要約です。
 

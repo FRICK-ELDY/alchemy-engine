@@ -1,4 +1,4 @@
-﻿# Rust: render — 描画パイプライン・HUD
+# Rust: render — 描画パイプライン・HUD
 
 ## 概要
 
