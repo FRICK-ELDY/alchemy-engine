@@ -1,6 +1,6 @@
 # apps/contents → native/physics データフローと技術的ボトルネック
 
-> **アーカイブ（2026-04）**: ゲーム用 Rust NIF（`GameWorld`・`physics_step`・60Hz ループ）は撤去済み。以下は **旧アーキテクチャ** のボトルネック分析記録。現行は [overview.md](overview.md) を参照。
+> **アーカイブ（2026-04）**: ゲーム用 Rust NIF（`GameWorld`・`physics_step`・60Hz ループ）は撤去済み。以下は **旧アーキテクチャ** のボトルネック分析記録。現行の経路・用語は [overview.md](overview.md) と [network-protocol-current.md](network-protocol-current.md) を参照。
 
 > 本ドキュメントは `apps/contents` から `native/physics` までのデータの流れを可視化し、
 > 当時技術的にボトルネックになり得る箇所を分析した。

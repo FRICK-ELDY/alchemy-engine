@@ -357,7 +357,7 @@ defmodule Contents.Events.Game do
   # ── メインフレームループ ──────────────────────────────────────────
 
   # throttled?: true のとき、ゲーム整合性に影響するイベント処理（スコア・HP 等）は
-  # 維持しつつ、NIF 書き込み・ブロードキャスト等の重い副作用をスキップして追いつく。
+  # 維持しつつ、Zenoh フレーム publish・診断キャッシュ等の重い副作用をスキップして追いつく。
   defp handle_frame_events_main(events, state, throttled?) do
     now = now_ms()
     elapsed = now - state.start_ms
@@ -417,6 +417,8 @@ defmodule Contents.Events.Game do
     # process_transition は state を変更せず返すのみ。副作用（GenServer.call による push/replace/pop）のみ行う。
     _state = process_transition(result, state, now, content, runner)
 
+    # frame_injection: 旧 NIF 注入用の Process 辞書。現状コンポーネントから書き込みはなく
+    # apply_frame_injection → apply_frame_injection_binary はスタブ。protobuf 契約・将来の再配線用に温存。
     Process.put(:frame_injection, %{})
 
     maybe_set_input_and_broadcast(

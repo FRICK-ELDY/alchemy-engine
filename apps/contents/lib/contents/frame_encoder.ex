@@ -362,7 +362,7 @@ defmodule Content.FrameEncoder do
     %Alchemy.Render.MeshDef{name: name_str, vertices: verts, indices: indices}
   end
 
-  # ── set_frame_injection（injection_map）protobuf エンコーダ ─────────────────
+  # ── FrameInjection（injection_map）protobuf エンコーダ ───────────────────────
 
   @doc """
   injection_map を `Alchemy.Frame.FrameInjection` にエンコードする。

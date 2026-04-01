@@ -159,7 +159,7 @@ defmodule Network.Channel do
     {:noreply, socket}
   end
 
-  # ── サーバー → クライアント（GameEvents からの push）────────────────
+  # ── サーバー → クライアント（Contents.Events.Game からの push）──────────────
 
   @impl true
   def handle_info({:network_event, from_room, event}, socket) do
@@ -167,8 +167,8 @@ defmodule Network.Channel do
     {:noreply, socket}
   end
 
-  # Core.GameEvents は {:frame_events, events} の2要素タプルを送信する。
-  # tick は GameEvents 側に存在しないため、ペイロードには含めない。
+  # Contents.Events.Game は {:frame_events, events} の2要素タプルを送信する。
+  # tick は Events.Game 側に存在しないため、ペイロードには含めない。
   def handle_info({:frame_events, events}, socket) do
     push(socket, "frame", %{events: Enum.map(events, &encode_event/1)})
     {:noreply, socket}
