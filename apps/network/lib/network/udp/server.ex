@@ -112,8 +112,16 @@ defmodule Network.UDP do
           case port do
             0 ->
               case :inet.port(socket) do
-                {:ok, p} -> p
-                {:error, _} -> port
+                {:ok, p} ->
+                  p
+
+                {:error, reason} ->
+                  Logger.warning(
+                    "[Network.UDP] :inet.port/1 failed after bind on port 0: #{inspect(reason)}; " <>
+                      "state.port may be incorrect"
+                  )
+
+                  port
               end
 
             _ ->

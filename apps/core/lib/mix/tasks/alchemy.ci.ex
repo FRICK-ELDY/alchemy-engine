@@ -150,19 +150,13 @@ defmodule Mix.Tasks.Alchemy.Ci do
   defp elixir_test(failed, _, _), do: failed
 
   # MIX_ENV=test で子プロセスの mix を起動。[D] の test は GitHub elixir-test と同様。
+  # System.cmd の :env は親プロセスの環境を継承しつつ上書き（PATH 等は維持される）。
   defp mix_cmd(args, root) when is_list(args) do
     System.cmd("elixir", ["-S", "mix"] ++ args,
       cd: root,
       stderr_to_stdout: true,
-      env: env_with(%{"MIX_ENV" => "test"})
+      env: [{"MIX_ENV", "test"}]
     )
-  end
-
-  # System.cmd の :env は「全環境の置き換え」のため、PATH 等を落とさないよう現在の環境にマージする。
-  defp env_with(overrides) when is_map(overrides) do
-    System.get_env()
-    |> Map.merge(overrides)
-    |> Map.to_list()
   end
 
   defp run_step(failed, name, fun) do
