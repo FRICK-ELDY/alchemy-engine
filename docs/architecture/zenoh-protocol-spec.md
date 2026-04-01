@@ -59,16 +59,16 @@
 
 ---
 
-## 4. Phoenix Channel / GameEvents との対応
+## 4. Phoenix Channel / Contents.Events.Game との対応
 
-| 経路                 | イベント | ペイロード例                                           | GameEvents への変換                 |
+| 経路                 | イベント | ペイロード例                                           | Contents.Events.Game への変換                 |
 | ------------------ | ---- | ------------------------------------------------ | ------------------------------- |
 | Phoenix `"input"`  | C→S  | `%{"dx" => 0.5, "dy" => -1.0}`                   | `{:move_input, 0.5, -1.0}`      |
 | Zenoh movement     | C→S  | protobuf `Movement`                             | `{:move_input, dx, dy}`         |
 | Phoenix `"action"` | C→S  | `%{"name" => "select_weapon"}`                   | `{:ui_action, "select_weapon"}` |
 | Zenoh action       | C→S  | protobuf `Action`                               | `{:ui_action, name}`            |
 
-フェーズ 3 で Zenohex subscriber が movement / action を受信したら、上記と同様の形式で `GameEvents` に `send(pid, ...)` する。
+フェーズ 3 で Zenohex subscriber が movement / action を受信したら、上記と同様の形式で `Contents.Events.Game` に `send(pid, ...)` する。
 
 ---
 

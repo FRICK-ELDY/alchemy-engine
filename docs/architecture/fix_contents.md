@@ -122,7 +122,7 @@ Objects / Components は GenServer として実装。Nodes はプロセス化せ
 
 | 層 | GenServer | 理由 |
 |:---|:---|:---|
-| **Content（体験）** | 既存のまま | GameEvents 等が担う。ルーム単位で 1 プロセス。 |
+| **Content（体験）** | 既存のまま | `Contents.Events.Game` 等が担う。ルーム単位で 1 プロセス。 |
 | **Object** | する | 空間実体・子管理・イベント受信に適している。 |
 | **Component** | する | 状態保持とノード束ねの主体。 |
 | **Node（状態なし）** | しない | 関数として Executor が呼び出す。 |
@@ -158,7 +158,7 @@ flowchart TB
 
     subgraph impl_content["Content 実装"]
         FT[FormulaTest]
-        VS[VampireSurvivor]
+        BH[BulletHell3D]
     end
 
     subgraph impl_comp["Component 実装"]

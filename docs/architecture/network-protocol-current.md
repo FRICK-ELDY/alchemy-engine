@@ -14,7 +14,7 @@
 ### 接続状況
 
 **注意**: 現状、`Contents.Events.Game` は `{:frame_events, events}` を受信するが、これを `Network.Channel` や `Network.UDP` に転送する経路は **本番フローには未接続** である。
-Channel の `handle_info({:frame_events, events}, socket)` や `Network.UDP.broadcast_frame/2` は実装済みだが、GameEvents から呼ばれていない。
+Channel の `handle_info({:frame_events, events}, socket)` や `Network.UDP.broadcast_frame/2` は実装済みだが、`Contents.Events.Game` から呼ばれていない。
 テストでは直接 `broadcast_frame` を呼び出して検証している。フェーズ 3 で Zenoh 経路とあわせて接続を行う。
 
 ---

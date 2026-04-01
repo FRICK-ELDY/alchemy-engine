@@ -43,7 +43,7 @@ mix alchemy.ci              # 全チェック（テスト含む）
 
 | ルール | デフォルト | 本プロジェクト | 理由 |
 |:---|:---:|:---:|:---|
-| `CyclomaticComplexity` | 9 | **15** | `GameEvents` / `SaveManager` は複数の分岐を持つ状態機械。IP-03 の分解完了まで暫定緩和 |
+| `CyclomaticComplexity` | 9 | **15** | `Contents.Events.Game` / `SaveManager`（削除済み）は複数の分岐を持つ状態機械だった。IP-03 の分解完了まで暫定緩和 |
 | `Nesting` | 2 | **4** | SoA パターンの物理演算ループや NIF ブリッジで深いネストが構造上必要 |
 | `AliasUsage` | 1回以上 | **3回以上** | 短命な参照に alias を強制するとかえって可読性が下がるため |
 

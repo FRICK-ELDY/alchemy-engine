@@ -352,7 +352,7 @@ vertical_layout, horizontal_layout, text, rect, progress_bar, button, world_text
 - DrawCommand: PlayerSprite, SpriteRaw, Particle, Item, Obstacle, Box3D, GridPlane, Skybox 等
 - UiCanvas を egui で走査して描画
 
-**スプライトアトラスレイアウト（1600×64px、VampireSurvivor 等 2D 用）:**
+**スプライトアトラスレイアウト（1600×64px、2D コンテンツ用。旧 VampireSurvivor 系アセット互換）:**
 
 | オフセット | 内容 |
 |:---|:---|

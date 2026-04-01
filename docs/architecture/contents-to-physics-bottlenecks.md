@@ -1,7 +1,9 @@
 # apps/contents → native/physics データフローと技術的ボトルネック
 
+> **アーカイブ（2026-04）**: ゲーム用 Rust NIF（`GameWorld`・`physics_step`・60Hz ループ）は撤去済み。以下は **旧アーキテクチャ** のボトルネック分析記録。現行は [overview.md](overview.md) を参照。
+
 > 本ドキュメントは `apps/contents` から `native/physics` までのデータの流れを可視化し、
-> 今後技術的にボトルネックになり得る箇所を分析する。
+> 当時技術的にボトルネックになり得る箇所を分析した。
 
 ---
 
@@ -10,7 +12,7 @@
 ```mermaid
 flowchart TB
     subgraph Elixir["apps/contents (Elixir)"]
-        GE[GameEvents<br/>handle_info :frame_events]
+        GE[Contents.Events.Game<br/>handle_info :frame_events]
         FE[on_frame_event]
         UP[mod.update]
         PP[on_physics_process]
@@ -58,13 +60,13 @@ flowchart TB
 
 ## 2. 1 フレームあたりの NIF 呼び出しシーケンス
 
-Rust ゲームループ駆動のフレーム処理において、典型的な VampireSurvivor コンテンツでの NIF 呼び出し順序。
+Rust ゲームループ駆動のフレーム処理において、典型的な（旧）VampireSurvivor コンテンツでの NIF 呼び出し順序。
 
 ```mermaid
 sequenceDiagram
     participant RGL as Rust Game Loop
     participant GW as GameWorld (RwLock)
-    participant E as Elixir GameEvents
+    participant E as Elixir Contents.Events.Game
     participant LC as LevelComponent
     participant BC as BossComponent
     participant RC as RenderComponent
@@ -153,7 +155,7 @@ flowchart LR
 
 ---
 
-### 4.2 毎フレーム write NIF 呼び出し数（VampireSurvivor 想定）
+### 4.2 毎フレーム write NIF 呼び出し数（旧 VampireSurvivor 想定）
 
 ```mermaid
 pie title 1フレームあたりの GameWorld write lock 取得回数（想定）

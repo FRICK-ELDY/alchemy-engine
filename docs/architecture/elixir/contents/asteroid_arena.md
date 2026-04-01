@@ -31,7 +31,7 @@ end
 
 ## Spawner（Contents.Components.Category.Spawner）
 
-ワールド初期化・エンティティ登録。VampireSurvivor と同様に `on_ready/1` でマップサイズ・エンティティパラメータを注入。
+ワールド初期化・エンティティ登録。（旧）[VampireSurvivor](./vampire_survivor.md) と同様に `on_ready/1` でマップサイズ・エンティティパラメータを注入。
 
 ---
 
