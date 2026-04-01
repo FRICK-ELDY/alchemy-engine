@@ -133,9 +133,9 @@ alwaysApply: false
 - **開発者体験（DX）**
   - セットアップ手順の明確さ（README → 動作までのステップ数）
   - ローカル開発環境の構築コスト（依存ツール・バージョンの明示）
-  - ローカル CI スクリプトの整備（`bin/ci.bat` 等）
+  - ローカル CI の単一エントリ（本リポジトリでは **`mix alchemy.ci`**。`docs/warranty/ci.md` 参照。歴史的に `bin/ci.bat` と記載していたが廃止）
   - ビルドエラーメッセージの分かりやすさ
-  - ローカル CI として `bin\ci.bat` が **エラーゼロで通過すること**を前提とする（cargo fmt / cargo clippy -D warnings / mix compile --warnings-as-errors / mix format --check-formatted / mix credo --strict がすべて PASS）
+  - ローカル CI として **`mix alchemy.ci` がエラーゼロで通過すること**を前提とする（Rust: fmt / clippy -D warnings / test、Elixir: format / credo / `mix test --warnings-as-errors` 等。部分実行は `mix alchemy.ci check` 等）
 
 - **ゲームプレイ完成度**
   - ゲームループの完結性（開始→プレイ→終了→リトライの全経路）
@@ -253,7 +253,7 @@ alwaysApply: false
 
 - 前回評価（`docs/evaluation/evaluation-YYYY-MM-DD.md`）や `specific-weaknesses.md` に記載された「マイナス点」が解決済みかどうかは、**対象ファイルを読み直して確認する**
 - 前回「解決済み」でなかった項目を「解決済み」と書く前に、コードの該当箇所を確認する
-- `bin/ci.bat` の通過可否など、実行で確認すべき項目は可能な限り実行して結果を見る（実行環境の制約がある場合はその旨を明記する）
+- `mix alchemy.ci`（または同等の個別コマンド）の通過可否など、実行で確認すべき項目は可能な限り実行して結果を見る（実行環境の制約がある場合はその旨を明記する）
 
 ---
 

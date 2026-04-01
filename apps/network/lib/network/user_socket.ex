@@ -7,8 +7,10 @@ defmodule Network.UserSocket do
 
   ## 認証
 
-  現フェーズでは認証なし（開発・ローカル用途）。
-  フェーズ3以降でトークン検証を追加する想定。
+  `connect/3` ではパラメータ検証を行わない（ソケット接続のみ許可）。
+  **ルーム参加は `Network.Channel` 側で必須** — `room:<id>` への join には
+  `POST /api/room_token` で取得した `token` を渡す（期限・room スコープ付き）。
+  詳細は `Network.Channel` の moduledoc を参照。
   """
 
   use Phoenix.Socket
