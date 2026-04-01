@@ -82,7 +82,7 @@
 ## リスク・未決事項
 
 - **描画パイプライン用の Rust**（`native/render`, `native/window`, `native/app` 等）を今後も維持するか。ゲーム NIF だけ削っても `mix` と `cargo` の二段構えは残る可能性がある。
-- **VR / `features: ["xr"]`** を将来どうするか。NIF 撤去と XR 入力スレッドの関係を `Core.NifBridge` コメントおよび `workspace/1_backlog` の既存 VR 項目と突き合わせる。
+- **VR / XR**: NIF とは独立。入力はクライアント `native/xr` → `network` / Zenoh 経由でサーバに届き、`Contents.Events.Game` が `handle_info` で受ける。`features: ["xr"]` は歴史的な mix フック（現行 `nif` に XR コードなし）。`Core.NifBridge` moduledoc を更新済み。
 - `SimpleBox3D` 削除により `BulletHell3D` のコメント・共通化前提が古くなるため、doc とコメントの軽い更新が必要。
 - **Formula 用 NIF を残すか否か**: 残す場合は `native/nif` の「ゲーム」と「式」の境界をコード上でも明確にする。残さない場合は `Core.Formula` の Elixir 実装を先に完了させる。
 

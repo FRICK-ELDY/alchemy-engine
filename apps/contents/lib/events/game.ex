@@ -185,7 +185,7 @@ defmodule Contents.Events.Game do
     {:noreply, state}
   end
 
-  # ── インフォ: VR 入力イベント（input_openxr → nif 経由）───────
+  # ── インフォ: VR 入力（クライアント等が Zenoh/UDP 等でサーバへ送り、ここへメッセージ化）──
   # position: {x,y,z}, orientation: {qx,qy,qz,qw}, velocity: {vx,vy,vz}
   # 不正なペイロードはフォールバックで無視しクラッシュを防ぐ。
 

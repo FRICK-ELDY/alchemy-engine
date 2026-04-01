@@ -4,8 +4,10 @@ defmodule Core.NifBridge do
 
   ゲーム ECS・物理用 NIF はフェーズ 4 で Rust 側から削除済み。
 
-  VR 用に `config :core, Core.NifBridge, features: ["xr"]` を付けても、
-  現行 `native/nif` クレートに xr 専用コードは無い（将来用フック）。
+  **XR / VR 入力**は NIF を経由しない。クライアント側 `native/xr`・`network` 経由で
+  Zenoh 等に乗り、サーバでは `Contents.Events.Game` へメッセージとして届く。
+  `config :core, Core.NifBridge, features: ["xr"]` は歴史的な mix フックの残りで、
+  現行 `native/nif` に XR 専用コードは無い。
   """
 
   use Rustler,
