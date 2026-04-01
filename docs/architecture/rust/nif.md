@@ -1,5 +1,7 @@
 # Rust: nif — NIF インターフェース・ゲームループ
 
+> **2026-04 更新（フェーズ 4）**: `native/nif/src/physics/` とゲーム用 NIF は削除済み。現行クレートは **Formula VM（`run_formula_bytecode`）のみ**。以下の図・章は旧構成の説明が残っている場合がある。最新は [`native/nif/README.md`](../../../native/nif/README.md)。
+
 ## 概要
 
 `nif` クレートは Elixir と Rust のブリッジです。Rustler NIF のエントリポイント・ゲームループ制御・セーブ/ロードを担当します。描画は Zenoh 経由で `app`（VRAlchemy）に委譲するため、nif は [physics](./nif/physics.md)（nif 内包）と [audio](./nif/audio.md) のみに依存します。

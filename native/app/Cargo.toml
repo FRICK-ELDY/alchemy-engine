@@ -16,7 +16,7 @@ network = { path = "../network" }
 render = { path = "../render" }
 window = { path = "../window" }
 xr = { path = "../xr" }
-nif = { path = "../nif" }
+shared = { path = "../shared" }
 audio = { path = "../audio" }
 log = "0.4"
 env_logger = "0.11"

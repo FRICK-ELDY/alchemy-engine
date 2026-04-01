@@ -13,7 +13,7 @@
 
 use audio::AssetLoader;
 use network::NetworkRenderBridge;
-use nif::physics::constants::{SCREEN_HEIGHT, SCREEN_WIDTH};
+use shared::display::{SCREEN_HEIGHT, SCREEN_WIDTH};
 use render::window::{RendererInit, WindowConfig};
 use window::run_desktop_loop;
 

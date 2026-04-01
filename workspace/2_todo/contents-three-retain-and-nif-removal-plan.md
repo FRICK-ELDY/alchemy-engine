@@ -69,9 +69,9 @@
 
 ## フェーズ 4: Rust / ワークスペース整理
 
-- [ ] `native/nif` クレートから**ゲーム ECS・物理**関連を削除または別クレートへ分離し、ビルド対象を整理する。**Formula 実行**が NIF に残る場合は `nif` メンバー自体は維持し、中身のスリム化から着手する。
-- [ ] `native/Cargo.toml` の `members` とクレート間依存を、上記方針に合わせて更新。
-- [ ] CI / `mix compile` 手順の変更（Rustler の有無・ビルド時間）を README または開発メモに追記（任意）。
+- [x] `native/nif` から**ゲーム ECS・物理**（`src/physics/`・旧ゲーム NIF 一式）を削除。**Formula** の `run_formula_bytecode` のみ残す。`prost` / `build.rs`・不要依存を除去。
+- [x] `native/app` は `nif` 依存を外し、既定解像度は **`shared::display`**（`SCREEN_WIDTH` / `SCREEN_HEIGHT`）。`native/Cargo.toml` の `members` は `nif` 維持。
+- [x] `development.md`・`native/nif/README.md`・`docs/architecture/rust/nif.md` 先頭に現行構成を追記。
 
 ## フェーズ 5: 検証
 

@@ -1,19 +1,6 @@
-//! Path: native/nif/src/nif/mod.rs
-//! Summary: NIF エントリモジュール
+//! NIF サブモジュール（Formula のみ）
 
-mod action_nif;
-mod decode;
-pub(crate) mod events;
 mod formula_nif;
-mod game_loop_nif;
 mod load;
-mod protobuf_frame_injection;
-mod push_tick_nif;
-mod read_nif;
-mod render_frame_nif;
-mod save_nif;
-mod util;
-mod world_nif;
 
 pub use load::load;
-pub use save_nif::SaveSnapshot;
