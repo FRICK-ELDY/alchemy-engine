@@ -4,7 +4,7 @@
 
 ## 設計思想
 
-AlchemyEngine は **Elixir を Single Source of Truth（SSoT）** とし、**数式 VM の実行**と**デスクトップ描画**に Rust を使う構成です。
+AlchemyEngine は **Elixir を Single Source of Truth（SSoT）** とし、**数式 VM の実行**と**デスクトップ描画**に Rust を使う構成です。入力のキャプチャとサーバー側の公式入力列・tick 方針の整理は [authoritative-state-sync-policy.md](./authoritative-state-sync-policy.md) を参照。
 
 - **Elixir（サーバ）**: シーン・コンポーネント・メインループ（約 16ms タイマー）、Zenoh への `RenderFrame` publish、入力・イベントの受信
 - **Rust（サーバ `nif`）**: `Core.Formula` 経由のバイトコード実行のみ（Rustler NIF）
