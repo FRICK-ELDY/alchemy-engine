@@ -161,6 +161,7 @@ elixir -S mix alchemy.build --release    # リリースビルド
 
 ## 関連ドキュメント
 
+- [ラボ開発環境（ネットワーク構成図）](./docs/development/lab-environment.md)
 - [Protobuf 移行（概要）](./docs/architecture/protobuf-migration.md)
 - [ビジョンと設計思想](./docs/vision.md)
 - クライアント・サーバー分離・ランチャー設計: [README.md](./README.md) の Architecture 付近を参照（作業用ツリー配下の文書へのリンクは張らない）
