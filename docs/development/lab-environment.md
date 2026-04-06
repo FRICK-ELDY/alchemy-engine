@@ -55,3 +55,5 @@ graph TD
     Win & Mac & Lux & Pi4 ==>|Load Assets| NAS
     Win & Mac & Lux & Pi4 -.->|Send Logs| Syslog
 ```
+
+運用設計（VLAN・FW・ログ・NAS のたたき台）は [lab-environment-operations-stub.md](./lab-environment-operations-stub.md) を参照してください。
