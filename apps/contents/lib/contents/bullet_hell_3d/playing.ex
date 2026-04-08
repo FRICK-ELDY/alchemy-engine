@@ -25,6 +25,7 @@ defmodule Content.BulletHell3D.Playing do
   """
   @behaviour Contents.SceneBehaviour
 
+  alias Contents.Components.Category.Procedural.Meshes.Sphere
   alias Contents.Objects.Core.Struct, as: ObjectStruct
   alias Structs.Category.Space.Transform
 
@@ -58,10 +59,9 @@ defmodule Content.BulletHell3D.Playing do
     {0, 6, 2000}
   ]
 
-  # 描画用（半径から導出。box_3d は half を期待するため）
+  # 描画用（プレイヤー・敵は box_3d の half、弾は sphere_3d の半径）
   @player_half @player_radius
   @enemy_half @enemy_radius
-  @bullet_half @bullet_radius
   @camera_eye {0.0, 18.0, 14.0}
   @camera_target {0.0, 0.0, 0.0}
   @camera_up {0.0, 1.0, 0.0}
@@ -189,8 +189,7 @@ defmodule Content.BulletHell3D.Playing do
       Enum.map(bullet_objects, fn %{object: obj} ->
         {bx, by, bz} = position_from_object(obj)
 
-        {:box_3d, bx, by + @bullet_half, bz, @bullet_half, @bullet_half,
-         {@bullet_half, br, bg, bb, ba}}
+        Sphere.sphere_3d_command(bx, by + @bullet_radius, bz, @bullet_radius, {br, bg, bb, ba})
       end)
 
     [skybox_cmd, grid_cmd, player_cmd] ++ enemy_cmds ++ bullet_cmds

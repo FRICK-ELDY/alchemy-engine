@@ -1,6 +1,6 @@
 //! 3D レンダリングパイプライン（Phase R-5）
 //!
-//! `DrawCommand::Box3D` / `GridPlane` / `Skybox` を wgpu で描画する。
+//! `DrawCommand::Box3D` / `Sphere3D` / `GridPlane` / `Skybox` を wgpu で描画する。
 //! 描画順: スカイボックス（深度テストなし）→ グリッド → ボックス（深度テストあり）。
 //!
 //! ## バッファ設計
@@ -24,11 +24,11 @@ use wgpu::util::DeviceExt;
 /// divisions=100 の場合: (100 + 1) 本 × 2 方向 × 2 頂点 = 404 頂点。
 const MAX_GRID_VERTS: usize = 404;
 
-/// ボックス頂点の最大数（8 頂点 × 最大 256 ボックス）。
-const MAX_BOX_VERTS: usize = 8 * 256;
+/// メッシュパス頂点スクラッチ上限（プレイヤー・敵の unit_box + 多数の unit_sphere 弾を想定）。
+const MAX_BOX_VERTS: usize = 24_000;
 
-/// ボックスインデックスの最大数（36 インデックス × 最大 256 ボックス）。
-const MAX_BOX_INDICES: usize = 36 * 256;
+/// メッシュパスインデックススクラッチ上限（上記に対応）。
+const MAX_BOX_INDICES: usize = 100_000;
 
 /// スカイボックス頂点数（固定: 4 頂点 2 三角形）。
 const SKYBOX_VERT_COUNT: usize = 4;
@@ -166,6 +166,51 @@ fn box_mesh(
     ];
 
     (verts, idx)
+}
+
+/// `MeshDef` テンプレート（`unit_box` / `unit_sphere` 等）を half 拡張でスケールしスクラッチに追加する。
+fn push_mesh_from_def(
+    cache: &HashMap<String, (Vec<MeshVertex>, Vec<u32>)>,
+    mesh_name: &str,
+    x: f32,
+    y: f32,
+    z: f32,
+    half_w: f32,
+    half_h: f32,
+    half_d: f32,
+    color: [f32; 4],
+    verts_out: &mut Vec<MeshVertex>,
+    indices_out: &mut Vec<u32>,
+) {
+    let base = verts_out.len() as u32;
+    let (verts, idx) = if let Some((template, indices)) = cache.get(mesh_name) {
+        if !indices.is_empty() {
+            let hw = half_w * 2.0;
+            let hh = half_h * 2.0;
+            let hd = half_d * 2.0;
+            let verts: Vec<MeshVertex> = template
+                .iter()
+                .map(|v| MeshVertex {
+                    position: [
+                        v.position[0] * hw + x,
+                        v.position[1] * hh + y,
+                        v.position[2] * hd + z,
+                    ],
+                    color,
+                })
+                .collect();
+            let idx: Vec<u32> = indices.iter().map(|&i| i + base).collect();
+            (verts, idx)
+        } else {
+            let (v, i) = box_mesh(x, y, z, half_w, half_h, half_d, color);
+            (v.to_vec(), i.iter().map(|&i| i + base).collect::<Vec<_>>())
+        }
+    } else {
+        let (v, i) = box_mesh(x, y, z, half_w, half_h, half_d, color);
+        (v.to_vec(), i.iter().map(|&i| i + base).collect::<Vec<_>>())
+    };
+    verts_out.extend(verts);
+    indices_out.extend(idx);
 }
 
 /// XZ 平面上のグリッドラインを生成する（ラインリスト用）。
@@ -505,7 +550,7 @@ impl Pipeline3D {
     ///
     /// `camera` が `Camera3D` 以外の場合は即座にリターンする。
     /// 描画順: スカイボックス（深度テストなし）→ グリッド + ボックス（深度テストあり）。
-    /// P3: mesh_definitions が非空の場合、キャッシュに登録し、unit_box / skybox_quad を
+    /// P3: mesh_definitions が非空の場合、キャッシュに登録し、unit_box / unit_sphere / skybox_quad を
     /// 使用する。未登録時は従来の box_mesh / skybox_verts にフォールバック。
     pub(crate) fn render(
         &mut self,
@@ -643,39 +688,40 @@ impl Pipeline3D {
                     half_d,
                     color,
                 } => {
-                    let base = self.box_verts_scratch.len() as u32;
-                    let (verts, idx) = if let Some((template, indices)) =
-                        self.mesh_def_cache.get("unit_box")
-                    {
-                        if !indices.is_empty() {
-                            // P3: Elixir 定義の unit_box を使用。スケール・移動・色を適用
-                            let hw = *half_w * 2.0;
-                            let hh = *half_h * 2.0;
-                            let hd = *half_d * 2.0;
-                            let verts: Vec<MeshVertex> = template
-                                .iter()
-                                .map(|v| MeshVertex {
-                                    position: [
-                                        v.position[0] * hw + x,
-                                        v.position[1] * hh + y,
-                                        v.position[2] * hd + z,
-                                    ],
-                                    color: *color,
-                                })
-                                .collect();
-                            let idx: Vec<u32> = indices.iter().map(|&i| i + base).collect();
-                            (verts, idx)
-                        } else {
-                            // mesh_def の indices が空（ETF デコード問題等）の場合はフォールバック
-                            let (v, i) = box_mesh(*x, *y, *z, *half_w, *half_h, *half_d, *color);
-                            (v.to_vec(), i.iter().map(|&i| i + base).collect::<Vec<_>>())
-                        }
-                    } else {
-                        let (v, i) = box_mesh(*x, *y, *z, *half_w, *half_h, *half_d, *color);
-                        (v.to_vec(), i.iter().map(|&i| i + base).collect::<Vec<_>>())
-                    };
-                    self.box_verts_scratch.extend(verts);
-                    self.box_indices_scratch.extend(idx);
+                    push_mesh_from_def(
+                        &self.mesh_def_cache,
+                        "unit_box",
+                        *x,
+                        *y,
+                        *z,
+                        *half_w,
+                        *half_h,
+                        *half_d,
+                        *color,
+                        &mut self.box_verts_scratch,
+                        &mut self.box_indices_scratch,
+                    );
+                }
+                DrawCommand::Sphere3D {
+                    x,
+                    y,
+                    z,
+                    radius,
+                    color,
+                } => {
+                    push_mesh_from_def(
+                        &self.mesh_def_cache,
+                        "unit_sphere",
+                        *x,
+                        *y,
+                        *z,
+                        *radius,
+                        *radius,
+                        *radius,
+                        *color,
+                        &mut self.box_verts_scratch,
+                        &mut self.box_indices_scratch,
+                    );
                 }
                 _ => {}
             }

@@ -737,6 +737,7 @@ fn sprite_instance_from_command(cmd: &DrawCommand) -> Option<SpriteInstance> {
         DrawCommand::PlayerSprite { .. } | DrawCommand::Item { .. } => None,
         // 3D コマンドはスプライトパイプラインでは描画しない
         DrawCommand::Box3D { .. }
+        | DrawCommand::Sphere3D { .. }
         | DrawCommand::GridPlane { .. }
         | DrawCommand::GridPlaneVerts { .. }
         | DrawCommand::Skybox { .. } => None,

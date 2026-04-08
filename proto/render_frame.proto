@@ -33,6 +33,7 @@ message DrawCommand {
     GridPlaneCmd grid_plane = 7;
     GridPlaneVertsCmd grid_plane_verts = 8;
     SkyboxCmd skybox = 9;
+    Sphere3dCmd sphere_3d = 10;
   }
 }
 
@@ -83,6 +84,15 @@ message Box3dCmd {
   float half_h = 5;
   float half_d = 6;
   repeated float color = 7;
+}
+
+// 単位球メッシュ（半径 0.5・中心原点、MeshDef 名 unit_sphere）を半径 radius でワールド配置する。
+message Sphere3dCmd {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+  float radius = 4;
+  repeated float color = 5;
 }
 
 message GridPlaneCmd {

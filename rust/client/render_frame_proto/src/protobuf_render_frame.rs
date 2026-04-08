@@ -117,6 +117,13 @@ fn draw_cmd_pb(cmd: pb::DrawCommand) -> Option<DrawCommand> {
             half_d: b.half_d,
             color: f4(&b.color),
         },
+        Sphere3d(s) => DrawCommand::Sphere3D {
+            x: s.x,
+            y: s.y,
+            z: s.z,
+            radius: s.radius,
+            color: f4(&s.color),
+        },
         GridPlane(g) => DrawCommand::GridPlane {
             size: g.size,
             divisions: g.divisions,

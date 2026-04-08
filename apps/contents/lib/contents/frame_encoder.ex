@@ -124,6 +124,20 @@ defmodule Content.FrameEncoder do
     }
   end
 
+  defp command_to_pb({:sphere_3d, x, y, z, radius, {r, g, b, a}}) do
+    %Alchemy.Render.DrawCommand{
+      kind:
+        {:sphere_3d,
+         %Alchemy.Render.Sphere3dCmd{
+           x: pb_float(x),
+           y: pb_float(y),
+           z: pb_float(z),
+           radius: pb_float(radius),
+           color: color_tuple_to_pb_list({r, g, b, a})
+         }}
+    }
+  end
+
   defp command_to_pb({:grid_plane, size, divisions, {r, g, b, a}}) do
     %Alchemy.Render.DrawCommand{
       kind:
