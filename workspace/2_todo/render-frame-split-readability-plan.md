@@ -1,7 +1,7 @@
 # 実施計画: RenderFrame / FrameEncoder / 3D パイプラインの分割（可読性優先）
 
 > 作成日: 2026-04-08  
-> ステータス: 着手前  
+> ステータス: **フェーズ 1 完了**（フェーズ 2 着手可能）  
 > 方針: **実行時コストは変えず**、ソースの**見通しと変更点の局所化**を優先する。ワイヤ形式・protobuf の意味は変更しない。
 
 ---
@@ -111,17 +111,45 @@ rust/client/render_frame_proto/src/
 
 ## 5. 実施フェーズ
 
-### フェーズ 0: 準備
+### フェーズ 0: 準備（完了）
 
-- [ ] 本書をレビューし、「FrameEncoder だけ先」「proto 分割は後」など**切り出し順**を決める。
-- [ ] `Content.FrameEncoder.encode_frame/5` の公開 API・呼び出し元（`Rendering.Render` 等）を固定し、**振る舞い不変**を完了条件に書く。
+- [x] 本書をレビューし、「FrameEncoder だけ先」「proto 分割は後」など**切り出し順**を決める。
+- [x] `Content.FrameEncoder.encode_frame/5` の公開 API・呼び出し元（`Rendering.Render` 等）を固定し、**振る舞い不変**を完了条件に書く。
 
-### フェーズ 1: Elixir FrameEncoder 分割（最優先・リスク低）
+#### フェーズ 0 で確定したこと
 
-- [ ] `frame_encoder.ex` から `command_to_pb/1` の各句を `frame_encoder/draw_commands/*.ex` へ移動。
-- [ ] 中央に `command_to_pb(cmd)` → `case elem(cmd, 0)` でディスパッチ（または既存のマッチを 1 関数に集約）。
-- [ ] `camera_to_pb` / `ui_to_pb` / `mesh_def_to_pb` は**第 2 段**で同様に分割可能（任意）。
-- [ ] `mix compile`、既存テストがあれば実行。
+**切り出し順（この順で実施する）**
+
+1. **フェーズ 1** — Elixir `Content.FrameEncoder`（`command_to_pb` のサブモジュール化）を**最優先**。
+2. **フェーズ 2** — Rust `render_frame_proto` / `pipeline_3d` の委譲。
+3. **フェーズ 3** — `proto` の `import` 分割は**任意・最後**（コンフリクトやレビュー負荷が効くときに実施）。
+
+**`encode_frame/5` の公開契約（リファクタ中も変更しない）**
+
+| 項目 | 内容 |
+|------|------|
+| 定義 | `Content.FrameEncoder.encode_frame(commands, camera, ui, mesh_definitions, cursor_grab \\ nil)` |
+| 戻り値 | `binary()` — `Alchemy.Render.RenderFrame` の protobuf エンコード結果 |
+| `cursor_grab` | `:grab` \| `:release` \| `:no_change` \| `nil`（省略時はフィールド未設定扱い） |
+| タプル形式 | `commands` / `camera` / `ui` の各要素は [draw-command-spec.md](../../docs/architecture/draw-command-spec.md) および本モジュールの `command_to_pb` 句と一致させる |
+
+**実行時の呼び出し元（調査日: 2026-04-08）**
+
+- **唯一の本番経路**: `Contents.Components.Category.Rendering.Render.on_nif_sync/1` が `Content.FrameEncoder.encode_frame(commands, camera, ui, mesh_definitions, cursor_grab)` を呼ぶ。
+- **その他**: `Contents.Behaviour.Content` の moduledoc が `encode_frame/4` 形式の戻り値について言及するのみ（コード呼び出しなし）。
+- **別 API**: `Content.FrameEncoder.encode_injection_map/1` は `Contents.Events.Game` から使用。**フェーズ 1 の分割対象は主に `encode_frame` 経路**とし、`encode_injection_map` は同ファイルに残すか、必要になったら別計画で切り出す。
+
+**振る舞い不変の検証**
+
+- 同一の `{commands, camera, ui, mesh_definitions, cursor_grab}` に対する出力バイナリは、分割前後で**一致すること**（`rust/client/network/tests/fixtures/render_frame_elixir_golden.bin` 等の既存契約テストで担保）。
+
+### フェーズ 1: Elixir FrameEncoder 分割（完了）
+
+- [x] `frame_encoder.ex` から `command_to_pb/1` の各句を `frame_encoder/draw_commands/*.ex` へ移動。
+- [x] 中央は **タプル先頭タグ＋アリティに合わせた `defp command_to_pb/1` 1 行委譲**（`case elem(cmd, 0)` より未知コマンドの `ArgumentError` 挙動を保ちやすい）。
+- [x] 共有数値ヘルパーは `Content.FrameEncoder.Proto` に集約（`camera_to_pb` / `ui_to_pb` / `mesh_def_to_pb` / injection から利用）。
+- [ ] `camera_to_pb` / `ui_to_pb` / `mesh_def_to_pb` のファイル分割は**第 2 段**（任意）。
+- [x] `mix compile` 確認済み。
 
 ### フェーズ 2: Rust デコード・3D パイプラインの委譲
 
@@ -165,3 +193,5 @@ rust/client/render_frame_proto/src/
 | 日付 | 内容 |
 |------|------|
 | 2026-04-08 | 初版作成 |
+| 2026-04-08 | フェーズ 0 完了: 切り出し順の確定、`encode_frame/5` 契約・呼び出し元の記録 |
+| 2026-04-08 | フェーズ 1 完了: `frame_encoder/draw_commands/*.ex` + `frame_encoder/proto.ex`、本体内は `command_to_pb` 委譲のみ |
