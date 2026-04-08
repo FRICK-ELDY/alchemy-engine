@@ -1,7 +1,7 @@
 # 実施計画: RenderFrame / FrameEncoder / 3D パイプラインの分割（可読性優先）
 
 > 作成日: 2026-04-08  
-> ステータス: **フェーズ 1 完了**（フェーズ 2 着手可能）  
+> ステータス: **フェーズ 2 完了**（フェーズ 3 は任意）  
 > 方針: **実行時コストは変えず**、ソースの**見通しと変更点の局所化**を優先する。ワイヤ形式・protobuf の意味は変更しない。
 
 ---
@@ -151,11 +151,12 @@ rust/client/render_frame_proto/src/
 - [ ] `camera_to_pb` / `ui_to_pb` / `mesh_def_to_pb` のファイル分割は**第 2 段**（任意）。
 - [x] `mix compile` 確認済み。
 
-### フェーズ 2: Rust デコード・3D パイプラインの委譲
+### フェーズ 2: Rust デコード・3D パイプラインの委譲（完了）
 
-- [ ] `render_frame_proto`: `draw_cmd_pb` の `match` 各枝を `draw_commands/*.rs` の関数へ（`Sphere3d(s) => sphere_3d::map(s)`）。
-- [ ] `pipeline_3d`: `DrawCommand::Box3D` / `Sphere3D` の処理を既に `push_mesh_from_def` に寄せている部分を **`mod` ファイル**に移し、`render()` 内の `match` は短く保つ。
-- [ ] `cargo test -p render_frame_proto -p network -p shared`（既存 CI 相当）で確認。
+- [x] `render_frame_proto`: `protobuf_render_frame.rs` を `protobuf_render_frame/` に分割。`draw_command.rs` に `DrawCommand` oneof の `match`、`float_helpers.rs` に `f2`/`f3`/`f4`/`pad4`、`mesh_helpers.rs` に `MeshVertex`/`MeshDef` 変換。
+- [x] `pipeline_3d`: `pipeline_3d.rs` を `pipeline_3d/mod.rs` に移し、`mesh_template.rs`（`box_mesh` / `push_mesh_from_def` / `grid_lines` / `skybox_verts`）、`mesh_accumulate.rs`（グリッド・Box3D・Sphere3D のスクラッチ蓄積）へ分離。`include_str!` は `../shaders/mesh.wgsl` に変更。
+- [x] `shared::render_frame::DrawCommand` enum は**未変更**（計画どおり中央集約）。
+- [x] `cargo test -p render_frame_proto -p network -p shared -p render` で確認済み。
 
 ### フェーズ 3: proto ファイル分割（任意・コンフリクト時に効く）
 
@@ -195,3 +196,4 @@ rust/client/render_frame_proto/src/
 | 2026-04-08 | 初版作成 |
 | 2026-04-08 | フェーズ 0 完了: 切り出し順の確定、`encode_frame/5` 契約・呼び出し元の記録 |
 | 2026-04-08 | フェーズ 1 完了: `frame_encoder/draw_commands/*.ex` + `frame_encoder/proto.ex`、本体内は `command_to_pb` 委譲のみ |
+| 2026-04-08 | フェーズ 2 完了: `render_frame_proto` の `protobuf_render_frame/` 分割、`render` の `pipeline_3d/` 分割 |

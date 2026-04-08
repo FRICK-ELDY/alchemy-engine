@@ -8,13 +8,18 @@
 //! 内容を上書きする。フレームごとの `create_buffer` 呼び出しは行わない。
 //!
 //! ## Uniform バッファ設計
-//! スカイボックスは MVP 変換を通さずクリップ座標を直接渡す（`vs_sky` エントリポイント）。
+//! スカイボックスは MVP 変換を通さずクリップ空間を直接渡す（`vs_sky` エントリポイント）。
 //! メッシュ・グリッドは `vs_main` を使い、`mvp_buf` に書き込んだカメラ行列を適用する。
 //! 2 つのパスで同じ `mvp_buf` を共有しても問題ない。スカイボックスは MVP を参照しない
 //! シェーダーエントリポイントを使うため、`mvp_buf` の内容に依存しない。
 
+mod mesh_accumulate;
+mod mesh_template;
+
 use crate::DrawCommand;
 use crate::{MeshDef, MeshVertex};
+use mesh_accumulate::accumulate_grid_and_mesh_draws;
+use mesh_template::{skybox_verts, SKYBOX_INDICES};
 use std::collections::{HashMap, HashSet};
 use wgpu::util::DeviceExt;
 
@@ -124,148 +129,6 @@ fn normalize(v: [f32; 3]) -> [f32; 3] {
     [v[0] / len, v[1] / len, v[2] / len]
 }
 
-// ─── メッシュ生成ヘルパー ─────────────────────────────────────────────────
-
-/// 軸平行ボックスの頂点（8 個）・インデックス（36 個）を生成する。
-fn box_mesh(
-    cx: f32,
-    cy: f32,
-    cz: f32,
-    hw: f32,
-    hh: f32,
-    hd: f32,
-    color: [f32; 4],
-) -> ([MeshVertex; 8], [u32; 36]) {
-    let (x0, x1) = (cx - hw, cx + hw);
-    let (y0, y1) = (cy - hh, cy + hh);
-    let (z0, z1) = (cz - hd, cz + hd);
-
-    let v = |pos| MeshVertex {
-        position: pos,
-        color,
-    };
-    let verts = [
-        v([x0, y0, z0]),
-        v([x1, y0, z0]),
-        v([x1, y1, z0]),
-        v([x0, y1, z0]),
-        v([x0, y0, z1]),
-        v([x1, y0, z1]),
-        v([x1, y1, z1]),
-        v([x0, y1, z1]),
-    ];
-
-    #[rustfmt::skip]
-    let idx: [u32; 36] = [
-        0,1,2, 0,2,3, // -Z 面
-        5,4,7, 5,7,6, // +Z 面
-        4,0,3, 4,3,7, // -X 面
-        1,5,6, 1,6,2, // +X 面
-        3,2,6, 3,6,7, // +Y 面
-        4,5,1, 4,1,0, // -Y 面
-    ];
-
-    (verts, idx)
-}
-
-/// `MeshDef` テンプレート（`unit_box` / `unit_sphere` 等）を half 拡張でスケールしスクラッチに追加する。
-fn push_mesh_from_def(
-    cache: &HashMap<String, (Vec<MeshVertex>, Vec<u32>)>,
-    mesh_name: &str,
-    x: f32,
-    y: f32,
-    z: f32,
-    half_w: f32,
-    half_h: f32,
-    half_d: f32,
-    color: [f32; 4],
-    verts_out: &mut Vec<MeshVertex>,
-    indices_out: &mut Vec<u32>,
-) {
-    let base = verts_out.len() as u32;
-    let (verts, idx) = if let Some((template, indices)) = cache.get(mesh_name) {
-        if !indices.is_empty() {
-            let hw = half_w * 2.0;
-            let hh = half_h * 2.0;
-            let hd = half_d * 2.0;
-            let verts: Vec<MeshVertex> = template
-                .iter()
-                .map(|v| MeshVertex {
-                    position: [
-                        v.position[0] * hw + x,
-                        v.position[1] * hh + y,
-                        v.position[2] * hd + z,
-                    ],
-                    color,
-                })
-                .collect();
-            let idx: Vec<u32> = indices.iter().map(|&i| i + base).collect();
-            (verts, idx)
-        } else {
-            let (v, i) = box_mesh(x, y, z, half_w, half_h, half_d, color);
-            (v.to_vec(), i.iter().map(|&i| i + base).collect::<Vec<_>>())
-        }
-    } else {
-        let (v, i) = box_mesh(x, y, z, half_w, half_h, half_d, color);
-        (v.to_vec(), i.iter().map(|&i| i + base).collect::<Vec<_>>())
-    };
-    verts_out.extend(verts);
-    indices_out.extend(idx);
-}
-
-/// XZ 平面上のグリッドラインを生成する（ラインリスト用）。
-fn grid_lines(size: f32, divisions: u32, color: [f32; 4], out: &mut Vec<MeshVertex>) {
-    let half = size / 2.0;
-    let step = size / divisions as f32;
-    let n = divisions + 1;
-    for i in 0..n {
-        let t = -half + i as f32 * step;
-        out.push(MeshVertex {
-            position: [-half, 0.0, t],
-            color,
-        });
-        out.push(MeshVertex {
-            position: [half, 0.0, t],
-            color,
-        });
-        out.push(MeshVertex {
-            position: [t, 0.0, -half],
-            color,
-        });
-        out.push(MeshVertex {
-            position: [t, 0.0, half],
-            color,
-        });
-    }
-}
-
-/// スカイボックス用グラデーション矩形の頂点（4 個）を生成する。
-///
-/// クリップ空間を直接指定する（`vs_sky` エントリポイントは MVP 変換を行わない）。
-/// depth = 0.999 とすることで深度テストなしパスで最背面に描画される。
-fn skybox_verts(top: [f32; 4], bottom: [f32; 4]) -> [MeshVertex; 4] {
-    [
-        MeshVertex {
-            position: [-1.0, 1.0, 0.999],
-            color: top,
-        },
-        MeshVertex {
-            position: [1.0, 1.0, 0.999],
-            color: top,
-        },
-        MeshVertex {
-            position: [1.0, -1.0, 0.999],
-            color: bottom,
-        },
-        MeshVertex {
-            position: [-1.0, -1.0, 0.999],
-            color: bottom,
-        },
-    ]
-}
-
-const SKYBOX_INDICES: [u32; 6] = [0, 1, 2, 0, 2, 3];
-
 // ─── DepthStencilState ヘルパー ───────────────────────────────────────────
 
 fn depth_stencil_write() -> wgpu::DepthStencilState {
@@ -329,7 +192,7 @@ impl Pipeline3D {
         height: u32,
         mesh_wgsl: Option<&str>,
     ) -> Self {
-        let shader_source = mesh_wgsl.unwrap_or(include_str!("shaders/mesh.wgsl"));
+        let shader_source = mesh_wgsl.unwrap_or(include_str!("../shaders/mesh.wgsl"));
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Mesh Shader"),
             source: wgpu::ShaderSource::Wgsl(shader_source.into()),
@@ -667,65 +530,13 @@ impl Pipeline3D {
         self.box_verts_scratch.clear();
         self.box_indices_scratch.clear();
 
-        for cmd in commands {
-            match cmd {
-                DrawCommand::GridPlaneVerts { vertices } => {
-                    self.grid_verts_scratch.extend(vertices);
-                }
-                DrawCommand::GridPlane {
-                    size,
-                    divisions,
-                    color,
-                } => {
-                    grid_lines(*size, *divisions, *color, &mut self.grid_verts_scratch);
-                }
-                DrawCommand::Box3D {
-                    x,
-                    y,
-                    z,
-                    half_w,
-                    half_h,
-                    half_d,
-                    color,
-                } => {
-                    push_mesh_from_def(
-                        &self.mesh_def_cache,
-                        "unit_box",
-                        *x,
-                        *y,
-                        *z,
-                        *half_w,
-                        *half_h,
-                        *half_d,
-                        *color,
-                        &mut self.box_verts_scratch,
-                        &mut self.box_indices_scratch,
-                    );
-                }
-                DrawCommand::Sphere3D {
-                    x,
-                    y,
-                    z,
-                    radius,
-                    color,
-                } => {
-                    push_mesh_from_def(
-                        &self.mesh_def_cache,
-                        "unit_sphere",
-                        *x,
-                        *y,
-                        *z,
-                        *radius,
-                        *radius,
-                        *radius,
-                        *color,
-                        &mut self.box_verts_scratch,
-                        &mut self.box_indices_scratch,
-                    );
-                }
-                _ => {}
-            }
-        }
+        accumulate_grid_and_mesh_draws(
+            commands,
+            &self.mesh_def_cache,
+            &mut self.grid_verts_scratch,
+            &mut self.box_verts_scratch,
+            &mut self.box_indices_scratch,
+        );
 
         // スカイボックスのみ描画済みの場合もここで抜ける
         if self.grid_verts_scratch.is_empty() && self.box_verts_scratch.is_empty() {
