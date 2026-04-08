@@ -1,7 +1,7 @@
 # 実施計画: RenderFrame / FrameEncoder / 3D パイプラインの分割（可読性優先）
 
 > 作成日: 2026-04-08  
-> ステータス: **フェーズ 2 完了**（フェーズ 3 は任意）  
+> ステータス: **フェーズ 3 完了**（計画した分割はすべて実施済み）  
 > 方針: **実行時コストは変えず**、ソースの**見通しと変更点の局所化**を優先する。ワイヤ形式・protobuf の意味は変更しない。
 
 ---
@@ -73,19 +73,21 @@ apps/contents/lib/contents/
 - 各サブモジュールは **`@doc false`** または短い moduledoc で「FrameEncoder 専用」と明記。
 - **命名**: `Content.FrameEncoder.DrawCommands.Sphere3d` のように protobuf 名と揃えると追いやすい。
 
-### 4.2 proto（任意・フェーズ 2）
+### 4.2 proto（フェーズ 3 で実施済み）
 
 ```
 proto/
-  render_frame.proto            # RenderFrame, DrawCommand oneof, Camera, Ui 等の「束ね」
+  render_frame.proto            # RenderFrameEnvelope, RenderFrame + import のみ
   render_frame/
-    draw_sphere_3d.proto        # message Sphere3dCmd のみ、package 同一 alchemy.render
-    draw_box_3d.proto           # message Box3dCmd のみ
-    ...
+    cursor_grab.proto           # CursorGrabKind
+    mesh.proto                  # MeshVertex, MeshDef
+    camera.proto                # CameraParams, Camera2d, Camera3d
+    ui.proto                    # UiCanvas … UiScreenFlash
+    draw_commands.proto         # DrawCommand oneof + 各 Draw 用 message（import mesh）
 ```
 
-- `package alchemy.render` を全ファイルで統一すること。
-- `prost-build` の `compile_protos` に**複数ファイル**を渡すか、`render_frame.proto` のみをエントリにし中で `import`（既存 `build.rs` の方針に合わせる）。
+- 全ファイル `package alchemy.render`。
+- `prost-build`: エントリは `render_frame.proto` のみ、`import` で断片を解決。
 
 ### 4.3 Rust（render クレート例）
 
@@ -158,12 +160,13 @@ rust/client/render_frame_proto/src/
 - [x] `shared::render_frame::DrawCommand` enum は**未変更**（計画どおり中央集約）。
 - [x] `cargo test -p render_frame_proto -p network -p shared -p render` で確認済み。
 
-### フェーズ 3: proto ファイル分割（任意・コンフリクト時に効く）
+### フェーズ 3: proto ファイル分割（完了）
 
-- [ ] `Box3dCmd` / `Sphere3dCmd` 等を `proto/render_frame/*.proto` に移し、`render_frame.proto` で `import`。
-- [ ] `rust/client/render_frame_proto/build.rs` の入力ファイル一覧を更新。
-- [ ] Elixir `render_frame.pb.ex` を **protoc 再生成 or 手差し**で整合。
-- [ ] **ワイヤ互換**: 既存 `render_frame_elixir_golden.bin` 等が通ることを確認。
+- [x] `proto/render_frame.proto` をエントリにし、`proto/render_frame/` 配下へ分割:
+  - `cursor_grab.proto`, `mesh.proto`, `camera.proto`, `ui.proto`, `draw_commands.proto`（`DrawCommand` oneof 含む。`mesh.proto` を import）。
+- [x] `rust/client/render_frame_proto/build.rs` — エントリは `render_frame.proto` のみ、`cargo:rerun-if-changed` に各断片を列挙。
+- [x] Elixir `render_frame.pb.ex` — **ワイヤ・型名は不変のため変更なし**（手メンテ運用のまま）。
+- [x] **ワイヤ互換**: `cargo test -p render_frame_proto -p network`（golden `render_frame_elixir_golden.bin`）通過済み。
 
 ### フェーズ 4（別タスク・本書では記録のみ）
 
@@ -197,3 +200,4 @@ rust/client/render_frame_proto/src/
 | 2026-04-08 | フェーズ 0 完了: 切り出し順の確定、`encode_frame/5` 契約・呼び出し元の記録 |
 | 2026-04-08 | フェーズ 1 完了: `frame_encoder/draw_commands/*.ex` + `frame_encoder/proto.ex`、本体内は `command_to_pb` 委譲のみ |
 | 2026-04-08 | フェーズ 2 完了: `render_frame_proto` の `protobuf_render_frame/` 分割、`render` の `pipeline_3d/` 分割 |
+| 2026-04-08 | フェーズ 3 完了: `proto/render_frame/*.proto` に分割、`build.rs` の rerun 依存を更新 |
