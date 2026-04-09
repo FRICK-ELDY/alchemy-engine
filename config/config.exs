@@ -52,7 +52,7 @@ config :network, :zenoh_connect, "tcp/localhost:7447"
 #   Content.FormulaTest   — Formula / Nodes 検証（`config/formula_test.exs` 参照）
 # ローカル開発・動作検証時は上記いずれかに切り替える。本番は config/runtime.exs で設定すること。
 # 既定モジュールは `Server.Application` の `Application.get_env(:server, :current, …)` フォールバックと同じにすること。
-config :server, :current, Content.Tetris
+config :server, :current, Content.BulletHell3D
 config :server, :map, :plain
 config :server, :game_events_module, Contents.Events.Game
 

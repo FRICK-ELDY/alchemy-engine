@@ -74,6 +74,12 @@ defmodule Alchemy.Render.DrawCommand do
   )
 
   field(:skybox, 9, type: Alchemy.Render.SkyboxCmd, oneof: 0)
+
+  field(:sphere_3d, 10,
+    type: Alchemy.Render.Sphere3dCmd,
+    json_name: "sphere3d",
+    oneof: 0
+  )
 end
 
 defmodule Alchemy.Render.PlayerSprite do
@@ -165,6 +171,21 @@ defmodule Alchemy.Render.Box3dCmd do
   field(:half_h, 5, type: :float, json_name: "halfH")
   field(:half_d, 6, type: :float, json_name: "halfD")
   field(:color, 7, repeated: true, type: :float)
+end
+
+defmodule Alchemy.Render.Sphere3dCmd do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "alchemy.render.Sphere3dCmd",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  field(:x, 1, type: :float)
+  field(:y, 2, type: :float)
+  field(:z, 3, type: :float)
+  field(:radius, 4, type: :float)
+  field(:color, 5, repeated: true, type: :float)
 end
 
 defmodule Alchemy.Render.GridPlaneCmd do

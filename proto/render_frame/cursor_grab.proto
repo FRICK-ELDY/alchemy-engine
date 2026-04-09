@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package alchemy.render;
+
+enum CursorGrabKind {
+  CURSOR_GRAB_UNSPECIFIED = 0;
+  CURSOR_GRAB_GRAB = 1;
+  CURSOR_GRAB_RELEASE = 2;
+}

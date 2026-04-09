@@ -175,6 +175,14 @@ pub enum DrawCommand {
         half_d: f32,
         color: [f32; 4],
     },
+    /// 3D 球（`MeshDef` 名 `unit_sphere`、半径 0.5 の単位球を `radius` でスケール）
+    Sphere3D {
+        x: f32,
+        y: f32,
+        z: f32,
+        radius: f32,
+        color: [f32; 4],
+    },
     /// グリッド地面描画（R-5）— パラメータから Rust が頂点を生成（後方互換）
     GridPlane {
         size: f32,
