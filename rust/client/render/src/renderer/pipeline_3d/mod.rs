@@ -1,6 +1,6 @@
 //! 3D レンダリングパイプライン（Phase R-5）
 //!
-//! `DrawCommand::Box3D` / `Sphere3D` / `GridPlane` / `Skybox` を wgpu で描画する。
+//! `DrawCommand::Box3D` / `Sphere3D` / `Cone3D` / `GridPlane` / `Skybox` を wgpu で描画する。
 //! 描画順: スカイボックス（深度テストなし）→ グリッド → ボックス（深度テストあり）。
 //!
 //! ## バッファ設計
@@ -413,9 +413,12 @@ impl Pipeline3D {
     /// `DrawCommand` リストを 3D パスで描画する。
     ///
     /// `camera` が `Camera3D` 以外の場合は即座にリターンする。
-    /// 描画順: スカイボックス（深度テストなし）→ グリッド + ボックス（深度テストあり）。
-    /// P3: mesh_definitions が非空の場合、キャッシュに登録し、unit_box / unit_sphere / skybox_quad を
-    /// 使用する。未登録時は従来の box_mesh / skybox_verts にフォールバック。
+    /// 描画順: スカイボックス（深度テストなし）→ グリッド + メッシュ（深度テストあり）。
+    /// P3: `mesh_definitions` を毎フレームキャッシュに同期し、コンテンツが送った名前（例: `unit_box`,
+    /// `unit_sphere`, `unit_cone`, `skybox_quad` 等）を [`mesh_template::push_mesh_from_def`] で展開する。
+    /// テンプレ欠落時は `unit_box` のみ同形状の [`mesh_template::box_mesh`] に静かにフォールバックし、
+    /// それ以外の名前はログ付きで `box_mesh` に落ちる（[`mesh_template::push_mesh_from_def`] 参照）。
+    /// スカイボックスは `skybox_quad` があればそれを使い、なければ [`mesh_template::skybox_verts`]。
     pub(crate) fn render(
         &mut self,
         encoder: &mut wgpu::CommandEncoder,

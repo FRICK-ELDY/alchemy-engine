@@ -45,7 +45,10 @@ pub(super) fn box_mesh(
     (verts, idx)
 }
 
-/// `MeshDef` テンプレート（`unit_box` / `unit_sphere` 等）を half 拡張でスケールしスクラッチに追加する。
+/// `MeshDef` テンプレート（`unit_box` / `unit_sphere` / `unit_cone` 等）を half 拡張でスケールしスクラッチに追加する。
+///
+/// キャッシュ未登録または空インデックス時は [`box_mesh`] にフォールバックする。
+/// `unit_box` 以外ではシルエットが一致しないため、その場合は [`log::warn`] する（`unit_box` 欠落時は同形状のためログしない）。
 pub(super) fn push_mesh_from_def(
     cache: &HashMap<String, (Vec<MeshVertex>, Vec<u32>)>,
     mesh_name: &str,
@@ -76,6 +79,15 @@ pub(super) fn push_mesh_from_def(
             indices_out.extend(indices.iter().map(|&i| i + base));
             return;
         }
+        log::warn!(
+            "pipeline_3d: MeshDef {:?} is cached but has empty indices; using procedural box fallback",
+            mesh_name
+        );
+    } else if mesh_name != "unit_box" {
+        log::warn!(
+            "pipeline_3d: MeshDef {:?} missing from frame mesh_definitions; using procedural box (incorrect for sphere/cone)",
+            mesh_name
+        );
     }
 
     let (v, i) = box_mesh(x, y, z, half_w, half_h, half_d, color);
