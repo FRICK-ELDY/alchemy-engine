@@ -60,34 +60,27 @@ pub(super) fn push_mesh_from_def(
     indices_out: &mut Vec<u32>,
 ) {
     let base = verts_out.len() as u32;
-    let (verts, idx) = if let Some((template, indices)) = cache.get(mesh_name) {
+    if let Some((template, indices)) = cache.get(mesh_name) {
         if !indices.is_empty() {
             let hw = half_w * 2.0;
             let hh = half_h * 2.0;
             let hd = half_d * 2.0;
-            let verts: Vec<MeshVertex> = template
-                .iter()
-                .map(|v| MeshVertex {
-                    position: [
-                        v.position[0] * hw + x,
-                        v.position[1] * hh + y,
-                        v.position[2] * hd + z,
-                    ],
-                    color,
-                })
-                .collect();
-            let idx: Vec<u32> = indices.iter().map(|&i| i + base).collect();
-            (verts, idx)
-        } else {
-            let (v, i) = box_mesh(x, y, z, half_w, half_h, half_d, color);
-            (v.to_vec(), i.iter().map(|&i| i + base).collect::<Vec<_>>())
+            verts_out.extend(template.iter().map(|v| MeshVertex {
+                position: [
+                    v.position[0] * hw + x,
+                    v.position[1] * hh + y,
+                    v.position[2] * hd + z,
+                ],
+                color,
+            }));
+            indices_out.extend(indices.iter().map(|&i| i + base));
+            return;
         }
-    } else {
-        let (v, i) = box_mesh(x, y, z, half_w, half_h, half_d, color);
-        (v.to_vec(), i.iter().map(|&i| i + base).collect::<Vec<_>>())
-    };
-    verts_out.extend(verts);
-    indices_out.extend(idx);
+    }
+
+    let (v, i) = box_mesh(x, y, z, half_w, half_h, half_d, color);
+    verts_out.extend(v);
+    indices_out.extend(i.iter().map(|&idx| idx + base));
 }
 
 /// XZ 平面上のグリッドラインを生成する（ラインリスト用）。
