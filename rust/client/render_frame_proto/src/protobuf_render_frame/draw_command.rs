@@ -67,6 +67,15 @@ pub(super) fn draw_cmd_pb(cmd: pb::DrawCommand) -> Option<DrawCommand> {
             radius: s.radius,
             color: f4(&s.color),
         },
+        Cone3d(b) => DrawCommand::Cone3D {
+            x: b.x,
+            y: b.y,
+            z: b.z,
+            half_w: b.half_w,
+            half_h: b.half_h,
+            half_d: b.half_d,
+            color: f4(&b.color),
+        },
         GridPlane(g) => DrawCommand::GridPlane {
             size: g.size,
             divisions: g.divisions,

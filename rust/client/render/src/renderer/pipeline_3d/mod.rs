@@ -1,6 +1,6 @@
 //! 3D レンダリングパイプライン（Phase R-5）
 //!
-//! `DrawCommand::Box3D` / `Sphere3D` / `GridPlane` / `Skybox` を wgpu で描画する。
+//! `DrawCommand::Box3D` / `Sphere3D` / `Cone3D` / `GridPlane` / `Skybox` を wgpu で描画する。
 //! 描画順: スカイボックス（深度テストなし）→ グリッド → ボックス（深度テストあり）。
 //!
 //! ## バッファ設計

@@ -183,6 +183,16 @@ pub enum DrawCommand {
         radius: f32,
         color: [f32; 4],
     },
+    /// 3D 円錐（`MeshDef` 名 `unit_cone`。フィールド意味は `Box3D` と同じ half 拡張）
+    Cone3D {
+        x: f32,
+        y: f32,
+        z: f32,
+        half_w: f32,
+        half_h: f32,
+        half_d: f32,
+        color: [f32; 4],
+    },
     /// グリッド地面描画（R-5）— パラメータから Rust が頂点を生成（後方互換）
     GridPlane {
         size: f32,

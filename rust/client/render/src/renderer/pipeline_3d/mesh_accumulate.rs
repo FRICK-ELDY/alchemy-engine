@@ -1,4 +1,4 @@
-//! 3D パス用: グリッド・`Box3D` / `Sphere3D` を CPU スクラッチへ積む。
+//! 3D パス用: グリッド・`Box3D` / `Sphere3D` / `Cone3D` を CPU スクラッチへ積む。
 
 use crate::DrawCommand;
 use crate::MeshVertex;
@@ -65,6 +65,29 @@ pub(super) fn accumulate_grid_and_mesh_draws(
                     *radius,
                     *radius,
                     *radius,
+                    *color,
+                    mesh_verts_scratch,
+                    mesh_indices_scratch,
+                );
+            }
+            DrawCommand::Cone3D {
+                x,
+                y,
+                z,
+                half_w,
+                half_h,
+                half_d,
+                color,
+            } => {
+                push_mesh_from_def(
+                    mesh_def_cache,
+                    "unit_cone",
+                    *x,
+                    *y,
+                    *z,
+                    *half_w,
+                    *half_h,
+                    *half_d,
                     *color,
                     mesh_verts_scratch,
                     mesh_indices_scratch,

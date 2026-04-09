@@ -2,6 +2,7 @@ defmodule Content.FrameEncoder do
   require Logger
 
   alias Content.FrameEncoder.DrawCommands.Box3d, as: DrawBox3d
+  alias Content.FrameEncoder.DrawCommands.Cone3d, as: DrawCone3d
   alias Content.FrameEncoder.DrawCommands.GridPlane, as: DrawGridPlane
   alias Content.FrameEncoder.DrawCommands.GridPlaneVerts, as: DrawGridPlaneVerts
   alias Content.FrameEncoder.DrawCommands.Item, as: DrawItem
@@ -55,6 +56,7 @@ defmodule Content.FrameEncoder do
   defp command_to_pb({:item, _, _, _} = t), do: DrawItem.to_pb(t)
   defp command_to_pb({:obstacle, _, _, _, _} = t), do: DrawObstacle.to_pb(t)
   defp command_to_pb({:box_3d, _, _, _, _, _, _} = t), do: DrawBox3d.to_pb(t)
+  defp command_to_pb({:cone_3d, _, _, _, _, _, _} = t), do: DrawCone3d.to_pb(t)
   defp command_to_pb({:sphere_3d, _, _, _, _, _} = t), do: DrawSphere3d.to_pb(t)
   defp command_to_pb({:grid_plane, _, _, _} = t), do: DrawGridPlane.to_pb(t)
   defp command_to_pb({:grid_plane_verts, _} = t), do: DrawGridPlaneVerts.to_pb(t)

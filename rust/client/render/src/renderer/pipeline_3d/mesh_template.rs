@@ -45,7 +45,7 @@ pub(super) fn box_mesh(
     (verts, idx)
 }
 
-/// `MeshDef` テンプレート（`unit_box` / `unit_sphere` 等）を half 拡張でスケールしスクラッチに追加する。
+/// `MeshDef` テンプレート（`unit_box` / `unit_sphere` / `unit_cone` 等）を half 拡張でスケールしスクラッチに追加する。
 pub(super) fn push_mesh_from_def(
     cache: &HashMap<String, (Vec<MeshVertex>, Vec<u32>)>,
     mesh_name: &str,

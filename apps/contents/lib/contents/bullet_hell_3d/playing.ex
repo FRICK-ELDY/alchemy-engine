@@ -25,6 +25,7 @@ defmodule Content.BulletHell3D.Playing do
   """
   @behaviour Contents.SceneBehaviour
 
+  alias Contents.Components.Category.Procedural.Meshes.Cone
   alias Contents.Components.Category.Procedural.Meshes.Sphere
   alias Contents.Objects.Core.Struct, as: ObjectStruct
   alias Structs.Category.Space.Transform
@@ -59,7 +60,7 @@ defmodule Content.BulletHell3D.Playing do
     {0, 6, 2000}
   ]
 
-  # 描画用（プレイヤー・敵は box_3d の half、弾は sphere_3d の半径）
+  # 描画用（プレイヤーは box_3d、敵は cone_3d、弾は sphere_3d）
   @player_half @player_radius
   @enemy_half @enemy_radius
   @camera_eye {0.0, 18.0, 14.0}
@@ -181,8 +182,8 @@ defmodule Content.BulletHell3D.Playing do
       Enum.map(enemy_objects, fn %{object: obj} ->
         {ex, ey, ez} = position_from_object(obj)
 
-        {:box_3d, ex, ey + @enemy_half, ez, @enemy_half, @enemy_half,
-         {@enemy_half, er, eg, eb, ea}}
+        Cone.cone_3d_command(ex, ey + @enemy_half, ez, @enemy_half, @enemy_half, @enemy_half,
+          {er, eg, eb, ea})
       end)
 
     bullet_cmds =

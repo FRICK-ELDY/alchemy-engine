@@ -80,6 +80,12 @@ defmodule Alchemy.Render.DrawCommand do
     json_name: "sphere3d",
     oneof: 0
   )
+
+  field(:cone_3d, 11,
+    type: Alchemy.Render.Box3dCmd,
+    json_name: "cone3d",
+    oneof: 0
+  )
 end
 
 defmodule Alchemy.Render.PlayerSprite do
