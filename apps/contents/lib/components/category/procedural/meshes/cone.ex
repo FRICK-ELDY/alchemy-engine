@@ -8,7 +8,7 @@ defmodule Contents.Components.Category.Procedural.Meshes.Cone do
   @slice_segments 12
 
   @doc """
-  単位円錐（中心付近を原点とした正規化座標、色は白）。
+  単位円錐（頂点は `unit_box` と同様に y ∈ [-0.5, 0.5] の軸平行バウンディング内。厳密な幾何中心＝円錐の重心ではない）。
 
   色は DrawCommand で上書きされる。
   """

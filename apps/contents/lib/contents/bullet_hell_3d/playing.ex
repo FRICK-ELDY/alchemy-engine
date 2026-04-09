@@ -8,6 +8,11 @@ defmodule Content.BulletHell3D.Playing do
   Phase 4 移行: プレイヤー・敵・弾を Contents.Objects.Core.Struct で表現。
   transform.position で座標を保持。弾は Object + vel のペアで管理。
 
+  ## 描画と当たり判定
+
+  敵のメッシュは円錐だが、プレイヤーとの衝突は従来どおり **XZ 平面の距離**と半径定数（円／円柱近似）のみ。
+  見た目のシルエットと当たりは一致しない。弾・敵とも **Y 座標は判定に使わない**。
+
   ## 状態フィールド
   - `origin`          — 空間の原点 Transform（3D コンテンツ共通 state として保持、本コンテンツでは未使用）
   - `landing_object`  — プレイヤー Object への参照（同上）
@@ -36,7 +41,7 @@ defmodule Content.BulletHell3D.Playing do
   # フィールドサイズ
   @field_half 10.0
 
-  # プレイヤー・敵・弾の半径（衝突判定と描画の両方に使用）
+  # プレイヤー・敵・弾の半径（XZ 当たりと描画スケール。敵見た目は円錐だが当たりはこの半径の円近似）
   @player_radius 0.5
   @enemy_radius 0.5
   @bullet_radius 0.15
@@ -530,7 +535,7 @@ defmodule Content.BulletHell3D.Playing do
     end)
   end
 
-  # ── 衝突判定 ──────────────────────────────────────────────────────
+  # ── 衝突判定（XZ のみ・Y は無視。敵は円錐表示だがヒットボックスは円近似）────────
 
   defp check_damage(hp, {px, _py, pz}, enemy_positions, bullet_positions) do
     enemy_hit =

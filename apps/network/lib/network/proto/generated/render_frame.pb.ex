@@ -81,6 +81,8 @@ defmodule Alchemy.Render.DrawCommand do
     oneof: 0
   )
 
+  # proto/render_frame/draw_commands.proto の DrawCommand oneof と一致させること。
+  # protoc + protoc-gen-elixir 再生成時は欠落しないか差分確認（手メンテ運用の場合）。
   field(:cone_3d, 11,
     type: Alchemy.Render.Box3dCmd,
     json_name: "cone3d",
