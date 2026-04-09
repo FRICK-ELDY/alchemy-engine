@@ -11,8 +11,8 @@ pub(super) fn accumulate_grid_and_mesh_draws(
     commands: &[DrawCommand],
     mesh_def_cache: &HashMap<String, (Vec<MeshVertex>, Vec<u32>)>,
     grid_verts_scratch: &mut Vec<MeshVertex>,
-    box_verts_scratch: &mut Vec<MeshVertex>,
-    box_indices_scratch: &mut Vec<u32>,
+    mesh_verts_scratch: &mut Vec<MeshVertex>,
+    mesh_indices_scratch: &mut Vec<u32>,
 ) {
     for cmd in commands {
         match cmd {
@@ -45,8 +45,8 @@ pub(super) fn accumulate_grid_and_mesh_draws(
                     *half_h,
                     *half_d,
                     *color,
-                    box_verts_scratch,
-                    box_indices_scratch,
+                    mesh_verts_scratch,
+                    mesh_indices_scratch,
                 );
             }
             DrawCommand::Sphere3D {
@@ -66,8 +66,8 @@ pub(super) fn accumulate_grid_and_mesh_draws(
                     *radius,
                     *radius,
                     *color,
-                    box_verts_scratch,
-                    box_indices_scratch,
+                    mesh_verts_scratch,
+                    mesh_indices_scratch,
                 );
             }
             _ => {}

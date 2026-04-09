@@ -30,10 +30,10 @@ use wgpu::util::DeviceExt;
 const MAX_GRID_VERTS: usize = 404;
 
 /// メッシュパス頂点スクラッチ上限（プレイヤー・敵の unit_box + 多数の unit_sphere 弾を想定）。
-const MAX_BOX_VERTS: usize = 24_000;
+const MAX_MESH_VERTS: usize = 24_000;
 
-/// メッシュパスインデックススクラッチ上限（上記に対応）。
-const MAX_BOX_INDICES: usize = 100_000;
+/// メッシュパス（unit_box / unit_sphere 等）のインデックススクラッチ上限。
+const MAX_MESH_INDICES: usize = 100_000;
 
 /// スカイボックス頂点数（固定: 4 頂点 2 三角形）。
 const SKYBOX_VERT_COUNT: usize = 4;
@@ -161,9 +161,9 @@ pub(crate) struct Pipeline3D {
     depth_view: wgpu::TextureView,
     /// 事前確保済みグリッド頂点バッファ（COPY_DST | VERTEX）
     grid_vbuf: wgpu::Buffer,
-    /// 事前確保済みボックス頂点バッファ（COPY_DST | VERTEX）
+    /// 事前確保済みメッシュ（三角形リスト）頂点バッファ（COPY_DST | VERTEX）
     box_vbuf: wgpu::Buffer,
-    /// 事前確保済みボックスインデックスバッファ（COPY_DST | INDEX）
+    /// 事前確保済みメッシュインデックスバッファ（COPY_DST | INDEX）
     box_ibuf: wgpu::Buffer,
     /// 事前確保済みスカイボックス頂点バッファ（COPY_DST | VERTEX）
     sky_vbuf: wgpu::Buffer,
@@ -173,8 +173,9 @@ pub(crate) struct Pipeline3D {
     height: u32,
     /// CPU スクラッチバッファ（毎フレーム clear() して再利用し、ヒープ再確保を避ける）
     grid_verts_scratch: Vec<MeshVertex>,
-    box_verts_scratch: Vec<MeshVertex>,
-    box_indices_scratch: Vec<u32>,
+    /// メッシュパス用（`Box3D` / `Sphere3D` 等の展開先）
+    mesh_verts_scratch: Vec<MeshVertex>,
+    mesh_indices_scratch: Vec<u32>,
     /// P3: Elixir 定義のメッシュキャッシュ（unit_box, skybox_quad 等）
     mesh_def_cache: HashMap<String, (Vec<MeshVertex>, Vec<u32>)>,
     /// 直前フレームで登録した mesh_definitions の名前リスト。同じなら insert をスキップする。
@@ -348,15 +349,15 @@ impl Pipeline3D {
         });
 
         let box_vbuf = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Box VBuf"),
-            size: (std::mem::size_of::<MeshVertex>() * MAX_BOX_VERTS) as u64,
+            label: Some("Mesh VBuf"),
+            size: (std::mem::size_of::<MeshVertex>() * MAX_MESH_VERTS) as u64,
             usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
 
         let box_ibuf = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Box IBuf"),
-            size: (std::mem::size_of::<u32>() * MAX_BOX_INDICES) as u64,
+            label: Some("Mesh IBuf"),
+            size: (std::mem::size_of::<u32>() * MAX_MESH_INDICES) as u64,
             usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -393,8 +394,8 @@ impl Pipeline3D {
             width,
             height,
             grid_verts_scratch: Vec::with_capacity(MAX_GRID_VERTS),
-            box_verts_scratch: Vec::with_capacity(MAX_BOX_VERTS),
-            box_indices_scratch: Vec::with_capacity(MAX_BOX_INDICES),
+            mesh_verts_scratch: Vec::with_capacity(MAX_MESH_VERTS),
+            mesh_indices_scratch: Vec::with_capacity(MAX_MESH_INDICES),
             mesh_def_cache: HashMap::new(),
             mesh_def_cache_key: None,
         }
@@ -527,19 +528,19 @@ impl Pipeline3D {
         // ─── グリッド + ボックスパス（深度テストあり）──────────────
         // スクラッチバッファを clear() して再利用し、毎フレームのヒープ確保を避ける
         self.grid_verts_scratch.clear();
-        self.box_verts_scratch.clear();
-        self.box_indices_scratch.clear();
+        self.mesh_verts_scratch.clear();
+        self.mesh_indices_scratch.clear();
 
         accumulate_grid_and_mesh_draws(
             commands,
             &self.mesh_def_cache,
             &mut self.grid_verts_scratch,
-            &mut self.box_verts_scratch,
-            &mut self.box_indices_scratch,
+            &mut self.mesh_verts_scratch,
+            &mut self.mesh_indices_scratch,
         );
 
         // スカイボックスのみ描画済みの場合もここで抜ける
-        if self.grid_verts_scratch.is_empty() && self.box_verts_scratch.is_empty() {
+        if self.grid_verts_scratch.is_empty() && self.mesh_verts_scratch.is_empty() {
             return;
         }
 
@@ -586,32 +587,32 @@ impl Pipeline3D {
             pass.draw(0..count as u32, 0..1);
         }
 
-        if !self.box_verts_scratch.is_empty() && !self.box_indices_scratch.is_empty() {
+        if !self.mesh_verts_scratch.is_empty() && !self.mesh_indices_scratch.is_empty() {
             debug_assert!(
-                self.box_verts_scratch.len() <= MAX_BOX_VERTS,
-                "box_verts が上限 {} を超えています（{}）。MAX_BOX_VERTS を増やしてください。",
-                MAX_BOX_VERTS,
-                self.box_verts_scratch.len()
+                self.mesh_verts_scratch.len() <= MAX_MESH_VERTS,
+                "mesh_verts が上限 {} を超えています（{}）。MAX_MESH_VERTS を増やしてください。",
+                MAX_MESH_VERTS,
+                self.mesh_verts_scratch.len()
             );
             debug_assert!(
-                self.box_indices_scratch.len() <= MAX_BOX_INDICES,
-                "box_indices が上限 {} を超えています（{}）。MAX_BOX_INDICES を増やしてください。",
-                MAX_BOX_INDICES,
-                self.box_indices_scratch.len()
+                self.mesh_indices_scratch.len() <= MAX_MESH_INDICES,
+                "mesh_indices が上限 {} を超えています（{}）。MAX_MESH_INDICES を増やしてください。",
+                MAX_MESH_INDICES,
+                self.mesh_indices_scratch.len()
             );
-            let vcount = self.box_verts_scratch.len().min(MAX_BOX_VERTS);
-            let icount = self.box_indices_scratch.len().min(MAX_BOX_INDICES);
+            let vcount = self.mesh_verts_scratch.len().min(MAX_MESH_VERTS);
+            let icount = self.mesh_indices_scratch.len().min(MAX_MESH_INDICES);
             let vbyte_len = (vcount * std::mem::size_of::<MeshVertex>()) as u64;
             let ibyte_len = (icount * std::mem::size_of::<u32>()) as u64;
             self.queue.write_buffer(
                 &self.box_vbuf,
                 0,
-                bytemuck::cast_slice(&self.box_verts_scratch[..vcount]),
+                bytemuck::cast_slice(&self.mesh_verts_scratch[..vcount]),
             );
             self.queue.write_buffer(
                 &self.box_ibuf,
                 0,
-                bytemuck::cast_slice(&self.box_indices_scratch[..icount]),
+                bytemuck::cast_slice(&self.mesh_indices_scratch[..icount]),
             );
             pass.set_pipeline(&self.mesh_pipeline);
             pass.set_vertex_buffer(0, self.box_vbuf.slice(..vbyte_len));
