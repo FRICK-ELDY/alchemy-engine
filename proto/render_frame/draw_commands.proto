@@ -16,6 +16,10 @@ message DrawCommand {
     GridPlaneVertsCmd grid_plane_verts = 8;
     SkyboxCmd skybox = 9;
     Sphere3dCmd sphere_3d = 10;
+    // `Box3dCmd` と同じフィールド。`MeshDef` 名 `unit_cone` を half 拡張でワールド配置する。
+    // 将来、円錐専用パラメータ（切り口のセグメント数、先端オフセット等）を wire に載せたくなったら
+    // 別メッセージ `Cone3dCmd` を定義し oneof を差し替える（フィールド番号の互換に注意）。
+    Box3dCmd cone_3d = 11;
   }
 }
 

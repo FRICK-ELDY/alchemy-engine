@@ -7,7 +7,7 @@ defmodule Content.BulletHell3D do
 
   ## ゲームルール
   - プレイヤー（青ボックス）は WASD で XZ 平面上を移動
-  - 敵（赤ボックス）がフィールド外周から出現し、プレイヤーに向かって直進
+  - 敵（赤い円錐）がフィールド外周から出現し、プレイヤーに向かって直進
   - 敵が定期的にプレイヤー方向へ弾（黄の球）を発射
   - 弾または敵に当たると HP -1（HP = 3）
   - HP が 0 になるとゲームオーバー
@@ -94,6 +94,7 @@ defmodule Content.BulletHell3D do
     [
       Contents.Components.Category.Procedural.Meshes.Box.mesh_def(),
       Contents.Components.Category.Procedural.Meshes.Sphere.mesh_def(),
+      Contents.Components.Category.Procedural.Meshes.Cone.mesh_def(),
       Contents.Components.Category.Procedural.Meshes.Quad.mesh_def()
     ]
   end
