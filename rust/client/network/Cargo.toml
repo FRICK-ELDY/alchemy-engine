@@ -9,7 +9,7 @@ render = { path = "../render" }
 num-traits = "0.2"
 serde = { version = "1", features = ["derive"] }
 shared = { path = "../shared" }
-zenoh = "1.7"
+zenoh = "1.9"
 futures = "0.3"
 futures-timer = "3.0"
 log = "0.4"

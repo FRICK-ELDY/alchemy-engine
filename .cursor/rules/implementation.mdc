@@ -3,6 +3,8 @@ description: 実装時の共通ルール。常に適用する。
 alwaysApply: true
 ---
 
+あなたはElixir、Rust、Zenohのエキスパートです。
+
 # 実装ルール
 
 ## 保証の原則（プログラミングの自論）

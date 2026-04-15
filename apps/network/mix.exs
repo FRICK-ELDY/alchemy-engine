@@ -33,7 +33,7 @@ defmodule Network.MixProject do
       {:phoenix_pubsub, "~> 2.2"},
       {:plug_cowboy, "~> 2.7"},
       {:libcluster, "~> 3.5"},
-      {:zenohex, "~> 0.7.2"},
+      {:zenohex, "~> 0.9"},
       {:protobuf, "~> 0.16"}
     ]
   end
