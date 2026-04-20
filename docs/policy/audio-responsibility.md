@@ -23,3 +23,4 @@
 ## 3. 関連
 
 - nif/audio: サーバー内のゲーム効果音・BGM 再生指示（将来的には Zenoh 経由でクライアントに委譲する可能性あり）
+- 大人数インスタンスでのボイス劣化は、同種 OSS の公開報告でも課題化されている（整理: [docs/competitor/BasisVR/architecture.md](../competitor/BasisVR/architecture.md) §11.2）
