@@ -47,7 +47,7 @@ flowchart TB
 - **二層の SSoT（ドメインは Elixir、ワイヤは経路ごと）**
 > **ドメイン**（権威ある状態・ルール・コンテンツ定義）は Elixir 側で管理します。クライアント用のコードをそのままヘッドレスのマルチプレイサーバーとして転用可能です。1000人規模のプレイヤーが交差する大規模ネットワークも Elixir の並行処理能力で捌きます。
 >
-> **ワイヤ**（バイト列や JSON の「形」の合意）は **経路・形式ごとに** SSoT が異なります（例: Zenoh の `RenderFrame` 等の **Protobuf** は **`proto/*.proto`**、UDP 外枠は `Network.UDP.Protocol`、Phoenix はチャネルごとの JSON）。生成は [development.md の Protobuf 節](./development.md#protobuf-proto)。全体の整理は [アーキテクチャ概要 — 設計思想](./docs/architecture/overview.md#設計思想) を参照。
+> **ワイヤ**（バイト列や JSON の「形」の合意）は **経路・形式ごとに** SSoT が異なります（例: Zenoh の `RenderFrame` 等の **Protobuf** は submodule **`3rdparty/alchemy-protocol/proto`**、UDP 外枠は `Network.UDP.Protocol`、Phoenix はチャネルごとの JSON）。生成は [development.md の Protobuf 節](./development.md#protobuf-proto)。全体の整理は [アーキテクチャ概要 — 設計思想](./docs/architecture/overview.md#設計思想) を参照。
 - **Rust ECS for Physics & Rendering & Audio**
 > Elixir から同期された状態をもとに、Rust の ECS が 60Hz 固定の物理演算・描画・オーディオ処理を行います。SoA（Structure of Arrays）と SIMD による CPU キャッシュ最適化で、高フレームレートを維持します。
 - **Zero NIF Serialization Overhead**
@@ -70,8 +70,9 @@ flowchart TB
 ### Setup & Run
 
 ```bash
-git clone git@github.com:FRICK-ELDY/alchemy-engine.git
+git clone --recurse-submodules git@github.com:FRICK-ELDY/alchemy-engine.git
 cd alchemy-engine
+# 既に clone 済みの場合: git submodule update --init --recursive
 mix deps.get
 mix alchemy.setup
 mix alchemy.server

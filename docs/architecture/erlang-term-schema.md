@@ -4,9 +4,9 @@
 > 最終更新: 2026-03-28  
 > ポリシー（歴史的経緯）: [zenoh-frame-serialization.md](../policy-as-code/why_adopted/zenoh-frame-serialization.md)
 >
-> **現在の主経路**: フレーム・injection は **protobuf** のみ（`proto/render_frame.proto`, `proto/frame_injection.proto`）。Elixir は生成モジュール経由、Rust は `prost` デコード。本章の ETF 記述は **旧バイナリ形式の参照・デバッグ用**（ワイヤ上では用いない）。
+> **現在の主経路**: フレーム・injection は **protobuf** のみ（[render_frame.proto](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/render_frame.proto)、[frame_injection.proto](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/frame_injection.proto) — alchemy-protocol `v0.1.1`、本リポでは submodule `3rdparty/alchemy-protocol/proto/`）。Elixir は生成モジュール経由、Rust は `prost` デコード。本章の ETF 記述は **旧バイナリ形式の参照・デバッグ用**（ワイヤ上では用いない）。
 >
-> フレームの意味論・フィールド対応は [draw-command-spec.md](draw-command-spec.md) および `proto/render_frame.proto` を参照する。
+> フレームの意味論・フィールド対応は [draw-command-spec.md](draw-command-spec.md) および上記 [render_frame.proto](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/render_frame.proto) を参照する。
 
 ---
 
@@ -53,7 +53,7 @@
 
 ### 7.1 現在の送信形式（protobuf）
 
-`Content.FrameEncoder.encode_injection_map/1` は **`Alchemy.Frame.FrameInjection`** の protobuf バイナリを返す（スキーマ: `proto/frame_injection.proto`）。
+`Content.FrameEncoder.encode_injection_map/1` は **`Alchemy.Frame.FrameInjection`** の protobuf バイナリを返す（スキーマ: [frame_injection.proto（alchemy-protocol `v0.1.1`）](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/frame_injection.proto)）。
 
 ### 7.2 サーバー上の適用（NIF はない）
 
@@ -79,6 +79,6 @@
 ## 8. 参照
 
 - `Content.FrameEncoder` — フレーム・injection の protobuf エンコード
-- `proto/render_frame.proto`, `proto/frame_injection.proto` — 契約スキーマ
+- [render_frame.proto](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/render_frame.proto)、[frame_injection.proto](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/frame_injection.proto)（alchemy-protocol `v0.1.1`）— 契約スキーマ（本リポ: `3rdparty/alchemy-protocol/proto/`）
 - `render_frame_proto::decode_pb_render_frame` — クライアント側フレーム protobuf デコード（`rust/client/render_frame_proto`）
 - `Contents.Events.Game` — `apply_frame_injection_binary` スタブ（`apps/contents/lib/events/game.ex`）

@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.Alchemy.Gen.Proto do
-  @shortdoc "proto/*.proto から Elixir / Rust の生成コードを作る（単一エントリ）"
+  @shortdoc "3rdparty/alchemy-protocol/proto（または PROTO_ROOT）の .proto から Elixir / Rust の生成コードを作る"
   @moduledoc """
   `protoc` / `prost-build` による生成処理を **この Mix タスクに集約**する。
 
@@ -10,7 +10,12 @@ defmodule Mix.Tasks.Alchemy.Gen.Proto do
   生成ロジックは段階的に本モジュールへ追加する。詳細・契約・CI 要件は
   `workspace/7_done/protobuf-full-automation-procedure.md` を参照。
 
-  ## 使用例（予定）
+  ## `.proto` の場所
+
+  既定は Git submodule **`3rdparty/alchemy-protocol/proto`**（[alchemy-protocol](https://github.com/FRICK-ELDY/alchemy-protocol)）。
+  取得: `git submodule update --init --recursive`。別パスを使う場合は環境変数 **`PROTO_ROOT`** にそのディレクトリを指定する。
+
+  ## 使用例
 
       mix alchemy.gen.proto
   """
@@ -20,7 +25,7 @@ defmodule Mix.Tasks.Alchemy.Gen.Proto do
   @impl Mix.Task
   def run(_args) do
     root = File.cwd!()
-    proto_dir = Path.join(root, "proto")
+    proto_dir = resolve_proto_dir!(root)
     elixir_out = Path.join(root, "apps/network/lib/network/proto/generated")
     rust_manifest = Path.join(root, "rust/Cargo.toml")
     protoc = System.get_env("PROTOC") || "protoc"
@@ -46,20 +51,23 @@ defmodule Mix.Tasks.Alchemy.Gen.Proto do
 
       replace_generated_files!(temp_out, elixir_out)
 
-      # prost-build は各クレートの build.rs で走る。`network` と `nif` の両方をビルドして取りこぼしを防ぐ。
+      # prost-build は `network` / `render_frame_proto` の build.rs で走る（`network` ビルドで依存も解決される）。
+      # `nif` は現行 Cargo プロファイルに prost / build.rs がないため対象外（将来復活時はここに追加）。
       run_step_or_raise!(
-        "cargo build -p network -p nif",
+        "cargo build -p network",
         "cargo",
         [
           "build",
           "--manifest-path",
           rust_manifest,
           "-p",
-          "network",
-          "-p",
-          "nif"
+          "network"
         ],
-        root
+        root,
+        env: [
+          {"PROTO_ROOT", Path.expand(proto_dir, root)},
+          {"PROTOC", protoc}
+        ]
       )
     after
       File.rm_rf!(temp_out)
@@ -70,16 +78,41 @@ defmodule Mix.Tasks.Alchemy.Gen.Proto do
   end
 
   defp protoc_args(proto_dir, elixir_out, proto_files) do
+    base = Path.expand(proto_dir)
+
+    rel_inputs =
+      Enum.map(proto_files, fn p ->
+        p |> Path.expand() |> Path.relative_to(base)
+      end)
+
     [
       "--elixir_out=#{elixir_out}",
-      "--proto_path=#{proto_dir}"
-    ] ++ proto_files
+      "--proto_path=#{base}"
+    ] ++ rel_inputs
+  end
+
+  defp resolve_proto_dir!(root) do
+    dir =
+      case System.get_env("PROTO_ROOT") do
+        nil -> Path.join(root, "3rdparty/alchemy-protocol/proto")
+        p -> Path.expand(p, root)
+      end
+
+    unless File.dir?(dir) do
+      Mix.raise(
+        "Protobuf スキーマディレクトリが見つかりません: #{dir}\n" <>
+          "`git submodule update --init --recursive` で 3rdparty/alchemy-protocol を取得するか、" <>
+          "環境変数 PROTO_ROOT で .proto を含むディレクトリを指定してください。"
+      )
+    end
+
+    dir
   end
 
   defp discover_proto_files!(proto_dir) do
     proto_files =
       proto_dir
-      |> Path.join("*.proto")
+      |> Path.join("**/*.proto")
       |> Path.wildcard()
       |> Enum.sort()
 
@@ -134,7 +167,8 @@ defmodule Mix.Tasks.Alchemy.Gen.Proto do
 
   # `System.halt/1` は VM を即終了するため `try` の `after` が走らず一時ディレクトリが残る。
   # 失敗時は `Mix.raise/1` で例外にし、`after` で必ずクリーンアップする。
-  defp run_step_or_raise!(label, cmd, args, root, opts \\ []) do
+  # 呼び出しは常に `opts` を渡す（`opts \\ []` は全呼び出しが 5 引数のため未使用警告のみ発生する）。
+  defp run_step_or_raise!(label, cmd, args, root, opts) do
     Mix.shell().info("")
     Mix.shell().info("[STEP] #{label}")
     env = Keyword.get(opts, :env, [])

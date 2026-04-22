@@ -2,7 +2,7 @@
 
 SSoT（Single Source of Truth）コアエンジン。ゲームは **Core モジュール経由でのみ** エンジンとやり取りする。
 
-**用語の整理**: ここでの SSoT は **ドメイン／基盤ロジック** を指す。**Protobuf メッセージ形**のワイヤ契約の SSoT は **`proto/*.proto`**。UDP や Phoenix JSON など **別形式**は別の SSoT（[docs/architecture/overview.md](../../docs/architecture/overview.md#設計思想)）。
+**用語の整理**: ここでの SSoT は **ドメイン／基盤ロジック** を指す。**Protobuf メッセージ形**のワイヤ契約の SSoT は submodule **`3rdparty/alchemy-protocol/proto`**。UDP や Phoenix JSON など **別形式**は別の SSoT（[docs/architecture/overview.md](../../docs/architecture/overview.md#設計思想)）。
 
 ## 責務
 

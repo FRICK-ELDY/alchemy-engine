@@ -121,14 +121,14 @@
 
 **推奨（実装が単純な順）**: チームが submodule に慣れているなら **A**。慣れていないなら **B** で `sparse: "proto"` を指定し、展開先を `PROTO_ROOT` 環境変数や Mix タスク内で解決する。
 
-**方式 A と B でパスが異なる**: submodule は多くの場合 `vendor/alchemy-protocol/proto/` に `.proto` が並ぶ。`sparse: "proto"` の Mix 依存では、依存のルートが **上流リポの `proto/` ディレクトリの内容そのもの**になる（§7.1）。Rust の `build.rs` はクレートごとに `CARGO_MANIFEST_DIR` からリポジトリルートまでの `..` の段数が違うため、**相対パスをハードコードだけで統一するのは事故りやすい**。
+**方式 A と B でパスが異なる**: submodule は多くの場合 `3rdparty/alchemy-protocol/proto/` に `.proto` が並ぶ。`sparse: "proto"` の Mix 依存では、依存のルートが **上流リポの `proto/` ディレクトリの内容そのもの**になる（§7.1）。Rust の `build.rs` はクレートごとに `CARGO_MANIFEST_DIR` からリポジトリルートまでの `..` の段数が違うため、**相対パスをハードコードだけで統一するのは事故りやすい**。
 
 実装タスク（エンジン側）:
 
-1. ルートの `proto/` を **削除**し、代わりに submodule 用ディレクトリ（例: `vendor/alchemy-protocol`）を置く **または** Mix の git 依存（`sparse: "proto"` 等）で取得する。取得先の実パスは方式 A/B で異なる（§7）。  
+1. ルートの `proto/` を **削除**し、代わりに submodule 用ディレクトリ（例: `3rdparty/alchemy-protocol`）を置く **または** Mix の git 依存（`sparse: "proto"` 等）で取得する。取得先の実パスは方式 A/B で異なる（§7）。  
 2. **`Mix.Tasks.Alchemy.Gen.Proto`**（`apps/core/lib/mix/tasks/alchemy.gen.proto.ex`）の `proto_dir` を、**PROTO_ROOT**（環境変数または Mix が解決した絶対パス）に解決するように変更する。  
 3. **Rust** の各 `build.rs`（`rust/client/render_frame_proto/build.rs`、`rust/client/network/build.rs` 等）の `proto_root` は、**標準手順として `std::env::var("PROTO_ROOT")` を最優先**し、未設定時のみ `CARGO_MANIFEST_DIR` からの相対パスにフォールバックする。CI・ローカルとも、`PROTO_ROOT` を明示すれば **方式 A/B の差とクレート深度の差を吸収**できる。  
-   - フォールバック例（現行レイアウト・**submodule が `vendor/alchemy-protocol/proto/` の場合**）: `rust/client/network` や `rust/client/render_frame_proto` からはリポジトリルートまで `../../../` のため、デフォルトは `../../../vendor/alchemy-protocol/proto` のように **3 段上がる**（`../../vendor/...` は **1 段足りない**）。`rust/nif` のように `rust/` 直下のクレートでは `../../vendor/...` で足りるなど、**クレートごとに検証すること**。  
+   - フォールバック例（現行レイアウト・**submodule が `3rdparty/alchemy-protocol/proto/` の場合**）: `rust/client/network` や `rust/client/render_frame_proto` からはリポジトリルートまで `../../../` のため、デフォルトは `../../../3rdparty/alchemy-protocol/proto` のように **3 段上がる**（`../../3rdparty/...` は **1 段足りない**）。`rust/nif` のように `rust/` 直下のクレートでは `../../3rdparty/...` で足りるなど、**クレートごとに検証すること**。  
 4. ルート `mix.exs` に **開発用オプション**（`config :alchemy, :proto_path` 等）を置く場合は、**デフォルトは submodule／deps パス**にし、ローカルオーバーライドのみ env で上書き可能にする。`cargo` 実行時に `PROTO_ROOT` を渡す方法（ドキュメント化・`cargo build` 前の export 等）を `development.md` に書く。
 
 ### フェーズ 3 — 生成物とテスト（1〜2 日）
@@ -192,11 +192,11 @@
 ### 7.2 Git submodule の例
 
 ```bash
-git submodule add https://github.com/ORG/alchemy-protocol.git vendor/alchemy-protocol
-# proto は vendor/alchemy-protocol/proto/
+git submodule add https://github.com/ORG/alchemy-protocol.git 3rdparty/alchemy-protocol
+# proto は 3rdparty/alchemy-protocol/proto/
 ```
 
-この場合の PROTO_ROOT は **`vendor/alchemy-protocol/proto`（リポジトリルートからの相対）** である。`build.rs` ではフェーズ 2 の実装タスクどおり **`PROTO_ROOT` 環境変数を優先**し、未設定時のみ例として `rust/client/network` から `../../../vendor/alchemy-protocol/proto` のように **クレート位置に合わせた相対**で指定する（段数は必ず実パスで検証する）。
+この場合の PROTO_ROOT は **`3rdparty/alchemy-protocol/proto`（リポジトリルートからの相対）** である。`build.rs` ではフェーズ 2 の実装タスクどおり **`PROTO_ROOT` 環境変数を優先**し、未設定時のみ例として `rust/client/network` から `../../../3rdparty/alchemy-protocol/proto` のように **クレート位置に合わせた相対**で指定する（段数は必ず実パスで検証する）。
 
 ---
 

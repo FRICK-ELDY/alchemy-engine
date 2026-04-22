@@ -213,7 +213,7 @@ Zenoh から受け取ったバイト列を `decode_pb_render_frame` で `RenderF
 
 - [zenoh-protocol-spec.md](../zenoh-protocol-spec.md)
 - [draw-command-spec.md](../draw-command-spec.md)
-- [`proto/render_frame.proto`](../../../proto/render_frame.proto)
+- [render_frame.proto（alchemy-protocol `v0.1.1`）](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/render_frame.proto)
 - [アーキテクチャ概要](../overview.md)（クライアント動作モード）
 - [desktop/input](./desktop/input.md)（window クレート）
 - [desktop/render](./desktop/render.md)（render クレート）
