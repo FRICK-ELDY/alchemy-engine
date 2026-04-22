@@ -6,7 +6,7 @@
 >
 > **現在の主経路**: フレーム・injection は **protobuf** のみ（`proto/render_frame.proto`, `proto/frame_injection.proto`）。Elixir は生成モジュール経由、Rust は `prost` デコード。本章の ETF 記述は **旧バイナリ形式の参照・デバッグ用**（ワイヤ上では用いない）。
 >
-> フレームの意味論・フィールド対応は [draw-command-spec.md](draw-command-spec.md) および `proto/render_frame.proto` を参照する。
+> フレームの意味論・フィールド対応は [draw-command-spec.md](draw-command-spec.md) および [render_frame.proto（alchemy-protocol `v0.1.1`）](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/render_frame.proto) を参照する。
 
 ---
 

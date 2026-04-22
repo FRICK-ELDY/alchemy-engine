@@ -20,7 +20,7 @@
 
 ## 2. フレーム直列化は protobuf のみ
 
-**方針**: Zenoh 経由のサーバー→クライアント **RenderFrame** は `proto/render_frame.proto` に基づく **protobuf** のみ。スキーマ外のバイナリ形式で配信しない。
+**方針**: Zenoh 経由のサーバー→クライアント **RenderFrame** は [render_frame.proto（alchemy-protocol `v0.1.1`）](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/render_frame.proto) に基づく **protobuf** のみ。スキーマ外のバイナリ形式で配信しない。
 
 **理由**:
 

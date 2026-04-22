@@ -4,9 +4,9 @@ Zenoh 経由のペイロードを Erlang term（ETF）から **Protocol Buffers*
 
 ## 契約（ワイヤ上の単一ソース）
 
-ドメイン（ルール・公式状態）は **Elixir** が担う。**Protobuf で表現するメッセージ形**は **`proto/*.proto`** を単一ソースとする。UDP 外枠や JSON など **別形式**は `proto` の外（全体像は [overview.md](./overview.md#設計思想) の表）。
+ドメイン（ルール・公式状態）は **Elixir** が担う。**Protobuf で表現するメッセージ形**の単一ソースは **[alchemy-protocol](https://github.com/FRICK-ELDY/alchemy-protocol)** の **`proto/`** ツリーである（本リポジトリでは Git submodule **`3rdparty/alchemy-protocol/proto`** で取り込む）。Web 上の参照用に、タグ固定の例: [render_frame.proto（`v0.1.1`）](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/render_frame.proto)。UDP 外枠や JSON など **別形式**は submodule の外（全体像は [overview.md](./overview.md#設計思想) の表）。
 
-- スキーマ定義: リポジトリ直下の **`proto/*.proto`**
+- スキーマ定義: submodule **`3rdparty/alchemy-protocol/proto/**/*.proto`**（`PROTO_ROOT` で上書き可。生成は **`mix alchemy.gen.proto`**）
 - Elixir: `apps/network/lib/network/proto/`（`use Protobuf` 手書きが多い）
 - Rust: `rust/client/network` / `rust/nif` 等（`prost`；一部手書き `Message`）
 

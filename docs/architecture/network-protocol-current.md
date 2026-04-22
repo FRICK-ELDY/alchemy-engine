@@ -103,7 +103,7 @@ Channel の `handle_info({:frame_events, events}, socket)` や `Network.UDP.broa
 DrawCommand は Elixir の Render コンポーネントが組み立て、`Content.FrameEncoder.encode_frame/5` で **protobuf**（`proto/render_frame.proto`）にし、`FrameBroadcaster.put` 経由で Zenoh の `game/room/{room_id}/frame` へ publish する。クライアント（Rust `app`）が subscribe し、`render_frame_proto::decode_pb_render_frame` でデコードして描画する。サーバー側 NIF は描画を持たない（`Core.NifBridge` は Formula VM のみ）。過去の MessagePack 専用ドキュメントを参照していたブックマークは [draw-command-spec.md](draw-command-spec.md) および本節へ置き換え。
 
 
-スキーマは [draw-command-spec.md](draw-command-spec.md)、[zenoh-protocol-spec.md](zenoh-protocol-spec.md)、[`proto/render_frame.proto`](../../proto/render_frame.proto) を参照。
+スキーマは [draw-command-spec.md](draw-command-spec.md)、[zenoh-protocol-spec.md](zenoh-protocol-spec.md)、[render_frame.proto（alchemy-protocol `v0.1.1`）](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/render_frame.proto) を参照。
 
 ---
 

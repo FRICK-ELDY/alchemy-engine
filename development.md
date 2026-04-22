@@ -22,10 +22,14 @@
 
 ## セットアップ
 
-1. リポジトリをクローンします。
+1. リポジトリをクローンします（**Protobuf スキーマ**は [alchemy-protocol](https://github.com/FRICK-ELDY/alchemy-protocol) の Git submodule のため、サブモジュールごと取得してください）。
    ```bash
-   git clone git@github.com:FRICK-ELDY/alchemy-engine.git
+   git clone --recurse-submodules git@github.com:FRICK-ELDY/alchemy-engine.git
    cd alchemy-engine
+   ```
+   すでに通常の `git clone` 済みの場合は、ルートで次を実行して **`3rdparty/alchemy-protocol`** を取得します。
+   ```bash
+   git submodule update --init --recursive
    ```
 
 2. 開発環境のセットアップを実行します。
@@ -149,7 +153,7 @@ CI の詳細は [docs/warranty/ci.md](./docs/warranty/ci.md) を参照。
 
 ## Protobuf（`.proto`）
 
-**Protobuf を使うペイロード**（サーバーとクライアント等が共有する **その形式の** フィールド契約）の単一ソースは、リポジトリ直下の **`proto/*.proto`**。UDP 外枠や Phoenix の JSON など **別形式のワイヤ契約**は `proto` の外にあり、[docs/architecture/overview.md](./docs/architecture/overview.md#設計思想) の表を参照。ゲーム状態やルールの「公式な中身」の SSoT は引き続き **Elixir**。生成物の更新は **`mix alchemy.gen.proto`** を公式エントリとする（実装は段階的に同タスクへ集約）。ツール導入、`build.rs`、CI、生成物の置き方の詳細は、作業用ツリー `workspace/2_todo/protobuf-full-automation-procedure.md` に書く。
+**Protobuf を使うペイロード**（サーバーとクライアント等が共有する **その形式の** フィールド契約）の単一ソースは Git submodule **`3rdparty/alchemy-protocol/proto/*.proto`**（上流: [FRICK-ELDY/alchemy-protocol](https://github.com/FRICK-ELDY/alchemy-protocol)）。clone 後は **`git submodule update --init --recursive`** が必要です。別ディレクトリを指す場合は環境変数 **`PROTO_ROOT`** を設定してください（`mix alchemy.gen.proto` および `rust/client/*/build.rs` が参照）。**チームで固定しているタグ・コミット**は [docs/protocol-lock.md](./docs/protocol-lock.md) を参照してください。UDP 外枠や Phoenix の JSON など **別形式のワイヤ契約**は submodule の外にあり、[docs/architecture/overview.md](./docs/architecture/overview.md#設計思想) の表を参照。ゲーム状態やルールの「公式な中身」の SSoT は引き続き **Elixir**。生成物の更新は **`mix alchemy.gen.proto`** を公式エントリとする（実装は段階的に同タスクへ集約）。ツール導入、`build.rs`、CI、生成物の置き方の詳細は、作業用ツリー `workspace/2_todo/protobuf-full-automation-procedure.md` に書く。
 
 - 公開向けの短い概要: [docs/architecture/protobuf-migration.md](./docs/architecture/protobuf-migration.md)
 - ワイヤ形式とレガシー ETF: [docs/architecture/erlang-term-schema.md](./docs/architecture/erlang-term-schema.md)

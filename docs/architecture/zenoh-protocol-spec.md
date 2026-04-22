@@ -26,7 +26,7 @@
 - Elixir は `Content.FrameEncoder.encode_frame/5` が生成するバイナリを publish する。
 - Rust は `render_frame_proto::decode_pb_render_frame`（または `network` / `render` の再エクスポート）でデコードする。
 
-意味論・フィールドは [draw-command-spec.md](draw-command-spec.md) および `proto/render_frame.proto` を参照。
+意味論・フィールドは [draw-command-spec.md](draw-command-spec.md) および [render_frame.proto（alchemy-protocol `v0.1.1`）](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/render_frame.proto) を参照。
 
 ### 2.2 オプション拡張（将来）
 
@@ -88,5 +88,5 @@
 - [client-server-separation-procedure.md](../plan/completed/client-server-separation-procedure.md) — 分離手順（未実施項目は [client-server-separation-future.md](../plan/reference/client-server-separation-future.md)）
 - [network-protocol-current.md](network-protocol-current.md) — 既存 Channel / UDP プロトコル
 - [draw-command-spec.md](draw-command-spec.md) — DrawCommand タグ・フィールド
-- [proto/render_frame.proto](../../proto/render_frame.proto) — フレーム protobuf 定義
+- [render_frame.proto（alchemy-protocol `v0.1.1`）](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/render_frame.proto) — フレーム protobuf 定義
 - [Network.Channel](../../apps/network/lib/network/channel.ex) — Phoenix input/action ハンドラ

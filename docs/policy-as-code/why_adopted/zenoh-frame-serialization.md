@@ -4,7 +4,7 @@
 > 最終更新: 2026-03-28  
 > ステータス: 記録（現行は protobuf のみ）
 
-> **現行**: Zenoh のサーバー→クライアント **RenderFrame** は **protobuf**（`proto/render_frame.proto`、Elixir `Alchemy.Render.RenderFrame`、Rust `render_frame_proto::decode_pb_render_frame`）。  
+> **現行**: Zenoh のサーバー→クライアント **RenderFrame** は **protobuf**（[render_frame.proto（alchemy-protocol `v0.1.1`）](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/render_frame.proto)、Elixir `Alchemy.Render.RenderFrame`、Rust `render_frame_proto::decode_pb_render_frame`）。  
 > 契約と手順は [erlang-term-schema.md](../../architecture/erlang-term-schema.md)（レガシー ETF 参照）、[protobuf-migration.md](../../architecture/protobuf-migration.md)、[zenoh-protocol-spec.md](../../architecture/zenoh-protocol-spec.md) を参照。
 
 ---
