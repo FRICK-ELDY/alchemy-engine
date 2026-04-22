@@ -51,21 +51,23 @@ defmodule Mix.Tasks.Alchemy.Gen.Proto do
 
       replace_generated_files!(temp_out, elixir_out)
 
-      # prost-build は各クレートの build.rs で走る。`network` と `nif` の両方をビルドして取りこぼしを防ぐ。
+      # prost-build は `network` / `render_frame_proto` の build.rs で走る（`network` ビルドで依存も解決される）。
+      # `nif` は現行 Cargo プロファイルに prost / build.rs がないため対象外（将来復活時はここに追加）。
       run_step_or_raise!(
-        "cargo build -p network -p nif",
+        "cargo build -p network",
         "cargo",
         [
           "build",
           "--manifest-path",
           rust_manifest,
           "-p",
-          "network",
-          "-p",
-          "nif"
+          "network"
         ],
         root,
-        env: [{"PROTO_ROOT", Path.expand(proto_dir, root)}]
+        env: [
+          {"PROTO_ROOT", Path.expand(proto_dir, root)},
+          {"PROTOC", protoc}
+        ]
       )
     after
       File.rm_rf!(temp_out)
@@ -165,6 +167,7 @@ defmodule Mix.Tasks.Alchemy.Gen.Proto do
 
   # `System.halt/1` は VM を即終了するため `try` の `after` が走らず一時ディレクトリが残る。
   # 失敗時は `Mix.raise/1` で例外にし、`after` で必ずクリーンアップする。
+  # 呼び出しは常に `opts` を渡す（`opts \\ []` は全呼び出しが 5 引数のため未使用警告のみ発生する）。
   defp run_step_or_raise!(label, cmd, args, root, opts) do
     Mix.shell().info("")
     Mix.shell().info("[STEP] #{label}")
