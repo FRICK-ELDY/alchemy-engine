@@ -2,7 +2,7 @@
 
 > 作成日: 2026-03-07  
 > 出典: [contents-defines-rust-executes.md](../plan/backlog/contents-defines-rust-executes.md) P2-1  
-> 目的: DrawCommand のタグ・フィールド（Elixir タプル形）を文書化する。**契約の SSoT は `proto/render_frame.proto`**。本ドキュメントは人間可読な対応表と `Content.FrameEncoder` の入力形式を示す。
+> 目的: DrawCommand のタグ・フィールド（Elixir タプル形）を文書化する。**ワイヤ契約の SSoT は `proto/render_frame.proto`**（ドメインの SSoT は Elixir。二層の整理は [overview.md](./overview.md#設計思想)）。本ドキュメントは人間可読な対応表と `Content.FrameEncoder` の入力形式を示す。
 >
 > **プロトコル仕様**: ワイヤ上のバイト列は **protobuf**（`proto/render_frame.proto`）。本ドキュメントは同じ意味論の **Elixir タプル入力**を述べる。Zenoh 経由のフレーム配信でも同じ契約を用いる（歴史的出典: [client-server-separation-procedure.md](../plan/completed/client-server-separation-procedure.md) フェーズ 1）。
 
@@ -12,7 +12,7 @@
 
 **DrawCommand** は Elixir 側（contents の Render コンポーネント等）が **タプル**として組み立てる描画命令リストの要素である。**サーバーからクライアントへは NIF を経由しない。** `Content.FrameEncoder.encode_frame/5` が **`Alchemy.Render.RenderFrame` の protobuf** に変換し、Zenoh 等で配信する。クライアント（Rust）は `render_frame_proto::decode_pb_render_frame` でデコードし、`render` が描画する。
 
-- **契約（SSoT）**: `proto/render_frame.proto`（protobuf）。Elixir 側の対応実装は `Content.FrameEncoder`（`command_to_pb/1` 等）。
+- **ワイヤ契約（SSoT）**: `proto/render_frame.proto`（protobuf）。Elixir 側の対応実装は `Content.FrameEncoder`（`command_to_pb/1` 等）。
 - **実行**: クライアント Rust（`rust/client/render_frame_proto` → `rust/client/shared` の `DrawCommand`、`rust/client/render`）。`Core.NifBridge` は **`run_formula_bytecode/3` のみ**であり、DrawCommand 型や描画 NIF は持たない。
 
 ---

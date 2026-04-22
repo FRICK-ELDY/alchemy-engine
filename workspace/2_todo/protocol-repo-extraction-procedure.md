@@ -16,6 +16,8 @@
 | **alchemy-engine** | 上記を **バージョン付きで取り込み**、`mix alchemy.gen.proto` / `prost-build` が **取り込み先の `proto/`** を参照する。ルートの `proto/` は削除または薄いラッパにする。 |
 | **CI** | プロトコルリポ単体で **契約検証**（`protoc` での検証、既存の encode/decode 往復テストの移管または二重実行）が通る。エンジン側 CI は **ロックされたリビジョン**のプロトと整合することを確認する。 |
 
+**補足（二層の SSoT）**: 上表の **SSoT** は **アプリ間ワイヤの契約**に限る。ゲーム状態・ルールの **ドメイン SSoT** は alchemy-engine 側の **Elixir**（[docs/architecture/overview.md](../../docs/architecture/overview.md#設計思想)）。
+
 ### 1.2 完了条件（Definition of Done）
 
 - [ ] GitHub 上に **プロトコル専用リポジトリ**が存在し、ライセンス・README・変更履歴がある。  

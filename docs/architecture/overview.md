@@ -4,7 +4,18 @@
 
 ## 設計思想
 
-AlchemyEngine は **Elixir を Single Source of Truth（SSoT）** とし、**数式 VM の実行**と**デスクトップ描画**に Rust を使う構成です。入力のキャプチャとサーバー側の公式入力列・tick 方針の整理は [authoritative-state-sync-policy.md](./authoritative-state-sync-policy.md) を参照。
+AlchemyEngine は **サーバー上の権威あるゲーム状態とルール**を **Elixir** を中心に置き、**数式 VM の実行**と**デスクトップ描画**に Rust を使う構成です。入力のキャプチャとサーバー側の公式入力列・tick 方針の整理は [authoritative-state-sync-policy.md](./authoritative-state-sync-policy.md) を参照。
+
+### 二層の SSoT（ドメインとワイヤ契約）
+
+ドキュメントや議論で **「SSoT」** と書くとき、**何についての単一の真実か**を混同しないようにします。
+
+| 対象 | 主な担い手 | 例 |
+|:---|:---|:---|
+| **ドメイン**（公式状態、ルール、コンテンツ定義、「いつ何を送るか」の判断） | **Elixir**（contents / core / network のアプリロジック） | ルーム、tick、コンポーネント、`Content.FrameEncoder` が組み立てる論理データ |
+| **ワイヤ契約**（プロセスや言語をまたいで **同じバイト列の意味** に合意する形） | **`proto/*.proto`**（Elixir / Rust は生成コードで従う） | `RenderFrame`、入力イベント等の Protobuf。UDP の外側ヘッダは `Network.UDP.Protocol` の独自バイナリ。Phoenix Channel は JSON など経路ごとのフォーマットあり |
+
+**Elixir がドメインの SSoT であること**と、**`.proto` がバイナリメッセージ形の SSoT であること**は両立します。前者を捨てて後者に一本化する必要はありません。
 
 - **Elixir（サーバ）**: シーン・コンポーネント・メインループ（約 16ms タイマー）、Zenoh への `RenderFrame` publish、入力・イベントの受信
 - **Rust（サーバ `nif`）**: `Core.Formula` 経由のバイトコード実行のみ（Rustler NIF）

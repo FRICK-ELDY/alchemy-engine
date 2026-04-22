@@ -2,6 +2,8 @@
 
 SSoT（Single Source of Truth）コアエンジン。ゲームは **Core モジュール経由でのみ** エンジンとやり取りする。
 
+**用語の整理**: ここでの SSoT は **ドメイン／基盤ロジック** を指す。クライアントと共有する **Protobuf メッセージ形**の SSoT はリポジトリ直下の **`proto/*.proto`**（[docs/architecture/overview.md](../../docs/architecture/overview.md#設計思想)）。
+
 ## 責務
 
 - ゲームループ制御、イベント受信

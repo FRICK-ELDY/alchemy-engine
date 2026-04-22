@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package alchemy.render;
 
-// スキーマの断片は `render_frame/*.proto`。エントリは本ファイル（prost / ドキュメントの SSoT 起点）。
+// スキーマの断片は `render_frame/*.proto`。エントリは本ファイル（prost / ワイヤ契約のドキュメント起点。ドメイン SSoT は Elixir — docs/architecture/overview.md「二層の SSoT」）。
 import "render_frame/cursor_grab.proto";
 import "render_frame/mesh.proto";
 import "render_frame/camera.proto";

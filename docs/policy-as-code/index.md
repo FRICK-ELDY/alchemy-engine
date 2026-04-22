@@ -10,7 +10,7 @@
 | ファイル | 対象 | 内容 |
 |:---|:---|:---|
 | [why_adopted/zenoh-frame-serialization.md](./why_adopted/zenoh-frame-serialization.md) | 採用理由 | Zenoh フレーム直列化（Erlang term） |
-| [elixir.md](./elixir.md) | Elixir | 責務・禁止事項（定義の SSoT、処理レート 10/20/30Hz） |
+| [elixir.md](./elixir.md) | Elixir | 責務・禁止事項（**ドメイン**定義の SSoT、ワイヤは `.proto`、処理レート 10/20/30Hz） |
 | [elixir_zenoh.md](./elixir_zenoh.md) | Elixir × Zenoh | ネットワーク・フレーム配信 |
 | [nif.md](./nif.md) | NIF | ブロック・シリアライズ・呼び出し頻度 |
 | [nif_rust_thread.md](./nif_rust_thread.md) | NIF × Rust スレッド | 責務分担・Dirty NIF・委譲 |

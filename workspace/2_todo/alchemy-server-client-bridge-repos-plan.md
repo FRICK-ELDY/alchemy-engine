@@ -3,7 +3,7 @@
 > **置き場**: `workspace/2_todo`（着手前。Definition of Ready を満たしたら `3_Inprogress` へ）  
 > **作成日**: 2026-04-22  
 > **目的**: ワイヤと BEAM／ネイティブ内部表現の **変換・Zenoh セッション・購読ルーティング**など、**Elixir と Rust の両方に通じたレビューが必要な層**を `alchemy-engine` から分離し、**サーバー側**と**クライアント側**で責務とオーナーシップをはっきりさせる。  
-> **関連**: プロト契約の SSoT は [protocol-repo-extraction-procedure.md](./protocol-repo-extraction-procedure.md) と**別リポ**とし、ブリッジは **その契約を消費する実装**として依存する（順序は §6）。
+> **関連**: **ワイヤ**上のプロト契約の SSoT は [protocol-repo-extraction-procedure.md](./protocol-repo-extraction-procedure.md) と**別リポ**とし、ブリッジは **その契約を消費する実装**として依存する（順序は §6）。**ゲームドメイン**の SSoT は引き続き `alchemy-engine` 側の **Elixir**（[docs/architecture/overview.md](../../docs/architecture/overview.md#設計思想) の「二層の SSoT」）。
 
 ---
 

@@ -2,7 +2,9 @@
 
 Zenoh 経由のペイロードを Erlang term（ETF）から **Protocol Buffers** に揃える移行の、公開向けの要約です。
 
-## 契約（単一ソース）
+## 契約（ワイヤ上の単一ソース）
+
+ドメイン（ルール・公式状態）は **Elixir** が担い、**バイト列としてのメッセージ形**は **`proto/*.proto`** を単一ソースとする（全体像は [overview.md](./overview.md#設計思想) の「二層の SSoT」）。
 
 - スキーマ定義: リポジトリ直下の **`proto/*.proto`**
 - Elixir: `apps/network/lib/network/proto/`（`use Protobuf` 手書きが多い）

@@ -147,7 +147,7 @@ CI の詳細は [docs/warranty/ci.md](./docs/warranty/ci.md) を参照。
 
 ## Protobuf（`.proto`）
 
-スキーマの単一ソースはリポジトリ直下の **`proto/*.proto`**。生成物の更新は **`mix alchemy.gen.proto`** を公式エントリとする（実装は段階的に同タスクへ集約）。ツール導入、`build.rs`、CI、生成物の置き方の詳細は、作業用ツリー `workspace/2_todo/protobuf-full-automation-procedure.md` に書く。
+**ワイヤ上のメッセージ形**（サーバーとクライアント等が共有するバイナリ契約）の単一ソースは、リポジトリ直下の **`proto/*.proto`**。ゲーム状態やルールの「公式な中身」の SSoT は引き続き **Elixir**（[docs/architecture/overview.md](./docs/architecture/overview.md#設計思想) の「二層の SSoT」参照）。生成物の更新は **`mix alchemy.gen.proto`** を公式エントリとする（実装は段階的に同タスクへ集約）。ツール導入、`build.rs`、CI、生成物の置き方の詳細は、作業用ツリー `workspace/2_todo/protobuf-full-automation-procedure.md` に書く。
 
 - 公開向けの短い概要: [docs/architecture/protobuf-migration.md](./docs/architecture/protobuf-migration.md)
 - ワイヤ形式とレガシー ETF: [docs/architecture/erlang-term-schema.md](./docs/architecture/erlang-term-schema.md)

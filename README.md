@@ -44,8 +44,10 @@ flowchart TB
 
 ## ハイライト
 
-- **Elixir as SSoT**
-> 状態とロジックはすべて Elixir 側で管理します。クライアント用のコードをそのままヘッドレスのマルチプレイサーバーとして転用可能です。1000人規模のプレイヤーが交差する大規模ネットワークも Elixir の並行処理能力で捌きます。
+- **二層の SSoT（ドメインは Elixir、ワイヤ契約は `.proto`）**
+> **ドメイン**（権威ある状態・ルール・コンテンツ定義）は Elixir 側で管理します。クライアント用のコードをそのままヘッドレスのマルチプレイサーバーとして転用可能です。1000人規模のプレイヤーが交差する大規模ネットワークも Elixir の並行処理能力で捌きます。
+>
+> **ワイヤ**（サーバーとデスクトップクライアント等が共有するバイナリメッセージの形）は **`proto/*.proto`** を契約の単一ソースとし、生成は `mix alchemy.gen.proto`（[development.md](./development.md)）。混同しないよう整理した説明は [アーキテクチャ概要 — 設計思想](./docs/architecture/overview.md#設計思想) を参照。
 - **Rust ECS for Physics & Rendering & Audio**
 > Elixir から同期された状態をもとに、Rust の ECS が 60Hz 固定の物理演算・描画・オーディオ処理を行います。SoA（Structure of Arrays）と SIMD による CPU キャッシュ最適化で、高フレームレートを維持します。
 - **Zero NIF Serialization Overhead**
