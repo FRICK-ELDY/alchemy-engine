@@ -74,7 +74,9 @@ end
 | **Elixir（contents）** | **コンポーネントの定義を決める**。メッシュ・シェーダー・式・ルール・パラメータなど、コンテンツ固有の「何を・どうするか」を定義する |
 | **Rust** | **定義を実行する**。受け取った定義に基づいて物理演算・描画・オーディオを処理し、結果を出力する |
 
-Elixir は定義の **SSoT（Single Source of Truth）** であり、Rust は定義に従う実行層である。
+Elixir は **コンテンツとゲームルールの定義**における **SSoT（Single Source of Truth）** であり、Rust はその定義に従う実行層である。
+
+**別の「真実」として**、Elixir サーバーと Rust クライアント等が **同じバイト列**で合意する **Protobuf メッセージ**（例: Zenoh の `RenderFrame`）は **`proto/*.proto`** をその形式のワイヤ契約の SSoT とする。UDP 外枠や WebSocket の JSON など **別形式**は別のモジュール／文書が契約の SSoT になる。ドメインの判断は Elixir、Protobuf のフィールド番号・型は `.proto`、という整理に分ける（詳細は [architecture/overview.md](./architecture/overview.md#設計思想)）。
 
 **Rust 側のコンポーネントの設計は、Elixir の `apps/contents` で定義する。** パラメータ・スキーマ・ルールは contents が持つ。Rust は受け取った定義に基づいて SoA で実行する。
 
