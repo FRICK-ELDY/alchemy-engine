@@ -37,8 +37,8 @@
 **理由**:
 
 - **Elixir**: **ドメイン**における定義の SSoT（Single Source of Truth）。「何を・どうするか」を決める責務を持つ（権威ある状態・ルール・コンテンツ）
-- **`.proto`**: **ワイヤ**上のメッセージ形の SSoT。Elixir と Rust が同じバイト列で合意するフィールド契約。ゲームルールの SSoT に置き換わるものではない（[architecture/overview.md](../architecture/overview.md#設計思想)）
-- **Rust**: Elixir のドメイン定義を受け取り、それを効率よく「実行」する責務を持つ（クライアントは `.proto` に従ってデコードする）
+- **`.proto`**: **Protobuf を使うペイロード**について、Elixir と Rust が同じバイト列で合意する **フィールド契約**の SSoT。UDP 外枠や Phoenix JSON など **他形式**は別の SSoT（[architecture/overview.md](../architecture/overview.md#設計思想)）。ゲームルールの SSoT に置き換わるものではない
+- **Rust**: Elixir のドメイン定義を受け取り、それを効率よく「実行」する責務を持つ（クライアントは Protobuf 経路で `.proto` に従ってデコードする）
 - 責務が逆転すると、ヘッドレスサーバーへの転用やコンテンツの差し替えが困難になり、アーキテクチャの一貫性が崩れる
 
 **やるべきこと**: Elixir で定義し、NIF や Zenoh 経由で Rust（サーバー・クライアント両方）に注入する。Rust は注入された定義に従って SoA/SIMD で実行する。

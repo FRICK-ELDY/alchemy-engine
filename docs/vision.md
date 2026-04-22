@@ -76,7 +76,7 @@ end
 
 Elixir は **コンテンツとゲームルールの定義**における **SSoT（Single Source of Truth）** であり、Rust はその定義に従う実行層である。
 
-**別の「真実」として**、Elixir サーバーと Rust クライアント等が **同じバイト列**で合意するメッセージ形（例: Zenoh の `RenderFrame`）は **`proto/*.proto`** をワイヤ契約の SSoT とする。ドメインの判断は Elixir、線路上のフィールド番号・型は `.proto`、という二層に分ける（詳細は [architecture/overview.md](./architecture/overview.md#設計思想)）。
+**別の「真実」として**、Elixir サーバーと Rust クライアント等が **同じバイト列**で合意する **Protobuf メッセージ**（例: Zenoh の `RenderFrame`）は **`proto/*.proto`** をその形式のワイヤ契約の SSoT とする。UDP 外枠や WebSocket の JSON など **別形式**は別のモジュール／文書が契約の SSoT になる。ドメインの判断は Elixir、Protobuf のフィールド番号・型は `.proto`、という整理に分ける（詳細は [architecture/overview.md](./architecture/overview.md#設計思想)）。
 
 **Rust 側のコンポーネントの設計は、Elixir の `apps/contents` で定義する。** パラメータ・スキーマ・ルールは contents が持つ。Rust は受け取った定義に基づいて SoA で実行する。
 

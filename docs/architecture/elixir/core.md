@@ -1,6 +1,6 @@
 # Elixir: core — SSoT コアエンジン
 
-ここでの **SSoT** は **ドメイン／エンジン基盤**（ルーム、イベント、Formula、設定など）の話である。Zenoh 等の **ワイヤ上の Protobuf 形**は **`proto/*.proto`** が契約の SSoT（[overview.md](../overview.md#設計思想)）。
+ここでの **SSoT** は **ドメイン／エンジン基盤**（ルーム、イベント、Formula、設定など）の話である。**Protobuf ペイロード**のワイヤ形は **`proto/*.proto`** が契約の SSoT（他形式は [overview.md](../overview.md#設計思想) の表）。
 
 > **2026-04 更新**: `Core` ファサードは **モジュールドキュメントのみ**（セーブ・ゲーム用 NIF API は撤去）。実装モジュールは `core/` 配下に残存。
 
