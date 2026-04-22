@@ -119,13 +119,15 @@
 
 **推奨（実装が単純な順）**: チームが submodule に慣れているなら **A**。慣れていないなら **B** で `sparse: "proto"` を指定し、展開先を `PROTO_ROOT` 環境変数や Mix タスク内で解決する。
 
+**方式 A と B でパスが異なる**: submodule は多くの場合 `vendor/alchemy-protocol/proto/` に `.proto` が並ぶ。`sparse: "proto"` の Mix 依存では、依存のルートが **上流リポの `proto/` ディレクトリの内容そのもの**になる（§7.1）。Rust の `build.rs` はクレートごとに `CARGO_MANIFEST_DIR` からリポジトリルートまでの `..` の段数が違うため、**相対パスをハードコードだけで統一するのは事故りやすい**。
+
 実装タスク（エンジン側）:
 
-1. ルートの `proto/` を **削除**し、代わりに submodule 用ディレクトリ（例: `vendor/alchemy-protocol`）を置く **または** Mix の git 依存で取得した `deps/.../proto` を指す。  
-2. **`Mix.Tasks.Alchemy.Gen.Proto`**（`apps/core/lib/mix/tasks/alchemy.gen.proto.ex`）の `proto_dir` を、上記 **PROTO_ROOT** に解決するように変更する。  
-3. **Rust** の各 `build.rs`（`rust/client/render_frame_proto/build.rs`、`rust/client/network/build.rs` 等）の `proto_root` を、**`CARGO_MANIFEST_DIR` からの相対パス**で PROTO_ROOT に届くように変更する。  
-   - 方針: 「リポジトリルートからの相対」で統一するなら `../../vendor/alchemy-protocol/proto` のように **一段の定数**にまとめ、将来のディレクトリ移動に強くする。  
-4. ルート `mix.exs` に **開発用オプション**（`config :alchemy, :proto_path` 等）を置く場合は、**デフォルトは submodule／deps パス**にし、ローカルオーバーライドのみ env で上書き可能にする。
+1. ルートの `proto/` を **削除**し、代わりに submodule 用ディレクトリ（例: `vendor/alchemy-protocol`）を置く **または** Mix の git 依存（`sparse: "proto"` 等）で取得する。取得先の実パスは方式 A/B で異なる（§7）。  
+2. **`Mix.Tasks.Alchemy.Gen.Proto`**（`apps/core/lib/mix/tasks/alchemy.gen.proto.ex`）の `proto_dir` を、**PROTO_ROOT**（環境変数または Mix が解決した絶対パス）に解決するように変更する。  
+3. **Rust** の各 `build.rs`（`rust/client/render_frame_proto/build.rs`、`rust/client/network/build.rs` 等）の `proto_root` は、**標準手順として `std::env::var("PROTO_ROOT")` を最優先**し、未設定時のみ `CARGO_MANIFEST_DIR` からの相対パスにフォールバックする。CI・ローカルとも、`PROTO_ROOT` を明示すれば **方式 A/B の差とクレート深度の差を吸収**できる。  
+   - フォールバック例（現行レイアウト・**submodule が `vendor/alchemy-protocol/proto/` の場合**）: `rust/client/network` や `rust/client/render_frame_proto` からはリポジトリルートまで `../../../` のため、デフォルトは `../../../vendor/alchemy-protocol/proto` のように **3 段上がる**（`../../vendor/...` は **1 段足りない**）。`rust/nif` のように `rust/` 直下のクレートでは `../../vendor/...` で足りるなど、**クレートごとに検証すること**。  
+4. ルート `mix.exs` に **開発用オプション**（`config :alchemy, :proto_path` 等）を置く場合は、**デフォルトは submodule／deps パス**にし、ローカルオーバーライドのみ env で上書き可能にする。`cargo` 実行時に `PROTO_ROOT` を渡す方法（ドキュメント化・`cargo build` 前の export 等）を `development.md` に書く。
 
 ### フェーズ 3 — 生成物とテスト（1〜2 日）
 
@@ -183,7 +185,7 @@
   app: false}
 ```
 
-取得先は `deps/alchemy_protocol_files/proto/` になる想定で、`Mix.Tasks.Alchemy.Gen.Proto` で `Path.join(Mix.Project.deps_path(), "alchemy_protocol_files/proto")` を解決する。**アプリ名は実装時に衝突しない名前にする**。
+`sparse: "proto"` を指定すると、Mix は上流リポジトリの **`proto/` サブツリーだけ**を依存先に展開し、**依存のルートディレクトリがすでに `.proto` の親**になる（`deps/alchemy_protocol_files/render_frame.proto` のように並ぶ）。そのため `Mix.Tasks.Alchemy.Gen.Proto` では `Path.join(Mix.Project.deps_path(), "alchemy_protocol_files")` を **PROTO_ROOT として解決**し、末尾に **`/proto` を二重に付けない**こと。**アプリ名（依存キー）は実装時に衝突しない名前にする**。
 
 ### 7.2 Git submodule の例
 
@@ -192,7 +194,7 @@ git submodule add https://github.com/ORG/alchemy-protocol.git vendor/alchemy-pro
 # proto は vendor/alchemy-protocol/proto/
 ```
 
-`build.rs` では `../../../vendor/alchemy-protocol/proto` のように **クレートからの相対**で指定する。
+この場合の PROTO_ROOT は **`vendor/alchemy-protocol/proto`（リポジトリルートからの相対）** である。`build.rs` ではフェーズ 2 の実装タスクどおり **`PROTO_ROOT` 環境変数を優先**し、未設定時のみ例として `rust/client/network` から `../../../vendor/alchemy-protocol/proto` のように **クレート位置に合わせた相対**で指定する（段数は必ず実パスで検証する）。
 
 ---
 
@@ -206,7 +208,7 @@ git submodule add https://github.com/ORG/alchemy-protocol.git vendor/alchemy-pro
 | 2 | **多言語生成の単一パイプライン** | [protobuf-full-automation-procedure.md](../7_done/protobuf-full-automation-procedure.md) が未完のうちは、**二リポでも「生成コマンドはエンジン側に一本」**のままでよい。自動化完了後に **プロトリポで生成して配布**へ移行するか再評価する。 |
 | 3 | **契約テストの単一実行場所** | テストを両リポに複製すると二重メンテになる。**推奨**: 厳密な往復はプロトコルリポ（最小 Elixir/Rust ワークスペース）、エンジンは **統合テスト**に留める。 |
 | 4 | **Rust の prost-build** | `render_frame_proto` / `network` 等、**`build.rs` で `proto/` を参照する全クレート**を `grep`/Cargo で洗い出し、フェーズ 2 でパスを漏れなく更新する（現行の `nif` は protobuf を参照しないが、将来復活時に同様）。 |
-| 5 | **Windows 開発者** | `PROTOC` 環境変数と `PATH`（`protoc-gen-elixir`）の手順を **development.md に明記**。submodule の初期化も Windows で同じコマンドか確認する。 |
+| 5 | **Windows 開発者** | `PROTOC` 環境変数と `PATH`（`protoc-gen-elixir`）の手順を **development.md に明記**。submodule の初期化も Windows で同じコマンドか確認する。`PROTO_ROOT` を **Cargo と Mix の両方**で揃える（sparse 時は `deps/<name>/` がルートで `/proto` 二重付与に注意）。 |
 | 6 | **OSS とライセンス** | プロトコルリポの LICENSE は **エンジンと互換**にし、外部が **単体で fork しやすい**ようにする。 |
 | 7 | **「プロトコル」と「ゲームデータ」** | ワールドの意味論までプロトリポに寄せすぎると境界が曖昧になる。**ワイヤに出るメッセージのみ**を原則とする。 |
 | 8 | **Cap’n Proto 共存** | 将来 XR 用に別 IDL を足す場合、**同一リポの `schemas/capnp/`** にするか **別リポ**にするかを **レイヤー図で固定**しないと、また「どこが SSoT か」が分断する。 |
@@ -231,3 +233,4 @@ git submodule add https://github.com/ORG/alchemy-protocol.git vendor/alchemy-pro
 | 日付 | 内容 |
 |:---|:---|
 | 2026-04-22 | 初版（`workspace/2_todo` に手順書として作成） |
+| 2026-04-22 | レビュー反映: `PROTO_ROOT` を `build.rs` / Mix の標準解決に明記。`sparse: "proto"` 時は `deps/<name>/` がルートで `/proto` を二重に付けない。方式 A/B とクレート深度による相対パス差を追記。 |
