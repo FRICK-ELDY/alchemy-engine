@@ -18,7 +18,7 @@ defmodule Content.FrameEncoder do
   Zenoh フレーム配信用 protobuf エンコーダ。
 
   DrawCommand・CameraParams・UiCanvas・MeshDef を `Alchemy.Render.RenderFrame` に変換して encode する。
-  スキーマ: proto/render_frame.proto
+  スキーマ: [alchemy-protocol の `render_frame.proto`（例: タグ `v0.1.1`）](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/render_frame.proto)（本リポでは submodule `3rdparty/alchemy-protocol/proto/`）。
   """
 
   @doc """
@@ -64,7 +64,7 @@ defmodule Content.FrameEncoder do
 
   defp command_to_pb(command) do
     raise ArgumentError,
-          "unknown DrawCommand #{inspect(command)}. Add a clause or update proto/render_frame.proto"
+          "unknown DrawCommand #{inspect(command)}. Add a clause or update alchemy-protocol render_frame schema (3rdparty/alchemy-protocol/proto)"
   end
 
   defp camera_to_pb({:camera_2d, offset_x, offset_y}) do
@@ -269,7 +269,7 @@ defmodule Content.FrameEncoder do
   injection_map を `Alchemy.Frame.FrameInjection` にエンコードする。
 
   バイナリは `Contents.Events.Game` のフレーム注入フローで参照可能。旧 NIF への受け渡しは撤去済み。
-  map のキーは atom でも string でも可。スキーマ: proto/frame_injection.proto。未対応キーはログして無視する。
+  map のキーは atom でも string でも可。スキーマ: [frame_injection.proto（alchemy-protocol `v0.1.1`）](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/frame_injection.proto)（本リポでは `3rdparty/alchemy-protocol/proto/`）。未対応キーはログして無視する。
   """
   @spec encode_injection_map(map()) :: {:ok, binary()} | {:error, term()}
   def encode_injection_map(injection) when is_map(injection) do

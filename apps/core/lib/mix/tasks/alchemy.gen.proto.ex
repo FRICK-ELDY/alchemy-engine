@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.Alchemy.Gen.Proto do
-  @shortdoc "proto/*.proto から Elixir / Rust の生成コードを作る（単一エントリ）"
+  @shortdoc "3rdparty/alchemy-protocol/proto（または PROTO_ROOT）の .proto から Elixir / Rust の生成コードを作る"
   @moduledoc """
   `protoc` / `prost-build` による生成処理を **この Mix タスクに集約**する。
 

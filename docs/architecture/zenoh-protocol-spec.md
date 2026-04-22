@@ -22,7 +22,7 @@
 
 ### 2.1 形式
 
-- **protobuf** の `alchemy.render.RenderFrame`（`proto/render_frame.proto`）。
+- **protobuf** の `alchemy.render.RenderFrame`（[render_frame.proto（alchemy-protocol `v0.1.1`）](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/render_frame.proto)）。
 - Elixir は `Content.FrameEncoder.encode_frame/5` が生成するバイナリを publish する。
 - Rust は `render_frame_proto::decode_pb_render_frame`（または `network` / `render` の再エクスポート）でデコードする。
 
@@ -43,7 +43,7 @@
 
 ### 3.1 movement（`game/room/{room_id}/input/movement`）
 
-**形式**: protobuf `alchemy.input.Movement`（`proto/input_events.proto`）。フィールド `dx`, `dy`（float）。
+**形式**: protobuf `alchemy.input.Movement`（[input_events.proto（alchemy-protocol `v0.1.1`）](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/input_events.proto)）。フィールド `dx`, `dy`（float）。
 
 **Phoenix Channel 互換**: `"input"` イベントの `%{"dx" => dx, "dy" => dy}` と意味的に同一。
 
