@@ -76,8 +76,6 @@ defmodule Mix.Tasks.Alchemy.Ci do
             "--manifest-path",
             manifest,
             "--workspace",
-            "--exclude",
-            "launcher",
             "--",
             "-D",
             "warnings"

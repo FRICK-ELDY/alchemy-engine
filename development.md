@@ -61,7 +61,8 @@ mix alchemy.server
 zenohd / HL-Server / Client をトレイメニューから管理します（Phase 0–6 対応）。
 
 ```bash
-mix alchemy.launcher
+cd ../alchemy-launcher
+cargo run
 ```
 
 - トレイにアイコンが表示されます
@@ -88,7 +89,7 @@ Get-Process zenohd -ErrorAction SilentlyContinue
 
 ### クライアント exe のみでプレイ（一括起動）
 
-ランチャー（`mix alchemy.launcher`）を使用して zenohd、サーバー、クライアントを管理します。
+`alchemy-launcher` リポジトリのランチャーを使用して zenohd、サーバー、クライアントを管理します。
 
 **前提**: zenohd をインストール済み（`cargo install eclipse-zenoh`）
 
