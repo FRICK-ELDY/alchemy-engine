@@ -60,12 +60,8 @@ graph TB
         APP --> SH
     end
 
-    LAUNCHER[rust/launcher]
-
     GN -->|Zenoh frame| NETC
     NETC -->|Zenoh input| GN
-    LAUNCHER -.-> Server
-    LAUNCHER -.-> Client
 ```
 
 ---
@@ -81,9 +77,8 @@ alchemy-engine/
 │   ├── contents/lib/          # 維持 3 コンテンツ + behaviour / events / scenes / components
 │   └── network/               # ZenohBridge, UDP, Phoenix …
 ├── rust/
-│   ├── Cargo.toml             # ワークスペース（members に nif / launcher / client/*）
+│   ├── Cargo.toml             # ワークスペース（members に nif / client/*）
 │   ├── nif/                   # Rustler・Formula VM のみ（physics なし）
-│   ├── launcher/              # ルーター・サーバ・クライアント起動
 │   └── client/
 │       ├── shared/            # 契約型・display（既定解像度）等
 │       ├── render_frame_proto/ # RenderFrame protobuf デコード
@@ -128,8 +123,6 @@ graph TB
     APP --> SHARED
     APP --> XR
     APP --> AUDIO
-
-    LAUNCHER[rust/launcher]
 
     Note1[Elixir mix compile が nif を<br/>release ビルドして NIF ロード]
 ```
@@ -230,6 +223,19 @@ sequenceDiagram
 
 ---
 
+## 起動方法（現行）
+
+開発時は launcher を介さず、役割ごとに `mix` タスクを直接起動する。
+
+- ルーター: `mix alchemy.router`
+- サーバ: `mix alchemy.server`
+- クライアント: `mix alchemy.client`
+
+`alchemy-launcher` は本リポジトリ外で管理される独立ツール:
+<https://github.com/FRICK-ELDY/alchemy-launcher>
+
+---
+
 ## ユーザー入力（クライアント → サーバ）
 
 ```mermaid
@@ -303,5 +309,6 @@ graph TB
 
 - [ビジョンと設計思想](../vision.md)
 - **Elixir**: [server](./elixir/server.md) / [core](./elixir/core.md) / [contents](./elixir/contents.md) / [network](./elixir/network.md)
-- **Rust**: [nif](./rust/nif.md) / [desktop_client](./rust/desktop_client.md) / [desktop/input](./rust/desktop/input.md) / [desktop/render](./rust/desktop/render.md) / [launcher](./rust/launcher.md) / [audio](./rust/nif/audio.md)
+- **Rust**: [nif](./rust/nif.md) / [desktop_client](./rust/desktop_client.md) / [desktop/input](./rust/desktop/input.md) / [desktop/render](./rust/desktop/render.md) / [audio](./rust/nif/audio.md)
+- **外部ツール**: [alchemy-launcher](https://github.com/FRICK-ELDY/alchemy-launcher)（別リポジトリ管理）
 - **歴史（削除済み physics）**: [nif/physics](./rust/nif/physics.md) はアーカイブ参照用
