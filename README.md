@@ -78,7 +78,7 @@ mix alchemy.setup
 mix alchemy.server
 ```
 
-`mix alchemy.server` はサーバーのみ起動します。ゲームをプレイするには `zenohd` + サーバー + VRAlchemy の 3 プロセスが必要です。`mix alchemy.launcher` で一括管理できます。
+`mix alchemy.server` はサーバーのみ起動します。ゲームをプレイするには `zenohd` + サーバー + VRAlchemy の 3 プロセスが必要です。一括起動は別リポジトリ `../alchemy-launcher` で実行してください。
 
 **開発者向け**: 起動手順の詳細・ランチャー・品質保証コマンドなどは [development.md](./development.md) を参照してください。
 

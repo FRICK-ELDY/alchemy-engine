@@ -2,7 +2,6 @@
 resolver = "2"
 members = [
     "nif",
-    "launcher",
     "client/shared",
     "client/render_frame_proto",
     "client/network",

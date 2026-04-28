@@ -88,6 +88,6 @@ VRAlchemy.exe --connect tcp/127.0.0.1:7447 --room main
 
 ### zenohd
 
-zenohd の起動は `mix alchemy.router` または `mix alchemy.launcher` から行えます。
+zenohd の起動は `mix alchemy.router` または `alchemy-launcher` から行えます。
 
 **注意**: mix run（サーバー）は長時間実行のため、非表示で起動すると問題発生時の確認が難しくなります。開発時はターミナルで起動し、製品運用時はサービス化や別プロセス管理を検討してください。

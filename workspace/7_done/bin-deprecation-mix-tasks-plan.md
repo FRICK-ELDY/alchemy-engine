@@ -45,7 +45,7 @@
 | ---------------------- | --------------------------------------- |
 | `mix alchemy.clean`    | `_build`、`deps`、`native/target` を削除     |
 | `mix alchemy.setup`    | `mix deps.get` + `mix compile`          |
-| `mix alchemy.launcher` | `cargo run -p launcher`                 |
+| （廃止）`mix alchemy.launcher` | launcher 分離前の旧タスク（現在は `alchemy-launcher` リポジトリへ移行） |
 | `mix alchemy.build`    | `-p app` で desktop ビルド（debug/release）   |
 | `mix alchemy.ci`       | CI 相当（filter: rust / elixir / check）    |
 | `mix alchemy.format`   | Elixir + Rust 同時フォーマット                  |
@@ -69,7 +69,7 @@
 
 - **フェーズ 0**: client_desktop 整理 ✅
 - **フェーズ 1**: 基盤タスク（clean, setup, format, test, build, ci）✅
-- **フェーズ 2**: 起動系タスク（launcher, router, server, client）✅
+- **フェーズ 2**: 起動系タスク（router, server, client + launcher）✅
 - **フェーズ 3**: credo 追加、bin/ 削除、ドキュメント更新 ✅
 
 ---
