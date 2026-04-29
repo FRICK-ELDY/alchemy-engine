@@ -66,14 +66,19 @@ defmodule Contents.Components.Category.Rendering.Render do
     from_playing = Map.get(playing_state, :cursor_grab_request, :no_change)
 
     cond do
-      from_playing != :no_change -> from_playing
+      from_playing != :no_change ->
+        from_playing
+
       # ゲームオーバーシーンではカーソルを解放して RETRY 等のボタンをクリック可能に
-      current_scene == content.game_over_scene() -> :release
+      current_scene == content.game_over_scene() ->
+        :release
+
       function_exported?(content, :scene_needs_cursor_release?, 1) and
           content.scene_needs_cursor_release?(current_scene) ->
         :release
 
-      true -> :no_change
+      true ->
+        :no_change
     end
   end
 

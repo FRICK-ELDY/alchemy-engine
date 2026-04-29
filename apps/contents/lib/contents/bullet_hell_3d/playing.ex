@@ -187,8 +187,15 @@ defmodule Content.BulletHell3D.Playing do
       Enum.map(enemy_objects, fn %{object: obj} ->
         {ex, ey, ez} = position_from_object(obj)
 
-        Cone.cone_3d_command(ex, ey + @enemy_half, ez, @enemy_half, @enemy_half, @enemy_half,
-          {er, eg, eb, ea})
+        Cone.cone_3d_command(
+          ex,
+          ey + @enemy_half,
+          ez,
+          @enemy_half,
+          @enemy_half,
+          @enemy_half,
+          {er, eg, eb, ea}
+        )
       end)
 
     bullet_cmds =

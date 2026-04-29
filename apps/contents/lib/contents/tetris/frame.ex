@@ -112,8 +112,7 @@ defmodule Content.Tetris.Frame do
     ui =
       {:canvas,
        [
-         {:node, {:top_left, {10.0, 10.0}, :wrap},
-          {:rect, {0.0, 0.0, 0.0, 0.72}, 8.0, :none},
+         {:node, {:top_left, {10.0, 10.0}, :wrap}, {:rect, {0.0, 0.0, 0.0, 0.72}, 8.0, :none},
           [
             {:node, {:top_left, {0.0, 0.0}, :wrap},
              {:vertical_layout, 12.0, {10.0, 8.0, 10.0, 8.0}},
@@ -129,8 +128,8 @@ defmodule Content.Tetris.Frame do
                 {:text, "FPS #{fps}", {0.55, 0.6, 0.65, 1.0}, 12.0, false}, []},
                {:node, {:top_left, {0.0, 0.0}, :wrap}, :separator, []},
                {:node, {:top_left, {0.0, 0.0}, :wrap},
-                {:text, "A/D or arrows: move   W or up: rotate", {0.65, 0.72, 0.8, 1.0}, 11.0, false},
-                []},
+                {:text, "A/D or arrows: move   W or up: rotate", {0.65, 0.72, 0.8, 1.0}, 11.0,
+                 false}, []},
                {:node, {:top_left, {0.0, 0.0}, :wrap},
                 {:text, "S or down: soft drop", {0.65, 0.72, 0.8, 1.0}, 11.0, false}, []}
              ]}
@@ -187,6 +186,7 @@ defmodule Content.Tetris.Frame do
     y_wall_half = (y_wall_hi - y_wall_lo) / 2
 
     {br, bg, bb, ba} = @frame_black
+
     box = fn cx, cy, cz, hw, hh, hd ->
       {:box_3d, cx, cy, cz, hw, hh, {hd, br, bg, bb, ba}}
     end
@@ -209,7 +209,9 @@ defmodule Content.Tetris.Frame do
     {ex, ey, ez} = @camera_eye
     {tx, ty, tz} = @camera_target
     {ux, uy, uz} = @camera_up
-    {:camera_3d, {ex, ey, ez}, {tx, ty, tz}, {ux, uy, uz}, {@camera_fov, @camera_near, @camera_far}}
+
+    {:camera_3d, {ex, ey, ez}, {tx, ty, tz}, {ux, uy, uz},
+     {@camera_fov, @camera_near, @camera_far}}
   end
 
   defp block_commands(grid, piece, colors, opts) do
