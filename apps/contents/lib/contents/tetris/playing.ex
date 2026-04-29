@@ -93,71 +93,86 @@ defmodule Content.Tetris.Playing do
   end
 
   defp tick(state) do
-    {dx, dz} = Map.get(state, :move_input, {0.0, 0.0})
-    dx_i = trunc(dx)
-    dz_i = trunc(dz)
-
-    state = %{state | h_cool: max(0, state.h_cool - 1), rotate_cool: max(0, state.rotate_cool - 1)}
-
-    state =
-      cond do
-        dx_i < 0 and state.h_cool == 0 ->
-          case try_shift(state, -1, 0) do
-            {:ok, s} -> %{s | h_cool: @h_repeat_frames}
-            :no -> state
-          end
-
-        dx_i > 0 and state.h_cool == 0 ->
-          case try_shift(state, 1, 0) do
-            {:ok, s} -> %{s | h_cool: @h_repeat_frames}
-            :no -> state
-          end
-
-        true ->
-          state
-      end
-
-    # W / arrow up: rotate
-    state =
-      if dz_i < 0 and state.rotate_cool == 0 do
-        case try_rotate(state) do
-          {:ok, s} -> %{s | rotate_cool: @rotate_cooldown_frames}
-          :no -> state
-        end
-      else
-        state
-      end
-
-    # S / arrow down: soft drop (one row per frame)
-    state =
-      if dz_i > 0 do
-        case try_shift(state, 0, 1) do
-          {:ok, s} -> %{s | score: s.score + 1}
-          :no -> lock_and_continue(state)
-        end
-      else
-        state
-      end
-
-    # Gravity
-    state =
-      if dz_i > 0 do
-        state
-      else
-        drop_every = state.drop_frames
-        new_timer = state.drop_timer - 1
-
-        if new_timer <= 0 do
-          case try_shift(state, 0, 1) do
-            {:ok, s} -> %{s | drop_timer: drop_every}
-            :no -> lock_and_continue(%{state | drop_timer: drop_every})
-          end
-        else
-          %{state | drop_timer: new_timer}
-        end
-      end
+    {dx_i, dz_i} = tick_input_integers(state)
 
     state
+    |> tick_decrement_cooldowns()
+    |> tick_horizontal_move(dx_i)
+    |> tick_rotate(dz_i)
+    |> tick_soft_drop(dz_i)
+    |> tick_gravity(dz_i)
+  end
+
+  defp tick_input_integers(state) do
+    {dx, dz} = Map.get(state, :move_input, {0.0, 0.0})
+    {trunc(dx), trunc(dz)}
+  end
+
+  defp tick_decrement_cooldowns(state) do
+    %{
+      state
+      | h_cool: max(0, state.h_cool - 1),
+        rotate_cool: max(0, state.rotate_cool - 1)
+    }
+  end
+
+  defp tick_horizontal_move(state, dx_i) do
+    cond do
+      dx_i < 0 and state.h_cool == 0 ->
+        case try_shift(state, -1, 0) do
+          {:ok, s} -> %{s | h_cool: @h_repeat_frames}
+          :no -> state
+        end
+
+      dx_i > 0 and state.h_cool == 0 ->
+        case try_shift(state, 1, 0) do
+          {:ok, s} -> %{s | h_cool: @h_repeat_frames}
+          :no -> state
+        end
+
+      true ->
+        state
+    end
+  end
+
+  defp tick_rotate(state, dz_i) do
+    if dz_i < 0 and state.rotate_cool == 0 do
+      case try_rotate(state) do
+        {:ok, s} -> %{s | rotate_cool: @rotate_cooldown_frames}
+        :no -> state
+      end
+    else
+      state
+    end
+  end
+
+  defp tick_soft_drop(state, dz_i) do
+    if dz_i > 0 do
+      case try_shift(state, 0, 1) do
+        {:ok, s} -> %{s | score: s.score + 1}
+        :no -> lock_and_continue(state)
+      end
+    else
+      state
+    end
+  end
+
+  defp tick_gravity(state, dz_i) do
+    if dz_i > 0 do
+      state
+    else
+      drop_every = state.drop_frames
+      new_timer = state.drop_timer - 1
+
+      if new_timer <= 0 do
+        case try_shift(state, 0, 1) do
+          {:ok, s} -> %{s | drop_timer: drop_every}
+          :no -> lock_and_continue(%{state | drop_timer: drop_every})
+        end
+      else
+        %{state | drop_timer: new_timer}
+      end
+    end
   end
 
   defp lock_and_continue(state) do

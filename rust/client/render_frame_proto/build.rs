@@ -3,7 +3,9 @@ use std::path::{Path, PathBuf};
 fn proto_root_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
     let p = match std::env::var("PROTO_ROOT") {
         Ok(root) => PathBuf::from(root),
-        Err(_) => Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../3rdparty/alchemy-protocol/proto"),
+        Err(_) => {
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../3rdparty/alchemy-protocol/proto")
+        }
     };
     if !p.is_dir() {
         return Err(format!(
@@ -29,6 +31,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("cargo:rerun-if-changed={}", proto_root.join(rel).display());
     }
     println!("cargo:rerun-if-changed={}", proto_root.display());
-    prost_build::compile_protos(&["render_frame.proto"], &[proto_root.clone()])?;
+    prost_build::compile_protos(&["render_frame.proto"], std::slice::from_ref(&proto_root))?;
     Ok(())
 }

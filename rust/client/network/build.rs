@@ -4,7 +4,9 @@ use std::path::{Path, PathBuf};
 fn proto_root_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
     let p = match std::env::var("PROTO_ROOT") {
         Ok(root) => PathBuf::from(root),
-        Err(_) => Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../3rdparty/alchemy-protocol/proto"),
+        Err(_) => {
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../3rdparty/alchemy-protocol/proto")
+        }
     };
     if !p.is_dir() {
         return Err(format!(
@@ -15,7 +17,6 @@ fn proto_root_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
     }
     Ok(p)
 }
-
 
 /// `--proto_path` 基準の相対パス（直下および `render_frame/` 等のサブツリー）を列挙する。
 fn collect_proto_rel_paths(proto_dir: &Path) -> Result<Vec<PathBuf>, Box<dyn std::error::Error>> {
@@ -30,8 +31,7 @@ fn collect_proto_rel_paths(proto_dir: &Path) -> Result<Vec<PathBuf>, Box<dyn std
 
 /// `prost_build` / `protoc` が Windows でも相対パス解決できるよう `/` 区切りにする。
 fn rel_path_posix(rel: &Path) -> String {
-    rel
-        .components()
+    rel.components()
         .map(|c| c.as_os_str().to_string_lossy())
         .collect::<Vec<_>>()
         .join("/")
@@ -66,7 +66,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let compile_inputs: Vec<String> = proto_files.iter().map(|p| rel_path_posix(p)).collect();
     prost_build::compile_protos(
-        &compile_inputs.iter().map(String::as_str).collect::<Vec<_>>(),
+        &compile_inputs
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<_>>(),
         &[proto_dir.as_path()],
     )?;
     Ok(())

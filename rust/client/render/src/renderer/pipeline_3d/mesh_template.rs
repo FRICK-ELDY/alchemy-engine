@@ -3,6 +3,18 @@
 use crate::MeshVertex;
 use std::collections::HashMap;
 
+/// [`push_mesh_from_def`] へのインスタンス変換（中心・半拡張・色）。
+#[derive(Clone, Copy)]
+pub(super) struct MeshFromDefInst {
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub half_w: f32,
+    pub half_h: f32,
+    pub half_d: f32,
+    pub color: [f32; 4],
+}
+
 /// 軸平行ボックスの頂点（8 個）・インデックス（36 個）を生成する。
 pub(super) fn box_mesh(
     cx: f32,
@@ -52,16 +64,19 @@ pub(super) fn box_mesh(
 pub(super) fn push_mesh_from_def(
     cache: &HashMap<String, (Vec<MeshVertex>, Vec<u32>)>,
     mesh_name: &str,
-    x: f32,
-    y: f32,
-    z: f32,
-    half_w: f32,
-    half_h: f32,
-    half_d: f32,
-    color: [f32; 4],
+    inst: MeshFromDefInst,
     verts_out: &mut Vec<MeshVertex>,
     indices_out: &mut Vec<u32>,
 ) {
+    let MeshFromDefInst {
+        x,
+        y,
+        z,
+        half_w,
+        half_h,
+        half_d,
+        color,
+    } = inst;
     let base = verts_out.len() as u32;
     if let Some((template, indices)) = cache.get(mesh_name) {
         if !indices.is_empty() {

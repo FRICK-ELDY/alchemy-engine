@@ -3,9 +3,7 @@ defmodule Content.FrameEncoder.DrawCommands.SpriteRaw do
 
   alias Content.FrameEncoder.Proto
 
-  def to_pb(
-        {:sprite_raw, x, y, width, height, {{uv_ox, uv_oy}, {uv_sx, uv_sy}, {r, g, b, a}}}
-      ) do
+  def to_pb({:sprite_raw, x, y, width, height, {{uv_ox, uv_oy}, {uv_sx, uv_sy}, {r, g, b, a}}}) do
     %Alchemy.Render.DrawCommand{
       kind:
         {:sprite_raw,

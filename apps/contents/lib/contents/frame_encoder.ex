@@ -71,7 +71,10 @@ defmodule Content.FrameEncoder do
     %Alchemy.Render.CameraParams{
       kind:
         {:camera_2d,
-         %Alchemy.Render.Camera2d{offset_x: Proto.pb_float(offset_x), offset_y: Proto.pb_float(offset_y)}}
+         %Alchemy.Render.Camera2d{
+           offset_x: Proto.pb_float(offset_x),
+           offset_y: Proto.pb_float(offset_y)
+         }}
     }
   end
 
@@ -107,8 +110,11 @@ defmodule Content.FrameEncoder do
 
     size_pb =
       case size do
-        :wrap -> {:wrap, %Alchemy.Render.UiSizeWrap{}}
-        {:fixed, w, h} -> {:fixed, %Alchemy.Render.UiSizeFixed{w: Proto.pb_float(w), h: Proto.pb_float(h)}}
+        :wrap ->
+          {:wrap, %Alchemy.Render.UiSizeWrap{}}
+
+        {:fixed, w, h} ->
+          {:fixed, %Alchemy.Render.UiSizeFixed{w: Proto.pb_float(w), h: Proto.pb_float(h)}}
       end
 
     %Alchemy.Render.UiRect{

@@ -8,7 +8,7 @@ use crate::DrawCommand;
 use crate::MeshVertex;
 use std::collections::HashMap;
 
-use super::mesh_template::push_mesh_from_def;
+use super::mesh_template::{push_mesh_from_def, MeshFromDefInst};
 
 /// スカイボックス以外の幾何をコマンド列からスクラッチへ書き込む（毎フレーム先に `clear` 済みであること）。
 pub(super) fn accumulate_grid_and_mesh_draws(
@@ -36,13 +36,15 @@ pub(super) fn accumulate_grid_and_mesh_draws(
                 push_mesh_from_def(
                     mesh_def_cache,
                     "unit_box",
-                    *x,
-                    *y,
-                    *z,
-                    *half_w,
-                    *half_h,
-                    *half_d,
-                    *color,
+                    MeshFromDefInst {
+                        x: *x,
+                        y: *y,
+                        z: *z,
+                        half_w: *half_w,
+                        half_h: *half_h,
+                        half_d: *half_d,
+                        color: *color,
+                    },
                     mesh_verts_scratch,
                     mesh_indices_scratch,
                 );
@@ -57,13 +59,15 @@ pub(super) fn accumulate_grid_and_mesh_draws(
                 push_mesh_from_def(
                     mesh_def_cache,
                     "unit_sphere",
-                    *x,
-                    *y,
-                    *z,
-                    *radius,
-                    *radius,
-                    *radius,
-                    *color,
+                    MeshFromDefInst {
+                        x: *x,
+                        y: *y,
+                        z: *z,
+                        half_w: *radius,
+                        half_h: *radius,
+                        half_d: *radius,
+                        color: *color,
+                    },
                     mesh_verts_scratch,
                     mesh_indices_scratch,
                 );
@@ -80,13 +84,15 @@ pub(super) fn accumulate_grid_and_mesh_draws(
                 push_mesh_from_def(
                     mesh_def_cache,
                     "unit_cone",
-                    *x,
-                    *y,
-                    *z,
-                    *half_w,
-                    *half_h,
-                    *half_d,
-                    *color,
+                    MeshFromDefInst {
+                        x: *x,
+                        y: *y,
+                        z: *z,
+                        half_w: *half_w,
+                        half_h: *half_h,
+                        half_d: *half_d,
+                        color: *color,
+                    },
                     mesh_verts_scratch,
                     mesh_indices_scratch,
                 );
