@@ -32,7 +32,7 @@ defmodule Content.BulletHell3D do
     do: Content.BulletHell3D.Playing.build_frame(playing_state, context)
 
   def zenoh_audio_cues(playing_state) do
-    Map.get(playing_state, :pending_audio_urls, [])
+    Map.get(playing_state, :pending_zenoh_audio_relpaths, [])
   end
 
   def after_zenoh_audio_cues_sent(nil), do: :ok
@@ -41,7 +41,7 @@ defmodule Content.BulletHell3D do
     Contents.Scenes.Stack.update_by_scene_type(
       runner,
       playing_scene(),
-      &Map.put(&1, :pending_audio_urls, [])
+      &Map.put(&1, :pending_zenoh_audio_relpaths, [])
     )
 
     :ok

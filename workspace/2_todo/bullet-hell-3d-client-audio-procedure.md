@@ -13,7 +13,7 @@
 ## Definition of Done
 
 - [x] `alchemy-protocol` の `RenderFrame.audio_frame`（ネスト `AudioFrame`）がワイヤに載る。
-- [x] BulletHell3D で被ダメージ時のみキューに 1 要素が入り、送信後 `pending_audio_urls` がクリアされる。
+- [x] BulletHell3D で被ダメージ時のみキューに 1 要素が入り、送信後 `pending_zenoh_audio_relpaths` がクリアされる。
 - [x] Rust クライアントが新フレーム受信時のみ SE を鳴らし、**前フレームの再利用描画では再再生しない**。
 - [x] 相対パスに `..` を含む等の不正値はクライアントで拒否する。
 
@@ -31,7 +31,7 @@
 | `apps/contents/lib/components/category/rendering/render.ex` | `Content.zenoh_audio_cues/1` を呼び encode；送信後に `after_zenoh_audio_cues_sent/1` |
 | `apps/contents/lib/behaviour/content.ex` | 任意コールバック `zenoh_audio_cues/1`・`after_zenoh_audio_cues_sent/1` |
 | `apps/contents/lib/contents/bullet_hell_3d.ex` | 上記コールバック実装（キューと送信後クリア） |
-| `apps/contents/lib/contents/bullet_hell_3d/playing.ex` | `init` に `pending_audio_urls`、無敵外で `hp` が減ったティックに URL を追加 |
+| `apps/contents/lib/contents/bullet_hell_3d/playing.ex` | `init` に `pending_zenoh_audio_relpaths`、無敵外で `hp` が減ったティックに相対パスを追加 |
 
 ## Rust 変更の要点
 

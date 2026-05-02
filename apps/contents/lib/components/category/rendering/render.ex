@@ -8,7 +8,8 @@ defmodule Contents.Components.Category.Rendering.Render do
   本モジュールは取得・エンコード・送信のみを実行する。
 
   Zenoh 向け効果音キューは **コンテンツ**の任意コールバック `zenoh_audio_cues/1` で渡す。
-  非空で送信したフレームの後は `after_zenoh_audio_cues_sent/1` を呼ぶ（`Contents.Behaviour.Content` 参照）。
+  `audio_cues` が非空のときは `encode_frame` 送信の直後に、実装がある限り
+  `after_zenoh_audio_cues_sent/1` を **`flow_runner` が `nil` でも**呼ぶ（`Contents.Behaviour.Content` 参照）。
   """
   @behaviour Core.Component
 
@@ -56,8 +57,7 @@ defmodule Contents.Components.Category.Rendering.Render do
 
       Contents.FrameBroadcaster.put(context.room_id, frame_binary)
 
-      if runner && audio_cues != [] &&
-           function_exported?(content, :after_zenoh_audio_cues_sent, 1) do
+      if audio_cues != [] && function_exported?(content, :after_zenoh_audio_cues_sent, 1) do
         content.after_zenoh_audio_cues_sent(runner)
       end
 

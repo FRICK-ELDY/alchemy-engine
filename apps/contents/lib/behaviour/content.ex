@@ -166,15 +166,19 @@ defmodule Contents.Behaviour.Content do
   @doc """
   Zenoh 向け `RenderFrame` の `AudioFrame` に載せるキュー（識別子文字列列）。
 
+  v1 では **リポジトリ相対パス**（例: `assets/audio/hit.wav`）を想定。将来 `https://` 等に拡張する場合も
+  クライアントが解釈する文字列として渡す。
+
   未実装時は `Rendering.Render` が空リストを渡す。非空を返すコンテンツは、対となる
   `after_zenoh_audio_cues_sent/1` を実装して送信後の状態更新（例: pending のクリア）を行うこと。
   """
   @callback zenoh_audio_cues(playing_state :: map()) :: [String.t()]
 
   @doc """
-  `zenoh_audio_cues/1` が非空だったフレームで、`encode_frame` 送信の直後に呼ばれる。
+  `zenoh_audio_cues/1` が非空だったフレームで、`encode_frame` 送信の **直後**に必ず呼ばれる。
 
-  `runner` は `flow_runner/1` と同じ（`nil` のこともある）。未実装時は何もしない。
+  第1引数 `runner` は `flow_runner/1` と同じで **`nil` になり得る**。`nil` でもコールバックは呼ぶため、
+  シーンスタック更新など `runner` が必要な処理は分岐すること。未実装のコンテンツでは呼ばれない。
   """
   @callback after_zenoh_audio_cues_sent(runner :: pid() | nil) :: :ok
 

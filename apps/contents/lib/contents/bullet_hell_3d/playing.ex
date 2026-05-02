@@ -27,6 +27,7 @@ defmodule Content.BulletHell3D.Playing do
   - `next_bullet_id`  — 弾 ID カウンタ
   - `spawn_timer_ms`  — 敵スポーンタイマー
   - `shoot_timer_ms`  — 弾発射タイマー
+  - `pending_zenoh_audio_relpaths` — 次の Zenoh フレームに載せる **リポジトリ相対パス**の列（クライアントがファイル解決。v1 は `assets/...` のみ）
   """
   @behaviour Contents.SceneBehaviour
 
@@ -112,7 +113,7 @@ defmodule Content.BulletHell3D.Playing do
        next_bullet_id: 0,
        spawn_timer_ms: 0,
        shoot_timer_ms: 1500,
-       pending_audio_urls: []
+       pending_zenoh_audio_relpaths: []
      }}
   end
 
@@ -329,11 +330,11 @@ defmodule Content.BulletHell3D.Playing do
         check_damage(state.hp, new_player_pos, new_enemy_positions, bullet_pos_list)
       end
 
-    pending_audio_urls =
+    pending_zenoh_audio_relpaths =
       if state.invincible_ms == 0 and hp < state.hp do
-        Map.get(state, :pending_audio_urls, []) ++ [@player_damage_audio_path]
+        Map.get(state, :pending_zenoh_audio_relpaths, []) ++ [@player_damage_audio_path]
       else
-        Map.get(state, :pending_audio_urls, [])
+        Map.get(state, :pending_zenoh_audio_relpaths, [])
       end
 
     new_player_object = put_position(state.player_object, new_player_pos)
@@ -351,7 +352,7 @@ defmodule Content.BulletHell3D.Playing do
         next_bullet_id: next_bullet_id,
         spawn_timer_ms: spawn_timer_ms,
         shoot_timer_ms: shoot_timer_ms,
-        pending_audio_urls: pending_audio_urls
+        pending_zenoh_audio_relpaths: pending_zenoh_audio_relpaths
     }
   end
 
