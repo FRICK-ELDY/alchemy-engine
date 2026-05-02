@@ -62,12 +62,18 @@ fn pb_into_render_frame(pb: pb::RenderFrame) -> RenderFrame {
         _ => None,
     });
 
+    let audio_cues = pb
+        .audio_frame
+        .map(|a| a.audio_cues)
+        .unwrap_or_default();
+
     RenderFrame {
         commands,
         camera,
         ui,
         cursor_grab,
         mesh_definitions,
+        audio_cues,
     }
 }
 

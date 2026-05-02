@@ -6,6 +6,10 @@ defmodule Contents.Components.Category.Rendering.Render do
   {commands, camera, ui} を取得し、エンコード・送信・cursor_grab リセットを行う。
   「何を描くか」の定義は apps/contents/lib/contents 側（各 Content / Playing）にあり、
   本モジュールは取得・エンコード・送信のみを実行する。
+
+  Zenoh 向け効果音キューは **コンテンツ**の任意コールバック `zenoh_audio_cues/1` で渡す。
+  `audio_cues` が非空のときは `encode_frame` 送信の直後に、実装がある限り
+  `after_zenoh_audio_cues_sent/1` を **`flow_runner` が `nil` でも**呼ぶ（`Contents.Behaviour.Content` 参照）。
   """
   @behaviour Core.Component
 
@@ -36,20 +40,30 @@ defmodule Contents.Components.Category.Rendering.Render do
       # ゲームオーバー等でボタンクリックが必要なシーンでは cursor_grab: :release を送る
       cursor_grab = resolve_cursor_grab(content, playing_state, current_scene)
 
+      audio_cues =
+        if function_exported?(content, :zenoh_audio_cues, 1),
+          do: content.zenoh_audio_cues(playing_state),
+          else: []
+
       frame_binary =
         Content.FrameEncoder.encode_frame(
           commands,
           camera,
           ui,
           mesh_definitions,
-          cursor_grab
+          cursor_grab,
+          audio_cues
         )
 
       Contents.FrameBroadcaster.put(context.room_id, frame_binary)
 
+      if audio_cues != [] && function_exported?(content, :after_zenoh_audio_cues_sent, 1) do
+        content.after_zenoh_audio_cues_sent(runner)
+      end
+
       cursor_grab_reset = Map.get(playing_state, :cursor_grab_request, :no_change)
 
-      if cursor_grab_reset != :no_change and runner do
+      if runner && cursor_grab_reset != :no_change do
         Contents.Scenes.Stack.update_by_scene_type(
           runner,
           content.playing_scene(),

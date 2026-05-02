@@ -4,6 +4,7 @@
 //! Zenoh 通信は platform/desktop.rs の ClientSession を経由する。
 
 use crate::{action_key, client_info_key, frame_key, movement_key, ClientInfo, ClientSession};
+use audio::AudioCommandSender;
 use render::window::{KeyCode, KeyState, RenderBridge};
 use render::RenderFrame;
 use std::collections::HashSet;
@@ -24,6 +25,8 @@ pub struct NetworkRenderBridge {
     frame_buffer: Arc<Mutex<Option<RenderFrame>>>,
     /// 前回描画したフレーム。欠損時はこれを使用してフリッカーを防ぐ。
     last_frame: Arc<Mutex<Option<RenderFrame>>>,
+    /// 新規フレーム受信時に `audio_cues` を再生する。欠損時の再利用では再再生しない。
+    audio_tx: Option<AudioCommandSender>,
     keys_held: Arc<Mutex<HashSet<KeyCode>>>,
     session: ClientSession,
     movement_key_expr: String,
@@ -37,6 +40,15 @@ pub struct NetworkRenderBridge {
 impl NetworkRenderBridge {
     /// connect_config: Zenoh 接続先（例: "tcp/127.0.0.1:7447"）。空ならデフォルト（scouting）。
     pub fn new(connect_config: &str, room_id: &str) -> Result<Self, String> {
+        Self::new_with_audio(connect_config, room_id, None)
+    }
+
+    /// `audio_tx` を渡すと、Zenoh で受信した新フレームの `audio_cues` をオーディオスレッドへ送る。
+    pub fn new_with_audio(
+        connect_config: &str,
+        room_id: &str,
+        audio_tx: Option<AudioCommandSender>,
+    ) -> Result<Self, String> {
         let session = ClientSession::open(connect_config)?;
 
         let frame_buffer: Arc<Mutex<Option<RenderFrame>>> = Arc::new(Mutex::new(None));
@@ -75,6 +87,7 @@ impl NetworkRenderBridge {
         let bridge = Self {
             frame_buffer,
             last_frame,
+            audio_tx,
             keys_held,
             session,
             movement_key_expr: movement_key(room_id),
@@ -167,6 +180,11 @@ impl RenderBridge for NetworkRenderBridge {
         };
 
         if let Some(frame) = new_frame {
+            if let Some(ref tx) = self.audio_tx {
+                for url in &frame.audio_cues {
+                    tx.play_se_from_relative_path(url.clone());
+                }
+            }
             // 新フレームがあれば、last_frame を更新してそれを返す
             match self.last_frame.lock() {
                 Ok(mut last_guard) => *last_guard = Some(frame.clone()),
@@ -177,10 +195,12 @@ impl RenderBridge for NetworkRenderBridge {
             return frame;
         }
 
-        // 新フレームがなければ、前回描画したフレームを返す
+        // 新フレームがなければ、前回描画したフレームを返す（再利用時は SE を再送しない）。
+        // キャッシュ側の `audio_cues` を一度空にしておくと、以降の再利用で毎回フルクローン→クリアを繰り返さない。
         match self.last_frame.lock() {
-            Ok(guard) => {
-                if let Some(frame) = guard.as_ref() {
+            Ok(mut guard) => {
+                if let Some(frame) = guard.as_mut() {
+                    frame.audio_cues.clear();
                     return frame.clone();
                 }
             }

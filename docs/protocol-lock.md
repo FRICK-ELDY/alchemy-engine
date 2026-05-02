@@ -4,9 +4,9 @@
 
 | 項目 | 値 |
 |:---|:---|
-| **Git タグ（レビュー用の人間可読名）** | `v0.1.1` |
-| **コミット SHA（真のロック）** | `3abd65e1341c88b55fbc74bf3ec1cf9f42bad215` |
-| **タグ付きツリー（GitHub）** | [github.com/FRICK-ELDY/alchemy-protocol @ `v0.1.1`](https://github.com/FRICK-ELDY/alchemy-protocol/tree/v0.1.1) |
+| **Git タグ（レビュー用の人間可読名）** | `v0.1.2` |
+| **コミット SHA（真のロック）** | `84278a8a6f51fe559263b36a1d5dae9c9a731504` |
+| **タグ付きツリー（GitHub）** | [github.com/FRICK-ELDY/alchemy-protocol @ `v0.1.2`](https://github.com/FRICK-ELDY/alchemy-protocol/tree/v0.1.2) |
 
 ## 追従するとき
 

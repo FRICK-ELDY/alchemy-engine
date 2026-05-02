@@ -157,14 +157,33 @@ defmodule Contents.Behaviour.Content do
 
   playing_state は現在の playing シーンの state。context は on_nif_sync の context。
   context には :current_scene が含まれる（現在表示中のシーン種別）。
-  戻り値は `Content.FrameEncoder.encode_frame/4` に渡す形式の
+  戻り値は `Content.FrameEncoder.encode_frame/6`（描画用 3 要素）に渡す形式の
   `{commands, camera, ui}`。未実装の Content では Render が描画をスキップする。
   """
   @callback build_frame(playing_state :: map(), context :: map()) ::
               {commands :: list(), camera :: tuple(), ui :: tuple()}
 
   @doc """
-  メッシュ定義のリストを返す。Rendering.Render が encode_frame の第4引数に渡す。
+  Zenoh 向け `RenderFrame` の `AudioFrame` に載せるキュー（識別子文字列列）。
+
+  v1 では **リポジトリ相対パス**（例: `assets/audio/hit.wav`）を想定。将来 `https://` 等に拡張する場合も
+  クライアントが解釈する文字列として渡す。
+
+  未実装時は `Rendering.Render` が空リストを渡す。非空を返すコンテンツは、対となる
+  `after_zenoh_audio_cues_sent/1` を実装して送信後の状態更新（例: pending のクリア）を行うこと。
+  """
+  @callback zenoh_audio_cues(playing_state :: map()) :: [String.t()]
+
+  @doc """
+  `zenoh_audio_cues/1` が非空だったフレームで、`encode_frame` 送信の **直後**に必ず呼ばれる。
+
+  第1引数 `runner` は `flow_runner/1` と同じで **`nil` になり得る**。`nil` でもコールバックは呼ぶため、
+  シーンスタック更新など `runner` が必要な処理は分岐すること。未実装のコンテンツでは呼ばれない。
+  """
+  @callback after_zenoh_audio_cues_sent(runner :: pid() | nil) :: :ok
+
+  @doc """
+  メッシュ定義のリストを返す。Rendering.Render が `encode_frame` の mesh 用引数に渡す。
   未実装の Content では [] を使用する。
   """
   @callback mesh_definitions() :: list()
@@ -180,6 +199,8 @@ defmodule Contents.Behaviour.Content do
     enemy_exp_reward: 1,
     score_from_exp: 1,
     build_frame: 2,
+    zenoh_audio_cues: 1,
+    after_zenoh_audio_cues_sent: 1,
     mesh_definitions: 0,
     world_size: 0,
     on_quit_requested: 0,

@@ -463,7 +463,7 @@ defmodule Contents.Events.Game do
   end
 
   defp apply_frame_injection_binary(_state, _frame_binary) do
-    # ゲーム用 NIF へのフレーム注入は撤去済み。描画は Render.on_nif_sync → FrameBroadcaster 経路。
+    # ゲーム用 NIF へのフレーム注入は撤去済み。Zenoh フレームは Render.on_nif_sync → FrameBroadcaster 経路（音キューは Content の任意コールバック）。
     :ok
   end
 

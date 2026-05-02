@@ -31,6 +31,22 @@ defmodule Content.BulletHell3D do
   def build_frame(playing_state, context),
     do: Content.BulletHell3D.Playing.build_frame(playing_state, context)
 
+  def zenoh_audio_cues(playing_state) do
+    Map.get(playing_state, :pending_zenoh_audio_relpaths, [])
+  end
+
+  def after_zenoh_audio_cues_sent(nil), do: :ok
+
+  def after_zenoh_audio_cues_sent(runner) when not is_nil(runner) do
+    Contents.Scenes.Stack.update_by_scene_type(
+      runner,
+      playing_scene(),
+      &Map.put(&1, :pending_zenoh_audio_relpaths, [])
+    )
+
+    :ok
+  end
+
   # ── シーン定義 ────────────────────────────────────────────────────
 
   def flow_runner(_room_id), do: Process.whereis(Contents.Scenes.Stack)

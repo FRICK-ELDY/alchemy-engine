@@ -1,7 +1,7 @@
 //! Path: native/audio/src/asset/mod.rs
 //! Summary: アセット ID マッピング・実行時ロード・埋め込みフォールバック
 
-use std::path::Path;
+use std::path::{Component, Path, PathBuf};
 
 /// アセット ID とパスの定義を1箇所に集約（single source of truth）
 macro_rules! define_assets {
@@ -41,6 +41,7 @@ define_assets! {
 }
 
 /// アセットのロードを行う。実行時ロード（ファイル存在時）＋埋め込みフォールバック。
+#[derive(Clone)]
 pub struct AssetLoader {
     /// `ASSETS_PATH` 環境変数から設定されるベースディレクトリ
     base_path: Option<std::path::PathBuf>,
@@ -144,6 +145,58 @@ impl AssetLoader {
 
     pub fn load_audio(&self, id: AssetId) -> Vec<u8> {
         self.load_bytes(id)
+    }
+
+    /// `AssetId` 以外の相対パス（例: `assets/audio/player_hurt.wav`）を読み込む。
+    /// `..` を含む・`assets/` 以外で始まる・バックスラッシュを含むパスは拒否する。
+    pub fn load_bytes_relative_path(&self, rel: &str) -> Option<Vec<u8>> {
+        if !Self::is_safe_assets_relative_path(rel) {
+            log::warn!(
+                "AssetLoader: rejected unsafe or invalid relative audio path {:?}",
+                rel
+            );
+            return None;
+        }
+        for path in self.paths_to_try_for_rel(rel) {
+            if let Ok(bytes) = std::fs::read(&path) {
+                return Some(bytes);
+            }
+        }
+        None
+    }
+
+    fn is_safe_assets_relative_path(rel: &str) -> bool {
+        if rel.contains('\\') {
+            return false;
+        }
+        if !rel.starts_with("assets/") {
+            return false;
+        }
+        let p = Path::new(rel);
+        for c in p.components() {
+            if matches!(c, Component::ParentDir) {
+                return false;
+            }
+        }
+        true
+    }
+
+    fn paths_to_try_for_rel(&self, rel: &str) -> Vec<PathBuf> {
+        let mut paths_to_try: Vec<PathBuf> = Vec::new();
+
+        if let Some(game_path_str) = self.game_specific_path(rel) {
+            if let Some(base) = &self.base_path {
+                paths_to_try.push(base.join(&game_path_str));
+            }
+            paths_to_try.push(game_path_str.into());
+        }
+
+        if let Some(base) = &self.base_path {
+            paths_to_try.push(base.join(rel));
+        }
+
+        paths_to_try.push(rel.into());
+        paths_to_try
     }
 
     fn load_embedded(&self, id: AssetId) -> Vec<u8> {

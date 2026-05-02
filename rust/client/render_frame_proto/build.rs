@@ -26,6 +26,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "render_frame/camera.proto",
         "render_frame/ui.proto",
         "render_frame/draw_commands.proto",
+        "render_frame/audio_frame.proto",
     ];
     for rel in fragments {
         println!("cargo:rerun-if-changed={}", proto_root.join(rel).display());

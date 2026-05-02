@@ -5,6 +5,7 @@ edition = "2021"
 description = "Zenoh による高速トランスポート（The Pipe）"
 
 [dependencies]
+audio = { path = "../audio" }
 render = { path = "../render" }
 num-traits = "0.2"
 serde = { version = "1", features = ["derive"] }
