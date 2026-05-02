@@ -195,13 +195,13 @@ impl RenderBridge for NetworkRenderBridge {
             return frame;
         }
 
-        // 新フレームがなければ、前回描画したフレームを返す（再利用時は SE を再送しない）
+        // 新フレームがなければ、前回描画したフレームを返す（再利用時は SE を再送しない）。
+        // キャッシュ側の `audio_cues` を一度空にしておくと、以降の再利用で毎回フルクローン→クリアを繰り返さない。
         match self.last_frame.lock() {
-            Ok(guard) => {
-                if let Some(frame) = guard.as_ref() {
-                    let mut f = frame.clone();
-                    f.audio_cues.clear();
-                    return f;
+            Ok(mut guard) => {
+                if let Some(frame) = guard.as_mut() {
+                    frame.audio_cues.clear();
+                    return frame.clone();
                 }
             }
             Err(e) => {
