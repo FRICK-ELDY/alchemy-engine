@@ -203,4 +203,6 @@ pub struct RenderFrame {
     pub cursor_grab: Option<bool>,
     /// P3: メッシュ定義。非空の場合、パイプラインが登録して描画に使用する。
     pub mesh_definitions: Vec<MeshDef>,
+    /// フレーム単位の効果音キュー（v1: `assets/` 始まりの相対パス）。クライアントが解決して再生。
+    pub audio_cues: Vec<String>,
 }

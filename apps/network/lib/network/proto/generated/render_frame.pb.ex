@@ -33,4 +33,6 @@ defmodule Alchemy.Render.RenderFrame do
     json_name: "cursorGrab",
     enum: true
   )
+
+  field(:audio_cues, 6, repeated: true, type: :string, json_name: "audioCues")
 end

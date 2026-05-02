@@ -35,6 +35,7 @@ defmodule Contents.Components.Category.Rendering.Render do
 
       # ゲームオーバー等でボタンクリックが必要なシーンでは cursor_grab: :release を送る
       cursor_grab = resolve_cursor_grab(content, playing_state, current_scene)
+      audio_cues = Map.get(playing_state, :pending_audio_urls, [])
 
       frame_binary =
         Content.FrameEncoder.encode_frame(
@@ -42,18 +43,28 @@ defmodule Contents.Components.Category.Rendering.Render do
           camera,
           ui,
           mesh_definitions,
-          cursor_grab
+          cursor_grab,
+          audio_cues
         )
 
       Contents.FrameBroadcaster.put(context.room_id, frame_binary)
 
       cursor_grab_reset = Map.get(playing_state, :cursor_grab_request, :no_change)
 
-      if cursor_grab_reset != :no_change and runner do
+      if runner && (audio_cues != [] || cursor_grab_reset != :no_change) do
         Contents.Scenes.Stack.update_by_scene_type(
           runner,
           content.playing_scene(),
-          &apply_cursor_grab_request(&1, cursor_grab_reset)
+          fn state ->
+            state =
+              if audio_cues != [],
+                do: Map.put(state, :pending_audio_urls, []),
+                else: state
+
+            if cursor_grab_reset != :no_change,
+              do: apply_cursor_grab_request(state, cursor_grab_reset),
+              else: state
+          end
         )
       end
     end

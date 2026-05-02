@@ -73,6 +73,8 @@ pub enum AudioCommand {
     SetBgmVolume(f32),
     PlaySe(AssetId),
     PlaySeWithVolume(AssetId, f32),
+    /// 検証済み相対パス（`assets/` 始まり）から SE を読み込んで再生。
+    PlaySeFromRelativePath(String),
     Shutdown,
 }
 
@@ -105,6 +107,11 @@ impl AudioCommandSender {
     pub fn play_se_with_volume(&self, id: AssetId, volume: f32) {
         self.send(AudioCommand::PlaySeWithVolume(id, volume));
     }
+
+    pub fn play_se_from_relative_path(&self, path: String) {
+        self.send(AudioCommand::PlaySeFromRelativePath(path));
+    }
+
     pub fn shutdown(&self) {
         self.send(AudioCommand::Shutdown);
     }
@@ -158,6 +165,13 @@ fn run_audio_loop(rx: Receiver<AudioCommand>, loader: AssetLoader) {
             AudioCommand::PlaySeWithVolume(id, volume) => {
                 if let Some(audio) = &audio {
                     audio.play_se_with_volume(loader.load_audio(id), volume);
+                }
+            }
+            AudioCommand::PlaySeFromRelativePath(ref path) => {
+                if let Some(audio) = &audio {
+                    if let Some(bytes) = loader.load_bytes_relative_path(path) {
+                        audio.play_se(bytes);
+                    }
                 }
             }
             AudioCommand::Shutdown => break,

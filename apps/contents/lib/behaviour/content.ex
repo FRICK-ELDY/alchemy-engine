@@ -157,14 +157,14 @@ defmodule Contents.Behaviour.Content do
 
   playing_state は現在の playing シーンの state。context は on_nif_sync の context。
   context には :current_scene が含まれる（現在表示中のシーン種別）。
-  戻り値は `Content.FrameEncoder.encode_frame/4` に渡す形式の
+  戻り値は `Content.FrameEncoder.encode_frame/6`（描画用 3 要素）に渡す形式の
   `{commands, camera, ui}`。未実装の Content では Render が描画をスキップする。
   """
   @callback build_frame(playing_state :: map(), context :: map()) ::
               {commands :: list(), camera :: tuple(), ui :: tuple()}
 
   @doc """
-  メッシュ定義のリストを返す。Rendering.Render が encode_frame の第4引数に渡す。
+  メッシュ定義のリストを返す。Rendering.Render が `encode_frame` の mesh 用引数に渡す。
   未実装の Content では [] を使用する。
   """
   @callback mesh_definitions() :: list()

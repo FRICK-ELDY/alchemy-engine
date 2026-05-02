@@ -1,12 +1,12 @@
-//! **役割（E2E 契約の SSoT）**: Elixir `Content.FrameEncoder.encode_frame/5` と Rust `decode_pb_render_frame`
+//! **役割（E2E 契約の SSoT）**: Elixir `Content.FrameEncoder.encode_frame/6` と Rust `decode_pb_render_frame`
 //! の意味的一致を、**同一 golden バイト列**で網羅検証する。フィールド・数値の詳細アサートはここに集約し、
 //! `render_frame_proto` クレートのテストはデコード層の薄いスモークに留める（重複メンテを避ける）。
 
 use network::protobuf_render_frame::decode_pb_render_frame;
 use render::{CameraParams, DrawCommand, UiComponent};
 
-// Golden fixture: same bytes as `Content.FrameEncoder.encode_frame/5` (same `proto/render_frame.proto`).
-// Regenerate: `mix run` a one-off script that calls `Content.FrameEncoder.encode_frame/5` with the
+// Golden fixture: same bytes as `Content.FrameEncoder.encode_frame/6` (same `proto/render_frame.proto`).
+// Regenerate: `mix run` a one-off script that calls `Content.FrameEncoder.encode_frame/6` with the
 // same tuples as the assertions below, `File.write!` to this path, then rerun `cargo test -p network`.
 const GOLDEN_FRAME: &[u8] = include_bytes!("fixtures/render_frame_elixir_golden.bin");
 
@@ -18,6 +18,7 @@ fn decode_elixir_generated_render_frame_golden() {
     assert_eq!(frame.mesh_definitions.len(), 1);
     assert_eq!(frame.ui.nodes.len(), 1);
     assert_eq!(frame.cursor_grab, Some(true));
+    assert!(frame.audio_cues.is_empty());
 
     match &frame.camera {
         CameraParams::Camera2D { offset_x, offset_y } => {

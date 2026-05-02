@@ -84,6 +84,9 @@ defmodule Content.BulletHell3D.Playing do
   @grid_divisions 20
   @max_hp 3
 
+  # クライアントが `ASSETS_PATH` 等で解決するリポジトリ相対パス（ワイヤ上の識別子）
+  @player_damage_audio_path "assets/audio/player_hurt.wav"
+
   @impl Contents.SceneBehaviour
   def init(_init_arg) do
     origin = Transform.new()
@@ -108,7 +111,8 @@ defmodule Content.BulletHell3D.Playing do
        next_enemy_id: 0,
        next_bullet_id: 0,
        spawn_timer_ms: 0,
-       shoot_timer_ms: 1500
+       shoot_timer_ms: 1500,
+       pending_audio_urls: []
      }}
   end
 
@@ -325,6 +329,13 @@ defmodule Content.BulletHell3D.Playing do
         check_damage(state.hp, new_player_pos, new_enemy_positions, bullet_pos_list)
       end
 
+    pending_audio_urls =
+      if state.invincible_ms == 0 and hp < state.hp do
+        Map.get(state, :pending_audio_urls, []) ++ [@player_damage_audio_path]
+      else
+        Map.get(state, :pending_audio_urls, [])
+      end
+
     new_player_object = put_position(state.player_object, new_player_pos)
 
     %{
@@ -339,7 +350,8 @@ defmodule Content.BulletHell3D.Playing do
         next_enemy_id: next_enemy_id,
         next_bullet_id: next_bullet_id,
         spawn_timer_ms: spawn_timer_ms,
-        shoot_timer_ms: shoot_timer_ms
+        shoot_timer_ms: shoot_timer_ms,
+        pending_audio_urls: pending_audio_urls
     }
   end
 

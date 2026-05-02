@@ -11,7 +11,7 @@
 //!   ASSETS_PATH - アセットルート（未指定時はカレントディレクトリ）
 //!   ASSETS_ID - コンテンツ別サブディレクトリ（例: bullet_hell_3d）で assets/{id}/ を参照
 
-use audio::AssetLoader;
+use audio::{start_audio_thread, AssetLoader};
 use network::NetworkRenderBridge;
 use render::window::{RendererInit, WindowConfig};
 use shared::display::{SCREEN_HEIGHT, SCREEN_WIDTH};
@@ -35,7 +35,8 @@ fn main() -> Result<(), String> {
     let atlas_png = load_atlas(&loader);
     let (sprite_wgsl, mesh_wgsl) = load_shaders(assets_path.as_deref());
 
-    let bridge = NetworkRenderBridge::new(connect_str, &room_id)?;
+    let audio_tx = start_audio_thread(loader.clone());
+    let bridge = NetworkRenderBridge::new_with_audio(connect_str, &room_id, Some(audio_tx))?;
 
     let config = WindowConfig {
         title: format!("Alchemy Client — room {}", room_id),
