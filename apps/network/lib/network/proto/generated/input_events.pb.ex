@@ -6,8 +6,8 @@ defmodule Alchemy.Input.Movement do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field(:dx, 1, type: :float)
-  field(:dy, 2, type: :float)
+  field :dx, 1, type: :float
+  field :dy, 2, type: :float
 end
 
 defmodule Alchemy.Input.Action do
@@ -18,5 +18,5 @@ defmodule Alchemy.Input.Action do
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
-  field(:name, 1, type: :string)
+  field :name, 1, type: :string
 end
