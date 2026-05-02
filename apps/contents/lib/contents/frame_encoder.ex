@@ -17,7 +17,7 @@ defmodule Content.FrameEncoder do
   @moduledoc """
   Zenoh フレーム配信用 protobuf エンコーダ。
 
-  DrawCommand・CameraParams・UiCanvas・MeshDef・任意の `audio_cues` を `Alchemy.Render.RenderFrame` に変換して encode する。
+  DrawCommand・CameraParams・UiCanvas・MeshDef・任意の `AudioFrame`（`render_frame/audio_frame.proto`）を `Alchemy.Render.RenderFrame` に変換して encode する。
   スキーマ: [alchemy-protocol の `render_frame.proto`（例: タグ `v0.1.1`）](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/render_frame.proto)（本リポでは submodule `3rdparty/alchemy-protocol/proto/`）。
   """
 
@@ -40,12 +40,18 @@ defmodule Content.FrameEncoder do
         commands: Enum.map(commands, &command_to_pb/1),
         camera: camera_to_pb(camera),
         ui: ui_to_pb(ui),
-        mesh_definitions: Enum.map(mesh_definitions, &mesh_def_to_pb/1),
-        audio_cues: audio_cues
+        mesh_definitions: Enum.map(mesh_definitions, &mesh_def_to_pb/1)
       }
+      |> maybe_put_audio_frame_pb(audio_cues)
       |> maybe_put_cursor_grab_pb(cursor_grab)
 
     Alchemy.Render.RenderFrame.encode(frame)
+  end
+
+  defp maybe_put_audio_frame_pb(f, []), do: f
+
+  defp maybe_put_audio_frame_pb(f, audio_cues) when is_list(audio_cues) do
+    struct!(f, audio_frame: %Alchemy.Render.AudioFrame{audio_cues: audio_cues})
   end
 
   defp maybe_put_cursor_grab_pb(f, :grab), do: struct!(f, cursor_grab: 1)

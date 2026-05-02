@@ -34,5 +34,9 @@ defmodule Alchemy.Render.RenderFrame do
     enum: true
   )
 
-  field(:audio_cues, 6, repeated: true, type: :string, json_name: "audioCues")
+  field(:audio_frame, 6,
+    proto3_optional: true,
+    type: Alchemy.Render.AudioFrame,
+    json_name: "audioFrame"
+  )
 end

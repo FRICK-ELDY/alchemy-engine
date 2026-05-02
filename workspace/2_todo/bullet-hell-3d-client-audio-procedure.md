@@ -2,7 +2,7 @@
 
 ## 目的
 
-- サーバー（Elixir / contents）は **音源の識別子としての文字列（v1: リポジトリ相対パス）** のみを `RenderFrame` に載せる。
+- サーバー（Elixir / contents）は **音源の識別子としての文字列（v1: リポジトリ相対パス）** を `RenderFrame.audio_frame`（`render_frame/audio_frame.proto`）に載せる。
 - クライアント（Rust）は受信したキューを **ローカル `ASSETS_PATH` 等で解決**し、`audio` クレート（rodio）で再生する。
 
 ## 非目的（v1）
@@ -12,14 +12,14 @@
 
 ## Definition of Done
 
-- [x] `alchemy-protocol` の `RenderFrame.audio_cues` がワイヤに載る。
+- [x] `alchemy-protocol` の `RenderFrame.audio_frame`（ネスト `AudioFrame`）がワイヤに載る。
 - [x] BulletHell3D で被ダメージ時のみキューに 1 要素が入り、送信後 `pending_audio_urls` がクリアされる。
 - [x] Rust クライアントが新フレーム受信時のみ SE を鳴らし、**前フレームの再利用描画では再再生しない**。
 - [x] 相対パスに `..` を含む等の不正値はクライアントで拒否する。
 
 ## 依存・submodule
 
-1. スキーマ変更は **`3rdparty/alchemy-protocol/proto/render_frame.proto`**（上流 PR 後に submodule 更新）。
+1. スキーマ変更は **`3rdparty/alchemy-protocol/proto/render_frame.proto`** と **`render_frame/audio_frame.proto`**（上流 PR 後に submodule 更新）。
 2. 本リポで生成物を揃える: ルートで `mix alchemy.gen.proto`（`PROTO_ROOT` で別パスも可。詳細は `development.md`）。
 3. Rust は `cargo build -p render_frame_proto` 等で `prost` 再生成（Mix タスク内でも `network` ビルドが走る）。
 
@@ -27,8 +27,10 @@
 
 | ファイル | 内容 |
 |:---|:---|
-| `apps/contents/lib/contents/frame_encoder.ex` | `encode_frame/6`（省略時 `[]`）で `audio_cues` を struct に渡す |
-| `apps/contents/lib/components/category/rendering/render.ex` | `pending_audio_urls` を読み encode に渡し、送信後に Stack で `[]` に戻す |
+| `apps/contents/lib/contents/frame_encoder.ex` | `encode_frame/6` で非空時のみ `%Alchemy.Render.AudioFrame{audio_cues: ...}` をセット |
+| `apps/contents/lib/components/category/rendering/render.ex` | `Content.zenoh_audio_cues/1` を呼び encode；送信後に `after_zenoh_audio_cues_sent/1` |
+| `apps/contents/lib/behaviour/content.ex` | 任意コールバック `zenoh_audio_cues/1`・`after_zenoh_audio_cues_sent/1` |
+| `apps/contents/lib/contents/bullet_hell_3d.ex` | 上記コールバック実装（キューと送信後クリア） |
 | `apps/contents/lib/contents/bullet_hell_3d/playing.ex` | `init` に `pending_audio_urls`、無敵外で `hp` が減ったティックに URL を追加 |
 
 ## Rust 変更の要点
