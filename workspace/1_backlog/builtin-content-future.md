@@ -29,5 +29,5 @@
 ## 関連
 
 - `workspace/1_backlog/contents-scope-and-nif-removal.md` — 全体スコープ
-- `workspace/2_todo/contents-three-retain-and-nif-removal-plan.md` — 実施計画（builtin は削除しない）
+- `workspace/7_done/contents-three-retain-and-nif-removal-plan.md` — 実施計画（builtin は削除しない）
 - `Content.ContentLoader` / `Content.ComponentRegistry`（`apps/contents/lib/contents/*.ex`）— descriptor ベース実行の stub。将来 `content_definitions` と接続する想定の置き場
