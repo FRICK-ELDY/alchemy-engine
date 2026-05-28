@@ -24,7 +24,7 @@
 
 **現状**:
 
-- `rust/client/network/src/platform/desktop.rs` の `ClientSession.put/2` と `put_drop/2` が、毎回 `declare_publisher(key)` を実行してから `put` している。
+- `rust/client/network/src/platform/desktop.rs` の `ClientSession::put` と `ClientSession::put_drop` が、毎回 `declare_publisher(key)` を実行してから `publisher.put(...)` している。
 - 入力送信は高頻度で呼ばれるため、宣言コストと割り込みが積み上がる。
 
 **懸念**:
