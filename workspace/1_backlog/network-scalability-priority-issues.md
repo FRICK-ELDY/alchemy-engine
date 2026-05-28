@@ -24,7 +24,7 @@
 
 **現状**:
 
-- `rust/client/network/src/platform/desktop.rs` の `ClientSession.put/2` と `put_drop/2` が、毎回 `declare_publisher(key)` を実行してから `put` している。
+- `rust/client/network/src/platform/desktop.rs` の `ClientSession::put` と `ClientSession::put_drop` が、毎回 `declare_publisher(key)` を実行してから `publisher.put(...)` している。
 - 入力送信は高頻度で呼ばれるため、宣言コストと割り込みが積み上がる。
 
 **懸念**:
@@ -135,8 +135,41 @@
 
 ---
 
+## 別軸バックログ: Ash + PostgreSQL ログイン基盤（MVP）
+
+> 目的: Assets 管理（ユーザー/グループ所有）の前提となる認証・認可の土台を先に固める。
+
+### 目標
+
+- `Ash Framework + PostgreSQL` で、登録/ログイン/セッション検証/ログアウトを最小構成で動かす。
+
+### 最小スコープ
+
+1. `users`（`email`, `password_hash`, `status`）
+2. ユーザー登録（email 一意制約）
+3. メール + パスワードログイン
+4. セッション発行（トークン or cookie）
+5. 認証済み API ガード
+6. ログアウト（トークン失効）
+
+### 先に固定するセキュリティ方針
+
+- パスワード平文保存禁止（hash のみ）
+- 失敗ログインのレート制限
+- セッション有効期限と更新方針
+- 凍結/退会ユーザーの扱い（認証拒否・既存セッション失効）
+
+### Assets 管理との接続ポイント（次フェーズ）
+
+- `user` / `group` 所有の境界を Ash policy で定義
+- `membership(role)` を導入して group 権限を段階化
+- Asset 実体（BLOB）とメタデータ（DB）を分離する前提で進める
+
+---
+
 ## 改訂履歴
 
 | 日付 | 内容 |
 |:---|:---|
 | 2026-05-28 | 初版 |
+| 2026-05-28 | Ash + PostgreSQL ログイン基盤（MVP）バックログを追記 |
