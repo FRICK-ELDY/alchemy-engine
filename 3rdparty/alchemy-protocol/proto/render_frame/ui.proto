@@ -1,0 +1,112 @@
+syntax = "proto3";
+
+package alchemy.render;
+
+message UiCanvas {
+  repeated UiNode nodes = 1;
+}
+
+message UiNode {
+  UiRect rect = 1;
+  UiComponent component = 2;
+  repeated UiNode children = 3;
+}
+
+message UiRect {
+  string anchor = 1;
+  repeated float offset = 2;
+  oneof size {
+    UiSizeWrap wrap = 3;
+    UiSizeFixed fixed = 4;
+  }
+}
+
+message UiSizeWrap {}
+
+message UiSizeFixed {
+  float w = 1;
+  float h = 2;
+}
+
+message UiComponent {
+  oneof kind {
+    UiSeparator separator = 1;
+    UiVerticalLayout vertical_layout = 2;
+    UiHorizontalLayout horizontal_layout = 3;
+    UiRectStyle rect = 4;
+    UiText text = 5;
+    UiButton button = 6;
+    UiProgressBar progress_bar = 7;
+    UiSpacing spacing = 8;
+    UiWorldText world_text = 9;
+    UiScreenFlash screen_flash = 10;
+  }
+}
+
+message UiSeparator {}
+
+message UiVerticalLayout {
+  float spacing = 1;
+  repeated float padding = 2;
+}
+
+message UiHorizontalLayout {
+  float spacing = 1;
+  repeated float padding = 2;
+}
+
+message UiRectStyle {
+  repeated float color = 1;
+  float corner_radius = 2;
+  optional UiBorder border = 3;
+}
+
+message UiBorder {
+  repeated float color = 1;
+  float width = 2;
+}
+
+message UiText {
+  string text = 1;
+  repeated float color = 2;
+  float size = 3;
+  bool bold = 4;
+}
+
+message UiButton {
+  string label = 1;
+  string action = 2;
+  repeated float color = 3;
+  float min_width = 4;
+  float min_height = 5;
+}
+
+message UiProgressBar {
+  float value = 1;
+  float max = 2;
+  float width = 3;
+  float height = 4;
+  repeated float fg_color_high = 5;
+  repeated float fg_color_mid = 6;
+  repeated float fg_color_low = 7;
+  repeated float bg_color = 8;
+  float corner_radius = 9;
+}
+
+message UiSpacing {
+  float amount = 1;
+}
+
+message UiWorldText {
+  float world_x = 1;
+  float world_y = 2;
+  float world_z = 3;
+  string text = 4;
+  repeated float color = 5;
+  float lifetime = 6;
+  float max_lifetime = 7;
+}
+
+message UiScreenFlash {
+  repeated float color = 1;
+}

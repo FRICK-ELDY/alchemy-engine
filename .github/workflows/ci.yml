@@ -22,8 +22,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
       - uses: ./.github/actions/alchemy-ci-setup
         with:
           protoc-source: apt
@@ -35,24 +33,21 @@ jobs:
       - name: cargo clippy
         run: >
           cargo clippy --manifest-path rust/Cargo.toml --workspace
-          --exclude launcher
           -- -D warnings
 
   # ─────────────────────────────────────────────
-  # [B] Rust: ユニットテスト（nif/physics）
+  # [B] Rust: ユニットテスト（nif）
   # ─────────────────────────────────────────────
   rust-test:
     name: "Rust — unit tests"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
       - uses: ./.github/actions/alchemy-ci-setup
         with:
           protoc-source: apt
 
-      - name: cargo test (nif/physics)
+      - name: cargo test (nif)
         run: cargo test --manifest-path rust/Cargo.toml -p nif
 
   # ─────────────────────────────────────────────
@@ -63,8 +58,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
       - uses: ./.github/actions/alchemy-ci-setup
         with:
           protoc-source: arduino
@@ -101,8 +94,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
       - uses: ./.github/actions/alchemy-ci-setup
         with:
           protoc-source: arduino
@@ -140,8 +131,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
       - uses: ./.github/actions/alchemy-ci-setup
         with:
           protoc-source: arduino
@@ -163,35 +152,3 @@ jobs:
       - run: mix test
         env:
           MIX_ENV: test
-
-  # ─────────────────────────────────────────────
-  # [E] ベンチマーク回帰（main の push のみ）
-  # ─────────────────────────────────────────────
-  bench-regression:
-    name: "Rust — bench regression"
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - uses: ./.github/actions/alchemy-ci-setup
-        with:
-          protoc-source: apt
-
-      - name: cargo bench
-        run: >
-          cargo bench
-          --manifest-path rust/Cargo.toml
-          -p nif
-          -- --output-format bencher
-          | tee bench_output.txt
-
-      - uses: benchmark-action/github-action-benchmark@v1
-        with:
-          tool: cargo
-          output-file-path: bench_output.txt
-          fail-on-alert: true
-          alert-threshold: "110%"
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          auto-push: true

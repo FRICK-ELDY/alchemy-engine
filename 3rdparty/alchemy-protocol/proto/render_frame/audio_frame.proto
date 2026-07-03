@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package alchemy.render;
+
+// Zenoh 向けフレームに同梱する効果音キュー（識別子文字列列）。
+// v1 はリポジトリ相対パス（例: assets/audio/hit.wav）。クライアントが解決して再生。
+message AudioFrame {
+  repeated string audio_cues = 1;
+}

@@ -18,61 +18,79 @@ defmodule Contents.Components.Category.Rendering.Render do
     content = Core.Config.current()
 
     if function_exported?(content, :build_frame, 2) do
-      runner = content.flow_runner(:main)
-
-      playing_state =
-        (runner && Contents.Scenes.Stack.get_scene_state(runner, content.playing_scene())) || %{}
-
-      current_scene =
-        case runner && Contents.Scenes.Stack.current(runner) do
-          {:ok, %{scene_type: st}} -> st
-          _ -> content.playing_scene()
-        end
-
-      context_with_scene = Map.put(context, :current_scene, current_scene)
-      {commands, camera, ui} = content.build_frame(playing_state, context_with_scene)
-
-      mesh_definitions =
-        if function_exported?(content, :mesh_definitions, 0),
-          do: content.mesh_definitions(),
-          else: []
-
-      # ゲームオーバー等でボタンクリックが必要なシーンでは cursor_grab: :release を送る
-      cursor_grab = resolve_cursor_grab(content, playing_state, current_scene)
-
-      audio_cues =
-        if function_exported?(content, :zenoh_audio_cues, 1),
-          do: content.zenoh_audio_cues(playing_state),
-          else: []
-
-      frame_binary =
-        Content.FrameEncoder.encode_frame(
-          commands,
-          camera,
-          ui,
-          mesh_definitions,
-          cursor_grab,
-          audio_cues
-        )
-
-      Contents.FrameBroadcaster.put(context.room_id, frame_binary)
-
-      if audio_cues != [] && function_exported?(content, :after_zenoh_audio_cues_sent, 1) do
-        content.after_zenoh_audio_cues_sent(runner)
-      end
-
-      cursor_grab_reset = Map.get(playing_state, :cursor_grab_request, :no_change)
-
-      if runner && cursor_grab_reset != :no_change do
-        Contents.Scenes.Stack.update_by_scene_type(
-          runner,
-          content.playing_scene(),
-          &apply_cursor_grab_request(&1, cursor_grab_reset)
-        )
-      end
+      render_frame(content, context)
     end
 
     :ok
+  end
+
+  defp render_frame(content, context) do
+    runner = content.flow_runner(:main)
+    playing_state = fetch_playing_state(runner, content)
+    current_scene = resolve_current_scene(runner, content)
+
+    context_with_scene = Map.put(context, :current_scene, current_scene)
+    {commands, camera, ui} = content.build_frame(playing_state, context_with_scene)
+
+    # ゲームオーバー等でボタンクリックが必要なシーンでは cursor_grab: :release を送る
+    cursor_grab = resolve_cursor_grab(content, playing_state, current_scene)
+    audio_cues = fetch_audio_cues(content, playing_state)
+
+    frame_binary =
+      Content.FrameEncoder.encode_frame(
+        commands,
+        camera,
+        ui,
+        fetch_mesh_definitions(content),
+        cursor_grab,
+        audio_cues
+      )
+
+    Contents.FrameBroadcaster.put(context.room_id, frame_binary)
+
+    notify_audio_cues_sent(content, runner, audio_cues)
+    reset_cursor_grab_request(runner, content, playing_state)
+  end
+
+  defp fetch_playing_state(runner, content) do
+    (runner && Contents.Scenes.Stack.get_scene_state(runner, content.playing_scene())) || %{}
+  end
+
+  defp resolve_current_scene(runner, content) do
+    case runner && Contents.Scenes.Stack.current(runner) do
+      {:ok, %{scene_type: st}} -> st
+      _ -> content.playing_scene()
+    end
+  end
+
+  defp fetch_mesh_definitions(content) do
+    if function_exported?(content, :mesh_definitions, 0),
+      do: content.mesh_definitions(),
+      else: []
+  end
+
+  defp fetch_audio_cues(content, playing_state) do
+    if function_exported?(content, :zenoh_audio_cues, 1),
+      do: content.zenoh_audio_cues(playing_state),
+      else: []
+  end
+
+  defp notify_audio_cues_sent(content, runner, audio_cues) do
+    if audio_cues != [] && function_exported?(content, :after_zenoh_audio_cues_sent, 1) do
+      content.after_zenoh_audio_cues_sent(runner)
+    end
+  end
+
+  defp reset_cursor_grab_request(runner, content, playing_state) do
+    cursor_grab_reset = Map.get(playing_state, :cursor_grab_request, :no_change)
+
+    if runner && cursor_grab_reset != :no_change do
+      Contents.Scenes.Stack.update_by_scene_type(
+        runner,
+        content.playing_scene(),
+        &apply_cursor_grab_request(&1, cursor_grab_reset)
+      )
+    end
   end
 
   # フレームに含める cursor_grab。ゲームオーバー等では :release でボタンクリックを可能に。
