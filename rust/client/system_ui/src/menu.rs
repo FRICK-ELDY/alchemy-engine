@@ -53,6 +53,15 @@ fn render_account_section(ui: &mut egui::Ui, sys: &mut SystemUi, session: &Sessi
         render_account_icon(ui, session);
         ui.add_space(8.0);
         match session {
+            SessionState::NotLoggedIn if sys.is_auto_login_pending() => {
+                // 起動時自動ログイン（保存済み refresh token の検証）中
+                ui.spinner();
+                ui.label(
+                    egui::RichText::new("Signing in...")
+                        .color(TEXT_MUTED)
+                        .size(16.0),
+                );
+            }
             SessionState::NotLoggedIn => {
                 ui.label(
                     egui::RichText::new("Not logged in user")
@@ -79,9 +88,9 @@ fn render_account_section(ui: &mut egui::Ui, sys: &mut SystemUi, session: &Sessi
             }
         }
         SessionState::LoggedIn { .. } => {
-            // Phase 4 でログアウト処理（auth /logout + トークン破棄）を接続する
+            // POST /logout（access token 失効 + refresh token revoke）+ ローカル破棄
             if menu_button(ui, "Logout", BUTTON_NEUTRAL) {
-                sys.clear_session();
+                sys.logout();
             }
         }
     }
