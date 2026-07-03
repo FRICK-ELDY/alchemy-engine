@@ -122,7 +122,9 @@ pub struct SystemUi {
     /// refresh token の OS 資格情報ストア（Remember Me の永続化先）。
     token_store: Option<TokenStore>,
     /// 起動時自動ログイン（保存済み refresh token による `POST /refresh`）。
-    auto_login: Option<AuthTask<Session>>,
+    /// 使用中のトークンも保持し、成功時にセッションへ復元する
+    /// （refresh 応答には refresh_token が含まれないため）。
+    auto_login: Option<(String, AuthTask<Session>)>,
 }
 
 impl SystemUi {
@@ -138,9 +140,10 @@ impl SystemUi {
     pub fn set_auth_client(&mut self, client: AuthClient) {
         self.token_store = TokenStore::for_auth(client.base_url());
 
+        // 同期 load はイベントループ開始前（起動時）の一度だけなので許容する
         if let Some(token) = self.token_store.as_ref().and_then(TokenStore::load) {
             log::info!("stored refresh token found, attempting auto login");
-            self.auto_login = Some(client.refresh_async(token));
+            self.auto_login = Some((token.clone(), client.refresh_async(token)));
         }
 
         self.auth = Some(client);
@@ -153,25 +156,31 @@ impl SystemUi {
 
     /// 自動ログインの完了を検出して反映する（毎フレーム呼ばれる）。
     fn poll_auto_login(&mut self) {
-        let Some(task) = &self.auto_login else { return };
+        let Some((_, task)) = &self.auto_login else {
+            return;
+        };
         let Some(result) = task.try_take() else {
             return;
         };
-        self.auto_login = None;
+        let Some((used_token, _)) = self.auto_login.take() else {
+            return;
+        };
 
         match result {
-            Ok(session) => {
+            Ok(mut session) => {
                 log::info!("auto login succeeded as {}", session.user.username);
                 // refresh 応答に refresh_token は含まれない（トークン自体は
                 // 継続使用でサーバ側の last_used_at がスライドする）ため、
-                // ストアの保存内容はそのまま維持する
+                // ログアウト時の revoke 用に使用したトークンをセッションへ復元する。
+                // ストアの保存内容もそのまま維持する
+                session.refresh_token = Some(used_token);
                 self.apply_session_state(session);
             }
             Err(AuthError::InvalidCredentials(_)) => {
                 // 7 日超過・revoke 済み等。無効なトークンは破棄する
                 log::info!("stored refresh token is no longer valid, discarding");
                 if let Some(store) = &self.token_store {
-                    store.clear();
+                    store.clear_in_background();
                 }
             }
             Err(e) => {
@@ -233,17 +242,13 @@ impl SystemUi {
     /// トークンと資格情報ストアの保存分を破棄する。
     pub fn logout(&mut self) {
         if let (Some(auth), Some(session)) = (&self.auth, &self.auth_session) {
-            // 保存済み（Remember Me ON）のトークンを優先し、無ければ
-            // メモリ上のもの（ログイン直後）を使う
-            let refresh_token = self
-                .token_store
-                .as_ref()
-                .and_then(TokenStore::load)
-                .or_else(|| session.refresh_token.clone());
-            auth.logout_in_background(session.access_token.clone(), refresh_token);
+            // refresh token はメモリ上のセッションが常に持っている
+            // （手動ログイン時はレスポンス由来、自動ログイン時は復元済み）ため、
+            // GUI スレッドをブロックするストアの再読込は行わない
+            auth.logout_in_background(session.access_token.clone(), session.refresh_token.clone());
         }
         if let Some(store) = &self.token_store {
-            store.clear();
+            store.clear_in_background();
         }
         self.clear_session();
     }
@@ -255,10 +260,10 @@ impl SystemUi {
         if let Some(store) = &self.token_store {
             match &session.refresh_token {
                 // Remember Me ON: 次回起動の自動ログイン用に保存
-                Some(token) => store.save(token),
+                Some(token) => store.save_in_background(token.clone()),
                 // Remember Me OFF: 以前のトークンが残っていると別条件で
                 // 自動ログインしてしまうため消す
-                None => store.clear(),
+                None => store.clear_in_background(),
             }
         }
         self.apply_session_state(session);
