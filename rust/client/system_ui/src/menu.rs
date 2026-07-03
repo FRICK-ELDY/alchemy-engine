@@ -34,8 +34,9 @@ fn render_backdrop(ctx: &egui::Context) {
         .interactable(true)
         .show(ctx, |ui| {
             let screen = ui.ctx().screen_rect();
-            // クリックがゲーム側 UI に抜けないよう全面で入力を受ける
-            ui.allocate_rect(screen, egui::Sense::click());
+            // クリック・ドラッグがゲーム側 UI に抜けないよう全面で入力を受ける
+            // （egui 0.31 に Sense::all() は無いため click_and_drag が最大）
+            ui.allocate_rect(screen, egui::Sense::click_and_drag());
             ui.painter().rect_filled(
                 screen,
                 0.0,
