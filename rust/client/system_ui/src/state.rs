@@ -1,8 +1,10 @@
 //! システムメニューの状態機械とメニュー項目の可視性判定。
 
+use crate::login_form::{LoginAction, LoginForm};
+use crate::register_form::{RegisterAction, RegisterForm};
+use auth_client::{AuthClient, Session};
+
 /// システムメニューの画面遷移。
-///
-/// Phase 3 で `Login` / `Register` のフォーム画面が追加される。
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Screen {
     /// メニュー非表示（ゲームプレイ中）
@@ -10,13 +12,13 @@ pub enum Screen {
     Closed,
     /// メニュートップ（ログイン状態 + Login/Register + Quit）
     Menu,
-    /// ログインフォーム（Phase 3）
+    /// ログインフォーム
     Login,
-    /// アカウント登録フォーム（Phase 3）
+    /// アカウント登録フォーム
     Register,
 }
 
-/// 認証セッション状態（Phase 3 で auth_client が更新する）。
+/// 認証セッション状態（auth_client のログイン成否を反映する）。
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub enum SessionState {
     /// 未ログイン
@@ -69,6 +71,25 @@ pub fn item_visible(item: MenuItem, _env: &MenuEnvironment) -> bool {
     }
 }
 
+/// 利用規約・プライバシーポリシーのリンク先（登録フォームのハイパーリンク）。
+///
+/// ページ自体の作成はスコープ外のため、既定値は auth 側 config と同じ暫定 URL
+/// （login-register-ui-plan.md 3.3）。
+#[derive(Clone, Debug)]
+pub struct LegalLinks {
+    pub tos_url: String,
+    pub privacy_policy_url: String,
+}
+
+impl Default for LegalLinks {
+    fn default() -> Self {
+        Self {
+            tos_url: "https://alchemy.frick-eldy.com/terms".to_string(),
+            privacy_policy_url: "https://alchemy.frick-eldy.com/privacy".to_string(),
+        }
+    }
+}
+
 /// ホスト（イベントループ）が処理すべきイベント。
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SystemUiEvent {
@@ -89,11 +110,30 @@ pub struct SystemUi {
     screen: Screen,
     session: SessionState,
     env: MenuEnvironment,
+    /// auth API クライアント。未設定（URL 不正等）の場合フォームは
+    /// "Auth service is not configured." を表示する。
+    auth: Option<AuthClient>,
+    links: LegalLinks,
+    login_form: LoginForm,
+    register_form: RegisterForm,
+    /// ログイン中のトークン一式。Phase 4 で logout / 自動 refresh に使う。
+    /// Remember Me OFF ならメモリのみ保持でクライアント終了とともに消える。
+    auth_session: Option<Session>,
 }
 
 impl SystemUi {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// auth API クライアントを設定する（app 起動時に一度呼ぶ）。
+    pub fn set_auth_client(&mut self, client: AuthClient) {
+        self.auth = Some(client);
+    }
+
+    /// 利用規約・プライバシーポリシーのリンク先を設定する。
+    pub fn set_legal_links(&mut self, links: LegalLinks) {
+        self.links = links;
     }
 
     /// メニュー（いずれかの画面）が開いているか。
@@ -121,9 +161,28 @@ impl SystemUi {
         &self.env
     }
 
-    /// Phase 3 で auth_client がログイン成否を反映する。
+    /// セッション表示状態を直接設定する（テスト・Phase 4 の自動ログイン用）。
     pub fn set_session(&mut self, session: SessionState) {
         self.session = session;
+    }
+
+    /// ログイン中のトークン一式（Phase 4 の logout / refresh 用）。
+    pub fn auth_session(&self) -> Option<&Session> {
+        self.auth_session.as_ref()
+    }
+
+    /// ログアウト等でセッションを破棄し未ログイン表示へ戻す。
+    pub fn clear_session(&mut self) {
+        self.auth_session = None;
+        self.session = SessionState::NotLoggedIn;
+    }
+
+    /// ログイン/登録成功時にトークンを保持し、メニュー表示を username にする。
+    fn adopt_session(&mut self, session: Session) {
+        self.session = SessionState::LoggedIn {
+            username: session.user.username.clone(),
+        };
+        self.auth_session = Some(session);
     }
 
     /// ESC 押下。開いていなければメニューを開き、
@@ -155,6 +214,13 @@ impl SystemUi {
     }
 
     pub(crate) fn go_to(&mut self, screen: Screen) {
+        // フォーム画面に入るたびに前回の入力（パスワード含む）・エラー・
+        // 実行中リクエストを破棄する
+        match screen {
+            Screen::Login => self.login_form.reset(),
+            Screen::Register => self.register_form.reset(),
+            _ => {}
+        }
         self.screen = screen;
     }
 
@@ -164,8 +230,37 @@ impl SystemUi {
         match self.screen {
             Screen::Closed => None,
             Screen::Menu => crate::menu::render_menu(ctx, self),
-            // Phase 3 でフォーム実装に置き換える。それまではプレースホルダを表示する。
-            Screen::Login | Screen::Register => crate::menu::render_form_placeholder(ctx, self),
+            Screen::Login => {
+                let action =
+                    crate::login_form::render(ctx, &mut self.login_form, self.auth.as_ref());
+                match action {
+                    LoginAction::None => {}
+                    LoginAction::LoggedIn(session) => {
+                        self.adopt_session(*session);
+                        self.go_to(Screen::Menu);
+                    }
+                    LoginAction::GoToRegister => self.go_to(Screen::Register),
+                    LoginAction::CloseToMenu => self.go_to(Screen::Menu),
+                }
+                None
+            }
+            Screen::Register => {
+                let action = crate::register_form::render(
+                    ctx,
+                    &mut self.register_form,
+                    self.auth.as_ref(),
+                    &self.links,
+                );
+                match action {
+                    RegisterAction::None => {}
+                    RegisterAction::Registered(session) => {
+                        self.adopt_session(*session);
+                        self.go_to(Screen::Menu);
+                    }
+                    RegisterAction::CloseToMenu => self.go_to(Screen::Menu),
+                }
+                None
+            }
         }
     }
 }
@@ -232,6 +327,18 @@ mod tests {
         let env = MenuEnvironment::default();
         assert!(item_visible(MenuItem::Account, &env));
         assert!(item_visible(MenuItem::Quit, &env));
+    }
+
+    #[test]
+    fn clear_session_returns_to_not_logged_in() {
+        let mut sys = SystemUi::new();
+        sys.set_session(SessionState::LoggedIn {
+            username: "alice".to_string(),
+        });
+
+        sys.clear_session();
+        assert_eq!(*sys.session(), SessionState::NotLoggedIn);
+        assert!(sys.auth_session().is_none());
     }
 
     #[test]

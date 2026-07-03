@@ -10,12 +10,15 @@
 //!   ZENOH_CONNECT - 接続先（例: tcp/127.0.0.1:7447）。未指定時は zenoh のデフォルト
 //!   ASSETS_PATH - アセットルート（未指定時はカレントディレクトリ）
 //!   ASSETS_ID - コンテンツ別サブディレクトリ（例: bullet_hell_3d）で assets/{id}/ を参照
+//!   ALCHEMY_AUTH_URL - alchemy-auth のベース URL（既定 http://localhost:4002。
+//!                      localhost 以外は https 必須）
 
 use audio::{start_audio_thread, AssetLoader};
 use network::NetworkRenderBridge;
 use render::window::{RendererInit, WindowConfig};
 use shared::display::{SCREEN_HEIGHT, SCREEN_WIDTH};
-use window::run_desktop_loop;
+use system_ui::{auth_client::AuthClient, SystemUi};
+use window::run_desktop_loop_with_system_ui;
 
 fn main() -> Result<(), String> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
@@ -49,7 +52,21 @@ fn main() -> Result<(), String> {
         },
     };
 
-    run_desktop_loop(bridge, config)
+    run_desktop_loop_with_system_ui(bridge, config, build_system_ui())
+}
+
+/// システムメニューを構成する。auth URL が不正でもクライアント自体は起動し、
+/// ログイン/登録フォームだけが "not configured" 表示になる。
+fn build_system_ui() -> SystemUi {
+    let mut system_ui = SystemUi::new();
+    match AuthClient::from_env() {
+        Ok(client) => {
+            log::info!("auth service: {}", client.base_url());
+            system_ui.set_auth_client(client);
+        }
+        Err(e) => log::warn!("auth client disabled: {e}"),
+    }
+    system_ui
 }
 
 fn parse_args() -> (Option<String>, String, Option<String>) {
