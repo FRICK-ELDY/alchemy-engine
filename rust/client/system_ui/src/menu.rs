@@ -25,8 +25,9 @@ const BUTTON_SIZE: egui::Vec2 = egui::vec2(280.0, 40.0);
 /// 画面全体を薄暗くするオーバーレイ。メニューがゲーム画面より前面であることを示す。
 ///
 /// ゲーム内 Canvas UI（ダイアログ含む）は `Order::Foreground` を使うため、
-/// バックドロップも同じ `Foreground` にする。システム UI は Canvas UI の後
-/// （同一フレームの overlay）に生成されるので、同一 Order 内で最前面になる。
+/// バックドロップは `Foreground`、メニュー本体は一段上の `Tooltip` に置く。
+/// 同一 Order だとバックドロップをクリックした際にレイヤーが最前面へ
+/// 並べ替えられ、メニューのボタンが押せなくなるため Order を分離する。
 fn render_backdrop(ctx: &egui::Context) {
     egui::Area::new(egui::Id::new("system_ui_backdrop"))
         .anchor(egui::Align2::LEFT_TOP, egui::vec2(0.0, 0.0))
@@ -76,7 +77,7 @@ pub(crate) fn render_menu(ctx: &egui::Context, sys: &mut SystemUi) -> Option<Sys
 
     egui::Area::new(egui::Id::new("system_ui_menu"))
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
-        .order(egui::Order::Foreground)
+        .order(egui::Order::Tooltip)
         .show(ctx, |ui| {
             panel_frame().show(ui, |ui| {
                 ui.set_width(PANEL_WIDTH);
@@ -192,7 +193,7 @@ pub(crate) fn render_form_placeholder(
 
     egui::Area::new(egui::Id::new("system_ui_form_placeholder"))
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
-        .order(egui::Order::Foreground)
+        .order(egui::Order::Tooltip)
         .show(ctx, |ui| {
             panel_frame().show(ui, |ui| {
                 ui.set_width(PANEL_WIDTH);
