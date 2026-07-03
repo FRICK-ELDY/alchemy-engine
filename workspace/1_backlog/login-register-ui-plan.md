@@ -364,6 +364,7 @@ sequenceDiagram
 | 1-5 | コントローラ・ルータ更新(`POST /refresh` 追加) | `auth/lib/auth_web/` |
 | 1-6 | 設定追加(inactivity days, tos_version/url) | `auth/config/config.exs` |
 | 1-7 | テスト(登録バリデーション・identifier ログイン・refresh スライディング・7 日失効) | `auth/test/` |
+| 1-8 | デバッグ用シードアカウント整備: `Auth.Accounts.register/2` 経由で作成(Argon2/バリデーションを本番同経路で通す)、重複時スキップで冪等化、docker-compose の起動コマンド(`ecto.migrate` の後)に `mix run priv/repo/seeds.exs` を追加。dev 環境専用とし、フィールドは 1-3/1-4 の拡張後仕様(username/birthday/TOS/PW 複雑性)に合わせる | `auth/priv/repo/seeds.exs`, `auth/docker-compose.yml` |
 
 ### Phase 2: クライアント システムメニュー基盤
 
@@ -408,6 +409,7 @@ sequenceDiagram
 - [ ] Remember Me OFF: クライアント終了でログアウト状態
 - [ ] Lost Password? は「未実装」の案内のみ表示する
 - [ ] 既存 contents(CanvasTest 等)のゲーム内 Canvas UI 描画が壊れない
+- [ ] `docker compose up` でシードアカウントが自動作成され(再実行時は重複スキップ)、そのアカウントでクライアントからログインできる
 
 ---
 
