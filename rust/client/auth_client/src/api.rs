@@ -52,6 +52,9 @@ impl AuthClient {
 
         let http = reqwest::blocking::Client::builder()
             .timeout(REQUEST_TIMEOUT)
+            // リダイレクト追跡による https → http ダウングレードでスキーム検証が
+            // バイパスされるのを防ぐ。auth API はリダイレクトを使わない
+            .redirect(reqwest::redirect::Policy::none())
             .build()
             .map_err(|e| AuthError::Network(e.to_string()))?;
 

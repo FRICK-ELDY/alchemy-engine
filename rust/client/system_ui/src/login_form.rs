@@ -51,7 +51,12 @@ impl LoginForm {
         let result = self.pending.as_ref()?.try_take()?;
         self.pending = None;
         match result {
-            Ok(session) => Some(LoginAction::LoggedIn(Box::new(session))),
+            Ok(session) => {
+                // フォームは画面遷移後も SystemUi 内に残るため、平文パスワードを
+                // メモリに保持し続けないよう成功時に即座に消去する
+                self.password.clear();
+                Some(LoginAction::LoggedIn(Box::new(session)))
+            }
             Err(AuthError::InvalidCredentials(detail)) => {
                 self.error = Some(detail);
                 None
