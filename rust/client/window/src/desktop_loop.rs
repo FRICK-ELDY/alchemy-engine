@@ -25,6 +25,15 @@ use winit::{
 use winit::platform::windows::EventLoopBuilderExtWindows;
 
 pub fn run_desktop_loop<B: RenderBridge>(bridge: B, config: WindowConfig) -> Result<(), String> {
+    run_desktop_loop_with_system_ui(bridge, config, SystemUi::new())
+}
+
+/// 構成済みの [`SystemUi`]（auth クライアント・リンク設定済み）で起動する。
+pub fn run_desktop_loop_with_system_ui<B: RenderBridge>(
+    bridge: B,
+    config: WindowConfig,
+    system_ui: SystemUi,
+) -> Result<(), String> {
     let mut builder = EventLoop::builder();
     #[cfg(target_os = "windows")]
     builder.with_any_thread(true);
@@ -32,7 +41,7 @@ pub fn run_desktop_loop<B: RenderBridge>(bridge: B, config: WindowConfig) -> Res
     let event_loop = builder
         .build()
         .map_err(|e| format!("event loop create failed: {e}"))?;
-    let mut app = DesktopApp::new(bridge, config);
+    let mut app = DesktopApp::new(bridge, config, system_ui);
     event_loop
         .run_app(&mut app)
         .map_err(|e| format!("event loop runtime failed: {e}"))
@@ -53,14 +62,14 @@ struct DesktopApp<B: RenderBridge> {
 }
 
 impl<B: RenderBridge> DesktopApp<B> {
-    fn new(bridge: B, config: WindowConfig) -> Self {
+    fn new(bridge: B, config: WindowConfig, system_ui: SystemUi) -> Self {
         Self {
             bridge,
             config,
             window: None,
             renderer: None,
             ui_state: GameUiState::default(),
-            system_ui: SystemUi::new(),
+            system_ui,
             cursor_grabbed: false,
             server_cursor_grab: false,
             suppress_grab_frames: 0,

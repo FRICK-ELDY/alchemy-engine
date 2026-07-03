@@ -7,4 +7,4 @@ pub mod common;
 mod desktop_loop;
 pub(crate) mod platform;
 
-pub use desktop_loop::run_desktop_loop;
+pub use desktop_loop::{run_desktop_loop, run_desktop_loop_with_system_ui};

@@ -15,6 +15,7 @@ path = "src/lib.rs"
 network = { path = "../network" }
 render = { path = "../render" }
 window = { path = "../window" }
+system_ui = { path = "../system_ui" }
 xr = { path = "../xr" }
 shared = { path = "../shared" }
 audio = { path = "../audio" }

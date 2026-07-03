@@ -6,3 +6,5 @@ description = "クライアント所有のシステムUI（ESCメニュー・ロ
 
 [dependencies]
 egui = "0.31"
+auth_client = { path = "../auth_client" }
+log = "0.4"
