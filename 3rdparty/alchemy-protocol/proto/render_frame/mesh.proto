@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package alchemy.render;
+
+message MeshVertex {
+  repeated float position = 1;
+  repeated float color = 2;
+}
+
+message MeshDef {
+  string name = 1;
+  repeated MeshVertex vertices = 2;
+  repeated uint32 indices = 3;
+}

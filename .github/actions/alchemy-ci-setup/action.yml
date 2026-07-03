@@ -1,6 +1,6 @@
 # 各ジョブで重複していた ALSA / protoc / Rust / rust-cache / 任意で BEAM をまとめる
 name: Alchemy CI — Ubuntu base
-description: libasound2、prost-build 用 protoc、Rust、Swatinem/rust-cache、任意で Elixir/OTP
+description: libasound2、libdbus-1、prost-build 用 protoc、Rust、Swatinem/rust-cache、任意で Elixir/OTP
 
 inputs:
   protoc-source:
@@ -24,15 +24,16 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Install system packages (ALSA + optional apt protoc)
+    - name: Install system packages (ALSA + D-Bus + optional apt protoc)
       shell: bash
       run: |
         set -euo pipefail
         sudo apt-get update -q
+        # libdbus-1-dev: auth_client → keyring → dbus-secret-service が Linux で要求
         if [ "${{ inputs.protoc-source }}" = "apt" ]; then
-          sudo apt-get install -y libasound2-dev protobuf-compiler
+          sudo apt-get install -y libasound2-dev libdbus-1-dev protobuf-compiler
         else
-          sudo apt-get install -y libasound2-dev
+          sudo apt-get install -y libasound2-dev libdbus-1-dev
         fi
 
     - name: Setup protoc (27.x)

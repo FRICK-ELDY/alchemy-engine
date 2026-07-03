@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package alchemy.render;
+
+message CameraParams {
+  oneof kind {
+    Camera2d camera_2d = 1;
+    Camera3d camera_3d = 2;
+  }
+}
+
+message Camera2d {
+  float offset_x = 1;
+  float offset_y = 2;
+}
+
+message Camera3d {
+  repeated float eye = 1;
+  repeated float target = 2;
+  repeated float up = 3;
+  float fov_deg = 4;
+  float near = 5;
+  float far = 6;
+}
