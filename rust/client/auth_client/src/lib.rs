@@ -14,8 +14,10 @@ mod api;
 mod error;
 mod models;
 mod task;
+mod token_store;
 
 pub use api::{default_base_url, AuthClient, AUTH_URL_ENV};
 pub use error::AuthError;
 pub use models::{FieldErrors, RegisterRequest, Session, UserInfo};
 pub use task::AuthTask;
+pub use token_store::TokenStore;

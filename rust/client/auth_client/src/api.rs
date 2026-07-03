@@ -150,10 +150,23 @@ impl AuthClient {
         AuthTask::spawn(move || client.register(&request))
     }
 
-    /// リフレッシュをワーカースレッドで実行する（Phase 4 の自動ログイン用）。
+    /// リフレッシュをワーカースレッドで実行する（起動時の自動ログイン用）。
     pub fn refresh_async(&self, refresh_token: String) -> AuthTask<Session> {
         let client = self.clone();
         AuthTask::spawn(move || client.refresh(&refresh_token))
+    }
+
+    /// ログアウトをバックグラウンドで実行する（fire-and-forget）。
+    ///
+    /// ローカルのトークン破棄はサーバ応答を待たずに行ってよいため結果は
+    /// 返さない。失敗はログに残す（access token は 24h で自然失効する）。
+    pub fn logout_in_background(&self, access_token: String, refresh_token: Option<String>) {
+        let client = self.clone();
+        std::thread::spawn(move || {
+            if let Err(e) = client.logout(&access_token, refresh_token.as_deref()) {
+                log::warn!("logout request failed (tokens are discarded locally anyway): {e}");
+            }
+        });
     }
 
     fn post_json<B: serde::Serialize, T: serde::de::DeserializeOwned>(
