@@ -6,5 +6,6 @@ description = "窓層・winit によるイベント管理（The Shell）"
 
 [dependencies]
 render = { path = "../render" }
+system_ui = { path = "../system_ui" }
 winit = "0.30.12"
 pollster = "0.3"

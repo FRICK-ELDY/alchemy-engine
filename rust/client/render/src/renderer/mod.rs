@@ -521,6 +521,9 @@ impl Renderer {
     /// ui_state でセーブ/ロードダイアログ・トーストを制御する。
     /// R-5: `CameraParams::Camera3D` の場合は 3D パイプラインを使用する。
     /// P3: mesh_definitions が非空の場合、3D パイプラインにメッシュを登録する。
+    /// overlay: Canvas UI（ゲーム内 UI）の後に同一 egui フレームへ描画するコールバック。
+    /// システム UI（ESC メニュー等）を最前面に重ねるために使用する。
+    #[allow(clippy::too_many_arguments)]
     pub fn render(
         &mut self,
         window: &Window,
@@ -529,6 +532,7 @@ impl Renderer {
         commands: &[DrawCommand],
         mesh_definitions: &[crate::MeshDef],
         ui_state: &mut GameUiState,
+        overlay: &mut dyn FnMut(&egui::Context),
     ) -> Option<String> {
         // ─── FPS 計測 ────────────────────────────────────────────
         self.frame_count += 1;
@@ -604,6 +608,7 @@ impl Renderer {
         let mut chosen_weapon: Option<String> = None;
         let full_output = self.egui_ctx.run(raw_input, |ctx| {
             chosen_weapon = ui::render_ui_canvas(ctx, ui, camera, self.current_fps, ui_state);
+            overlay(ctx);
         });
 
         self.egui_winit

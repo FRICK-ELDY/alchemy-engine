@@ -1,0 +1,8 @@
+[package]
+name = "system_ui"
+version = "0.1.0"
+edition = "2021"
+description = "クライアント所有のシステムUI（ESCメニュー・ログイン/登録）"
+
+[dependencies]
+egui = "0.31"

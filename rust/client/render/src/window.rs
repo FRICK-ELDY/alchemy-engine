@@ -36,4 +36,9 @@ pub trait RenderBridge: Send + 'static {
     fn on_raw_key(&self, key: KeyCode, state: KeyState);
     fn on_raw_mouse_motion(&self, dx: f32, dy: f32);
     fn on_focus_lost(&self);
+    /// サーバ（ルーム）からフレームを受信済みか。
+    /// システム UI がパーソナルエリア相当（未接続）の判定に使う。
+    fn is_connected(&self) -> bool {
+        false
+    }
 }

@@ -11,6 +11,10 @@ use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::time::{Duration, Instant};
+
+/// この時間フレームを受信しなければ切断（未接続）とみなす。
+const CONNECTED_TIMEOUT: Duration = Duration::from_secs(3);
 
 /// WASD / 矢印キー → dx, dy
 fn move_vector_from_keys(keys: &HashSet<KeyCode>) -> (f32, f32) {
@@ -35,6 +39,12 @@ pub struct NetworkRenderBridge {
     room_id: String,
     recv_handle: Option<thread::JoinHandle<()>>,
     shutdown: Arc<AtomicBool>,
+    /// 最後にフレームを受信した時刻（`creation_time` からの経過ミリ秒。未受信は `u64::MAX`）。
+    /// `CONNECTED_TIMEOUT` 以内なら接続中とみなす（単調カウンタだと切断後も
+    /// 接続扱いになるため時刻ベースで判定する）。受信は高頻度なため、
+    /// ロック競合を避けて AtomicU64 でロックフリーに管理する。
+    last_frame_elapsed_ms: Arc<AtomicU64>,
+    creation_time: Instant,
 }
 
 impl NetworkRenderBridge {
@@ -60,9 +70,12 @@ impl NetworkRenderBridge {
         let buf_clone = Arc::clone(&frame_buffer);
         let shutdown_clone = Arc::clone(&shutdown);
         let frame_count = Arc::new(AtomicU64::new(0));
+        let creation_time = Instant::now();
+        let last_frame_elapsed_ms = Arc::new(AtomicU64::new(u64::MAX));
 
         let recv_handle = {
             let frame_count_clone = Arc::clone(&frame_count);
+            let last_frame_elapsed_ms_clone = Arc::clone(&last_frame_elapsed_ms);
             session.spawn_subscriber(&sub_key, shutdown_clone, move |bytes| {
                 match decode_render_frame_from_zenoh(&bytes) {
                     Ok(frame) => {
@@ -70,6 +83,8 @@ impl NetworkRenderBridge {
                         if prev == 0 {
                             log::info!("[frame receiver] first frame received and decoded");
                         }
+                        let elapsed = creation_time.elapsed().as_millis() as u64;
+                        last_frame_elapsed_ms_clone.store(elapsed, Ordering::Relaxed);
                         if let Ok(mut guard) = buf_clone.lock() {
                             *guard = Some(frame);
                         }
@@ -95,6 +110,8 @@ impl NetworkRenderBridge {
             room_id: room_id.to_string(),
             recv_handle: Some(recv_handle),
             shutdown,
+            last_frame_elapsed_ms,
+            creation_time,
         };
         bridge.publish_client_info(room_id);
         Ok(bridge)
@@ -241,5 +258,14 @@ impl RenderBridge for NetworkRenderBridge {
         } else {
             log::warn!("[network_render_bridge] keys_held lock failed (poisoned) in on_focus_lost");
         }
+    }
+
+    fn is_connected(&self) -> bool {
+        let last = self.last_frame_elapsed_ms.load(Ordering::Relaxed);
+        if last == u64::MAX {
+            return false;
+        }
+        let current = self.creation_time.elapsed().as_millis() as u64;
+        current.saturating_sub(last) < CONNECTED_TIMEOUT.as_millis() as u64
     }
 }
