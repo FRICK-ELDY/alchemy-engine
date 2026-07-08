@@ -1,8 +1,7 @@
 # Fable 評価 — マイナス点詳細一覧
 
-評価日: 2026-07-07 / 評価者: Fable 5（ソースベース評価、ドキュメント非参照）
-対象: `auth/`（認証サービス、lib 37 ファイル）+ `engine/`（apps 4アプリ + rust/client 10クレート + rust/nif）
-前回評価: 2026-07-04（`archive/2026-07-04/`）。本版は auth 強化（`auth/.workspace/3_done`）を反映した再評価。
+評価日: 2026-07-04 / 評価者: Fable 5（ソースベース評価、ドキュメント非参照）
+対象: `auth/`（認証サービス）+ `engine/`（apps 4アプリ + rust/client 10クレート + rust/nif）
 
 ## 採点基準
 
@@ -34,35 +33,59 @@
 
 ## auth（認証サービス）
 
-- **ログインにメール検証を要求しない** `-2`
-  > 検証フロー（verify-email / resend-verification）は実装済みだが、`login/3` は `email_verified_at` を確認しない。未検証ユーザーでも access token を取得でき、本番運用ではメール所有確認の意味が半減する。
-  > 対象ファイル: `auth/lib/auth/accounts.ex`, `auth/test/auth_web/controllers/auth_controller_test.exs`
+- **レート制限が完全に欠如** `-4`
+  > `/api/login`・`/api/register`・`/api/refresh` に試行回数制限・スロットリングが一切ない（router にプラグなし、Hammer 等の依存もなし）。Argon2 の計算コストが唯一の抑止であり、インターネット公開する認証サービスとしてブルートフォース・アカウント列挙・登録スパムに無防備。タイミング攻撃対策まで実装した他の丁寧さと落差が大きく、認証サービスの価値命題を損なう欠如。
+  > 対象ファイル: `auth/lib/auth_web/router.ex`, `auth/mix.exs`
+
+- **Authenticate プラグの未処理エラー経路（クラッシュ→500）** `-3`
+  > `Token.verify/1` は Joken 検証失敗時に `{:error, error}`（構造体）を返しうるが（`token.ex:47`）、`AuthWeb.Plugs.Authenticate` の `else` 節は `:invalid_token`・`:revoked`・`:user_not_found`・`:user_not_active` の 4 atom しかマッチしない（`authenticate.ex:35-45`）。細工されたトークンで WithClauseError が発生し、401 ではなく 500 を返す。認証境界での例外は情報漏洩とログノイズの両面で有害。
+  > 対象ファイル: `auth/lib/auth_web/plugs/authenticate.ex`
+
+- **メールアドレス検証がない** `-2`
+  > 登録時にメール所有確認がなく、format regex のみ。他人のメールアドレスで登録可能で、将来のパスワードリセット実装時に不正の起点になる。
+  > 対象ファイル: `auth/lib/auth/accounts/user.ex`
+
+- **リフレッシュトークンのローテーションなし** `-2`
+  > `refresh` は同一 opaque token を使い回し `last_used_at` を更新するのみ（`accounts.ex:66-90`）。盗まれたトークンはスライディングウィンドウを更新し続ける限り半永久的に有効で、再利用検知もない。OAuth 2.0 Security BCP のローテーション+再利用検知に照らして欠如。
+  > 対象ファイル: `auth/lib/auth/accounts.ex`
+
+- **アクセストークン TTL 86,400 秒（24 時間）** `-2`
+  > `config :auth, :jwt` の TTL が 24 時間（`config/config.exs:16`）。jti 失効は auth ローカル DB 照会のみで、JWKS 検証する外部リソースサーバには失効が伝播しない設計のため、長 TTL のリスクがそのまま残る。一般的な 5〜15 分に対して過大。
+  > 対象ファイル: `auth/config/config.exs`
+
+- **鍵ローテーション未対応** `-2`
+  > 署名鍵は単一ペア固定で、JWKS は常に 1 鍵のみ返す。ローテーション時に旧鍵検証の猶予期間を設ける仕組みがなく、鍵漏洩時は全トークン即時無効化しか選択肢がない。
+  > 対象ファイル: `auth/lib/auth/token/keys.ex`
+
+- **token_revocations / 期限切れ refresh_tokens の GC がない** `-2`
+  > 失効レコードは `expires_at` 経過後も削除されず無限に蓄積する。定期削除ジョブ（Oban 等）が存在しない。
+  > 対象ファイル: `auth/lib/auth/accounts/token_revocation.ex`
+
+- **アカウント運用機能の不在（パスワードリセット・変更・退会）** `-2`
+  > パスワードを忘れたユーザーの復旧手段、パスワード変更、アカウント削除の API がない。運用開始した瞬間に必要になる機能群。
+  > 対象ファイル: `auth/lib/auth_web/router.ex`
+
+- **auth の CI が品質ゲートなし** `-2`
+  > GitHub Actions は `mix test` のみで、`format --check-formatted`・`credo`・`compile --warnings-as-errors` がない。engine 側 CI（fmt/clippy/credo/warnings-as-errors 完備）との落差が大きく、モノレポ内で品質基準が分裂している。
+  > 対象ファイル: `auth/.github/workflows/ci.yml`
+
+- **本番デプロイ構成の不在** `-2`
+  > Dockerfile は dev 用 compose（Postgres）のみで、`mix release` 設定・本番イメージ・ヘルスチェック用 DB 疎通確認がない。`/health` 相当も未実装（router に該当ルートなし）。
+  > 対象ファイル: `auth/`（全体）
+
+- **register のユーザー列挙** `-1`
+  > 登録失敗時に `has already been taken` がフィールド別に返り、username/email の存在が列挙可能。login 側は対策済みなのと非対称。
+  > 対象ファイル: `auth/lib/auth_web/controllers/auth_controller.ex`
+
+- **DB SSL 設定がコメントアウトのまま** `-1`
+  > `runtime.exs` の ssl 設定が TODO コメントで放置。マネージド DB 接続時に平文になるリスク。
+  > 対象ファイル: `auth/config/runtime.exs`
 
 - **最低年齢チェックなし** `-1`
-  > `BirthdayInPast` で未来日のみ拒否。COPPA 等を意識した年齢下限バリデーションがない。
-  > 対象ファイル: `auth/lib/auth/accounts/validations/birthday_in_past.ex`
+  > 誕生日を必須収集しながら、COPPA 等を意識した年齢下限バリデーションがない。収集だけして使わないのは中途半端。
+  > 対象ファイル: `auth/lib/auth/accounts/user.ex`
 
-- **`/health` に DB 疎通チェックなし** `-1`
-  > status/service/version のみ返却。K8s readiness としては浅く、DB 障害時も `ok` を返しうる。
-  > 対象ファイル: `auth/lib/auth_web/controllers/health_controller.ex`
-
-- **`account_tokens` の GC なし** `-1`
-  > `TokenCleanup` は revocations / refresh_tokens のみ。期限切れ・使用済み account_token が蓄積しうる。
-  > 対象ファイル: `auth/lib/auth/token_cleanup.ex`
-
-- **レート制限が単一ノード ETS** `-1`
-  > 水平スケール時にバケットがノード間で共有されない。複数 auth インスタンス運用時は Redis 等への移行が必要。
-  > 対象ファイル: `auth/lib/auth/rate_limit.ex`
-
-- **CORS 未設定** `-1`
-  > SPA クライアントからの直接 API 呼び出しには追加設定が必要。
-  > 対象ファイル: `auth/lib/auth_web/endpoint.ex`
-
-- **Dialyzer / hex.audit なし** `-1`
-  > credo は導入済みだが、型検査・依存脆弱性監査は未導入。
-  > 対象ファイル: `auth/mix.exs`, `auth/.github/workflows/ci.yml`
-
-**auth マイナス小計: -8**
+**auth マイナス小計: -26**
 
 ---
 
@@ -269,7 +292,7 @@
 | 大分類 | マイナス小計 |
 |:---|:---:|
 | プロジェクト全体（アーキテクチャ） | -9 |
-| auth | -8 |
+| auth | -26 |
 | engine — apps/core | -10 |
 | engine — apps/contents | -15 |
 | engine — apps/network | -16 |
@@ -277,4 +300,4 @@
 | engine — rust/nif | -9 |
 | engine — rust/client | -23 |
 | 横断評価層 | -6 |
-| **マイナス合計** | **-98** |
+| **マイナス合計** | **-116** |

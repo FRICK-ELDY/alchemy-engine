@@ -1,8 +1,7 @@
 # Fable 評価 — プラス点詳細一覧
 
-評価日: 2026-07-07 / 評価者: Fable 5（ソースベース評価、ドキュメント非参照）
-対象: `auth/`（認証サービス、lib 37 ファイル）+ `engine/`（apps 4アプリ + rust/client 10クレート + rust/nif）
-前回評価: 2026-07-04（`archive/2026-07-04/`）。本版は auth 強化（`auth/.workspace/3_done`）を反映した再評価。
+評価日: 2026-07-04 / 評価者: Fable 5（ソースベース評価、ドキュメント非参照）
+対象: `auth/`（認証サービス）+ `engine/`（apps 4アプリ + rust/client 10クレート + rust/nif）
 
 ## 採点基準
 
@@ -20,91 +19,55 @@
 
 ### トークン・暗号設計
 
-- **RS256 非対称 JWT + マルチ鍵 JWKS** `+5`
-  > active 鍵で署名し、`jwt_verification_key_paths` で旧鍵を JWKS に併載。`Token.verify/1` は header の `kid` で `signer_for_kid/1` を解決（`token.ex:38-39`, `keys.ex:54-72`）。duplicate kid は起動時 fail-fast。連合型アーキテクチャの鍵ローテーション猶予に対応。
-  > 対象ファイル: `auth/lib/auth/token/keys.ex`, `auth/lib/auth/token.ex`
+- **RS256 非対称 JWT + 標準 JWKS エンドポイント** `+4`
+  > `Joken.Signer.create("RS256", ...)`（`lib/auth/token/keys.ex:35`）で署名し、`GET /.well-known/jwks.json` で公開鍵を配布。リソースサーバ（engine 等）が秘密鍵を共有せずにトークン検証できる、連合型アーキテクチャの正しい土台。`kid` は JWK thumbprint から導出（`keys.ex:101-106`）。
+  > 対象ファイル: `auth/lib/auth/token/keys.ex`
 
 - **Argon2id + 体系的なタイミング攻撃対策** `+4`
-  > パスワードは `Argon2.hash_pwd_salt/1`（`password.ex:11`）。ユーザー不在・ハッシュ不正時は必ず `no_user_verify`（`accounts.ex:71-72`）。ログインエラーは常に同一メッセージ。
+  > パスワードは `Argon2.hash_pwd_salt/1`（`lib/auth/password.ex:11`）。ユーザー不在時は `Password.no_user_verify()`（`lib/auth/accounts.ex:51`）、ハッシュ不正時も `Argon2.no_user_verify()`（`password.ex:25`）を必ず実行し、応答時間からユーザー存在を推測させない。ログインエラーは常に同一メッセージ（`accounts.ex:9`）。
   > 対象ファイル: `auth/lib/auth/password.ex`, `auth/lib/auth/accounts.ex`
 
-- **リフレッシュトークンのローテーション + family 再利用検知** `+5`
-  > `family_id` 単位で毎 refresh 時に rotate（`accounts.ex:354-357`）。失効済みトークンの grace 期間（10秒）超過後の再利用で family 全失効（`accounts.ex:119-124`）。OAuth 2.0 Security BCP に沿った設計で、テストで grace 内外を検証済み。
-  > 対象ファイル: `auth/lib/auth/accounts.ex`, `auth/test/auth/accounts_test.exs`
-
-- **jti 失効 + verify 時のユーザー状態再確認** `+3`
-  > 失効テーブル照会と DB からの `:active` 再確認。`:deleted` は `:unauthorized`、`:suspended` は `:forbidden` に分岐（`token.ex:97-110`）。
-  > 対象ファイル: `auth/lib/auth/token.ex`
-
-- **JWT TTL 15 分** `+1`
-  > `jwt_ttl_seconds: 900`（`config.exs:16`）。外部 JWKS 検証者への失効伝播がない設計のリスクを、短 TTL で実用的に緩和。
-  > 対象ファイル: `auth/config/config.exs`
-
-### セキュリティ・レート制限
-
-- **多軸レート制限（ETS + 429 + Retry-After）** `+4`
-  > `Auth.RateLimit` GenServer が endpoint 別に IP / identifier / email / token family で制限（`rate_limit.ex`, `plugs/rate_limit.ex`）。throttle 時に `[:auth, :rate_limit, :throttle]` telemetry と構造化ログ。prod は env で各 limit を上書き可能（`runtime.exs:141-214`）。
-  > 対象ファイル: `auth/lib/auth/rate_limit.ex`, `auth/lib/auth_web/plugs/rate_limit.ex`
-
-- **Authenticate プラグの防御深度** `+3`
-  > `classify_failure/1` で Joken 構造体エラー・期限切れ・revocation DB 障害を分類し、すべて 401/403 に正規化。`rescue` と未知結果のキャッチオールも実装（`authenticate.ex:41-129`）。malformed/expired/tampered/deleted user の統合テストあり。
-  > 対象ファイル: `auth/lib/auth_web/plugs/authenticate.ex`
-
-- **列挙安全な応答設計** `+2`
-  > register の uniqueness conflict → 汎用 `:register_failed`（`accounts.ex:37-41`）。forgot-password / resend-verification は存在しなくても同一メッセージ（`accounts.ex:179-200`）。
+- **リフレッシュトークンの堅実な設計** `+4`
+  > 32バイト乱数（`:crypto.strong_rand_bytes`）を平文で返し、DB には SHA-256 ハッシュのみ保存（`accounts.ex:153-163, 197-201`）。`last_used_at` ベースの 7 日スライディング失効（`accounts.ex:170-179`）、logout 時の `user_id` 一致チェックで他人のトークン失効を防止（`accounts.ex:185-195`）。テストで越境保護まで検証済み。
   > 対象ファイル: `auth/lib/auth/accounts.ex`
 
-- **ClientIp + trusted proxies** `+2`
-  > `remote_ip` による `X-Forwarded-For` 解決。`TRUSTED_PROXIES` env でプロキシ背後の IP 制限を正確化（`client_ip.ex`, `runtime.exs:125-132`）。
-  > 対象ファイル: `auth/lib/auth_web/client_ip.ex`
+- **jti 失効 + verify 時のユーザー状態再確認** `+3`
+  > `Token.verify/1` は署名検証に加えて失効テーブル照会（`token.ex:72-77`）と DB からの `:active` 再確認（`token.ex:79-90`）を行う。停止・削除ユーザーのトークンは TTL 内でも即座に無効化される。
+  > 対象ファイル: `auth/lib/auth/token.ex`
 
-### アカウントライフサイクル
-
-- **メール検証フロー** `+3`
-  > 登録時に検証メール送信、`AccountToken`（SHA-256 ハッシュ保存）で verify/resend。`FOR UPDATE` ロック + consume でワンタイム使用（`accounts.ex:459-487`）。
-  > 対象ファイル: `auth/lib/auth/accounts.ex`, `auth/lib/auth/accounts/account_token.ex`
-
-- **パスワードリセット・変更・退会 API** `+4`
-  > `/api/v1/auth/forgot-password`, `reset-password`, `change-password`, `deactivate` を実装。reset/change 時に全 refresh token 失効（`accounts.ex:215, 244`）。
-  > 対象ファイル: `auth/lib/auth_web/router.ex`, `auth/lib/auth/accounts.ex`
+- **鍵管理 GenServer（生成・パーミッション・環境分離）** `+2`
+  > 鍵は `handle_continue` で非同期ロード、dev のみ自動生成（RSA 2048）、`File.chmod!(path, 0o600)` で権限制限、prod は生成禁止で fail-fast（`keys.ex:46-72`）。
+  > 対象ファイル: `auth/lib/auth/token/keys.ex`
 
 ### ドメイン・データ設計
 
 - **Ash リソースによる多層バリデーション** `+3`
-  > username/email/password/TOS/birthday を宣言的に定義。`BirthdayInPast` で未来日を拒否（`user.ex:86-127`）。
+  > `register` アクションに username 形式・email 形式・パスワード複雑性（8文字+数字+大小英字）・TOS 同意・誕生日を宣言的に定義（`lib/auth/accounts/user.ex:82-123`）。`ci_string` + citext で email/username の大文字小文字非区別、unique identity 2 本。
   > 対象ファイル: `auth/lib/auth/accounts/user.ex`
 
 - **TOS 同意の時刻・バージョン永久記録** `+3`
-  > `StampTosAgreement` change が同意時刻と `tos_version` を書き込む。
+  > `StampTosAgreement` change が同意時刻と `tos_version`（config で日付管理）を書き込む。法務説明責任の観点で個人プロジェクトの平均を明確に超える。
   > 対象ファイル: `auth/lib/auth/accounts/changes/stamp_tos_agreement.ex`
 
-### 運用・テスト・配布
+### 運用・テスト
 
-- **TokenCleanup 定期 GC** `+2`
-  > 期限切れ `token_revocations` と stale `refresh_tokens` を定期削除（`token_cleanup.ex`）。grace 日数を config で管理。
-  > 対象ファイル: `auth/lib/auth/token_cleanup.ex`
-
-- **prod secrets + DB SSL の fail-fast** `+2`
-  > `SECRET_KEY_BASE` / `DATABASE_URL` 未設定時は raise。`DATABASE_SSL` / `DATABASE_SSL_CA_CERT` で SSL 接続（`runtime.exs`）。
+- **prod secrets の fail-fast** `+2`
+  > `SECRET_KEY_BASE` / `DATABASE_URL` 未設定時は raise で起動拒否（`config/runtime.exs:43-77`）。JWT 鍵ファイルも prod では必須。
   > 対象ファイル: `auth/config/runtime.exs`
 
-- **CI 品質ゲート + precommit** `+2`
-  > GitHub Actions: format / compile --warnings-as-errors / credo --strict / test。`mix precommit` エイリアスあり（`ci.yml`, `mix.exs:87-93`）。
-  > 対象ファイル: `auth/.github/workflows/ci.yml`, `auth/mix.exs`
-
-- **本番 release + multi-stage Dockerfile** `+3`
-  > `mix release` 定義、`Dockerfile` の build/release ステージ分離、`force_ssl`（health 除外）、`MailConfig` で Postmark/Sendgrid/Mailgun/SMTP 対応。
-  > 対象ファイル: `auth/Dockerfile`, `auth/mix.exs`, `auth/lib/auth/mail_config.ex`
-
-- **テスト品質の大幅拡充** `+4`
-  > テストファイル 6 → 21。rate limit、lifecycle、token cleanup、multi-key JWKS、authenticate 401 網羅、refresh family reuse をカバー。
-  > 対象ファイル: `auth/test/`
+- **テスト品質（async + SQL Sandbox + エッジケース）** `+3`
+  > 全テスト `async: true`、Sandbox 分離。suspended ユーザーの login/refresh 拒否、スライディング失効境界、logout 越境保護、JWKS kid 一致などエッジケースを網羅。
+  > 対象ファイル: `auth/test/auth/accounts_test.exs`, `auth/test/auth/token_test.exs`
 
 - **Ash エラーの構造化 HTTP 整形** `+1`
-  > `collect_field_errors/2` がフィールド別 map に再帰変換。
+  > `collect_field_errors/2` が Ash のネストしたエラーをフィールド別 map に再帰変換（`auth_controller.ex:147-183`）。クライアントがフォーム単位でエラー表示できる。
   > 対象ファイル: `auth/lib/auth_web/controllers/auth_controller.ex`
 
-**auth プラス小計: +52**
+- **登録直後のセッション発行** `+1`
+  > register 成功時に即 access token を返し、別途 login を強いない（`auth_controller.ex:37-41`）。
+  > 対象ファイル: `auth/lib/auth_web/controllers/auth_controller.ex`
+
+**auth プラス小計: +30**
 
 ---
 
@@ -350,7 +313,7 @@
 
 | 大分類 | プラス小計 |
 |:---|:---:|
-| auth | +52 |
+| auth | +30 |
 | engine — apps/core | +19 |
 | engine — apps/contents | +18 |
 | engine — apps/network | +20 |
@@ -358,4 +321,4 @@
 | engine — rust/nif | +11 |
 | engine — rust/client | +31 |
 | 横断評価層 | +20 |
-| **プラス合計** | **+175** |
+| **プラス合計** | **+153** |
