@@ -1,8 +1,8 @@
-# 課題: 大規模分散型 VRSNS へのスケールと未整備事項
+# 課題: 大規模分散連合型 VRSNS へのスケールと未整備事項
 
 > 作成日: 2026-03-12  
 > ステータス: 検討中  
-> 背景: policy-as-code レビューによる指摘事項の集約。エンティティ設計と並行して検討・追加していく。
+> 背景: policy-as-code レビューによる指摘事項の集約。エンティティ設計と並行して検討・追加していく。連合層の方針は [architecture/federation.md](../../architecture/federation.md) を参照。
 
 [← index](../index.md)
 
