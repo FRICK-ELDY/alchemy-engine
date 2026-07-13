@@ -50,11 +50,13 @@ graph LR
 ```
 
 - **libcluster**: `config :libcluster, topologies: [...]` でクラスタ形成。空の場合は単一ノードで Local が使われる。
+- **連合層との区別**: `Network.Distributed` は **単一運営者内のスケールアウト層** であり、インスタンス間フェデレーション（連合層）ではない。連合の方針は [federation.md](../federation.md)。
 
 ---
 
 ## 関連ドキュメント
 
 - [アーキテクチャ概要](../overview.md)
+- [連合層アーキテクチャ](../federation.md)
 - [server](./server.md) / [core](./core.md) / [contents](./contents.md)
 - [データフロー・通信](../overview.md#データフロー通信)（イベントバス等）

@@ -16,7 +16,8 @@
 | [nif_rust_thread.md](./nif_rust_thread.md) | NIF × Rust スレッド | 責務分担・Dirty NIF・委譲 |
 | [rust_client.md](./rust_client.md) | Rust クライアント | 描画・入力・DSP・予測補間・Zenoh 通信 |
 | [contents/object.md](./contents/object.md) | Contents | 層の責務（Structs / Node / Component / Object） |
-| [gaps/scale-and-gaps.md](./gaps/scale-and-gaps.md) | gaps | 大規模分散 VRSNS へのスケール・未整備事項 |
+| [federation-constraints.md](./federation-constraints.md) | Phase 1–3 | 連合を阻害しない実装制約 |
+| [gaps/scale-and-gaps.md](./gaps/scale-and-gaps.md) | gaps | 大規模分散連合 VRSNS へのスケール・未整備事項 |
 
 ---
 
@@ -35,4 +36,4 @@
 
 ---
 
-*このポリシーは [vision.md](../vision.md) およびアーキテクチャ設計と整合する。違反を検出した場合は修正を優先する。*
+*このポリシーは [vision.md](../vision.md)、[vision-goal.md](../vision-goal.md)、[architecture/federation.md](../architecture/federation.md) およびアーキテクチャ設計と整合する。違反を検出した場合は修正を優先する。*

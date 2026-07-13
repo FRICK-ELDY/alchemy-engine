@@ -2,7 +2,7 @@
 
 > 作成日: 2026-04-03  
 > ステータス: 採用（設計方針。実装は [overview.md](./overview.md) と逐次整合させる）  
-> 背景: 分散型 VRSNS を見据えたアーキテクチャ議論の引き継ぎ用まとめ。
+> 背景: 分散連合型 VRSNS を見据えたアーキテクチャ議論の引き継ぎ用まとめ。
 
 ---
 
@@ -13,7 +13,8 @@
 | --------------------------------------------------------------------------------- | ----------------------- |
 | [overview.md](./overview.md)                                                      | サーバー／クライアント構成・現状の責務分担   |
 | [vision.md](../vision.md)                                                         | バックプレッシャー・多数プレイヤー時の設計思想 |
-| [vision-goal.md](../vision-goal.md)                                               | フェデレーション・インスタンス像        |
+| [vision-goal.md](../vision-goal.md)                                               | フェデレーション・インスタンス像・Phase ロードマップ |
+| [federation.md](./federation.md)                                                  | 連合層とスケールアウト層の二層分離・Phase 4 正本   |
 | [policy-as-code/gaps/scale-and-gaps.md](../policy-as-code/gaps/scale-and-gaps.md) | スケール上の未整備・今後のタスク        |
 
 
