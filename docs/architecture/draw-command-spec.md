@@ -1,7 +1,7 @@
 # DrawCommand タグ・フィールド仕様（SSoT）
 
 > 作成日: 2026-03-07  
-> 出典: [contents-defines-rust-executes.md](../plan/backlog/contents-defines-rust-executes.md) P2-1  
+> 出典: [legacy_contents-defines-rust-executes.md](../plan/backlog/legacy_contents-defines-rust-executes.md) P2-1  
 > 目的: DrawCommand のタグ・フィールド（Elixir タプル形）を文書化する。**ワイヤ契約の SSoT** は [alchemy-protocol の `render_frame.proto`（タグ `v0.1.1`）](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/render_frame.proto)（本リポでは submodule **`3rdparty/alchemy-protocol/proto/`** 配下。ドメインの SSoT は Elixir。二層の整理は [overview.md](./overview.md#設計思想)）。本ドキュメントは人間可読な対応表と `Content.FrameEncoder` の入力形式を示す。
 >
 > **プロトコル仕様**: ワイヤ上のバイト列は **protobuf**（上記 `render_frame.proto` と `render_frame/*.proto`）。本ドキュメントは同じ意味論の **Elixir タプル入力**を述べる。Zenoh 経由のフレーム配信でも同じ契約を用いる（歴史的出典: [client-server-separation-procedure.md](../plan/completed/client-server-separation-procedure.md) フェーズ 1）。
@@ -168,7 +168,7 @@
 
 ## 5. 関連ドキュメント
 
-- [contents-defines-rust-executes.md](../plan/backlog/contents-defines-rust-executes.md) — 方針・リファクタリング計画
+- [legacy_contents-defines-rust-executes.md](../plan/backlog/legacy_contents-defines-rust-executes.md) — 方針・リファクタリング計画
 - [Rust: render](rust/desktop/render.md) — 描画パイプライン（render クレート）
 - [Rust: nif](rust/nif.md) — Formula NIF（`run_formula_bytecode`）のみ
 - [`rust/client/render_frame_proto`](../../rust/client/render_frame_proto) — protobuf → `RenderFrame` デコード

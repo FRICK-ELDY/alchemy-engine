@@ -1,6 +1,6 @@
 # Elixir: contents — ゲームコンテンツ層
 
-> **2026-04 更新**: 第一級コンテンツは **3 本**（`CanvasTest` / `BulletHell3D` / `FormulaTest`）。メインループは **Elixir タイマー駆動**（Rust 60Hz ゲーム NIF なし）。
+> **2026-07-23 更新**: 第一級コンテンツは **3 本**（`CanvasTest` / `BulletHell3D` / `FormulaTest`）。**主時間は Elixir 権威 tick**（推奨 20Hz。設定で 10/30/非推奨 60）。Rust 60Hz ゲーム NIF なし。正本: [authoritative-state-sync-policy.md](../authoritative-state-sync-policy.md)。
 
 ## 概要
 
@@ -67,11 +67,13 @@ graph LR
 
 ---
 
-## `Contents.Events.Game` — メインゲームループ
+## `Contents.Events.Game` — メインゲームループ（主時間）
 
-`:main` ルームでは **約 16ms の `Process.send_after`（`:elixir_frame_tick`）** で `handle_frame_events_main` を回し、コンポーネントとシーンを更新します。`world_ref` は **スタブ**（`:stub`）。旧ゲーム NIF 用の `control_ref` は保持しない。
+**方針**: Elixir の権威 tick が主時間。デフォルト **20Hz**（50ms）。設定で 10 / 30 / 非推奨 60Hz（[authoritative-state-sync-policy.md](../authoritative-state-sync-policy.md)）。
 
-**後方互換**: `{:frame_events, events}` を受け取れるが、**Rust からの 60Hz 供給はない**。
+**実装ギャップ**: `:main` ルームでは現行コードが **`@tick_ms 16` 近傍の `Process.send_after`（`:elixir_frame_tick`）** で `handle_frame_events_main` を回す場合がある。設定化とデフォルト 20Hz への寄せは別タスク。`world_ref` は **スタブ**（`:stub`）。旧ゲーム NIF 用の `control_ref` は保持しない。
+
+**後方互換**: `{:frame_events, events}` を受け取れるが、**サーバー Rust からの 60Hz 供給はない**。クライアントは表示 ~60fps で予測・補間する。
 
 ```mermaid
 flowchart TD

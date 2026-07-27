@@ -15,32 +15,30 @@
 flowchart TB
     subgraph Server["サーバー（Elixir）"]
         direction TB
-        Contents[contents<br/>ゲームロジック・シーン管理]
-        Core[core<br/>SSoT コア・RoomSupervisor]
-        PhysicsNIF[physics NIF<br/>物理演算・GameWorld]
-        Network[network<br/>Zenoh / Phoenix]
+        Contents[contents<br/>権威 tick・シーン・ルール]
+        Core[core<br/>SSoT コア・RoomSupervisor・Formula]
+        Network[network<br/>Zenoh / Phoenix / UDP]
         
         Contents --> Core
-        Core --> PhysicsNIF
         Core --> Network
+        Contents --> Network
     end
     
-    subgraph Client["Windows/Linux/MacOS"]
+    subgraph Client["Windows/Linux/MacOS（Rust）"]
         direction TB
-        Render[native/desktop_render<br/>wgpu 描画]
-        Input[native/desktop_input<br/>winit 入力]
-        Bridge[NetworkRenderBridge]
+        Render[render / window<br/>wgpu 描画 ~60fps]
+        Input[入力・予測補間]
+        Bridge[Zenoh network]
         
         Render --> Bridge
         Input --> Bridge
     end
     
-    Server -->|"Zenoh: frame"| Client
-    Client -->|"Zenoh: movement<br/>Unreliable"| Server
-    Client -->|"Zenoh: action<br/>Reliable"| Server
+    Server -->|"Zenoh: frame（権威 tick・推奨 20Hz）"| Client
+    Client -->|"Zenoh: movement / action"| Server
 ```
 
-> クライアント・サーバー分離の詳細と実装手順は [client-server-separation-procedure.md](./workspace/7_done/client-server-separation-procedure.md) を参照。未実施項目は [client-server-separation-future.md](./workspace/0_reference/client-server-separation-future.md)。
+> クライアント・サーバー分離の詳細と実装手順は [client-server-separation-procedure.md](./workspace/7_done/client-server-separation-procedure.md) を参照。未実施項目は [client-server-separation-future.md](./workspace/0_reference/client-server-separation-future.md)。主時間の正本は [authoritative-state-sync-policy.md](./docs/architecture/authoritative-state-sync-policy.md)。
 
 ## ハイライト
 
@@ -48,12 +46,14 @@ flowchart TB
 > **ドメイン**（権威ある状態・ルール・コンテンツ定義）は Elixir 側で管理します。クライアント用のコードをそのままヘッドレスのマルチプレイサーバーとして転用可能です。1000人規模のプレイヤーが交差する大規模ネットワークも Elixir の並行処理能力で捌きます。
 >
 > **ワイヤ**（バイト列や JSON の「形」の合意）は **経路・形式ごとに** SSoT が異なります（例: Zenoh の `RenderFrame` 等の **Protobuf** は submodule **`3rdparty/alchemy-protocol/proto`**、UDP 外枠は `Network.UDP.Protocol`、Phoenix はチャネルごとの JSON）。生成は [development.md の Protobuf 節](./development.md#protobuf-proto)。全体の整理は [アーキテクチャ概要 — 設計思想](./docs/architecture/overview.md#設計思想) を参照。
-- **Rust ECS for Physics & Rendering & Audio**
-> Elixir から同期された状態をもとに、Rust の ECS が 60Hz 固定の物理演算・描画・オーディオ処理を行います。SoA（Structure of Arrays）と SIMD による CPU キャッシュ最適化で、高フレームレートを維持します。
+- **主時間は Elixir（推奨 20Hz）／表示は Rust（~60fps）**
+> **権威 tick**（公式状態のコミット）は Elixir。デフォルト **20Hz**。設定で 10 / 30 / 非推奨 60Hz。クライアントは描画ループで **予測・補間**し、主時間の間を埋める（[authoritative-state-sync-policy.md](./docs/architecture/authoritative-state-sync-policy.md)）。
+>
+> サーバー NIF は **Formula VM** のみ。ゲーム用 60Hz 物理ループはない。描画・入力・DSP はクライアント Rust。
 - **Zero NIF Serialization Overhead**
-> Elixir <--> Rustの通信は軽量な識別子のみ。バイナリのシリアライズコストを設計レベルで排除しています。
+> Elixir <--> Rust（NIF）の通信は軽量な識別子・式呼び出しに限定。フレーム配信は Zenoh / protobuf。
 - **SuperCollider-inspired Audio**
-> Elixir が「指揮者」として非同期コマンドを発行し、Rust の専用スレッドが DSP 処理を行います。複雑な空間オーディオと動的ルーティングを低遅延で実現します。
+> Elixir が「指揮者」として非同期コマンドを発行し、Rust クライアントの専用経路が DSP 処理を行います。複雑な空間オーディオと動的ルーティングを低遅延で実現します。
 
 詳細は [プラス点 詳細一覧](./docs/evaluation/specific-strengths.md) を参照。
 

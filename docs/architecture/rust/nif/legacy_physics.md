@@ -1,5 +1,6 @@
-# Rust: nif/physics — 物理演算・ECS（アーカイブ）
+# Rust: nif/physics — 物理演算・ECS（レガシー）
 
+> **レガシー文書**（ファイル名: legacy_physics.md）  
 > **削除済み（2026-04）**: 物理モジュールはリポジトリから除去された。以下は **旧構成の記録**であり、現行ツリーには **`src/physics/` は存在しない**（誤解防止のため、`rust/nif/src/physics/` という「現行パス」のように読まないこと）。復旧・参照は Git 履歴上の **`native/nif/src/physics/`**（移行前）を使う。
 
 # Rust: nif/physics — 物理演算・ECS コードベース詳細（旧）

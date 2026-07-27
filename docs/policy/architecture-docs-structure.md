@@ -1,7 +1,8 @@
 # ポリシー: アーキテクチャドキュメントの構成
 
 > 作成日: 2026-03-08  
-> ステータス: 採用
+> ステータス: 採用  
+> 最終更新: 2026-07-23
 
 ---
 
@@ -17,12 +18,14 @@
 ```
 docs/architecture/
 ├── overview.md              # 全体の流れ（サーバー/クライアント分割）
+├── authoritative-state-sync-policy.md  # 主時間・権威 tick（推奨 20Hz）
+├── legacy_contents-to-physics-bottlenecks.md  # 旧物理経路（レガシー）
 ├── rust/
 │   ├── nif.md              # NIF 全体
 │   ├── nif/                # サーバー内 Rust
-│   │   ├── physics.md
+│   │   ├── legacy_physics.md
 │   │   └── audio.md
-│   ├── client_desktop.md   # クライアント exe
+│   ├── desktop_client.md   # クライアント exe
 │   ├── desktop/            # クライアント側
 │   │   ├── input.md
 │   │   ├── input_openxr.md
@@ -37,6 +40,6 @@ docs/architecture/
 
 - `rust/render.md` → `rust/desktop/render.md`
 - `rust/input_openxr.md` → `rust/desktop/input_openxr.md`
-- `rust/physics.md` → `rust/nif/physics.md`
+- `rust/physics.md` → `rust/nif/legacy_physics.md`（レガシー）
 - `rust/audio.md` → `rust/nif/audio.md`
 - 重複するドキュメントは統合し、参照リンクを更新する

@@ -13,8 +13,10 @@
 | 文書 | 関係 |
 |:---|:---|
 | [policy-as-code/gaps/scale-and-gaps.md](../../docs/policy-as-code/gaps/scale-and-gaps.md) | ペイロード・シャーディング・予測補間などスケール観点。本書は **ポリシー条文との 1:1 ギャップ** に寄せる。 |
-| [network-render-frame-share-optimization-plan.md](./network-render-frame-share-optimization-plan.md) | クライアント側フレーム共有と描画ループ負荷。ポリシー §2.1（描画 FPS）と間接的に関連。 |
-| [asset-cdn-design.md](./asset-cdn-design.md) | CDN・パッケージ化。ポリシー §5（HTTPS＋署名）と部分重複。署名・マニフェストの **明示的統合** は本ギャップに含める。 |
+| [network-render-frame-share-optimization-plan.md](./network-render-frame-share-optimization-plan.md) | クライアント側フレーム共有と描画ループ負荷。ポリシー §3.2（描画 FPS）と間接的に関連。 |
+| [asset-cdn-design.md](./asset-cdn-design.md) | CDN・パッケージ化。ポリシー §6（HTTPS＋署名）と部分重複。署名・マニフェストの **明示的統合** は本ギャップに含める。 |
+| [colocated-rust-physics-sim-design.md](./colocated-rust-physics-sim-design.md) | サーバー物理の採用方針（隣の Rust sim）。G3 の将来形。 |
+| [tick-workload-phoenix-debug-ui.md](./tick-workload-phoenix-debug-ui.md) | 1 tick 仕事量（entity / DrawCommand / protobuf）の Phoenix デバッグ可視化。 |
 
 ---
 
@@ -22,15 +24,16 @@
 
 ### G1 — 権威サーバー tick がポリシーと不一致（設定不能）
 
-**ポリシー**: Elixir 公式 tick を **10 / 20 / 30 Hz**（用途別）。60 Hz 近傍は非推奨。
+**ポリシー**: **主時間は Elixir 権威 tick**。**デフォルト 20Hz**。設定で **10 / 20 / 30 / 非推奨 60 Hz**（[authoritative-state-sync-policy.md](../../docs/architecture/authoritative-state-sync-policy.md)）。
 
 **現状**: `Contents.Events.Game` が `@tick_ms 16`（約 **62.5 Hz**）で `Process.send_after` により駆動している（`apps/contents/lib/events/game.ex`）。診断モジュールも `@tick_ms 16` を前提（`apps/contents/lib/events/game/diagnostics.ex`）。
 
 **ギャップ**:
 
-- 10 / 20 / 30 Hz の **設定スキーム**（`config` またはルーム単位）がない。
-- デフォルトがポリシーの「推奨 20Hz」や「高速 30Hz」と一致していない。
+- 10 / 20 / 30 / 60 Hz の **設定スキーム**（`config` またはルーム単位）がない。
+- デフォルトがポリシーの「推奨 20Hz」と一致していない（実装が ~62.5Hz 寄り）。
 - 負荷試験・レポート用の **10Hz プロファイル** の切替がコード上明示されていない。
+- **60Hz を選んでもハード RT 保証はない**ことの UI／ドキュメント未反映。
 
 ---
 
@@ -52,16 +55,17 @@
 
 ---
 
-### G3 — Rust 高頻度シミュレーションと Elixir「確定フレーム」コミットのパイプがない
+### G3 — クライアント表示時間と Elixir 主時間の契約が未配線
 
-**ポリシー**: Rust を 60Hz 等で回す場合、**いつ・どの形式で Elixir が取り込みコミットするか** をプロトコルで固定。
+**ポリシー**: 主時間は Elixir。Rust クライアントの ~60fps は **表示時間**（予測・補間）。サーバー側にゲーム用 60Hz 物理ループは置かない。
 
-**現状**: [overview.md](../../docs/architecture/overview.md) どおりサーバー NIF は **Formula VM のみ**で、旧 60Hz 物理ループは撤去済み。Elixir contents がシーン駆動の主担当。
+**現状**: [overview.md](../../docs/architecture/overview.md) どおりサーバー NIF は **Formula VM のみ**。補間ユーティリティは存在するが配線が不完全な箇所がある（評価・gaps 参照）。
 
 **ギャップ**:
 
-- サーバー側 Rust で **補助シム**を回す場合の **境界プロトコル**（コミット境界、ロールバック有無）。
-- Elixir の tick（G1 調整後）と Rust サブステップの **整合アルゴリズム**の未設計・未実装。
+- 権威 tick 変更時（10/20/30/60）にクライアント補間ウィンドウが追従する契約。
+- 入力キャプチャ（高頻度）→ 権威適用（tick）のシーケンス／ack。
+- （将来）サーバー物理は **隣の Rust sim**（[colocated-rust-physics-sim-design.md](./colocated-rust-physics-sim-design.md)）。コミット境界プロトコルが別途必要。
 
 ---
 

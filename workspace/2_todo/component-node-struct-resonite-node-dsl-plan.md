@@ -19,7 +19,7 @@
 ### 2.1 前提
 
 - アーキテクチャの全体像は [fix_contents.md](../../docs/architecture/fix_contents.md)（Node-Port-Link、Component とシーンの関係）に従う。
-- 定義層と実行層の分離方針は [contents-defines-rust-executes.md](../1_backlog/contents-defines-rust-executes.md) を参照する。
+- 定義層と実行層の分離方針は [legacy_contents-defines-rust-executes.md](../1_backlog/legacy_contents-defines-rust-executes.md) を参照する。
 - 現行の検証コンテンツは `Content.FormulaTest`（`Contents.Nodes`）を中心に据え、追加ノード・型は**テスト可能な単位**で入れる。
 
 ### 2.2 非目標（この計画で明示的にやらないこと）
@@ -118,7 +118,7 @@
 ## 7. 関連ドキュメント
 
 - [node-dsl-outlook.md](../1_backlog/node-dsl-outlook.md) — Node DSL の見通し・導入タイミング
-- [contents-defines-rust-executes.md](../1_backlog/contents-defines-rust-executes.md) — 定義層と実行層
+- [legacy_contents-defines-rust-executes.md](../1_backlog/legacy_contents-defines-rust-executes.md) — 定義層と実行層
 - [fix_contents.md](../../docs/architecture/fix_contents.md) — fix_contents アーキテクチャ
 - Resonite Wiki: [Category:Components](https://wiki.resonite.com/Category:Components)、[Category:ProtoFlux](https://wiki.resonite.com/Category:ProtoFlux)
 - [procedural-meshes-resonite-plan.md](./procedural-meshes-resonite-plan.md) — **Assets: Procedural Meshes** 先行（親計画フェーズ 2 の先遣）

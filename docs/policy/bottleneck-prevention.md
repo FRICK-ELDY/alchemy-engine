@@ -16,8 +16,8 @@
 
 | 分野 | 想定ボトルネック | 対応 |
 |:---|:---|:---|
-| **Zenoh フレーム直列化** | 60Hz のエンコード/デコード負荷 | protobuf（`proto/render_frame.proto`）でワイヤ形式を固定し、Elixir / Rust で同一スキーマを共有 |
-| **補間** | サーバー側での補間は負荷・遅延の要因 | クライアント側に移す（render_interpolation） |
+| **Zenoh フレーム直列化** | 権威 tick（推奨 20Hz）でのエンコード/デコード負荷 | protobuf（`proto/render_frame.proto`）でワイヤ形式を固定し、Elixir / Rust で同一スキーマを共有。配信は主時間に揃える（60Hz フルフレーム必須ではない） |
+| **補間** | 権威 Hz のまま描画するとカクつく／サーバー側補間は負荷要因 | クライアント側の予測・補間が主時間契約の本体（render_interpolation） |
 
 ---
 

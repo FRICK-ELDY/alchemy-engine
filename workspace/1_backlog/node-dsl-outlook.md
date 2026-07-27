@@ -49,7 +49,7 @@ DSL でノードを定義すると、その定義が「型付きグラフのス�
 
 ### 2.4 定義と実行の分離（contents-defines-rust-executes）
 
-[contents-defines-rust-executes.md](./contents-defines-rust-executes.md) の方針に沿うと：
+[legacy_contents-defines-rust-executes.md](./legacy_contents-defines-rust-executes.md) の方針に沿うと：
 
 - **Elixir 側**: ノードの「定義」（DSL で記述）
 - **Rust 側**: 定義に基づく「実行」
@@ -112,4 +112,4 @@ Ecto.Schema、Phoenix.Router など、Elixir の DSL はマクロで `quote` / `
 
 - [fix_contents.md](../../docs/architecture/fix_contents.md) — アーキテクチャの全体像
 - [fix-contents-implementation-procedure.md](../7_done/fix-contents-implementation-procedure.md) — 実施手順
-- [contents-defines-rust-executes.md](./contents-defines-rust-executes.md) — 定義層と実行層の責務
+- [legacy_contents-defines-rust-executes.md](./legacy_contents-defines-rust-executes.md) — 定義層と実行層の責務

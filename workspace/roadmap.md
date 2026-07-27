@@ -70,7 +70,9 @@
 | [visual-editor-architecture](1_backlog/visual-editor-architecture.md) | ビジュアルエディタ |
 | [node-dsl-outlook](1_backlog/node-dsl-outlook.md) | Node DSL 検討（fix-contents Phase 3 以降） |
 | [native-restructure-migration-plan](1_backlog/native-restructure-migration-plan.md) | native クレート再構成 |
-| [contents-defines-rust-executes](1_backlog/contents-defines-rust-executes.md) | 定義層 vs 実行層の責務（方針・長期） |
+| [legacy_contents-defines-rust-executes](1_backlog/legacy_contents-defines-rust-executes.md) | 定義層 vs 実行層の責務（方針・長期） |
+| [colocated-rust-physics-sim-design](1_backlog/colocated-rust-physics-sim-design.md) | サーバー物理: 隣の Rust sim（Elixir 権威・IPC A〜D） |
+| [tick-workload-phoenix-debug-ui](1_backlog/tick-workload-phoenix-debug-ui.md) | 権威 tick 仕事量の見える化（Phoenix デバッグ UI） |
 
 ---
 

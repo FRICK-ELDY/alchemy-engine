@@ -214,7 +214,7 @@ Elixir (SSoT)                    Rust (Render)
 
 ## 関連ドキュメント
 
-- [docs/architecture/rust/nif/physics.md](../../architecture/rust/nif/physics.md)
+- [docs/architecture/rust/nif/legacy_physics.md](../../architecture/rust/nif/legacy_physics.md)
 - [docs/architecture/rust/desktop/render.md](../../architecture/rust/desktop/render.md)
 - [docs/architecture/rust/nif/audio.md](../../architecture/rust/nif/audio.md)
 - [.cursor/rules/implementation.mdc](../../.cursor/rules/implementation.mdc) — SoA 維持の実装ルール
