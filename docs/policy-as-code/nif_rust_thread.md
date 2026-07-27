@@ -2,7 +2,7 @@
 
 [← index](./index.md)
 
-> **2026-04 更新**: ゲーム用 Rust 専用スレッド（旧 `GameWorld` / `physics_step` / 60Hz サーバーループ）は **撤去済み**。サーバー側 NIF は **`run_formula_bytecode`（Formula VM）** を主とする。ゲーム状態の刻みは **Elixir（contents）のタイマー**（[architecture/overview.md](../architecture/overview.md)）。
+> **2026-07-23 更新**: ゲーム用 Rust 専用スレッド（旧 `GameWorld` / `physics_step` / 60Hz サーバーループ）は **撤去済み**。サーバー側 NIF は **`run_formula_bytecode`（Formula VM）** を主とする。**主時間は Elixir の権威 tick**（推奨 20Hz。設定で 10/30/非推奨 60）。正本: [authoritative-state-sync-policy.md](../architecture/authoritative-state-sync-policy.md)、[overview.md](../architecture/overview.md)。
 
 ---
 
@@ -35,4 +35,4 @@
 
 **やってはいけないこと**: 「1 フレームにつき何十回も NIF を叩いてサーバー側の物理世界を進める」ような設計に戻すこと（旧ゲーム NIF の再導入）。
 
-**やるべきこと**: ゲーム刻みは **Elixir** がスケジュールし、必要な数式は **`run_formula_bytecode`** に集約する。ワイヤ上の描画・入力は protobuf / Zenoh でクライアントと同期する。予測・補間はクライアント側で行う（[rust_client.md](./rust_client.md)）。
+**やるべきこと**: ゲーム刻み（**主時間**）は **Elixir** がスケジュールし（推奨 20Hz）、必要な数式は **`run_formula_bytecode`** に集約する。ワイヤ上の描画・入力は protobuf / Zenoh でクライアントと同期する。予測・補間はクライアント側の表示時間で行う（[rust_client.md](./rust_client.md)）。

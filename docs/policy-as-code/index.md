@@ -10,11 +10,11 @@
 | ファイル | 対象 | 内容 |
 |:---|:---|:---|
 | [why_adopted/zenoh-frame-serialization.md](./why_adopted/zenoh-frame-serialization.md) | 採用理由 | Zenoh フレーム直列化（Erlang term） |
-| [elixir.md](./elixir.md) | Elixir | 責務・禁止事項（**ドメイン**定義の SSoT、ワイヤは `.proto`、処理レート 10/20/30Hz） |
+| [elixir.md](./elixir.md) | Elixir | 責務・禁止事項（**ドメイン**定義の SSoT、**主時間＝権威 tick** 推奨 20Hz・設定 10/30/非推奨 60、ワイヤは `.proto`） |
 | [elixir_zenoh.md](./elixir_zenoh.md) | Elixir × Zenoh | ネットワーク・フレーム配信 |
 | [nif.md](./nif.md) | NIF | ブロック・シリアライズ・呼び出し頻度 |
 | [nif_rust_thread.md](./nif_rust_thread.md) | NIF × Rust スレッド | 責務分担・Dirty NIF・委譲 |
-| [rust_client.md](./rust_client.md) | Rust クライアント | 描画・入力・DSP・予測補間・Zenoh 通信 |
+| [rust_client.md](./rust_client.md) | Rust クライアント | 描画・入力・DSP・**予測補間（表示時間）**・Zenoh 通信 |
 | [contents/object.md](./contents/object.md) | Contents | 層の責務（Structs / Node / Component / Object） |
 | [federation-constraints.md](./federation-constraints.md) | Phase 1–3 | 連合を阻害しない実装制約 |
 | [gaps/scale-and-gaps.md](./gaps/scale-and-gaps.md) | gaps | 大規模分散連合 VRSNS へのスケール・未整備事項 |
@@ -25,9 +25,9 @@
 
 | 禁止事項 | 理由の要約 | 詳細 |
 |:---|:---|:---|
-| Elixir で演算 | BEAM はヒープ・型解決・GC で演算が遅い | [elixir.md](./elixir.md) |
-| 責務の逆転 | SSoT と実行層の分離が崩れる | [elixir.md](./elixir.md) |
-| Elixir で 60Hz を保証 | BEAM のオーバーヘッドでキュー詰まりのリスク | [elixir.md](./elixir.md) |
+| Elixir で演算 | BEAM はヒープ・型解決・GC で重い連続演算が遅い | [elixir.md](./elixir.md) |
+| 責務の逆転 | ドメイン SSoT・主時間と表示時間の分離が崩れる | [elixir.md](./elixir.md) |
+| Elixir でハード RT の 60Hz を保証／デフォルト化 | BEAM のオーバーヘッドでキュー詰まりのリスク。主時間の推奨は 20Hz | [elixir.md](./elixir.md) |
 | Zenoh ハンドラで重い処理 | ライブネス・スケールの低下 | [elixir_zenoh.md](./elixir_zenoh.md) |
 | NIF で長時間ブロック | スケジューラを止め、ライブネスを損なう | [nif.md](./nif.md) |
 | 大きなバイナリを NIF で渡す | シリアライズコストが設計を破綻させる | [nif.md](./nif.md) |

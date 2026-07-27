@@ -1,10 +1,11 @@
 # AlchemyEngine — アーキテクチャ概要
 
-> **2026-04 更新**: ゲーム用 Rust NIF（`rust/nif` 内 physics / 60Hz ループ）は撤去済み。サーバ上のゲーム状態・シミュレーションは **Elixir（contents）** が主担当。`nif` は **Formula VM（`run_formula_bytecode`）のみ**。ローカルディスクセーブは未実装。
+> **2026-07-23 更新**: **主時間は Elixir の権威 tick**（推奨 **20Hz**。設定で 10 / 30 / 非推奨 60Hz）。Rust クライアントは描画 ~60fps で予測・補間する。ゲーム用 Rust NIF（physics / 60Hz ループ）は撤去済み。`nif` は **Formula VM（`run_formula_bytecode`）のみ**。ローカルディスクセーブは未実装。  
+> ※ 現行コードの `Events.Game` はまだ `@tick_ms 16` 近傍の実装が残る場合がある。**方針の正本は [authoritative-state-sync-policy.md](./authoritative-state-sync-policy.md)**（デフォルト 20Hz）。実装の寄せは別タスク。
 
 ## 設計思想
 
-AlchemyEngine は **サーバー上の権威あるゲーム状態とルール**を **Elixir** を中心に置き、**数式 VM の実行**と**デスクトップ描画**に Rust を使う構成です。入力のキャプチャとサーバー側の公式入力列・tick 方針の整理は [authoritative-state-sync-policy.md](./authoritative-state-sync-policy.md) を参照。
+AlchemyEngine は **サーバー上の権威あるゲーム状態とルール**を **Elixir** を中心に置き、**数式 VM** と **デスクトップ描画・予測補間** に Rust を使う構成です。入力のキャプチャとサーバー側の公式入力列・tick 方針の整理は [authoritative-state-sync-policy.md](./authoritative-state-sync-policy.md) を参照。
 
 ### 二層の SSoT（ドメインとワイヤ契約）
 
@@ -18,9 +19,9 @@ AlchemyEngine は **サーバー上の権威あるゲーム状態とルール**�
 
 **Elixir がドメインの SSoT であること**と、**Protobuf ペイロードでは alchemy-protocol の `proto/` がワイヤ上の SSoT であること**は両立します。経路ごとに別の契約の SSoT が並立するのは正常です。前者を捨てて後者に一本化する必要はありません。
 
-- **Elixir（サーバ）**: シーン・コンポーネント・メインループ（約 16ms タイマー）、Zenoh への `RenderFrame` publish、入力・イベントの受信
+- **Elixir（サーバ）**: シーン・コンポーネント・**権威 tick（主時間・推奨 20Hz）**、Zenoh への `RenderFrame` publish、入力・イベントの受信
 - **Rust（サーバ `nif`）**: `Core.Formula` 経由のバイトコード実行のみ（Rustler NIF）
-- **Rust（クライアント `app`）**: winit / wgpu 描画、Zenoh でフレーム受信・入力送信。`xr` は OpenXR（クライアント側）。**`nif` には依存しない**
+- **Rust（クライアント `app`）**: winit / wgpu 描画（表示時間・既定 ~60fps）、予測・補間、Zenoh でフレーム受信・入力送信。`xr` は OpenXR（クライアント側）。**`nif` には依存しない**
 
 ### 分散連合型 VRSNS との関係（二層）
 
@@ -185,7 +186,7 @@ graph LR
 
 アプリ・コンテンツは **`Core.Formula` 経由**。ゲームワールド用 `ResourceArc` は **持たない**。
 
-### 2. メインループ（`:main` ルーム・Elixir）
+### 2. メインループ（`:main` ルーム・Elixir）— 主時間
 
 ```mermaid
 sequenceDiagram
@@ -194,7 +195,7 @@ sequenceDiagram
     participant COMP as Components
     participant SS as Scenes.Stack
 
-    loop 約 16ms
+    loop 権威 tick（推奨 50ms＝20Hz。設定で 10/30/非推奨 60）
         T->>GE: handle_info
         GE->>COMP: dispatch（入力・UI 等）
         GE->>SS: scene_update 経由
@@ -202,7 +203,10 @@ sequenceDiagram
     end
 ```
 
-ネットワーク等からの `{:frame_events, _}` は **後方互換で受信可能**だが、Rust 60Hz ゲームループは **ない**。
+**方針**: 主時間は Elixir。デフォルト **20Hz**（[authoritative-state-sync-policy.md](./authoritative-state-sync-policy.md)）。  
+**実装ギャップ**: 現行の `Events.Game` は `@tick_ms 16` 近傍が残る場合がある。設定化とデフォルト 20Hz への寄せは別タスク。
+
+ネットワーク等からの `{:frame_events, _}` は **後方互換で受信可能**だが、サーバー側の Rust 60Hz ゲームループは **ない**。クライアントは表示 ~60fps で予測・補間する。
 
 ### 3. 描画の Zenoh 配信
 
@@ -335,4 +339,6 @@ graph TB
 - **Elixir**: [server](./elixir/server.md) / [core](./elixir/core.md) / [contents](./elixir/contents.md) / [network](./elixir/network.md)
 - **Rust**: [nif](./rust/nif.md) / [desktop_client](./rust/desktop_client.md) / [desktop/input](./rust/desktop/input.md) / [desktop/render](./rust/desktop/render.md) / [audio](./rust/nif/audio.md)
 - **外部ツール**: [alchemy-launcher](https://github.com/FRICK-ELDY/alchemy-launcher)（別リポジトリ管理）
-- **歴史（削除済み physics）**: [nif/physics](./rust/nif/physics.md) はアーカイブ参照用
+- **歴史（削除済み physics）**: [nif/legacy_physics](./rust/nif/legacy_physics.md) はアーカイブ参照用
+- **旧ボトルネック分析**: [legacy_contents-to-physics-bottlenecks.md](./legacy_contents-to-physics-bottlenecks.md)
+- **権威 tick / 主時間**: [authoritative-state-sync-policy.md](./authoritative-state-sync-policy.md)

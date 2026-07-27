@@ -1,7 +1,7 @@
 # P5 転送効率化 — Protobuf 採用の実施プラン
 
 > **ステータス**: 完了（`workspace/2_todo` → `workspace/7_done` に移動済み）。  
-> 出典: [contents-defines-rust-executes.md](../1_backlog/contents-defines-rust-executes.md)（旧セクション 2・P5）  
+> 出典: [legacy_contents-defines-rust-executes.md](../1_backlog/legacy_contents-defines-rust-executes.md)（旧セクション 2・P5）  
 > **Protobuf でエンコード（Elixir）・デコード（Rust）** する。`proto/render_frame.proto`、`Content.FrameEncoder`、`render` / `network` の `decode_pb_render_frame`、`set_frame_injection_binary`（`FrameInjection`）と同じスタック。
 
 ---
@@ -97,10 +97,10 @@
 
 ## 7. 関連ドキュメント（作業時に参照）
 
-- [contents-defines-rust-executes.md](../1_backlog/contents-defines-rust-executes.md)
+- [legacy_contents-defines-rust-executes.md](../1_backlog/legacy_contents-defines-rust-executes.md)
 - [p5-transfer-optimization-design.md](./p5-transfer-optimization-design.md)
 - [draw-command-spec.md](../../docs/architecture/draw-command-spec.md)
-- [contents-to-physics-bottlenecks.md](../../docs/architecture/contents-to-physics-bottlenecks.md) セクション 6
+- [legacy_contents-to-physics-bottlenecks.md](../../docs/architecture/legacy_contents-to-physics-bottlenecks.md) セクション 6
 - [network-protocol-current.md](../../docs/architecture/network-protocol-current.md)（`push_render_frame` / binary の記述）
 
 ---

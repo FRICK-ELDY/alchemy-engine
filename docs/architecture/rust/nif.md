@@ -1,6 +1,6 @@
 # Rust: nif — Formula VM（Rustler NIF）
 
-> **2026-04**: ゲーム ECS・`physics/`・旧 NIF 群は **削除済み**。本ページは **現行構成** のみ記す。旧 physics の長文仕様は [nif/physics.md](./nif/physics.md)（**アーカイブ**）。
+> **2026-04**: ゲーム ECS・`physics/`・旧 NIF 群は **削除済み**。本ページは **現行構成** のみ記す。旧 physics の長文仕様は [nif/legacy_physics.md](./nif/legacy_physics.md)（**レガシー**）。主時間方針は [authoritative-state-sync-policy.md](../authoritative-state-sync-policy.md)。
 
 ## 概要
 
@@ -39,4 +39,5 @@ graph TB
 - [desktop_client](./desktop_client.md)（クライアントは **nif 非依存**）
 - [formula-vm-bytecode.md](../formula-vm-bytecode.md)
 - [audio](./nif/audio.md)（**クライアント `audio` クレート**。nif からは未使用）
-- [nif/physics](./nif/physics.md)（削除済みコードの参照用）
+- [nif/legacy_physics](./nif/legacy_physics.md)（削除済みコードの参照用）
+- [authoritative-state-sync-policy.md](../authoritative-state-sync-policy.md)（主時間）

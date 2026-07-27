@@ -1,6 +1,7 @@
 # apps/contents → 旧 native/physics データフローと技術的ボトルネック
 
-> **アーカイブ（2026-04）**: ゲーム用 Rust NIF（`GameWorld`・`physics_step`・60Hz ループ）は撤去済み。以下は **旧アーキテクチャ** のボトルネック分析記録。現行の経路・用語は [overview.md](overview.md) と [network-protocol-current.md](network-protocol-current.md) を参照。
+> **レガシー文書**（ファイル名: legacy_contents-to-physics-bottlenecks.md）  
+> **アーカイブ（2026-04）**: ゲーム用 Rust NIF（`GameWorld`・`physics_step`・60Hz ループ）は撤去済み。以下は **旧アーキテクチャ** のボトルネック分析記録。現行の経路・用語は [overview.md](overview.md)・[network-protocol-current.md](network-protocol-current.md)・[authoritative-state-sync-policy.md](authoritative-state-sync-policy.md)（主時間＝Elixir 権威 tick）を参照。
 
 > 本ドキュメントは `apps/contents` から旧 `native/physics` までのデータの流れを可視化し、
 > 当時技術的にボトルネックになり得る箇所を分析した。
@@ -306,14 +307,14 @@ flowchart TB
 「Elixir が定義、Rust が実行」の原則に反する。現行の設計（Elixir が DrawCommand を組み立て、
 Rust が decode して描画する）を維持する。
 
-参照: [contents-defines-rust-executes.md](../plan/backlog/contents-defines-rust-executes.md) セクション 5
+参照: [legacy_contents-defines-rust-executes.md](../plan/backlog/legacy_contents-defines-rust-executes.md) セクション 5
 
 ---
 
 ## 8. 関連ドキュメント
 
 - [Rust: nif](rust/nif.md)
-- [Rust: physics](rust/nif/physics.md)
+- [Rust: physics](rust/nif/legacy_physics.md)
 - [Elixir: core](elixir/core.md)
 - [Elixir: contents](elixir/contents.md)
 - [draw-command-spec.md](draw-command-spec.md) — DrawCommand タグ・フィールド仕様（SSoT）

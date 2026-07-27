@@ -1,7 +1,7 @@
 # Formula 以外のパラメータ計算 — Rust 側ハードコード一覧（P1-1）
 
 > 作成日: 2026-03-07  
-> 出典: [contents-defines-rust-executes.md](../1_backlog/contents-defines-rust-executes.md) P1-1  
+> 出典: [legacy_contents-defines-rust-executes.md](../1_backlog/legacy_contents-defines-rust-executes.md) P1-1  
 > 目的: Formula 以外のパラメータ計算で Rust 側に残るハードコードを洗い出し、「Elixir 定義 → Rust 実行」の徹底余地を把握する
 
 ---
@@ -120,5 +120,5 @@ Formula は既に「Elixir 定義 → Rust VM 実行」が実現済み。本一�
 
 - [formula-migration-evaluation.md](./formula-migration-evaluation.md) — 武器式の Formula 移行評価（P1-2）
 - [formula-vm-bytecode.md](../../docs/architecture/formula-vm-bytecode.md) — Formula VM バイトコード仕様（P1-3）
-- [contents-defines-rust-executes.md](../1_backlog/contents-defines-rust-executes.md) — 方針・リファクタリング計画
+- [legacy_contents-defines-rust-executes.md](../1_backlog/legacy_contents-defines-rust-executes.md) — 方針・リファクタリング計画
 

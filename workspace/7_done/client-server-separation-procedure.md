@@ -321,8 +321,8 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 
 - [zenoh-protocol-spec.md](../../architecture/zenoh-protocol-spec.md) — Zenoh プロトコル仕様（フェーズ 1）
 - [Zenohex](https://github.com/biyooon-ex/zenohex) — Elixir API for Zenoh
-- [contents-defines-rust-executes.md](../1_backlog/contents-defines-rust-executes.md) — 定義 vs 実行の分離方針
+- [legacy_contents-defines-rust-executes.md](../1_backlog/legacy_contents-defines-rust-executes.md) — 定義 vs 実行の分離方針
 - [draw-command-spec.md](../../architecture/draw-command-spec.md) — DrawCommand スキーマ
 - [zenoh-protocol-spec.md](../../docs/architecture/zenoh-protocol-spec.md) — Zenoh ペイロード（protobuf）
-- [contents-to-physics-bottlenecks.md](../../architecture/contents-to-physics-bottlenecks.md) — データフロー・ボトルネック
+- [legacy_contents-to-physics-bottlenecks.md](../../architecture/legacy_contents-to-physics-bottlenecks.md) — データフロー・ボトルネック
 - [implementation.mdc](../../.cursor/rules/implementation.mdc) — 層間インターフェース設計

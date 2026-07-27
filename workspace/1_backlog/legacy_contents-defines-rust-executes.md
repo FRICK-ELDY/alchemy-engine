@@ -1,7 +1,9 @@
-# Contents 定義 / Rust 実行 — 方針とリファクタリング計画
+# Contents 定義 / Rust 実行 — 方針とリファクタリング計画（レガシー）
 
+> **レガシー文書**（ファイル名: legacy_contents-defines-rust-executes.md）  
+> 旧「Elixir＝定義 / Rust＝サーバー実行層」物語の計画メモ。現行の責務・主時間は [vision.md](../../docs/vision.md) と [authoritative-state-sync-policy.md](../../docs/architecture/authoritative-state-sync-policy.md)（Elixir 権威 tick 推奨 20Hz、Rust は表示の予測・補間）を正とする。  
 > 作成日: 2026-03-07  
-> 出典: NIF 層の関数型/データ指向混在の議論、[contents-to-physics-bottlenecks.md](../../docs/architecture/contents-to-physics-bottlenecks.md)  
+> 出典: NIF 層の関数型/データ指向混在の議論、[legacy_contents-to-physics-bottlenecks.md](../../docs/architecture/legacy_contents-to-physics-bottlenecks.md)  
 > 参照: [implementation.mdc](../../../.cursor/rules/implementation.mdc)、[improvement-plan.md](../0_reference/improvement-plan.md)
 
 ---
@@ -77,7 +79,7 @@
 - [p5-transfer-protobuf-implementation-plan.md](../7_done/p5-transfer-protobuf-implementation-plan.md) — P5 Protobuf 実施プラン（完了）
 - [implementation.mdc](../../../.cursor/rules/implementation.mdc) — 保証の原則・層間インターフェース
 - [shader-path-traversal-design.md](../2_todo/shader-path-traversal-design.md) — P4-S Path Traversal 対策設計
-- [contents-to-physics-bottlenecks.md](../../docs/architecture/contents-to-physics-bottlenecks.md) — ボトルネック・改善案
+- [legacy_contents-to-physics-bottlenecks.md](../../docs/architecture/legacy_contents-to-physics-bottlenecks.md) — ボトルネック・改善案
 - [improvement-plan.md](../0_reference/improvement-plan.md) — 全体改善計画
 - [Rust: desktop_render](../../docs/architecture/rust/desktop/render.md) — 描画パイプライン現状
 - [Rust: nif](../../docs/architecture/rust/nif.md) — NIF インターフェース
