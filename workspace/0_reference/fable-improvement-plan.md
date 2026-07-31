@@ -28,7 +28,7 @@
 
 **優先原則: 「一番弱い経路」から塞ぐ。全項目とも前回計画から進捗なし。**
 
-### 2-1. engine SECRET_KEY_BASE の fail-fast `-3 解消`
+### 2-1. engine SECRET_KEY_BASE の fail-fast `-3 解消` ✅
 
 auth と同じ方式で `runtime.exs` に prod 時の raise を追加。今回 runtime.exs に TICK_HZ 対応が入ったので、同ファイルへの追記のみ。
 
@@ -36,11 +36,17 @@ auth と同じ方式で `runtime.exs` に prod 時の raise を追加。今回 r
 
 ### 2-2. auth ↔ engine の接続（room token の認証発行） `-3 解消`
 
-engine に JWKS クライアントを実装し、`POST /api/room_token` を Bearer JWT 必須に変更。**auth 強化の効果をゲームサーバに接続する最重要タスク。**
+engine に JWKS クライアントを実装し、`POST /api/room_token` を Bearer JWT 必須に変更。**auth 強化の効果をゲームサーバに接続する最重要タスク。** 契約は `auth/docs/jwt-jwks-engine-contract.md`。
 
-対象: `engine/apps/network/lib/network/router.ex`（新規: `auth_verifier.ex`）
+**切替必須（デモ・ローカル向け）:** JWT 必須化は環境変数（例: `AUTH_REQUIRED`、既定はオフまたは dev オフ）で無効化できるようにする。オフ時は現行どおり無認証で room token を発行する。オン時のみ JWKS 検証を行い、失敗は 401。評価点の解消は **オン経路が本番／検証環境で有効であること** を前提とする。
+
+背景: 2026-08-27 お披露目は Mac（Server + Router）と Windows（Client）をテザリング同一 LAN で接続し、**auth なしデモ**を本線とする。auth の Docker 運用は任意・バックアップとし、デモ当日は `AUTH_REQUIRED` オフで入場経路を auth に依存させない。
+
+対象: `engine/apps/network/lib/network/router.ex`（新規: `auth_verifier.ex`）、`engine/config/runtime.exs`
 
 ### 2-3. UDP JOIN / Zenoh 入力への RoomToken 適用 `-5 解消（-3 + -2）`
+
+2-2 と同様、デモ前に入場を auth／RoomToken 必須へハードカットしない。適用時も `AUTH_REQUIRED`（または同等の切替）と整合させる。
 
 対象: `engine/apps/network/lib/network/udp/`, `zenoh_bridge.ex`
 
@@ -138,10 +144,10 @@ auth にも hex.audit / dialyzer を追加（auth 残 -1 解消）。
 
 ```
 フェーズ1  : Formula 除算バグ + tick_hz 整合 ────────────────── -7
-フェーズ2  : SECRET_KEY_BASE → auth↔engine 接続 → UDP/Zenoh ── -21
+フェーズ2  : SECRET_KEY_BASE → auth↔engine（AUTH_REQUIRED 切替）→ UDP/Zenoh ── -21
 フェーズ3  : マルチルーム → 補間 → OpenXR → S2S ─────────────── -25
 フェーズ4  : cargo test --workspace → contents テスト ────────── -16
 フェーズ5  : 負債返済（随時）─────────────────────────────────── -10+
 ```
 
-総合スコアは **+81（訂正後）→ +89**。今回の +8 は品質の地固め（tick 設定化・CI 復活）によるもので、価値命題側の -3〜-4 帯 10 件は 3 週間前から不変。**次の +15〜20 点はフェーズ 1〜2 前半（除算バグ修正 + auth↔engine 接続 + engine セキュリティ 3 件）が最も費用対効果が高い**、という前回の結論を維持する。
+総合スコアは **+81（訂正後）→ +89**。今回の +8 は品質の地固め（tick 設定化・CI 復活）によるもので、価値命題側の -3〜-4 帯 10 件は 3 週間前から不変。**次の +15〜20 点はフェーズ 1〜2 前半（除算バグ修正 + auth↔engine 接続 + engine セキュリティ 3 件）が最も費用対効果が高い**、という前回の結論を維持する。ただし 2026-08-27 お披露目までは 2-2 / 2-3 の必須化をデモ経路に載せない（`AUTH_REQUIRED` オフ）。

@@ -20,7 +20,7 @@ config :libcluster,
 # ポートはコンパイル時固定値として設定する。
 # 実行時に変更したい場合は config/runtime.exs の NETWORK_PORT を使用する。
 # secret_key_base は Phoenix.Token（ルーム参加認証）で使用する。
-# 本番では config/runtime.exs の SECRET_KEY_BASE で上書きすること。
+# 下記は dev/test 用の固定値。prod は runtime.exs が SECRET_KEY_BASE 必須（未設定時 raise）。
 config :network, Network.Endpoint,
   http: [port: 4000],
   pubsub_server: Network.PubSub,
