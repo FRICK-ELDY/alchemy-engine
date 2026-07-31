@@ -306,10 +306,6 @@ defmodule Contents.Events.Game do
 
   # ── インフォ: フレームイベント ────────────────────────────────────
 
-  # 権威 tick × 約 2 秒分のバッファ。超えたらフレームをドロップして追いつく。
-  # マウス / VR ポーズ等の高頻度入力も同一メールボックスに来るため、下限 120 で誤判定を防ぐ。
-  defp backpressure_threshold, do: max(Core.Config.tick_hz() * 2, 120)
-
   def handle_info({:frame_events, events}, state) do
     # 初回数フレームでログ（フレーム受信の確認用）
     if state.frame_count < 3 do
@@ -323,6 +319,7 @@ defmodule Contents.Events.Game do
         {:message_queue_len, depth} ->
           if depth > backpressure_threshold() do
             :telemetry.execute([:game, :frame_dropped], %{depth: depth}, %{room_id: state.room_id})
+
             true
           else
             false
@@ -354,6 +351,10 @@ defmodule Contents.Events.Game do
   def handle_info(:elixir_frame_tick, state), do: {:noreply, state}
 
   # ── メインフレームループ ──────────────────────────────────────────
+
+  # 権威 tick × 約 2 秒分のバッファ。超えたらフレームをドロップして追いつく。
+  # マウス / VR ポーズ等の高頻度入力も同一メールボックスに来るため、下限 120 で誤判定を防ぐ。
+  defp backpressure_threshold, do: max(Core.Config.tick_hz() * 2, 120)
 
   # throttled?: true のとき、ゲーム整合性に影響するイベント処理（スコア・HP 等）は
   # 維持しつつ、Zenoh フレーム publish・診断キャッシュ等の重い副作用をスキップして追いつく。
