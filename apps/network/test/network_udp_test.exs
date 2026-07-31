@@ -67,6 +67,19 @@ defmodule Network.UDPTest do
       assert {:error, :invalid_packet} = Protocol.decode(<<0x01, 1::32, 0, "tok">>)
     end
 
+    test ":join は末尾 NUL のみの token を nil にする" do
+      assert {:ok, bin} = Protocol.encode({:join, 1, "room_a"})
+      # room_id <<0>> （空 token）相当
+      assert {:ok, {:join, 1, "room_a", nil}} =
+               Protocol.decode(<<0x01, 1::32, "room_a", 0>>)
+      _ = bin
+    end
+
+    test ":join は空文字 token をトークンなしとしてエンコードする" do
+      assert {:ok, bin} = Protocol.encode({:join, 1, "room_a", ""})
+      assert {:ok, {:join, 1, "room_a", nil}} = Protocol.decode(bin)
+    end
+
     test ":join_ack パケットをエンコード・デコードできる" do
       packet = {:join_ack, 2, "room_b"}
       assert {:ok, bin} = Protocol.encode(packet)

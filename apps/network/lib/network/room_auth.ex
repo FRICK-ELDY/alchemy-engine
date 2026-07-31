@@ -55,7 +55,7 @@ defmodule Network.RoomAuth do
               {:error, reason}
             else
               # オフ時: 封筒らしいペイロードなら rest を採用し、そうでなければ生 protobuf とみなす
-              if reason in [:expired, :scope_mismatch] or len > 30 do
+              if (reason in [:expired, :scope_mismatch] or len > 30) and looks_like_token?(token) do
                 {:ok, rest}
               else
                 {:ok, payload}
@@ -82,5 +82,10 @@ defmodule Network.RoomAuth do
       when is_binary(token) and token != "" and byte_size(token) <= 65_535 and
              is_binary(protobuf) do
     <<byte_size(token)::16-big, token::binary, protobuf::binary>>
+  end
+
+  # Phoenix.Token は Base64URL + `.` 区切り。生 protobuf の誤検出を避ける。
+  defp looks_like_token?(token) when is_binary(token) do
+    Regex.match?(~r/^[a-zA-Z0-9._-]+$/, token)
   end
 end

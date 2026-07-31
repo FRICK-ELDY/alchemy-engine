@@ -73,7 +73,7 @@ defmodule Network.UDP.Protocol do
   @spec encode(packet()) :: {:ok, binary()} | {:error, term()}
   def encode({:join, seq, room_id}), do: encode({:join, seq, room_id, nil})
 
-  def encode({:join, seq, room_id, nil}) do
+  def encode({:join, seq, room_id, token}) when token in [nil, ""] do
     with {:ok, room_bin} <- join_room_bin(room_id) do
       {:ok, <<@type_join, seq::32, room_bin::binary>>}
     end
@@ -139,6 +139,7 @@ defmodule Network.UDP.Protocol do
         {:ok, {:join, seq, room_id, nil}}
 
       [room_id, token] when room_id != "" ->
+        token = if token == "", do: nil, else: token
         {:ok, {:join, seq, room_id, token}}
 
       _ ->
