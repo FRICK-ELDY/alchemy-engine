@@ -151,8 +151,7 @@ fn binary_mul(a: Value, b: Value) -> Option<Value> {
 fn binary_div(a: Value, b: Value) -> Result<Value, VmError> {
     // 両方 I32 なら I32 で演算。それ以外は F32（加減乗と揃える）
     // as_i32() は F32 も truncate して Some を返すため、型を先に判定する。
-    if matches!((a, b), (Value::I32(_), Value::I32(_))) {
-        let (va, vb) = (a.as_i32().unwrap(), b.as_i32().unwrap());
+    if let (Value::I32(va), Value::I32(vb)) = (a, b) {
         if vb == 0 {
             return Err(VmError::DivisionByZero);
         }
