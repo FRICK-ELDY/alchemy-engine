@@ -59,41 +59,34 @@ auth_required? =
 
 config :network, :auth_required, auth_required?
 
-if jwks_url = System.get_env("AUTH_JWKS_URL") do
-  if is_binary(jwks_url) and String.trim(jwks_url) != "" do
-    config :network, :auth_jwks_url, String.trim(jwks_url)
-  end
+auth_jwks_url_env = System.get_env("AUTH_JWKS_URL")
+auth_base_url_env = System.get_env("AUTH_BASE_URL")
+jwt_issuer_env = System.get_env("JWT_ISSUER")
+jwt_audience_env = System.get_env("JWT_AUDIENCE")
+
+jwks_ok? = is_binary(auth_jwks_url_env) and String.trim(auth_jwks_url_env) != ""
+
+if jwks_ok? do
+  config :network, :auth_jwks_url, String.trim(auth_jwks_url_env)
 end
 
-if base_url = System.get_env("AUTH_BASE_URL") do
-  if is_binary(base_url) and String.trim(base_url) != "" do
-    config :network, :auth_base_url, String.trim_trailing(String.trim(base_url), "/")
-  end
+base_ok? = is_binary(auth_base_url_env) and String.trim(auth_base_url_env) != ""
+
+if base_ok? do
+  config :network, :auth_base_url, String.trim_trailing(String.trim(auth_base_url_env), "/")
 end
 
-if issuer = System.get_env("JWT_ISSUER") do
-  if is_binary(issuer) and String.trim(issuer) != "" do
-    config :network, :jwt_issuer, String.trim(issuer)
-  end
+if is_binary(jwt_issuer_env) and String.trim(jwt_issuer_env) != "" do
+  config :network, :jwt_issuer, String.trim(jwt_issuer_env)
 end
 
-if audience = System.get_env("JWT_AUDIENCE") do
-  if is_binary(audience) and String.trim(audience) != "" do
-    config :network, :jwt_audience, String.trim(audience)
-  end
+if is_binary(jwt_audience_env) and String.trim(jwt_audience_env) != "" do
+  config :network, :jwt_audience, String.trim(jwt_audience_env)
 end
 
-if auth_required? do
-  jwks = System.get_env("AUTH_JWKS_URL")
-  base = System.get_env("AUTH_BASE_URL")
-
-  jwks_ok? = is_binary(jwks) and String.trim(jwks) != ""
-  base_ok? = is_binary(base) and String.trim(base) != ""
-
-  unless jwks_ok? or base_ok? do
-    raise """
-    AUTH_REQUIRED is enabled but neither AUTH_JWKS_URL nor AUTH_BASE_URL is set.
-    Example: AUTH_BASE_URL=http://localhost:4002
-    """
-  end
+if auth_required? and not (jwks_ok? or base_ok?) do
+  raise """
+  AUTH_REQUIRED is enabled but neither AUTH_JWKS_URL nor AUTH_BASE_URL is set.
+  Example: AUTH_BASE_URL=http://localhost:4002
+  """
 end

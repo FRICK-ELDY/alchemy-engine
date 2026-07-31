@@ -209,7 +209,7 @@ defmodule Network.AuthVerifier do
     |> Joken.Config.add_claim("iat", fn -> nil end, &valid_iat?(&1, now_fun, skew))
     |> Joken.Config.add_claim("sub", fn -> nil end, &valid_uuid?/1)
     |> Joken.Config.add_claim("jti", fn -> nil end, &valid_uuid?/1)
-    |> Joken.Config.add_claim("status", fn -> nil end, &valid_status?/1)
+    |> Joken.Config.add_claim("status", fn -> nil end, &is_binary/1)
   end
 
   defp aud_matches?(aud, expected) when is_binary(aud), do: aud == expected
@@ -224,9 +224,6 @@ defmodule Network.AuthVerifier do
 
   defp valid_uuid?(value) when is_binary(value), do: Regex.match?(@uuid_re, value)
   defp valid_uuid?(_), do: false
-
-  defp valid_status?(value) when value in ["active", "suspended", "deleted"], do: true
-  defp valid_status?(_), do: false
 
   # ── JWKS ─────────────────────────────────────────────────────────
 
