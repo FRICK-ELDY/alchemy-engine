@@ -48,6 +48,12 @@ defmodule Network.UDPTest do
     test ":join パケットをエンコード・デコードできる" do
       packet = {:join, 1, "room_a"}
       assert {:ok, bin} = Protocol.encode(packet)
+      assert {:ok, {:join, 1, "room_a", nil}} = Protocol.decode(bin)
+    end
+
+    test ":join に RoomToken を付けてエンコード・デコードできる" do
+      packet = {:join, 1, "room_a", "SFMyNTY.token"}
+      assert {:ok, bin} = Protocol.encode(packet)
       assert {:ok, ^packet} = Protocol.decode(bin)
     end
 
@@ -230,6 +236,33 @@ defmodule Network.UDPTest do
 
       rooms = Network.Local.list_rooms()
       assert room_id in rooms
+    end
+
+    test "AUTH_REQUIRED 時は token なし JOIN を拒否する", %{server_port: server_port} do
+      Application.put_env(:network, :auth_required, true)
+      on_exit(fn -> Application.put_env(:network, :auth_required, false) end)
+
+      room_id = "udp_auth_#{System.unique_integer([:positive])}"
+      sock = open_client()
+      on_exit(fn -> close_client(sock) end)
+
+      :ok = send_packet(sock, server_port, Protocol.encode({:join, 1, room_id}))
+      assert {:ok, {:error, 1, "token_required"}} = recv_packet(sock)
+    end
+
+    test "AUTH_REQUIRED 時は有効な RoomToken で JOIN できる", %{server_port: server_port} do
+      Application.put_env(:network, :auth_required, true)
+      on_exit(fn -> Application.put_env(:network, :auth_required, false) end)
+
+      room_id = "udp_tok_#{System.unique_integer([:positive])}"
+      on_exit(fn -> Network.Local.unregister_room(room_id) end)
+
+      {:ok, token} = Network.RoomToken.sign(room_id)
+      sock = open_client()
+      on_exit(fn -> close_client(sock) end)
+
+      :ok = send_packet(sock, server_port, Protocol.encode({:join, 1, room_id, token}))
+      assert {:ok, {:join_ack, 1, ^room_id}} = recv_packet(sock)
     end
   end
 

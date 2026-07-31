@@ -23,6 +23,9 @@ defmodule Network.UDP do
   クライアントは `{ip, port}` で識別される。
   同一アドレスからの JOIN で既存セッションは上書きされる。
 
+  `AUTH_REQUIRED=true` のとき JOIN に RoomToken（`room_id <<0>> token`）が必須。
+  オフ時は従来どおり room_id のみで参加できる（デモ・ローカル互換）。
+
   ## パケット形式
 
   `Network.UDP.Protocol` を参照。
@@ -194,7 +197,30 @@ defmodule Network.UDP do
 
   # ── パケットハンドラ ─────────────────────────────────────────────────
 
-  defp handle_packet({:join, seq, room_id}, client, state) do
+  defp handle_packet({:join, seq, room_id, token}, client, state) do
+    case Network.RoomAuth.verify_join_token(token, room_id) do
+      :ok ->
+        do_join(seq, room_id, client, state)
+
+      {:error, reason} ->
+        Logger.warning(
+          "[Network.UDP] JOIN rejected room=#{room_id} client=#{inspect(client)} reason=#{inspect(reason)}"
+        )
+
+        {:ok, err_packet} = Protocol.encode({:error, seq, unauthorized_reason(reason)})
+        {ip, port} = client
+        :gen_udp.send(state.socket, ip, port, err_packet)
+
+        state
+    end
+  end
+
+  defp handle_packet({:leave, _seq, room_id}, client, state) do
+    Logger.info("[Network.UDP] Client #{inspect(client)} left room=#{room_id}")
+    %{state | sessions: Map.delete(state.sessions, client)}
+  end
+
+  defp do_join(seq, room_id, client, state) do
     case Network.Local.register_room(room_id) do
       :ok ->
         session = %{room_id: room_id}
@@ -220,11 +246,11 @@ defmodule Network.UDP do
     end
   end
 
-  defp handle_packet({:leave, _seq, room_id}, client, state) do
-    Logger.info("[Network.UDP] Client #{inspect(client)} left room=#{room_id}")
-    %{state | sessions: Map.delete(state.sessions, client)}
-  end
-
+  defp unauthorized_reason(:missing), do: "token_required"
+  defp unauthorized_reason(:expired), do: "token_expired"
+  defp unauthorized_reason(:invalid), do: "invalid_token"
+  defp unauthorized_reason(:scope_mismatch), do: "token_scope_mismatch"
+  defp unauthorized_reason(_), do: "unauthorized"
   defp handle_packet({:input, _seq, dx, dy}, client, state) do
     case Map.get(state.sessions, client) do
       nil ->
