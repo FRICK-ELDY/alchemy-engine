@@ -58,7 +58,7 @@ config :server, :game_events_module, Contents.Events.Game
 
 # 権威 tick（主時間）。許容: 10 / 20 / 30 / 60。デフォルト 20（推奨）。
 # 60 は非推奨（ハードリアルタイム保証なし）。実行時は TICK_HZ で上書き可（runtime.exs）。
-config :server, :tick_hz, 10
+config :server, :tick_hz, 20
 
 # FormulaStore の synced 更新をネットワークブロードキャストする MFA。
 # 形式: {Mod, Fun, []}。apply(Mod, Fun, [room_id, event]) が呼ばれる。
