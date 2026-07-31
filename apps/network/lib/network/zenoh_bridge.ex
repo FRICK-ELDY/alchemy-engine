@@ -202,7 +202,7 @@ defmodule Network.ZenohBridge do
         end
 
       {:error, reason} ->
-        Logger.warning(
+        Logger.debug(
           "[input:ZenohBridge] movement unauthorized room=#{room_id} reason=#{inspect(reason)}"
         )
     end
@@ -227,7 +227,7 @@ defmodule Network.ZenohBridge do
         end
 
       {:error, reason} ->
-        Logger.warning(
+        Logger.debug(
           "[input:ZenohBridge] action unauthorized room=#{room_id} reason=#{inspect(reason)}"
         )
     end

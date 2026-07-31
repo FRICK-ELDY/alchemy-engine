@@ -80,6 +80,12 @@ defmodule Network.UDPTest do
       assert {:ok, {:join, 1, "room_a", nil}} = Protocol.decode(bin)
     end
 
+    test ":join は room_id が 64 バイト超だと拒否する" do
+      long = String.duplicate("a", 65)
+      assert {:error, :invalid_room_id} = Protocol.encode({:join, 1, long})
+      assert {:error, :invalid_packet} = Protocol.decode(<<0x01, 1::32, long::binary>>)
+    end
+
     test ":join_ack パケットをエンコード・デコードできる" do
       packet = {:join_ack, 2, "room_b"}
       assert {:ok, bin} = Protocol.encode(packet)

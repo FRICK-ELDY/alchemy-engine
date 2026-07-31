@@ -8,6 +8,9 @@ defmodule Network.RoomAuth do
   WebSocket（`Network.Channel`）は従来どおり常に RoomToken 必須。
   """
 
+  # Phoenix.Token は通常 200B 未満。封筒誤検出と巨大トークン処理のコストを抑える。
+  @max_token_bytes 1000
+
   @doc """
   RoomToken 検証が必須かどうか。
   """
@@ -45,7 +48,8 @@ defmodule Network.RoomAuth do
           | {:error, :missing | :expired | :invalid | :scope_mismatch | :missing_token}
   def unwrap_payload(payload, room_id) when is_binary(payload) and is_binary(room_id) do
     case payload do
-      <<len::16-big, token::binary-size(len), rest::binary>> when len > 0 ->
+      <<len::16-big, token::binary-size(len), rest::binary>>
+      when len > 0 and len <= @max_token_bytes ->
         case Network.RoomToken.verify(token, room_id) do
           :ok ->
             {:ok, rest}
@@ -75,11 +79,11 @@ defmodule Network.RoomAuth do
   @doc """
   RoomToken 付き Zenoh ペイロードを組み立てる（テスト・クライアント向け）。
 
-  token 長は 16bit 上限（65535）以内であること。
+  token 長は 1000 バイト以内であること。
   """
   @spec wrap_payload(String.t(), binary()) :: binary()
   def wrap_payload(token, protobuf)
-      when is_binary(token) and token != "" and byte_size(token) <= 65_535 and
+      when is_binary(token) and token != "" and byte_size(token) <= @max_token_bytes and
              is_binary(protobuf) do
     <<byte_size(token)::16-big, token::binary, protobuf::binary>>
   end

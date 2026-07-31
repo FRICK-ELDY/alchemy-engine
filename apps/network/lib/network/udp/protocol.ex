@@ -135,10 +135,10 @@ defmodule Network.UDP.Protocol do
   @spec decode(binary()) :: {:ok, packet()} | {:error, :invalid_packet}
   def decode(<<@type_join, seq::32, payload::binary>>) do
     case :binary.split(payload, <<0>>) do
-      [room_id] when room_id != "" ->
+      [room_id] when room_id != "" and byte_size(room_id) <= 64 ->
         {:ok, {:join, seq, room_id, nil}}
 
-      [room_id, token] when room_id != "" ->
+      [room_id, token] when room_id != "" and byte_size(room_id) <= 64 ->
         token = if token == "", do: nil, else: token
         {:ok, {:join, seq, room_id, token}}
 
@@ -187,10 +187,15 @@ defmodule Network.UDP.Protocol do
   defp join_room_bin(room_id) do
     room_bin = to_string(room_id)
 
-    if String.contains?(room_bin, <<0>>) do
-      {:error, :invalid_room_id}
-    else
-      {:ok, room_bin}
+    cond do
+      String.contains?(room_bin, <<0>>) ->
+        {:error, :invalid_room_id}
+
+      byte_size(room_bin) > 64 ->
+        {:error, :invalid_room_id}
+
+      true ->
+        {:ok, room_bin}
     end
   end
 
