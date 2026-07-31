@@ -4,7 +4,7 @@ import Config
 # 例: TICK_HZ=10 mix run --no-halt
 # 許容: 10 / 20 / 30 / 60。不正値は Core.Config が 20 にフォールバック。
 if tick_hz_str = System.get_env("TICK_HZ") do
-  case Integer.parse(tick_hz_str) do
+  case Integer.parse(String.trim(tick_hz_str)) do
     {hz, ""} -> config :server, :tick_hz, hz
     _ -> :ok
   end

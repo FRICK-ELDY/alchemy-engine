@@ -307,7 +307,8 @@ defmodule Contents.Events.Game do
   # ── インフォ: フレームイベント ────────────────────────────────────
 
   # 権威 tick × 約 2 秒分のバッファ。超えたらフレームをドロップして追いつく。
-  defp backpressure_threshold, do: Core.Config.tick_hz() * 2
+  # マウス / VR ポーズ等の高頻度入力も同一メールボックスに来るため、下限 120 で誤判定を防ぐ。
+  defp backpressure_threshold, do: max(Core.Config.tick_hz() * 2, 120)
 
   def handle_info({:frame_events, events}, state) do
     # 初回数フレームでログ（フレーム受信の確認用）
@@ -404,6 +405,7 @@ defmodule Contents.Events.Game do
            runner: runner
          } = opts
        ) do
+    started_us = System.monotonic_time(:microsecond)
     context = build_context(state, now, elapsed, runner)
 
     Enum.each(events, &dispatch_frame_event_to_components(&1, context))
@@ -430,17 +432,28 @@ defmodule Contents.Events.Game do
     dispatch_nif_sync_to_components(context)
     apply_frame_injection(state)
 
+    # Zenoh / 診断は予算外の副作用。ゲームプレイ更新の実測のみを physics_ms とする。
+    physics_ms = (System.monotonic_time(:microsecond) - started_us) / 1000
+
     unless throttled? do
-      apply_frame_noncritical_side_effects(state, scene_type, opts)
+      apply_frame_noncritical_side_effects(state, scene_type, opts, physics_ms)
     end
 
     {:noreply, %{state | last_tick: now, frame_count: state.frame_count + 1}}
   end
 
   # 重い処理（ネットワーク publish / 診断キャッシュ）は遅延時にスキップ可能。
-  defp apply_frame_noncritical_side_effects(state, scene_type, opts) do
+  defp apply_frame_noncritical_side_effects(state, scene_type, opts, physics_ms) do
     maybe_publish_zenoh_frame(state)
-    Diagnostics.maybe_log_and_cache(state, scene_type, opts.elapsed, opts.content, opts.runner)
+
+    Diagnostics.maybe_log_and_cache(
+      state,
+      scene_type,
+      opts.elapsed,
+      opts.content,
+      opts.runner,
+      physics_ms
+    )
   end
 
   defp apply_frame_injection(state) do
