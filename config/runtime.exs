@@ -28,17 +28,22 @@ end
 # RoomToken（Phoenix.Token）はこの値で署名される。
 # prod で未設定のまま config.exs の公開固定値で起動するとトークン偽造が可能になるため、
 # auth と同様に fail-fast する。生成: mix phx.gen.secret
+# "" は Elixir では truthy なので、nil だけでなく空・空白のみも拒否する。
 if config_env() == :prod do
-  secret_key_base =
-    System.get_env("SECRET_KEY_BASE") ||
-      raise """
-      environment variable SECRET_KEY_BASE is missing.
-      You can generate one by calling: mix phx.gen.secret
-      """
+  secret_key_base = System.get_env("SECRET_KEY_BASE")
+
+  if is_nil(secret_key_base) or String.trim(secret_key_base) == "" do
+    raise """
+    environment variable SECRET_KEY_BASE is missing.
+    You can generate one by calling: mix phx.gen.secret
+    """
+  end
 
   config :network, Network.Endpoint, secret_key_base: secret_key_base
 else
-  if secret = System.get_env("SECRET_KEY_BASE") do
+  secret = System.get_env("SECRET_KEY_BASE")
+
+  if is_binary(secret) and String.trim(secret) != "" do
     config :network, Network.Endpoint, secret_key_base: secret
   end
 end
