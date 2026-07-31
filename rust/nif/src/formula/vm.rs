@@ -149,11 +149,15 @@ fn binary_mul(a: Value, b: Value) -> Option<Value> {
 }
 
 fn binary_div(a: Value, b: Value) -> Result<Value, VmError> {
-    if let (Some(va), Some(vb)) = (a.as_i32(), b.as_i32()) {
+    // 両方 I32 なら I32 で演算。それ以外は F32（加減乗と揃える）
+    // as_i32() は F32 も truncate して Some を返すため、型を先に判定する。
+    if matches!((a, b), (Value::I32(_), Value::I32(_))) {
+        let (va, vb) = (a.as_i32().unwrap(), b.as_i32().unwrap());
         if vb == 0 {
             return Err(VmError::DivisionByZero);
         }
-        return Ok(Value::I32(va / vb));
+        // checked_div: i32::MIN / -1 のオーバーフローを封じる（saturating 方針）
+        return Ok(Value::I32(va.checked_div(vb).unwrap_or(i32::MAX)));
     }
     let (fa, fb) = a
         .binary_op_f32(b)
@@ -190,4 +194,115 @@ fn compare_eq(a: Value, b: Value) -> Value {
         }
     };
     Value::Bool(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    fn load_i32(dst: u8, value: i32) -> Vec<u8> {
+        let mut buf = vec![1u8, dst]; // OpCode::LoadI32
+        buf.extend_from_slice(&value.to_le_bytes());
+        buf
+    }
+
+    fn load_f32(dst: u8, value: f32) -> Vec<u8> {
+        let mut buf = vec![2u8, dst]; // OpCode::LoadF32
+        buf.extend_from_slice(&value.to_le_bytes());
+        buf
+    }
+
+    fn div(dst: u8, src_a: u8, src_b: u8) -> Vec<u8> {
+        vec![7u8, dst, src_a, src_b] // OpCode::Div
+    }
+
+    fn store_output(src: u8) -> Vec<u8> {
+        vec![11u8, src] // OpCode::StoreOutput
+    }
+
+    fn run_empty(bytecode: &[u8]) -> Result<Vec<Value>, VmError> {
+        let (outputs, _) = run(bytecode, &HashMap::new(), &HashMap::new())?;
+        Ok(outputs)
+    }
+
+    #[test]
+    fn div_f32_returns_float() {
+        // 5.0 / 2.0 → F32(2.5)（整数除算に化けないこと）
+        let mut bc = Vec::new();
+        bc.extend(load_f32(0, 5.0));
+        bc.extend(load_f32(1, 2.0));
+        bc.extend(div(2, 0, 1));
+        bc.extend(store_output(2));
+
+        let outputs = run_empty(&bc).expect("run");
+        assert_eq!(outputs.len(), 1);
+        match outputs[0] {
+            Value::F32(v) => assert!((v - 2.5).abs() < f32::EPSILON, "got {}", v),
+            other => panic!("expected F32(2.5), got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn div_i32_keeps_integer() {
+        let mut bc = Vec::new();
+        bc.extend(load_i32(0, 7));
+        bc.extend(load_i32(1, 2));
+        bc.extend(div(2, 0, 1));
+        bc.extend(store_output(2));
+
+        let outputs = run_empty(&bc).expect("run");
+        assert!(matches!(outputs.as_slice(), [Value::I32(3)]));
+    }
+
+    #[test]
+    fn div_mixed_promotes_to_f32() {
+        // I32 / F32 → F32
+        let mut bc = Vec::new();
+        bc.extend(load_i32(0, 5));
+        bc.extend(load_f32(1, 2.0));
+        bc.extend(div(2, 0, 1));
+        bc.extend(store_output(2));
+
+        let outputs = run_empty(&bc).expect("run");
+        match outputs[0] {
+            Value::F32(v) => assert!((v - 2.5).abs() < f32::EPSILON, "got {}", v),
+            other => panic!("expected F32(2.5), got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn div_i32_min_by_neg_one_does_not_panic() {
+        // i32::MIN / -1 → saturating で i32::MAX（パニックしない）
+        let mut bc = Vec::new();
+        bc.extend(load_i32(0, i32::MIN));
+        bc.extend(load_i32(1, -1));
+        bc.extend(div(2, 0, 1));
+        bc.extend(store_output(2));
+
+        let outputs = run_empty(&bc).expect("run must not panic");
+        assert!(matches!(outputs.as_slice(), [Value::I32(i32::MAX)]));
+    }
+
+    #[test]
+    fn div_by_zero_i32_errors() {
+        let mut bc = Vec::new();
+        bc.extend(load_i32(0, 1));
+        bc.extend(load_i32(1, 0));
+        bc.extend(div(2, 0, 1));
+        bc.extend(store_output(2));
+
+        assert!(matches!(run_empty(&bc), Err(VmError::DivisionByZero)));
+    }
+
+    #[test]
+    fn div_by_zero_f32_errors() {
+        let mut bc = Vec::new();
+        bc.extend(load_f32(0, 1.0));
+        bc.extend(load_f32(1, 0.0));
+        bc.extend(div(2, 0, 1));
+        bc.extend(store_output(2));
+
+        assert!(matches!(run_empty(&bc), Err(VmError::DivisionByZero)));
+    }
 }
