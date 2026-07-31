@@ -18,8 +18,6 @@ defmodule Content.CanvasTest.Playing do
   alias Contents.Objects.Core.Struct, as: ObjectStruct
   alias Structs.Category.Space.Transform
 
-  @tick_sec 1.0 / 60.0
-
   @move_speed 5.0
   @sprint_speed 10.0
   @mouse_sensitivity 0.002
@@ -127,14 +125,15 @@ defmodule Content.CanvasTest.Playing do
   def render_type, do: :playing
 
   @impl Contents.SceneBehaviour
-  def update(_context, state) do
-    new_state = tick(state)
+  def update(context, state) do
+    new_state = tick(state, context)
     {:continue, new_state}
   end
 
   # ── ゲームロジック ────────────────────────────────────────────────
 
-  defp tick(state) do
+  defp tick(state, context) do
+    dt = Map.get(context, :dt) || 1.0 / 60.0
     {mdx, mdy} = state.mouse_delta
 
     new_yaw = state.yaw + mdx * @mouse_sensitivity
@@ -144,14 +143,14 @@ defmodule Content.CanvasTest.Playing do
       |> max(-@pitch_clamp)
       |> min(@pitch_clamp)
 
-    new_pos = move(state.pos, state.move_input, new_yaw, state.sprint)
+    new_pos = move(state.pos, state.move_input, new_yaw, state.sprint, dt)
 
     %{state | yaw: new_yaw, pitch: new_pitch, pos: new_pos, mouse_delta: {0.0, 0.0}}
   end
 
-  defp move({px, py, pz}, {dx, dz}, yaw, sprint) do
+  defp move({px, py, pz}, {dx, dz}, yaw, sprint, dt) do
     speed = if sprint, do: @sprint_speed, else: @move_speed
-    step = speed * @tick_sec
+    step = speed * dt
 
     len = :math.sqrt(dx * dx + dz * dz)
 
