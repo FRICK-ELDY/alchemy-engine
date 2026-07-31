@@ -20,7 +20,7 @@ defmodule Network.UDP.Protocol do
 
   | 値 | 名前 | 方向 | 説明 |
   |:---|:-----|:-----|:-----|
-  | `0x01` | `:join`        | C→S | ルーム参加要求 |
+  | `0x01` | `:join`        | C→S | ルーム参加要求（payload: `room_id` または `room_id <<0>> token`） |
   | `0x02` | `:join_ack`    | S→C | 参加承認 |
   | `0x03` | `:leave`       | C→S | ルーム離脱 |
   | `0x04` | `:input`       | C→S | 移動入力 |
@@ -50,6 +50,8 @@ defmodule Network.UDP.Protocol do
 
   @type packet ::
           {:join, seq :: non_neg_integer(), room_id :: String.t()}
+          | {:join, seq :: non_neg_integer(), room_id :: String.t(),
+             token :: String.t() | nil}
           | {:join_ack, seq :: non_neg_integer(), room_id :: String.t()}
           | {:leave, seq :: non_neg_integer(), room_id :: String.t()}
           | {:input, seq :: non_neg_integer(), dx :: float(), dy :: float()}
@@ -62,13 +64,25 @@ defmodule Network.UDP.Protocol do
   @doc """
   パケットをバイナリにエンコードする。
 
+  `:join` は 3 要素（token なし）または 4 要素（token 付き）を受け付ける。
+  token 付きの場合、payload は `room_id <<0>> token`（NUL 区切り）。
+
   `:frame` パケットの圧縮に失敗した場合、または payload が binary でない場合は `{:error, term()}` を返す。
   それ以外のパケット種別は常に `{:ok, binary()}` を返す。
   """
   @spec encode(packet()) :: {:ok, binary()} | {:error, term()}
-  def encode({:join, seq, room_id}) do
-    room_bin = to_string(room_id)
-    {:ok, <<@type_join, seq::32, room_bin::binary>>}
+  def encode({:join, seq, room_id}), do: encode({:join, seq, room_id, nil})
+
+  def encode({:join, seq, room_id, token}) when token in [nil, ""] do
+    with {:ok, room_bin} <- join_room_bin(room_id) do
+      {:ok, <<@type_join, seq::32, room_bin::binary>>}
+    end
+  end
+
+  def encode({:join, seq, room_id, token}) when is_binary(token) and token != "" do
+    with {:ok, room_bin} <- join_room_bin(room_id) do
+      {:ok, <<@type_join, seq::32, room_bin::binary, 0, token::binary>>}
+    end
   end
 
   def encode({:join_ack, seq, room_id}) do
@@ -115,10 +129,22 @@ defmodule Network.UDP.Protocol do
   @doc """
   バイナリをパケットにデコードする。
   不正なパケットは `{:error, :invalid_packet}` を返す。
+
+  `:join` は常に 4 要素 `{:join, seq, room_id, token}` を返す（token なし時は `nil`）。
   """
   @spec decode(binary()) :: {:ok, packet()} | {:error, :invalid_packet}
-  def decode(<<@type_join, seq::32, room_id::binary>>) do
-    {:ok, {:join, seq, room_id}}
+  def decode(<<@type_join, seq::32, payload::binary>>) do
+    case :binary.split(payload, <<0>>) do
+      [room_id] when room_id != "" and byte_size(room_id) <= 64 ->
+        {:ok, {:join, seq, room_id, nil}}
+
+      [room_id, token] when room_id != "" and byte_size(room_id) <= 64 ->
+        token = if token == "", do: nil, else: token
+        {:ok, {:join, seq, room_id, token}}
+
+      _ ->
+        {:error, :invalid_packet}
+    end
   end
 
   def decode(<<@type_join_ack, seq::32, room_id::binary>>) do
@@ -157,6 +183,21 @@ defmodule Network.UDP.Protocol do
   end
 
   def decode(_), do: {:error, :invalid_packet}
+
+  defp join_room_bin(room_id) do
+    room_bin = to_string(room_id)
+
+    cond do
+      String.contains?(room_bin, <<0>>) ->
+        {:error, :invalid_room_id}
+
+      byte_size(room_bin) > 64 ->
+        {:error, :invalid_room_id}
+
+      true ->
+        {:ok, room_bin}
+    end
+  end
 
   # ── デルタ圧縮 ──────────────────────────────────────────────────────
 

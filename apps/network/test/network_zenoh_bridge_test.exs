@@ -8,6 +8,11 @@ defmodule Network.ZenohBridgeTest do
     end
 
     :ets.delete_all_objects(:client_info)
+
+    on_exit(fn ->
+      Application.put_env(:network, :auth_required, false)
+    end)
+
     :ok
   end
 
@@ -44,6 +49,70 @@ defmodule Network.ZenohBridgeTest do
                Network.ZenohBridge.handle_info(sample, %{test_state: true})
 
       assert [] == :ets.lookup(:client_info, {:main, :info})
+    end
+
+    test "AUTH_REQUIRED 時は token なし client_info を拒否する" do
+      Application.put_env(:network, :auth_required, true)
+
+      payload =
+        Alchemy.Client.ClientInfo.encode(%Alchemy.Client.ClientInfo{
+          os: "win32",
+          arch: "x86_64",
+          family: "windows"
+        })
+
+      sample = %Zenohex.Sample{
+        key_expr: "contents/room/main/client/info",
+        payload: payload,
+        kind: :put
+      }
+
+      assert {:noreply, _} = Network.ZenohBridge.handle_info(sample, %{})
+      assert [] == :ets.lookup(:client_info, {:main, :info})
+    end
+
+    test "AUTH_REQUIRED 時は RoomToken 付き client_info を受け入れる" do
+      Application.put_env(:network, :auth_required, true)
+      {:ok, token} = Network.RoomToken.sign("main")
+
+      protobuf =
+        Alchemy.Client.ClientInfo.encode(%Alchemy.Client.ClientInfo{
+          os: "linux",
+          arch: "aarch64",
+          family: "unix"
+        })
+
+      sample = %Zenohex.Sample{
+        key_expr: "contents/room/main/client/info",
+        payload: Network.RoomAuth.wrap_payload(token, protobuf),
+        kind: :put
+      }
+
+      assert {:noreply, _} = Network.ZenohBridge.handle_info(sample, %{})
+      assert [{{:main, :info}, info}] = :ets.lookup(:client_info, {:main, :info})
+      assert info.os == "linux"
+    end
+
+    test "AUTH_REQUIRED オフでもラップ済み client_info を受け入れる" do
+      Application.put_env(:network, :auth_required, false)
+      {:ok, token} = Network.RoomToken.sign("main")
+
+      protobuf =
+        Alchemy.Client.ClientInfo.encode(%Alchemy.Client.ClientInfo{
+          os: "darwin",
+          arch: "arm64",
+          family: "unix"
+        })
+
+      sample = %Zenohex.Sample{
+        key_expr: "contents/room/main/client/info",
+        payload: Network.RoomAuth.wrap_payload(token, protobuf),
+        kind: :put
+      }
+
+      assert {:noreply, _} = Network.ZenohBridge.handle_info(sample, %{})
+      assert [{{:main, :info}, info}] = :ets.lookup(:client_info, {:main, :info})
+      assert info.os == "darwin"
     end
   end
 end

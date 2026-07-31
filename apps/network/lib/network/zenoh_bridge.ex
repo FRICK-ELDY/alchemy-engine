@@ -7,6 +7,10 @@ defmodule Network.ZenohBridge do
   - client_info subscribe: `contents/room/*/client/info` → `:client_info` ETS に保存
   - 受信した入力は `Contents.Events.Game` へ `{:move_input, dx, dy}` / `{:ui_action, name}` で配送
 
+  `AUTH_REQUIRED=true` のとき、movement / action / client_info のペイロードは
+  `Network.RoomAuth.wrap_payload/2` 形式（RoomToken + protobuf）を必須とする。
+  オフ時は従来どおり生 protobuf のみ（デモ・ローカル互換）。
+
   入力ペイロードの解釈は **protobuf**（movement / action / client_info）。
 
   設定: `config :network, :zenoh_enabled, true` で有効化。
@@ -187,12 +191,20 @@ defmodule Network.ZenohBridge do
   end
 
   defp handle_movement(room_id, payload) do
-    case decode_movement(payload) do
-      {:ok, {dx, dy}} ->
-        forward_move_input(room_id, dx, dy)
+    case Network.RoomAuth.unwrap_payload(payload, room_id) do
+      {:ok, inner} ->
+        case decode_movement(inner) do
+          {:ok, {dx, dy}} ->
+            forward_move_input(room_id, dx, dy)
 
-      :error ->
-        Logger.warning("[input:ZenohBridge] handle_movement decode error room=#{room_id}")
+          :error ->
+            Logger.warning("[input:ZenohBridge] handle_movement decode error room=#{room_id}")
+        end
+
+      {:error, reason} ->
+        Logger.debug(
+          "[input:ZenohBridge] movement unauthorized room=#{room_id} reason=#{inspect(reason)}"
+        )
     end
   end
 
@@ -204,12 +216,20 @@ defmodule Network.ZenohBridge do
   end
 
   defp handle_action(room_id, payload) do
-    case decode_action(payload) do
-      {:ok, name} ->
-        forward_ui_action(room_id, name)
+    case Network.RoomAuth.unwrap_payload(payload, room_id) do
+      {:ok, inner} ->
+        case decode_action(inner) do
+          {:ok, name} ->
+            forward_ui_action(room_id, name)
 
-      :error ->
-        Logger.warning("[input:ZenohBridge] Invalid action payload room=#{room_id}")
+          :error ->
+            Logger.warning("[input:ZenohBridge] Invalid action payload room=#{room_id}")
+        end
+
+      {:error, reason} ->
+        Logger.debug(
+          "[input:ZenohBridge] action unauthorized room=#{room_id} reason=#{inspect(reason)}"
+        )
     end
   end
 
@@ -264,18 +284,26 @@ defmodule Network.ZenohBridge do
   @client_info_max_rooms 100
 
   defp handle_client_info(room_id, payload) do
-    if valid_room_id_for_client_info?(room_id) do
-      room_key = if room_id == "main", do: :main, else: room_id
+    case Network.RoomAuth.unwrap_payload(payload, room_id) do
+      {:ok, inner} ->
+        if valid_room_id_for_client_info?(room_id) do
+          room_key = if room_id == "main", do: :main, else: room_id
 
-      if new_client_info_room?(room_key) and client_info_table_at_limit?() do
+          if new_client_info_room?(room_key) and client_info_table_at_limit?() do
+            Logger.warning(
+              "[ZenohBridge] Rejected client_info: max rooms (#{@client_info_max_rooms}) reached"
+            )
+          else
+            do_handle_client_info(room_id, room_key, inner)
+          end
+        else
+          Logger.debug("[ZenohBridge] Rejected client_info: invalid room_id=#{inspect(room_id)}")
+        end
+
+      {:error, reason} ->
         Logger.warning(
-          "[ZenohBridge] Rejected client_info: max rooms (#{@client_info_max_rooms}) reached"
+          "[ZenohBridge] client_info unauthorized room=#{room_id} reason=#{inspect(reason)}"
         )
-      else
-        do_handle_client_info(room_id, room_key, payload)
-      end
-    else
-      Logger.debug("[ZenohBridge] Rejected client_info: invalid room_id=#{inspect(room_id)}")
     end
   end
 

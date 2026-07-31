@@ -26,7 +26,7 @@
 
 ## フェーズ 2: セキュリティ防御線（1〜2週間、-21 点解消）
 
-**優先原則: 「一番弱い経路」から塞ぐ。2-1 / 2-2 は実施済み。残りは前回計画から進捗なし。**
+**優先原則: 「一番弱い経路」から塞ぐ。2-1 / 2-2 / 2-3 は実施済み。残りは前回計画から進捗なし。**
 
 ### 2-1. engine SECRET_KEY_BASE の fail-fast `-3 解消` ✅
 
@@ -44,11 +44,14 @@ engine に JWKS クライアントを実装し、`POST /api/room_token` を Bear
 
 対象: `engine/apps/network/lib/network/router.ex`（新規: `auth_verifier.ex`）、`engine/config/runtime.exs`
 
-### 2-3. UDP JOIN / Zenoh 入力への RoomToken 適用 `-5 解消（-3 + -2）`
+### 2-3. UDP JOIN / Zenoh 入力への RoomToken 適用 `-5 解消（-3 + -2）` ✅
 
 2-2 と同様、デモ前に入場を auth／RoomToken 必須へハードカットしない。適用時も `AUTH_REQUIRED`（または同等の切替）と整合させる。
 
-対象: `engine/apps/network/lib/network/udp/`, `zenoh_bridge.ex`
+- UDP JOIN: payload `room_id` または `room_id <<0>> token`。`AUTH_REQUIRED` 時のみ `Network.RoomToken` 必須
+- Zenoh movement / action / client_info: `AUTH_REQUIRED` 時は `<<token_len::16, token, protobuf>>` 封筒必須（`Network.RoomAuth`）
+
+対象: `engine/apps/network/lib/network/udp/`, `zenoh_bridge.ex`, `room_auth.ex`
 
 ### 2-4. zlib 展開の上限設定 `-3 解消`
 
