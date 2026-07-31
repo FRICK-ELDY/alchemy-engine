@@ -92,5 +92,27 @@ defmodule Network.ZenohBridgeTest do
       assert [{{:main, :info}, info}] = :ets.lookup(:client_info, {:main, :info})
       assert info.os == "linux"
     end
+
+    test "AUTH_REQUIRED オフでもラップ済み client_info を受け入れる" do
+      Application.put_env(:network, :auth_required, false)
+      {:ok, token} = Network.RoomToken.sign("main")
+
+      protobuf =
+        Alchemy.Client.ClientInfo.encode(%Alchemy.Client.ClientInfo{
+          os: "darwin",
+          arch: "arm64",
+          family: "unix"
+        })
+
+      sample = %Zenohex.Sample{
+        key_expr: "contents/room/main/client/info",
+        payload: Network.RoomAuth.wrap_payload(token, protobuf),
+        kind: :put
+      }
+
+      assert {:noreply, _} = Network.ZenohBridge.handle_info(sample, %{})
+      assert [{{:main, :info}, info}] = :ets.lookup(:client_info, {:main, :info})
+      assert info.os == "darwin"
+    end
   end
 end

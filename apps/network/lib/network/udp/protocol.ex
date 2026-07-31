@@ -74,13 +74,15 @@ defmodule Network.UDP.Protocol do
   def encode({:join, seq, room_id}), do: encode({:join, seq, room_id, nil})
 
   def encode({:join, seq, room_id, nil}) do
-    room_bin = to_string(room_id)
-    {:ok, <<@type_join, seq::32, room_bin::binary>>}
+    with {:ok, room_bin} <- join_room_bin(room_id) do
+      {:ok, <<@type_join, seq::32, room_bin::binary>>}
+    end
   end
 
   def encode({:join, seq, room_id, token}) when is_binary(token) and token != "" do
-    room_bin = to_string(room_id)
-    {:ok, <<@type_join, seq::32, room_bin::binary, 0, token::binary>>}
+    with {:ok, room_bin} <- join_room_bin(room_id) do
+      {:ok, <<@type_join, seq::32, room_bin::binary, 0, token::binary>>}
+    end
   end
 
   def encode({:join_ack, seq, room_id}) do
@@ -133,7 +135,7 @@ defmodule Network.UDP.Protocol do
   @spec decode(binary()) :: {:ok, packet()} | {:error, :invalid_packet}
   def decode(<<@type_join, seq::32, payload::binary>>) do
     case :binary.split(payload, <<0>>) do
-      [room_id] ->
+      [room_id] when room_id != "" ->
         {:ok, {:join, seq, room_id, nil}}
 
       [room_id, token] when room_id != "" ->
@@ -180,6 +182,16 @@ defmodule Network.UDP.Protocol do
   end
 
   def decode(_), do: {:error, :invalid_packet}
+
+  defp join_room_bin(room_id) do
+    room_bin = to_string(room_id)
+
+    if String.contains?(room_bin, <<0>>) do
+      {:error, :invalid_room_id}
+    else
+      {:ok, room_bin}
+    end
+  end
 
   # ── デルタ圧縮 ──────────────────────────────────────────────────────
 

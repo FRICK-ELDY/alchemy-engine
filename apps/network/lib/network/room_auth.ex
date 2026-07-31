@@ -32,38 +32,55 @@ defmodule Network.RoomAuth do
   end
 
   @doc """
-  AUTH_REQUIRED 時の Zenoh ペイロード封筒を解く。
+  Zenoh ペイロード封筒を解く。
 
   形式: `<<token_len::16-big, token::binary-size(token_len), protobuf::binary>>`
 
-  オフ時は payload をそのまま返す（既存クライアント互換）。
+  `AUTH_REQUIRED` オフ時も、ラップ済みペイロードを検出できれば protobuf 部分だけを返す
+  （新クライアントが常にラップしても旧サーバ設定で壊れない）。
+  必須オン時はトークン検証失敗をエラーにする。
   """
   @spec unwrap_payload(binary(), String.t()) ::
           {:ok, binary()}
           | {:error, :missing | :expired | :invalid | :scope_mismatch | :missing_token}
   def unwrap_payload(payload, room_id) when is_binary(payload) and is_binary(room_id) do
-    if required?() do
-      case payload do
-        <<len::16-big, token::binary-size(len), rest::binary>> when len > 0 ->
-          case Network.RoomToken.verify(token, room_id) do
-            :ok -> {:ok, rest}
-            {:error, _} = err -> err
-          end
+    case payload do
+      <<len::16-big, token::binary-size(len), rest::binary>> when len > 0 ->
+        case Network.RoomToken.verify(token, room_id) do
+          :ok ->
+            {:ok, rest}
 
-        _ ->
+          {:error, reason} ->
+            if required?() do
+              {:error, reason}
+            else
+              # オフ時: 封筒らしいペイロードなら rest を採用し、そうでなければ生 protobuf とみなす
+              if reason in [:expired, :scope_mismatch] or len > 30 do
+                {:ok, rest}
+              else
+                {:ok, payload}
+              end
+            end
+        end
+
+      _ ->
+        if required?() do
           {:error, :missing_token}
-      end
-    else
-      {:ok, payload}
+        else
+          {:ok, payload}
+        end
     end
   end
 
   @doc """
   RoomToken 付き Zenoh ペイロードを組み立てる（テスト・クライアント向け）。
+
+  token 長は 16bit 上限（65535）以内であること。
   """
   @spec wrap_payload(String.t(), binary()) :: binary()
   def wrap_payload(token, protobuf)
-      when is_binary(token) and token != "" and is_binary(protobuf) do
+      when is_binary(token) and token != "" and byte_size(token) <= 65_535 and
+             is_binary(protobuf) do
     <<byte_size(token)::16-big, token::binary, protobuf::binary>>
   end
 end
