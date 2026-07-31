@@ -47,3 +47,53 @@ else
     config :network, Network.Endpoint, secret_key_base: secret
   end
 end
+
+# ── auth ↔ engine（AUTH_REQUIRED / JWKS）─────────────────────────
+# AUTH_REQUIRED=true|1 で POST /api/room_token に Bearer JWT 必須。
+# 未設定・空・それ以外は false（デモ・ローカル既定）。
+auth_required? =
+  case System.get_env("AUTH_REQUIRED") do
+    v when v in ~w(true 1) -> true
+    _ -> false
+  end
+
+config :network, :auth_required, auth_required?
+
+if jwks_url = System.get_env("AUTH_JWKS_URL") do
+  if is_binary(jwks_url) and String.trim(jwks_url) != "" do
+    config :network, :auth_jwks_url, String.trim(jwks_url)
+  end
+end
+
+if base_url = System.get_env("AUTH_BASE_URL") do
+  if is_binary(base_url) and String.trim(base_url) != "" do
+    config :network, :auth_base_url, String.trim_trailing(String.trim(base_url), "/")
+  end
+end
+
+if issuer = System.get_env("JWT_ISSUER") do
+  if is_binary(issuer) and String.trim(issuer) != "" do
+    config :network, :jwt_issuer, String.trim(issuer)
+  end
+end
+
+if audience = System.get_env("JWT_AUDIENCE") do
+  if is_binary(audience) and String.trim(audience) != "" do
+    config :network, :jwt_audience, String.trim(audience)
+  end
+end
+
+if auth_required? do
+  jwks = System.get_env("AUTH_JWKS_URL")
+  base = System.get_env("AUTH_BASE_URL")
+
+  jwks_ok? = is_binary(jwks) and String.trim(jwks) != ""
+  base_ok? = is_binary(base) and String.trim(base) != ""
+
+  unless jwks_ok? or base_ok? do
+    raise """
+    AUTH_REQUIRED is enabled but neither AUTH_JWKS_URL nor AUTH_BASE_URL is set.
+    Example: AUTH_BASE_URL=http://localhost:4002
+    """
+  end
+end

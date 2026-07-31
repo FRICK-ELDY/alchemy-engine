@@ -45,6 +45,16 @@ config :network, :zenoh_enabled, Mix.env() != :test
 # デフォルトは tcp/127.0.0.1:7447（IPv4 localhost）。リモート zenohd の場合は適宜変更。
 config :network, :zenoh_connect, "tcp/localhost:7447"
 
+# ── auth ↔ engine（room_token の JWT 必須化）────────────────────
+# AUTH_REQUIRED=true のとき POST /api/room_token に Bearer JWT が必須。
+# 既定 false（ローカル・お披露目デモは auth なしで入場可）。
+# JWKS: AUTH_JWKS_URL 優先。未設定時は AUTH_BASE_URL + /.well-known/jwks.json。
+config :network, :auth_required, false
+config :network, :auth_base_url, nil
+config :network, :auth_jwks_url, nil
+config :network, :jwt_issuer, "alchemy-auth"
+config :network, :jwt_audience, "alchemy-platform"
+
 # ── 使用するコンテンツを指定する。
 # 第一級コンテンツ（維持）:
 #   Content.CanvasTest    — Canvas / ワールド空間 UI デバッグ
