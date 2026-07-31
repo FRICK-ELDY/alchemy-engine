@@ -2,7 +2,8 @@ defmodule Contents.Events.Game do
   @moduledoc """
   メインゲームループとコンポーネント委譲を行う GenServer（旧名 GameEvents）。
 
-  `:main` ルームでは Elixir タイマー（約 16ms）で `scene_update` を駆動する。
+  `:main` ルームでは Elixir タイマー（権威 tick・推奨 20Hz）で `scene_update` を駆動する。
+  間隔は `Core.Config.tick_ms/0`（`config :server, :tick_hz`）。
   ゲーム用 NIF / Rust ゲームループは使わない。`{:frame_events, events}` も従来どおり受け付ける。
 
   ## 設計原則
@@ -16,8 +17,6 @@ defmodule Contents.Events.Game do
   require Logger
 
   alias Contents.Events.Game.Diagnostics
-
-  @tick_ms 16
 
   @stub_world :stub
 
@@ -62,7 +61,7 @@ defmodule Contents.Events.Game do
   end
 
   defp schedule_elixir_frame_tick do
-    Process.send_after(self(), :elixir_frame_tick, @tick_ms)
+    Process.send_after(self(), :elixir_frame_tick, Core.Config.tick_ms())
   end
 
   @impl true
@@ -307,10 +306,8 @@ defmodule Contents.Events.Game do
 
   # ── インフォ: フレームイベント ────────────────────────────────────
 
-  # 60Hz × 2秒分のバッファ。これを超えた場合、Elixir が GC ポーズや重いシーン遷移で
-  # 2秒以上遅延していることを意味し、フレームをドロップして追いつく必要がある。
-  # フレームレートが変わった場合（例: 30Hz 環境では 4秒分）は要調整。
-  @backpressure_threshold 120
+  # 権威 tick × 約 2 秒分のバッファ。超えたらフレームをドロップして追いつく。
+  defp backpressure_threshold, do: Core.Config.tick_hz() * 2
 
   def handle_info({:frame_events, events}, state) do
     # 初回数フレームでログ（フレーム受信の確認用）
@@ -322,9 +319,13 @@ defmodule Contents.Events.Game do
 
     throttled? =
       case Process.info(self(), :message_queue_len) do
-        {:message_queue_len, depth} when depth > @backpressure_threshold ->
-          :telemetry.execute([:game, :frame_dropped], %{depth: depth}, %{room_id: state.room_id})
-          true
+        {:message_queue_len, depth} ->
+          if depth > backpressure_threshold() do
+            :telemetry.execute([:game, :frame_dropped], %{depth: depth}, %{room_id: state.room_id})
+            true
+          else
+            false
+          end
 
         _ ->
           false
@@ -563,13 +564,14 @@ defmodule Contents.Events.Game do
 
   defp build_context(state, now, elapsed, runner) do
     content = current_content()
+    tick_ms = Core.Config.tick_ms()
 
-    # R-P2: dt = 1 フレームあたりの秒数。contents が damage_this_frame 計算に利用。
-    dt = @tick_ms / 1000.0
+    # dt = 1 権威 tick あたりの秒数。contents の移動・タイマーはこれを使う。
+    dt = tick_ms / 1000.0
 
     base = %{
       room_id: state.room_id,
-      tick_ms: @tick_ms,
+      tick_ms: tick_ms,
       dt: dt,
       world_ref: state.world_ref,
       now: now,

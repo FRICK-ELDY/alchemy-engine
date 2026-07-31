@@ -3,8 +3,6 @@ defmodule Contents.Events.Game.Diagnostics do
 
   require Logger
 
-  @tick_ms 16
-
   @doc "replace 遷移時の init_arg を構築する（ゲームオーバー時のスコア・ハイスコア欄は空リスト）"
   def build_replace_init_arg(scene_type, init_arg, elapsed, content, runner) do
     game_over_scene = content.game_over_scene()
@@ -25,9 +23,12 @@ defmodule Contents.Events.Game.Diagnostics do
     end
   end
 
-  @doc "60フレームごとにフレームキャッシュ更新・ログを行う（プレイ state ベース。NIF メトリクスは呼ばない）"
+  @doc "権威 tick 数フレームごとにフレームキャッシュ更新・ログを行う（プレイ state ベース）"
   def maybe_log_and_cache(state, _scene_type, elapsed, content, runner) do
-    if state.room_id == :main and rem(state.frame_count, 60) == 0 do
+    # 約 3 秒ごと（tick_hz に追従）
+    every = max(Core.Config.tick_hz() * 3, 1)
+
+    if state.room_id == :main and rem(state.frame_count, every) == 0 do
       do_log_and_cache(state, elapsed, content, runner)
     end
   end
@@ -38,6 +39,7 @@ defmodule Contents.Events.Game.Diagnostics do
     player_max_hp = Map.get(playing_state, :player_max_hp, 100.0)
     score = Map.get(playing_state, :score, 0)
     elapsed_s = elapsed / 1000.0
+    tick_ms = Core.Config.tick_ms() * 1.0
 
     render_type =
       if runner,
@@ -50,18 +52,17 @@ defmodule Contents.Events.Game.Diagnostics do
 
     enemy_count = enemy_count_from_playing_state(playing_state)
     bullet_count = bullet_count_from_playing_state(playing_state)
-    physics_ms = @tick_ms * 1.0
 
     Core.FrameCache.put(
       enemy_count,
       bullet_count,
-      physics_ms,
+      tick_ms,
       hud_data,
       render_type,
       high_scores
     )
 
-    log_tick(content, elapsed_s, render_type, enemy_count, physics_ms, playing_state)
+    log_tick(content, elapsed_s, render_type, enemy_count, tick_ms, playing_state)
   end
 
   defp enemy_count_from_playing_state(ps) do
@@ -90,9 +91,9 @@ defmodule Contents.Events.Game.Diagnostics do
     end
   end
 
-  defp log_tick(content, elapsed_s, render_type, enemy_count, physics_ms, playing_state) do
+  defp log_tick(content, elapsed_s, render_type, enemy_count, tick_ms, playing_state) do
     wave = content.wave_label(elapsed_s)
-    budget_warn = if physics_ms > @tick_ms, do: " [OVER BUDGET]", else: ""
+    budget_warn = if tick_ms > Core.Config.tick_ms(), do: " [OVER BUDGET]", else: ""
     log_exp = Map.get(playing_state, :exp, 0)
     log_level = Map.get(playing_state, :level, "-")
     weapon_info = format_weapon_info(Map.get(playing_state, :weapon_levels))
@@ -100,13 +101,13 @@ defmodule Contents.Events.Game.Diagnostics do
 
     Logger.info(
       "[LOOP] #{wave} | scene=#{render_type} | enemies=#{enemy_count} | " <>
-        "physics=#{Float.round(physics_ms, 2)}ms#{budget_warn} | " <>
+        "tick=#{Float.round(tick_ms, 2)}ms#{budget_warn} | target=#{Core.Config.tick_hz()}Hz | " <>
         "lv=#{log_level} exp=#{log_exp} | weapons=[#{weapon_info}]" <> boss_info
     )
 
     :telemetry.execute(
       [:game, :tick],
-      %{physics_ms: physics_ms, enemy_count: enemy_count},
+      %{physics_ms: tick_ms, enemy_count: enemy_count},
       %{phase: render_type, wave: wave}
     )
   end

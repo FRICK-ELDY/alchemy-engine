@@ -1,7 +1,7 @@
 # AlchemyEngine — アーキテクチャ概要
 
 > **2026-07-23 更新**: **主時間は Elixir の権威 tick**（推奨 **20Hz**。設定で 10 / 30 / 非推奨 60Hz）。Rust クライアントは描画 ~60fps で予測・補間する。ゲーム用 Rust NIF（physics / 60Hz ループ）は撤去済み。`nif` は **Formula VM（`run_formula_bytecode`）のみ**。ローカルディスクセーブは未実装。  
-> ※ 現行コードの `Events.Game` はまだ `@tick_ms 16` 近傍の実装が残る場合がある。**方針の正本は [authoritative-state-sync-policy.md](./authoritative-state-sync-policy.md)**（デフォルト 20Hz）。実装の寄せは別タスク。
+> ※ 実装: `config :server, :tick_hz`（デフォルト **20**）と `Core.Config.tick_ms/0`。`Events.Game` はこれに従う。`TICK_HZ` で実行時上書き可。
 
 ## 設計思想
 

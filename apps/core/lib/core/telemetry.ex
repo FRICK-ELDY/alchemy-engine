@@ -20,7 +20,7 @@ defmodule Core.Telemetry do
     [
       Telemetry.Metrics.summary("game.tick.physics_ms",
         unit: :millisecond,
-        description: "Rust physics step duration per frame"
+        description: "Authoritative tick budget sample (ms)"
       ),
       Telemetry.Metrics.last_value("game.tick.enemy_count",
         description: "Active enemy count (current)"

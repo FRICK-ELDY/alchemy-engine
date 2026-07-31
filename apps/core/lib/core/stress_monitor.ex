@@ -8,7 +8,6 @@ defmodule Core.StressMonitor do
   require Logger
 
   @sample_interval_ms 1_000
-  @frame_budget_ms 1000.0 / 60.0
 
   def start_link(opts), do: GenServer.start_link(__MODULE__, opts, name: __MODULE__)
 
@@ -45,7 +44,8 @@ defmodule Core.StressMonitor do
        }} ->
         content_module = Core.Config.current()
         wave = content_module.wave_label(elapsed_s)
-        overrun = physics_ms > @frame_budget_ms
+        frame_budget_ms = Core.Config.tick_ms() * 1.0
+        overrun = physics_ms > frame_budget_ms
 
         new_state = %{
           state

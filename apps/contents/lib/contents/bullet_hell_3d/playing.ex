@@ -36,8 +36,7 @@ defmodule Content.BulletHell3D.Playing do
   alias Contents.Objects.Core.Struct, as: ObjectStruct
   alias Structs.Category.Space.Transform
 
-  @tick_ms 1000.0 / 60.0
-  @tick_sec 1.0 / 60.0
+  # 権威 tick の dt / tick_ms は context から取る（フォールバックは 60Hz 相当）
 
   # フィールドサイズ
   @field_half 10.0
@@ -121,12 +120,12 @@ defmodule Content.BulletHell3D.Playing do
   def render_type, do: :playing
 
   @impl Contents.SceneBehaviour
-  def update(_context, state) do
+  def update(context, state) do
     if state.hp <= 0 do
       {:transition, {:replace, Content.BulletHell3D.GameOver, %{elapsed_sec: state.elapsed_sec}},
        state}
     else
-      new_state = tick(state)
+      new_state = tick(state, context)
       {:continue, new_state}
     end
   end
@@ -295,22 +294,30 @@ defmodule Content.BulletHell3D.Playing do
 
   # ── メインティック ────────────────────────────────────────────────
 
-  defp tick(state) do
+  defp tick(state, context) do
+    dt = Map.get(context, :dt) || 1.0 / 60.0
+    tick_ms = Map.get(context, :tick_ms) || Core.Config.tick_ms()
     {dx, dz} = Map.get(state, :move_input, {0.0, 0.0})
-    elapsed_sec = state.elapsed_sec + @tick_sec
+    elapsed_sec = state.elapsed_sec + dt
     {max_enemies, shoot_interval_ms} = difficulty(elapsed_sec)
 
     player_pos = position_from_object(state.player_object)
-    new_player_pos = move_player(player_pos, dx, dz)
+    new_player_pos = move_player(player_pos, dx, dz, dt)
 
-    bullet_objects = move_bullets(state.bullet_objects)
+    bullet_objects = move_bullets(state.bullet_objects, dt)
 
     enemy_positions = extract_positions(state.enemy_objects)
-    new_enemy_positions = move_enemies(enemy_positions, new_player_pos)
+    new_enemy_positions = move_enemies(enemy_positions, new_player_pos, dt)
     enemy_objects = put_positions(state.enemy_objects, new_enemy_positions)
 
     {enemy_objects, next_enemy_id, spawn_timer_ms} =
-      update_spawn_timer(enemy_objects, state.spawn_timer_ms, state.next_enemy_id, max_enemies)
+      update_spawn_timer(
+        enemy_objects,
+        state.spawn_timer_ms,
+        state.next_enemy_id,
+        max_enemies,
+        tick_ms
+      )
 
     {bullet_objects, next_bullet_id, shoot_timer_ms} =
       update_shoot_timer(
@@ -319,12 +326,13 @@ defmodule Content.BulletHell3D.Playing do
         state.next_bullet_id,
         enemy_objects,
         new_player_pos,
-        shoot_interval_ms
+        shoot_interval_ms,
+        tick_ms
       )
 
     {hp, invincible_ms} =
       if state.invincible_ms > 0 do
-        {state.hp, state.invincible_ms - trunc(@tick_ms)}
+        {state.hp, state.invincible_ms - trunc(tick_ms)}
       else
         bullet_pos_list = Enum.map(bullet_objects, fn %{object: o} -> position_from_object(o) end)
         check_damage(state.hp, new_player_pos, new_enemy_positions, bullet_pos_list)
@@ -386,8 +394,8 @@ defmodule Content.BulletHell3D.Playing do
 
   # ── プレイヤー移動 ────────────────────────────────────────────────
 
-  defp move_player({px, _py, pz}, dx, dz) do
-    speed = @player_speed * @tick_sec
+  defp move_player({px, _py, pz}, dx, dz, dt) do
+    speed = @player_speed * dt
     len = :math.sqrt(dx * dx + dz * dz)
 
     {nx, nz} =
@@ -402,11 +410,11 @@ defmodule Content.BulletHell3D.Playing do
 
   # ── 弾移動 ────────────────────────────────────────────────────────
 
-  defp move_bullets(bullet_objects) do
+  defp move_bullets(bullet_objects, dt) do
     bullet_objects
     |> Enum.map(fn %{id: id, object: obj, vel: {vx, _vy, vz}} ->
       {bx, by, bz} = position_from_object(obj)
-      new_obj = put_position(obj, {bx + vx * @tick_sec, by, bz + vz * @tick_sec})
+      new_obj = put_position(obj, {bx + vx * dt, by, bz + vz * dt})
       %{id: id, object: new_obj, vel: {vx, 0.0, vz}}
     end)
     |> Enum.filter(fn %{object: obj} ->
@@ -419,8 +427,8 @@ defmodule Content.BulletHell3D.Playing do
 
   # ── 敵移動 ────────────────────────────────────────────────────────
 
-  defp move_enemies(positions, {px, _py, pz}) do
-    speed = 2.5 * @tick_sec
+  defp move_enemies(positions, {px, _py, pz}, dt) do
+    speed = 2.5 * dt
 
     positions
     |> Enum.map(fn {ex, ey, ez} ->
@@ -484,8 +492,8 @@ defmodule Content.BulletHell3D.Playing do
 
   # ── スポーンタイマー ──────────────────────────────────────────────
 
-  defp update_spawn_timer(enemy_objects, timer_ms, next_id, max_enemies) do
-    new_timer = timer_ms - trunc(@tick_ms)
+  defp update_spawn_timer(enemy_objects, timer_ms, next_id, max_enemies, tick_ms) do
+    new_timer = timer_ms - trunc(tick_ms)
 
     if new_timer <= 0 and length(enemy_objects) < max_enemies do
       {new_entry, new_id} = spawn_enemy(next_id)
@@ -518,9 +526,10 @@ defmodule Content.BulletHell3D.Playing do
          next_id,
          enemy_objects,
          player_pos,
-         shoot_interval_ms
+         shoot_interval_ms,
+         tick_ms
        ) do
-    new_timer = timer_ms - trunc(@tick_ms)
+    new_timer = timer_ms - trunc(tick_ms)
 
     if new_timer <= 0 and enemy_objects != [] do
       {new_bullets, new_id} = fire_bullets(enemy_objects, player_pos, next_id)

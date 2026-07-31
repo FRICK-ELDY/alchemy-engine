@@ -16,24 +16,19 @@
 | [network-render-frame-share-optimization-plan.md](./network-render-frame-share-optimization-plan.md) | クライアント側フレーム共有と描画ループ負荷。ポリシー §3.2（描画 FPS）と間接的に関連。 |
 | [asset-cdn-design.md](./asset-cdn-design.md) | CDN・パッケージ化。ポリシー §6（HTTPS＋署名）と部分重複。署名・マニフェストの **明示的統合** は本ギャップに含める。 |
 | [colocated-rust-physics-sim-design.md](./colocated-rust-physics-sim-design.md) | サーバー物理の採用方針（隣の Rust sim）。G3 の将来形。 |
-| [tick-workload-phoenix-debug-ui.md](./tick-workload-phoenix-debug-ui.md) | 1 tick 仕事量（entity / DrawCommand / protobuf）の Phoenix デバッグ可視化。 |
-
 ---
 
 ## ギャップ一覧
 
 ### G1 — 権威サーバー tick がポリシーと不一致（設定不能）
 
-**ポリシー**: **主時間は Elixir 権威 tick**。**デフォルト 20Hz**。設定で **10 / 20 / 30 / 非推奨 60 Hz**（[authoritative-state-sync-policy.md](../../docs/architecture/authoritative-state-sync-policy.md)）。
+**ポリシー**: **主時間は Elixir 権威 tick**。**デフォルト 20Hz**。設定で **10 / 20 / 30 / 非推奨 60 Hz**。
 
-**現状**: `Contents.Events.Game` が `@tick_ms 16`（約 **62.5 Hz**）で `Process.send_after` により駆動している（`apps/contents/lib/events/game.ex`）。診断モジュールも `@tick_ms 16` を前提（`apps/contents/lib/events/game/diagnostics.ex`）。
+**現状（2026-07-27）**: `config :server, :tick_hz` + `Core.Config.tick_hz/0` / `tick_ms/0`。`Events.Game` がこれに従う。`TICK_HZ` で実行時上書き可。
+**残ギャップ**:
 
-**ギャップ**:
-
-- 10 / 20 / 30 / 60 Hz の **設定スキーム**（`config` またはルーム単位）がない。
-- デフォルトがポリシーの「推奨 20Hz」と一致していない（実装が ~62.5Hz 寄り）。
-- 負荷試験・レポート用の **10Hz プロファイル** の切替がコード上明示されていない。
-- **60Hz を選んでもハード RT 保証はない**ことの UI／ドキュメント未反映。
+- ルーム単位の Hz 上書き UI
+- 60Hz 非推奨の運用ドキュメント／警告の強化
 
 ---
 
