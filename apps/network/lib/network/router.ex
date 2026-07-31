@@ -2,8 +2,8 @@ defmodule Network.Router do
   @moduledoc """
   HTTP ルーター。
 
-  WebSocket 以外の HTTP リクエストを処理する。
-  現在は `/health` エンドポイントのみ提供する。
+  - `POST /api/room_token` — ルーム参加用トークン発行（`AUTH_REQUIRED` 時は Bearer JWT 必須）
+  - `GET /health` — ヘルスチェック
   """
 
   use Plug.Router
@@ -12,20 +12,18 @@ defmodule Network.Router do
   plug(:dispatch)
 
   post "/api/room_token" do
-    case conn.body_params do
-      %{"room_id" => room_id} when is_binary(room_id) and room_id != "" ->
-        {:ok, token} = Network.RoomToken.sign(room_id)
-        body = Phoenix.json_library().encode!(%{token: token})
-        send_json(conn, 200, body)
+    case authorize_room_token(conn) do
+      :ok ->
+        issue_room_token(conn)
 
-      _ ->
+      {:error, reason} ->
         body =
           Phoenix.json_library().encode!(%{
-            error: "missing_room_id",
-            message: "room_id is required and must be a non-empty string"
+            error: "unauthorized",
+            message: unauthorized_message(reason)
           })
 
-        send_json(conn, 400, body)
+        send_json(conn, 401, body)
     end
   end
 
@@ -60,6 +58,61 @@ defmodule Network.Router do
   match _ do
     send_resp(conn, 404, "not found")
   end
+
+  defp issue_room_token(conn) do
+    case conn.body_params do
+      %{"room_id" => room_id} when is_binary(room_id) and room_id != "" ->
+        {:ok, token} = Network.RoomToken.sign(room_id)
+        body = Phoenix.json_library().encode!(%{token: token})
+        send_json(conn, 200, body)
+
+      _ ->
+        body =
+          Phoenix.json_library().encode!(%{
+            error: "missing_room_id",
+            message: "room_id is required and must be a non-empty string"
+          })
+
+        send_json(conn, 400, body)
+    end
+  end
+
+  defp authorize_room_token(conn) do
+    if Application.get_env(:network, :auth_required, false) do
+      case bearer_token(conn) do
+        {:ok, token} ->
+          case Network.AuthVerifier.verify(token) do
+            {:ok, _claims} -> :ok
+            {:error, reason} -> {:error, reason}
+          end
+
+        :error ->
+          {:error, :missing_bearer}
+      end
+    else
+      :ok
+    end
+  end
+
+  defp bearer_token(conn) do
+    case Plug.Conn.get_req_header(conn, "authorization") do
+      ["Bearer " <> token] ->
+        token = String.trim(token)
+        if token == "", do: :error, else: {:ok, token}
+
+      _ ->
+        :error
+    end
+  end
+
+  defp unauthorized_message(:missing_bearer), do: "Bearer token is required"
+  defp unauthorized_message(:missing_kid), do: "JWT kid is required"
+  defp unauthorized_message(:invalid_alg), do: "JWT alg must be RS256"
+  defp unauthorized_message(:unknown_kid), do: "JWT kid is unknown"
+  defp unauthorized_message(:inactive_status), do: "user status is not active"
+  defp unauthorized_message({:jwks_unavailable, _}), do: "JWKS unavailable"
+  defp unauthorized_message({:token_validation_failed, _}), do: "JWT validation failed"
+  defp unauthorized_message(_), do: "unauthorized"
 
   defp send_json(conn, status, body) do
     conn

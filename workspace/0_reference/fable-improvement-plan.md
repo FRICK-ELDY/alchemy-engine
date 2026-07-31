@@ -26,7 +26,7 @@
 
 ## フェーズ 2: セキュリティ防御線（1〜2週間、-21 点解消）
 
-**優先原則: 「一番弱い経路」から塞ぐ。全項目とも前回計画から進捗なし。**
+**優先原則: 「一番弱い経路」から塞ぐ。2-1 / 2-2 は実施済み。残りは前回計画から進捗なし。**
 
 ### 2-1. engine SECRET_KEY_BASE の fail-fast `-3 解消` ✅
 
@@ -34,7 +34,7 @@ auth と同じ方式で `runtime.exs` に prod 時の raise を追加。今回 r
 
 対象: `engine/config/runtime.exs`
 
-### 2-2. auth ↔ engine の接続（room token の認証発行） `-3 解消`
+### 2-2. auth ↔ engine の接続（room token の認証発行） `-3 解消` ✅
 
 engine に JWKS クライアントを実装し、`POST /api/room_token` を Bearer JWT 必須に変更。**auth 強化の効果をゲームサーバに接続する最重要タスク。** 契約は `auth/docs/jwt-jwks-engine-contract.md`。
 
