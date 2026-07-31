@@ -637,7 +637,7 @@ fn build_load_dialog(ctx: &egui::Context, ui_state: &mut GameUiState) -> Option<
                 .inner_margin(egui::Margin::symmetric(40, 30))
                 .corner_radius(12.0)
                 .stroke(egui::Stroke::new(
-                    2.0,
+                    2.0_f32,
                     egui::Color32::from_rgb(100, 180, 255),
                 ))
                 .show(ui, |ui| {
@@ -722,7 +722,7 @@ fn build_save_toast(ctx: &egui::Context, msg: &str) {
                 .inner_margin(egui::Margin::symmetric(24, 12))
                 .corner_radius(8.0)
                 .stroke(egui::Stroke::new(
-                    1.0,
+                    1.0_f32,
                     egui::Color32::from_rgb(100, 255, 100),
                 ))
                 .show(ui, |ui| {
