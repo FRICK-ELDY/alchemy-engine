@@ -25,7 +25,20 @@ if udp_port_str = System.get_env("NETWORK_UDP_PORT") do
 end
 
 # ── Network.Endpoint secret_key_base（本番向け）──────────────────
-# 本番では mix phx.gen.secret で生成した値を SECRET_KEY_BASE に設定すること。
-if secret = System.get_env("SECRET_KEY_BASE") do
-  config :network, Network.Endpoint, secret_key_base: secret
+# RoomToken（Phoenix.Token）はこの値で署名される。
+# prod で未設定のまま config.exs の公開固定値で起動するとトークン偽造が可能になるため、
+# auth と同様に fail-fast する。生成: mix phx.gen.secret
+if config_env() == :prod do
+  secret_key_base =
+    System.get_env("SECRET_KEY_BASE") ||
+      raise """
+      environment variable SECRET_KEY_BASE is missing.
+      You can generate one by calling: mix phx.gen.secret
+      """
+
+  config :network, Network.Endpoint, secret_key_base: secret_key_base
+else
+  if secret = System.get_env("SECRET_KEY_BASE") do
+    config :network, Network.Endpoint, secret_key_base: secret
+  end
 end
