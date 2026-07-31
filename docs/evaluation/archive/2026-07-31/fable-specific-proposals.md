@@ -1,9 +1,9 @@
 # Fable 評価 — 提案（0点）詳細一覧
 
-評価日: 2026-07-31 / 評価者: Fable 5（ソースベース評価、ドキュメント非参照）
-前回評価: 2026-07-07（`archive/2026-07-31/`）
+評価日: 2026-07-07 / 評価者: Fable 5（ソースベース評価、ドキュメント非参照）
+前回評価: 2026-07-04（`archive/2026-07-04/`）
 
-現時点では存在しないため加点も減点もしないが、実装すれば将来のプラス評価につながる提案。既にマイナス点として計上した「欠陥の修正」は `workspace/0_reference/fable-improvement-plan.md` 側に記載し、ここには **新規の発展方向** のみを挙げる。
+現時点では存在しないため加点も減点もしないが、実装すれば将来のプラス評価につながる提案。既にマイナス点として計上した「欠陥の修正」は `fable-improvement-plan.md` 側に記載し、ここには **新規の発展方向** のみを挙げる。
 
 ---
 
@@ -46,21 +46,21 @@
   > 関連ファイル: `engine/apps/network/`, `engine/rust/client/network/`
 
 - **クライアント側予測（client-side prediction）の設計**
-  > 補間（既存 `interp.rs` の配線）が済んだ後の次段として、自分の移動入力のみローカル即時反映+サーバ照合の予測を導入すると、体感遅延が大きく改善する。権威 tick が 10〜20Hz に明確化された今、補間+予測の 2 段はクライアント体験の生命線になる。入力に seq が既にあるため、サーバ側の ack 付与だけで実現可能な土台がある。
+  > 補間（既存 `interp.rs` の配線）が済んだ後の次段として、自分の移動入力のみローカル即時反映+サーバ照合の予測を導入すると、体感遅延が大きく改善する。入力に seq が既にあるため、サーバ側の ack 付与だけで実現可能な土台がある。
   > 関連ファイル: `engine/rust/client/shared/src/interp.rs`, `engine/apps/network/lib/network/udp/protocol.ex`
 
 ## 運用・品質基盤
 
 - **ベンチマーク基盤（benchee / criterion）**
-  > フレームエンコード時間・Formula VM 実行時間・UDP encode/decode に対する継続的ベンチマークを提案。tick 予算が設定化された（20Hz なら 50ms、10Hz なら 100ms）今、各処理の予算消費率を数値で追跡でき、StressMonitor の警告閾値にも根拠が生まれる。
+  > フレームエンコード時間・Formula VM 実行時間・UDP encode/decode に対する継続的ベンチマークを提案。60Hz 予算（16ms）に対する各処理の消費率を数値で追跡でき、StressMonitor の警告閾値にも根拠が生まれる。
   > 関連ファイル: `engine/apps/contents/lib/contents/frame_encoder.ex`, `engine/rust/nif/`
 
 - **PromEx / Grafana によるメトリクス外部化**
-  > telemetry イベントの基盤は既にあり、physics_ms も実測化された。ConsoleReporter を PromEx に差し替えれば フレームレート・ルーム数・mailbox 深度をダッシュボード化できる。分散運用を目指すなら早期に入れるほど価値が高い。
+  > telemetry イベントの基盤は既にあるので、ConsoleReporter を PromEx に差し替えれば フレームレート・ルーム数・mailbox 深度をダッシュボード化できる。分散運用を目指すなら早期に入れるほど価値が高い。
   > 関連ファイル: `engine/apps/core/lib/core/telemetry.ex`
 
 - **リプレイ・決定論テスト**
-  > 入力列を記録して再実行し、同一フレーム列が得られることを検証するリプレイ基盤。デバッグ・チート検証・ネットコード検証の三役を担う。dt ベース化でゲームロジックが tick_hz 非依存になった今、「同一 tick_hz なら同一結果」の決定論ポリシーを明文化する契機にもなる。
+  > 入力列を記録して再実行し、同一フレーム列が得られることを検証するリプレイ基盤。デバッグ・チート検証・ネットコード検証の三役を担う。F32 演算の決定論ポリシー（クロスノード同期時）を明文化する契機にもなる。
   > 関連ファイル: `engine/apps/contents/lib/events/game.ex`
 
 - **QUIC / WebTransport の検討**
@@ -77,4 +77,4 @@
 
 ---
 
-提案は以上 15 件。いずれも既存の設計（Behaviour 契約、telemetry 基盤、headless レンダラー、RS256+JWKS、seq 付き UDP、そして今回の tick 設定化・dt ベース化）が「あと一歩」の状態まで用意されているものを優先して選定した。
+提案は以上 15 件。いずれも既存の設計（Behaviour 契約、telemetry 基盤、headless レンダラー、RS256+JWKS、seq 付き UDP）が「あと一歩」の状態まで用意されているものを優先して選定した。
