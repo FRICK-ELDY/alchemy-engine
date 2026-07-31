@@ -43,7 +43,7 @@ pub(crate) fn panel_frame() -> egui::Frame {
         .fill(PANEL_FILL)
         .inner_margin(egui::Margin::symmetric(20, 18))
         .corner_radius(10.0)
-        .stroke(egui::Stroke::new(1.5, PANEL_STROKE))
+        .stroke(egui::Stroke::new(1.5_f32, PANEL_STROKE))
 }
 
 /// 画面中央のシステム UI パネル（バックドロップ付き）。
