@@ -128,7 +128,8 @@ defmodule Core.StressMonitor do
   end
 
   defp format_meta_value(v) when is_float(v), do: Float.round(v, 1)
-  defp format_meta_value(v), do: v
+  defp format_meta_value(v) when is_integer(v) or is_binary(v) or is_atom(v), do: v
+  defp format_meta_value(v), do: inspect(v)
 
   defp physics_ms_to_float(n) when is_number(n), do: n * 1.0
   defp physics_ms_to_float(_), do: 0.0

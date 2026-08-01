@@ -116,4 +116,19 @@ defmodule Core.StressMonitorTest do
     assert stats.rooms[:main].last_counters.entities == 3
     assert stats.rooms[:main].peak_counters.entities == 3
   end
+
+  test "meta にネスト map があってもログでクラッシュしない" do
+    pid = Process.whereis(Core.StressMonitor)
+    assert is_pid(pid)
+
+    assert :ok =
+             Core.FrameCache.put(:main, %{
+               physics_ms: 1.0,
+               meta: %{nested: %{a: 1}, list: [1, 2, 3]}
+             })
+
+    send(pid, :sample)
+    state = :sys.get_state(pid)
+    assert state.rooms[:main].samples == 1
+  end
 end

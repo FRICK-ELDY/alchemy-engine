@@ -48,7 +48,13 @@ defmodule Contents.Events.Game.Diagnostics do
     enemy_count = enemy_count_from_playing_state(playing_state)
     bullet_count = bullet_count_from_playing_state(playing_state)
     wave = content.wave_label(elapsed_s)
-    hp_pct = if player_max_hp > 0, do: Float.round(player_hp / player_max_hp * 100, 1), else: 0.0
+
+    hp_pct =
+      if is_number(player_hp) and is_number(player_max_hp) and player_max_hp > 0 do
+        Float.round(player_hp / player_max_hp * 100, 1)
+      else
+        0.0
+      end
 
     snapshot = %{
       physics_ms: physics_ms,
