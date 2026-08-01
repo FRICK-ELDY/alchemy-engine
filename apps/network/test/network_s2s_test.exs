@@ -317,6 +317,64 @@ defmodule Network.S2STest do
       assert [%{"id" => "a", "status" => "General"}] = worlds
     end
 
+    test "Catalog は worlds 内の非マップ要素を無視する" do
+      worlds =
+        Catalog.list_worlds(
+          worlds: [
+            "invalid",
+            %{id: "ok", title: "OK", status: "General", path: "/ok"},
+            42
+          ],
+          max_content_status: "General"
+        )
+
+      assert [%{"id" => "ok"}] = worlds
+    end
+
+    test "configure 後も設定済みピアの JWKS キャッシュを維持する" do
+      {kid, pem, jwks} = generate_rsa_jwks()
+      fetch_count = :counters.new(1, [])
+
+      cfg = [
+        enabled: true,
+        domain: @local_domain,
+        canonical_url: "http://local.test",
+        ephemeral_keys: true,
+        worlds: [%{id: "alpha", title: "Alpha", status: "General", path: "/w"}],
+        peers: [%{domain: @peer_domain, jwks_url: "http://peer.test/jwks", jwks: jwks}],
+        fetch_fun: fn _url ->
+          :counters.add(fetch_count, 1, 1)
+          {:ok, jwks}
+        end
+      ]
+
+      Application.put_env(:network, Network.S2S, cfg)
+      assert :ok = Instance.configure(cfg)
+
+      token = sign_s2s_token(pem, kid, @peer_domain, @local_domain)
+
+      conn1 =
+        Phoenix.ConnTest.build_conn()
+        |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
+        |> Phoenix.ConnTest.get("/api/s2s/worlds")
+
+      assert %{"caller" => @peer_domain} = Phoenix.ConnTest.json_response(conn1, 200)
+
+      # worlds だけ変えて再 configure — ピア JWKS は再取得不要
+      cfg2 = Keyword.put(cfg, :worlds, [%{id: "beta", title: "Beta", status: "General", path: "/b"}])
+      Application.put_env(:network, Network.S2S, cfg2)
+      assert :ok = Instance.configure(cfg2)
+
+      conn2 =
+        Phoenix.ConnTest.build_conn()
+        |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
+        |> Phoenix.ConnTest.get("/api/s2s/worlds")
+
+      assert %{"caller" => @peer_domain} = Phoenix.ConnTest.json_response(conn2, 200)
+      assert [%{"id" => "beta"}] = Phoenix.ConnTest.json_response(conn2, 200)["worlds"]
+      assert :counters.get(fetch_count, 1) == 0
+    end
+
     test "JWKS fetch 中も GenServer が他リクエストに応答する" do
       parent = self()
       {kid, pem, jwks} = generate_rsa_jwks()

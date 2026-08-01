@@ -27,6 +27,7 @@ defmodule Network.S2S.Catalog do
 
     worlds
     |> Enum.map(&normalize_world(&1, canonical))
+    |> Enum.reject(&is_nil/1)
     |> Enum.filter(&allowed_status?(&1["status"], max_status))
   end
 
@@ -51,6 +52,8 @@ defmodule Network.S2S.Catalog do
     }
     |> Map.reject(fn {_k, v} -> is_nil(v) end)
   end
+
+  defp normalize_world(_, _), do: nil
 
   defp world_get(map, key) when is_map(map), do: Map.get(map, key)
 

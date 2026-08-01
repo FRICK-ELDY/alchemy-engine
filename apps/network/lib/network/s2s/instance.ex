@@ -215,14 +215,16 @@ defmodule Network.S2S.Instance do
   end
 
   def handle_call({:configure, opts}, _from, state) do
-    case build_state(opts) do
+    case build_state(opts, state) do
       {:ok, new_state} -> {:reply, :ok, new_state}
       {:error, reason} -> {:reply, {:error, reason}, state}
     end
   end
 
-  defp build_state(opts) do
+  defp build_state(opts, current_state \\ nil) do
     cfg = Keyword.merge(config(), opts)
+    peers = normalize_peers(Keyword.get(cfg, :peers, []))
+    {peer_signers, peer_fetched_at} = retained_peer_cache(current_state, peers)
 
     state = %{
       enabled: Keyword.get(cfg, :enabled, false) == true,
@@ -230,13 +232,13 @@ defmodule Network.S2S.Instance do
       canonical_url: Keyword.get(cfg, :canonical_url),
       max_content_status: Keyword.get(cfg, :max_content_status, "General"),
       worlds: Keyword.get(cfg, :worlds, []),
-      peers: normalize_peers(Keyword.get(cfg, :peers, [])),
+      peers: peers,
       fetch_fun: Keyword.get(cfg, :fetch_fun, &default_fetch/1),
       signer: nil,
       kid: nil,
       public_jwk: nil,
-      peer_signers: %{},
-      peer_fetched_at: %{}
+      peer_signers: peer_signers,
+      peer_fetched_at: peer_fetched_at
     }
 
     state =
@@ -262,6 +264,23 @@ defmodule Network.S2S.Instance do
       true ->
         {:ok, seed_static_peer_jwks(state)}
     end
+  end
+
+  # configure 時は設定済み peers に残るドメインの JWKS キャッシュだけ引き継ぐ
+  defp retained_peer_cache(nil, _peers), do: {%{}, %{}}
+
+  defp retained_peer_cache(current_state, peers) do
+    allowed = MapSet.new(Enum.map(peers, & &1.domain))
+
+    signers =
+      Map.filter(current_state.peer_signers, fn {domain, _} -> MapSet.member?(allowed, domain) end)
+
+    fetched_at =
+      Map.filter(current_state.peer_fetched_at, fn {domain, _} ->
+        MapSet.member?(allowed, domain)
+      end)
+
+    {signers, fetched_at}
   end
 
   # ── verify / peers（HTTP は GenServer 外）─────────────────────────
