@@ -28,7 +28,7 @@
 
 ## フェーズ 2: セキュリティ防御線（1〜2週間、-21 点解消）
 
-**優先原則: 「一番弱い経路」から塞ぐ。2-1 / 2-2 / 2-3 / 2-4 は実施済み。残りは 2-5 / 2-6。**
+**優先原則: 「一番弱い経路」から塞ぐ。2-1 / 2-2 / 2-3 / 2-4 / 2-5 は実施済み。残りは 2-6。**
 
 ### 2-1. engine SECRET_KEY_BASE の fail-fast `-3 解消` ✅
 
@@ -61,9 +61,9 @@ engine に JWKS クライアントを実装し、`POST /api/room_token` を Bear
 
 対象: `engine/apps/network/lib/network/udp/protocol.ex`（`decompress_frame_payload/1`）
 
-### 2-5. UDP セッションタイムアウト `-2 解消`
+### 2-5. UDP セッションタイムアウト `-2 解消` ✅
 
-ping を活かしたハートビート淘汰を追加。
+ping を活かしたハートビート淘汰を追加。`last_seen_ms` を JOIN / INPUT / ACTION / PING で更新し、`session_timeout_ms`（既定 30s）超過を定期スイープで除去。
 
 対象: `engine/apps/network/lib/network/udp/server.ex`
 

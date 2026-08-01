@@ -418,6 +418,71 @@ defmodule Network.UDPTest do
       sessions = Network.UDP.sessions()
       refute Enum.any?(sessions, fn {{_ip, p}, _} -> p == port end)
     end
+
+    test "無通信セッションはスイープで除去される", %{server_port: server_port} do
+      prev = Application.get_env(:network, Network.UDP, [])
+
+      Application.put_env(
+        :network,
+        Network.UDP,
+        Keyword.merge(prev, session_timeout_ms: 50, sweep_interval_ms: 5_000)
+      )
+
+      on_exit(fn -> Application.put_env(:network, Network.UDP, prev) end)
+
+      room_id = "udp_to_#{System.unique_integer([:positive])}"
+      on_exit(fn -> Network.Local.unregister_room(room_id) end)
+
+      sock = open_client()
+      on_exit(fn -> close_client(sock) end)
+      port = client_port(sock)
+
+      :ok = send_packet(sock, server_port, Protocol.encode({:join, 1, room_id}))
+      {:ok, {:join_ack, 1, _}} = recv_packet(sock)
+
+      Process.sleep(60)
+      send(Network.UDP, :sweep_sessions)
+      # スイープ完了を sessions/0 の call で同期
+      sessions = Network.UDP.sessions()
+      refute Enum.any?(sessions, fn {{_ip, p}, _} -> p == port end)
+    end
+
+    test "PING ハートビートでセッションが延長される", %{server_port: server_port} do
+      prev = Application.get_env(:network, Network.UDP, [])
+
+      Application.put_env(
+        :network,
+        Network.UDP,
+        Keyword.merge(prev, session_timeout_ms: 120, sweep_interval_ms: 5_000)
+      )
+
+      on_exit(fn -> Application.put_env(:network, Network.UDP, prev) end)
+
+      room_id = "udp_hb_#{System.unique_integer([:positive])}"
+      on_exit(fn -> Network.Local.unregister_room(room_id) end)
+
+      sock = open_client()
+      on_exit(fn -> close_client(sock) end)
+      port = client_port(sock)
+
+      :ok = send_packet(sock, server_port, Protocol.encode({:join, 1, room_id}))
+      {:ok, {:join_ack, 1, _}} = recv_packet(sock)
+
+      # タイムアウト直前まで PING で延長し、途中のスイープでも残ることを確認
+      for i <- 1..3 do
+        Process.sleep(50)
+        :ok = send_packet(sock, server_port, Protocol.encode({:ping, i}))
+        assert {:ok, {:pong, ^i, _}} = recv_packet(sock, 500)
+        send(Network.UDP, :sweep_sessions)
+        _ = Network.UDP.sessions()
+      end
+
+      sessions = Network.UDP.sessions()
+
+      assert Enum.any?(sessions, fn {{_ip, p}, session} ->
+               p == port and session.room_id == room_id
+             end)
+    end
   end
 
   describe "broadcast_frame/2" do

@@ -23,6 +23,11 @@ defmodule Network.UDP do
   クライアントは `{ip, port}` で識別される。
   同一アドレスからの JOIN で既存セッションは上書きされる。
 
+  各セッションは最終受信時刻（`last_seen_ms`、単調時計）を持ち、
+  JOIN / INPUT / ACTION / PING で更新される。`session_timeout_ms` を超えて
+  無通信のエントリは定期スイープで除去する（切断検知・テーブル肥大防止）。
+  アイドル中のクライアントは PING をハートビートとして送る想定。
+
   `AUTH_REQUIRED=true` のとき JOIN に RoomToken（`room_id <<0>> token`）が必須。
   オフ時は従来どおり room_id のみで参加できる（デモ・ローカル互換）。
 
@@ -33,9 +38,11 @@ defmodule Network.UDP do
   ## 設定
 
       config :network, Network.UDP,
-        port: 4001   # デフォルト: 4001
+        port: 4001,                 # デフォルト: 4001
+        session_timeout_ms: 30_000, # 無通信でセッション除去
+        sweep_interval_ms: 5_000    # 淘汰スイープ間隔
 
-  実行時に変更する場合は `config/runtime.exs` で `GAME_NETWORK_UDP_PORT` を設定する。
+  実行時にポートを変更する場合は `config/runtime.exs` で `NETWORK_UDP_PORT` を設定する。
 
   ## 受け入れ基準（フェーズ3）
 
@@ -51,9 +58,12 @@ defmodule Network.UDP do
   alias Network.UDP.Protocol
 
   @default_port 4001
+  # 無通信クライアントの除去閾値（アーカイブ改善計画の 30 秒）
+  @default_session_timeout_ms 30_000
+  @default_sweep_interval_ms 5_000
 
   @type client_key :: {:inet.ip_address(), :inet.port_number()}
-  @type session :: %{room_id: String.t()}
+  @type session :: %{room_id: String.t(), last_seen_ms: integer()}
 
   # ── 公開 API ────────────────────────────────────────────────────────
 
@@ -132,6 +142,7 @@ defmodule Network.UDP do
           end
 
         Logger.info("[Network.UDP] Listening on UDP port #{actual_port}")
+        schedule_sweep()
         {:ok, %{socket: socket, port: actual_port, sessions: %{}, next_seq: 0}}
 
       {:error, reason} ->
@@ -188,6 +199,12 @@ defmodule Network.UDP do
     {:noreply, new_state}
   end
 
+  def handle_info(:sweep_sessions, state) do
+    new_state = sweep_stale_sessions(state)
+    schedule_sweep()
+    {:noreply, new_state}
+  end
+
   def handle_info(_msg, state), do: {:noreply, state}
 
   @impl true
@@ -220,10 +237,70 @@ defmodule Network.UDP do
     %{state | sessions: Map.delete(state.sessions, client)}
   end
 
+  defp handle_packet({:input, _seq, dx, dy}, client, state) do
+    case Map.get(state.sessions, client) do
+      nil ->
+        Logger.warning("[Network.UDP] Input from unknown client #{inspect(client)}")
+        state
+
+      %{room_id: room_id} ->
+        case Core.RoomRegistry.get_loop(room_id) do
+          {:ok, pid} ->
+            send(pid, {:move_input, dx, dy})
+
+          :error ->
+            Logger.warning("[Network.UDP] Room #{room_id} not found for input")
+        end
+
+        touch_session(state, client)
+    end
+  end
+
+  defp handle_packet({:action, _seq, name}, client, state) do
+    case Map.get(state.sessions, client) do
+      nil ->
+        Logger.warning("[Network.UDP] Action from unknown client #{inspect(client)}")
+        state
+
+      %{room_id: room_id} ->
+        case Core.RoomRegistry.get_loop(room_id) do
+          {:ok, pid} ->
+            send(pid, {:ui_action, name})
+
+          :error ->
+            Logger.warning("[Network.UDP] Room #{room_id} not found for action")
+        end
+
+        touch_session(state, client)
+    end
+  end
+
+  defp handle_packet({:ping, seq}, client, state) do
+    ts = System.system_time(:millisecond)
+    {:ok, pong} = Protocol.encode({:pong, seq, ts})
+    {ip, port} = client
+    :gen_udp.send(state.socket, ip, port, pong)
+
+    # 登録済みクライアントの PING はハートビートとして last_seen を延長する
+    if Map.has_key?(state.sessions, client) do
+      touch_session(state, client)
+    else
+      state
+    end
+  end
+
+  defp handle_packet(packet, client, state) do
+    Logger.debug(
+      "[Network.UDP] Unhandled packet #{inspect(elem(packet, 0))} from #{inspect(client)}"
+    )
+
+    state
+  end
+
   defp do_join(seq, room_id, client, state) do
     case Network.Local.register_room(room_id) do
       :ok ->
-        session = %{room_id: room_id}
+        session = %{room_id: room_id, last_seen_ms: now_ms()}
         new_sessions = Map.put(state.sessions, client, session)
         Logger.info("[Network.UDP] Client #{inspect(client)} joined room=#{room_id}")
 
@@ -251,57 +328,6 @@ defmodule Network.UDP do
   defp unauthorized_reason(:invalid), do: "invalid_token"
   defp unauthorized_reason(:scope_mismatch), do: "token_scope_mismatch"
   defp unauthorized_reason(_), do: "unauthorized"
-  defp handle_packet({:input, _seq, dx, dy}, client, state) do
-    case Map.get(state.sessions, client) do
-      nil ->
-        Logger.warning("[Network.UDP] Input from unknown client #{inspect(client)}")
-
-      %{room_id: room_id} ->
-        case Core.RoomRegistry.get_loop(room_id) do
-          {:ok, pid} ->
-            send(pid, {:move_input, dx, dy})
-
-          :error ->
-            Logger.warning("[Network.UDP] Room #{room_id} not found for input")
-        end
-    end
-
-    state
-  end
-
-  defp handle_packet({:action, _seq, name}, client, state) do
-    case Map.get(state.sessions, client) do
-      nil ->
-        Logger.warning("[Network.UDP] Action from unknown client #{inspect(client)}")
-
-      %{room_id: room_id} ->
-        case Core.RoomRegistry.get_loop(room_id) do
-          {:ok, pid} ->
-            send(pid, {:ui_action, name})
-
-          :error ->
-            Logger.warning("[Network.UDP] Room #{room_id} not found for action")
-        end
-    end
-
-    state
-  end
-
-  defp handle_packet({:ping, seq}, client, state) do
-    ts = System.system_time(:millisecond)
-    {:ok, pong} = Protocol.encode({:pong, seq, ts})
-    {ip, port} = client
-    :gen_udp.send(state.socket, ip, port, pong)
-    state
-  end
-
-  defp handle_packet(packet, client, state) do
-    Logger.debug(
-      "[Network.UDP] Unhandled packet #{inspect(elem(packet, 0))} from #{inspect(client)}"
-    )
-
-    state
-  end
 
   # ── ユーティリティ ───────────────────────────────────────────────────
 
@@ -310,5 +336,51 @@ defmodule Network.UDP do
   defp next_seq(%{next_seq: seq} = state) do
     new_seq = rem(seq + 1, 0x100000000)
     {seq, %{state | next_seq: new_seq}}
+  end
+
+  defp now_ms, do: System.monotonic_time(:millisecond)
+
+  defp udp_config do
+    Application.get_env(:network, __MODULE__, [])
+  end
+
+  defp session_timeout_ms do
+    Keyword.get(udp_config(), :session_timeout_ms, @default_session_timeout_ms)
+  end
+
+  defp sweep_interval_ms do
+    Keyword.get(udp_config(), :sweep_interval_ms, @default_sweep_interval_ms)
+  end
+
+  defp schedule_sweep do
+    Process.send_after(self(), :sweep_sessions, sweep_interval_ms())
+  end
+
+  defp touch_session(state, client) do
+    case Map.get(state.sessions, client) do
+      nil ->
+        state
+
+      session ->
+        %{state | sessions: Map.put(state.sessions, client, %{session | last_seen_ms: now_ms()})}
+    end
+  end
+
+  defp sweep_stale_sessions(state) do
+    now = now_ms()
+    timeout = session_timeout_ms()
+
+    {kept, expired} =
+      Enum.split_with(state.sessions, fn {_client, session} ->
+        now - session.last_seen_ms <= timeout
+      end)
+
+    Enum.each(expired, fn {client, session} ->
+      Logger.info(
+        "[Network.UDP] Session timed out client=#{inspect(client)} room=#{session.room_id}"
+      )
+    end)
+
+    %{state | sessions: Map.new(kept)}
   end
 end
