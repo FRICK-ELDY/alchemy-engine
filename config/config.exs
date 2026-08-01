@@ -32,7 +32,12 @@ config :network, :json_library, Jason
 # ── Network.UDP（UDP トランスポートサーバー）─────────────────────
 # デフォルトポート: 4001
 # 変更する場合は config/runtime.exs の NETWORK_UDP_PORT を設定する。
-config :network, Network.UDP, port: 4001
+# session_timeout_ms: JOIN 後の無通信でセッション除去（ping / input / action で延長）
+# sweep_interval_ms: 淘汰スイープの間隔
+config :network, Network.UDP,
+  port: 4001,
+  session_timeout_ms: 30_000,
+  sweep_interval_ms: 5_000
 
 # ── Network.ZenohBridge（Zenoh フレーム配信・入力受信）────────────────
 # true にすると game/room/{room_id}/frame へ publish、
