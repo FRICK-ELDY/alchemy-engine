@@ -335,7 +335,8 @@ fn find_nearest_prev(
 /// `prev` → `curr` を `t` (0.0..=1.0) で補間した描画フレームを返す。
 ///
 /// 位置コマンドは **インデックスではなく近傍マッチ**で突き合わせる。
-/// マッチ不能な新規スポーンは `t < 1.0` の間は描画せず、フライング出現を防ぐ。
+/// - 新規スポーン（curr のみ）: `t < 1.0` の間は非表示（フライング出現防止）
+/// - デスポーン（prev のみ）: `t < 1.0` の間は prev 座標で維持（早期消滅防止）
 /// 非位置コマンド（Skybox 等）と Particle は `curr` を採用。
 /// UI / mesh / cursor / audio は最新（`curr`）を採用する。
 pub fn interpolate_render_frame(prev: &RenderFrame, curr: &RenderFrame, t: f32) -> RenderFrame {
@@ -348,7 +349,7 @@ pub fn interpolate_render_frame(prev: &RenderFrame, curr: &RenderFrame, t: f32) 
     }
 
     let mut used = vec![false; prev.commands.len()];
-    let commands = curr
+    let mut commands: Vec<DrawCommand> = curr
         .commands
         .iter()
         .filter_map(|curr_cmd| {
@@ -365,6 +366,17 @@ pub fn interpolate_render_frame(prev: &RenderFrame, curr: &RenderFrame, t: f32) 
             }
         })
         .collect();
+
+    // デスポーン体: 論理的な消滅（t = 1.0）まで prev 座標で残す
+    for (i, was_used) in used.iter().enumerate() {
+        if *was_used {
+            continue;
+        }
+        let prev_cmd = &prev.commands[i];
+        if command_position(prev_cmd).is_some() {
+            commands.push(prev_cmd.clone());
+        }
+    }
 
     RenderFrame {
         commands,
@@ -430,6 +442,9 @@ impl SnapshotInterpolator {
     /// 受信間隔から推定 tick を EMA 更新し、キューには `last_playback + estimated_interval`
     /// でスタンプする（バースト時も等間隔に載せる）。描画遅延は推定間隔×2 へ追従。
     ///
+    /// 受信が大きく開いて再生タイムラインが実時間から遅れた場合はキューをリセットし、
+    /// 以降も補間が効く状態に戻す（瞬断・一時停止対策）。
+    ///
     /// `received_at` は受信順で単調非減少であること。最新より古い受信時刻の push は破棄する。
     /// ペイロード内容のアウトオブオーダー検知にはサーバー tick が必要。
     pub fn push(&mut self, mut frame: RenderFrame, received_at: Instant) {
@@ -438,6 +453,18 @@ impl SnapshotInterpolator {
                 // 順序逆転した古いフレームは無視する
                 return;
             }
+        }
+
+        // 再生タイムラインが実時間から delay 超えて遅れたら同期し直す
+        if let Some((last_play, _)) = self.snapshots.back() {
+            let next_expected = *last_play + self.estimated_interval;
+            if received_at > next_expected + self.delay {
+                self.snapshots.clear();
+                self.last_received_at = None;
+            }
+        }
+
+        if let Some(last_recv) = self.last_received_at {
             let recv_gap = received_at.saturating_duration_since(last_recv);
             if recv_gap >= BURST_RECV_GAP {
                 let sample = recv_gap.clamp(INTERVAL_MIN, INTERVAL_MAX);
@@ -660,7 +687,7 @@ mod tests {
     #[test]
     fn interpolate_matches_by_nearest_not_index_when_bullet_despawns() {
         // prev: 弾 A(0) と B(10)。curr: A が消え B が 10.5 へ。インデックス 0 だと
-        // A→B' を補間して瞬間移動になる。近傍マッチなら B→B' になる。
+        // A→B' を補間して瞬間移動になる。近傍マッチなら B→B'、A はデスポーン維持。
         let prev = RenderFrame {
             commands: vec![sphere_at(0.0, 0.0), sphere_at(10.0, 0.0)],
             ..Default::default()
@@ -670,14 +697,22 @@ mod tests {
             ..Default::default()
         };
         let mid = interpolate_render_frame(&prev, &curr, 0.5);
-        assert_eq!(mid.commands.len(), 1);
-        match &mid.commands[0] {
-            DrawCommand::Sphere3D { x, z, .. } => {
-                assert!((*x - 10.25).abs() < 1e-4, "x={x} (should track B, not A)");
-                assert!(z.abs() < 1e-4);
-            }
-            other => panic!("unexpected: {other:?}"),
-        }
+        assert_eq!(mid.commands.len(), 2);
+        let mut xs: Vec<f32> = mid
+            .commands
+            .iter()
+            .map(|c| match c {
+                DrawCommand::Sphere3D { x, .. } => *x,
+                other => panic!("unexpected: {other:?}"),
+            })
+            .collect();
+        xs.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        assert!((xs[0] - 0.0).abs() < 1e-4, "despawned A kept at 0, got {}", xs[0]);
+        assert!(
+            (xs[1] - 10.25).abs() < 1e-4,
+            "B should track to 10.25, got {}",
+            xs[1]
+        );
     }
 
     #[test]
@@ -686,18 +721,49 @@ mod tests {
             commands: vec![sphere_at(0.0, 0.0)],
             ..Default::default()
         };
-        // 距離 10 > MAX_MATCH_DISTANCE → 新規スポーン。t < 1 では非表示
+        // 距離 10 > MAX_MATCH_DISTANCE → 別個体。新規は隠し、旧はデスポーン維持
         let curr = RenderFrame {
             commands: vec![sphere_at(10.0, 0.0)],
             ..Default::default()
         };
         let mid = interpolate_render_frame(&prev, &curr, 0.5);
-        assert!(
-            mid.commands.is_empty(),
-            "unmatched spawn must be hidden while t < 1"
-        );
+        assert_eq!(mid.commands.len(), 1);
+        match &mid.commands[0] {
+            DrawCommand::Sphere3D { x, .. } => {
+                assert!(x.abs() < 1e-5, "x={x} (keep prev, hide new spawn)");
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
         let at_curr = interpolate_render_frame(&prev, &curr, 1.0);
         assert_eq!(at_curr.commands.len(), 1);
+        match &at_curr.commands[0] {
+            DrawCommand::Sphere3D { x, .. } => {
+                assert!((*x - 10.0).abs() < 1e-5);
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn interpolate_keeps_despawned_entity_until_curr() {
+        let prev = RenderFrame {
+            commands: vec![sphere_at(5.0, 0.0)],
+            ..Default::default()
+        };
+        let curr = RenderFrame {
+            commands: vec![],
+            ..Default::default()
+        };
+        let mid = interpolate_render_frame(&prev, &curr, 0.5);
+        assert_eq!(mid.commands.len(), 1);
+        match &mid.commands[0] {
+            DrawCommand::Sphere3D { x, .. } => {
+                assert!((*x - 5.0).abs() < 1e-5);
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
+        let at_curr = interpolate_render_frame(&prev, &curr, 1.0);
+        assert!(at_curr.commands.is_empty());
     }
 
     #[test]
@@ -719,10 +785,43 @@ mod tests {
             ..Default::default()
         };
         let mid = interpolate_render_frame(&prev, &curr, 0.5);
-        assert!(
-            mid.commands.is_empty(),
-            "different Item kind must not lerp into each other"
-        );
+        // kind2 は新規として隠し、kind1 はデスポーン体として残る
+        assert_eq!(mid.commands.len(), 1);
+        match &mid.commands[0] {
+            DrawCommand::Item { x, kind, .. } => {
+                assert_eq!(*kind, 1);
+                assert!(x.abs() < 1e-5);
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn snapshot_resets_timeline_after_large_receive_gap() {
+        let mut interp = SnapshotInterpolator::with_delay(Duration::from_millis(100));
+        let t0 = Instant::now();
+        interp.push(player_at(0.0, 0.0), t0);
+        interp.push(player_at(1.0, 0.0), t0 + Duration::from_millis(50));
+
+        // delay を大きく超えるギャップ → キューリセットして再同期
+        let resume = t0 + Duration::from_millis(50) + Duration::from_millis(500);
+        interp.push(player_at(10.0, 0.0), resume);
+        interp.push(player_at(12.0, 0.0), resume + Duration::from_millis(50));
+
+        // リセット後の timeline: resume, resume+est。delay≈100 のままなら
+        // now = resume+125 → render_time = resume+25 → x=11
+        let frame = interp
+            .sample(resume + Duration::from_millis(125))
+            .expect("frame");
+        match &frame.commands[0] {
+            DrawCommand::PlayerSprite { x, .. } => {
+                assert!(
+                    (*x - 11.0).abs() < 1e-2,
+                    "x={x} (must re-sync and interpolate after gap)"
+                );
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
     }
 
     #[test]
