@@ -400,9 +400,17 @@ impl SnapshotInterpolator {
 
     /// 新しい権威スナップショットを取り込む。`audio_cues` は pending に移し、再再生を防ぐ。
     /// 受信間隔×2 を目標遅延とし、EMA で緩やかに追従する（ジッターによる render_time 跳ねを抑制）。
+    ///
+    /// `received_at` はフレーム権威順で単調非減少であること。最新より古い時刻の
+    /// push は破棄する（補間の時間逆行・SE 重複を防ぐ）。到着時刻だけのスタンプでは
+    /// ペイロードのアウトオブオーダーは検知できない点に注意。
     pub fn push(&mut self, mut frame: RenderFrame, received_at: Instant) {
-        if let Some((prev_at, _)) = &self.curr {
-            let interval = received_at.saturating_duration_since(*prev_at);
+        if let Some((curr_at, _)) = &self.curr {
+            if received_at < *curr_at {
+                // 順序逆転した古いフレームは無視する
+                return;
+            }
+            let interval = received_at.saturating_duration_since(*curr_at);
             if !interval.is_zero() {
                 let target = interval
                     .saturating_mul(2)
@@ -640,6 +648,28 @@ mod tests {
         let settled = interp.delay().as_secs_f64() * 1000.0;
         assert!(settled > 180.0, "settled_ms={settled}");
         assert!(settled <= 250.0, "settled_ms={settled}");
+    }
+
+    #[test]
+    fn push_discards_out_of_order_older_timestamp() {
+        let mut interp = SnapshotInterpolator::new();
+        let t0 = Instant::now();
+        let t1 = t0 + Duration::from_millis(50);
+        let mut older = player_at(0.0, 0.0);
+        older.audio_cues = vec!["assets/se/old.ogg".into()];
+        let newer = player_at(2.0, 0.0);
+
+        interp.push(newer, t1);
+        interp.push(older, t0); // 古い時刻 → 破棄
+
+        assert!(interp.take_pending_audio().is_empty());
+        let frame = interp.sample(t1 + Duration::from_millis(200)).unwrap();
+        match &frame.commands[0] {
+            DrawCommand::PlayerSprite { x, .. } => {
+                assert!((*x - 2.0).abs() < 1e-5, "x={x}");
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
     }
 
     #[test]
