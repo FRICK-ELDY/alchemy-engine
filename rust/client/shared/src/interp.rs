@@ -16,6 +16,9 @@ pub const INTERP_DELAY: Duration = Duration::from_millis(100);
 const INTERP_DELAY_MIN: Duration = Duration::from_millis(80);
 const INTERP_DELAY_MAX: Duration = Duration::from_millis(250);
 
+/// 描画遅延の EMA 係数。ジッターで `render_time` が跳ねないよう緩やかに追従する。
+const DELAY_EMA_ALPHA: f64 = 0.1;
+
 /// 同一バリアント内で「同じエンティティ」とみなす最大移動距離。
 /// bullet_hell の弾速 7.0 × 欠落込み ~0.3s ≈ 2.1 に余裕を持たせた値。
 /// これを超えるペアはスポーン／デスポーンによる別個体とみなし、補間せず curr を採用する。
@@ -256,18 +259,21 @@ fn lerp_camera(prev: &CameraParams, curr: &CameraParams, t: f32) -> CameraParams
     }
 }
 
-/// 位置を持つコマンドのワールド座標。非位置コマンドは `None`。
+/// 近傍マッチ対象のワールド座標。
+///
+/// `Particle` は大量生成され得て O(N×M) 探索のコストが大きい一方、
+/// 個別の厳密補間の重要性が低いため対象外（`None` → curr をそのまま採用）。
 fn command_position(cmd: &DrawCommand) -> Option<[f32; 3]> {
     match *cmd {
         DrawCommand::PlayerSprite { x, y, .. }
-        | DrawCommand::Particle { x, y, .. }
         | DrawCommand::Item { x, y, .. }
         | DrawCommand::Obstacle { x, y, .. }
         | DrawCommand::SpriteRaw { x, y, .. } => Some([x, y, 0.0]),
         DrawCommand::Box3D { x, y, z, .. }
         | DrawCommand::Sphere3D { x, y, z, .. }
         | DrawCommand::Cone3D { x, y, z, .. } => Some([x, y, z]),
-        DrawCommand::GridPlane { .. }
+        DrawCommand::Particle { .. }
+        | DrawCommand::GridPlane { .. }
         | DrawCommand::GridPlaneVerts { .. }
         | DrawCommand::Skybox { .. } => None,
     }
@@ -319,7 +325,7 @@ fn find_nearest_prev(
 ///
 /// 位置コマンドは **インデックスではなく近傍マッチ**で突き合わせる。
 /// 弾・敵のスポーン／デスポーンでコマンド列がずれても、別個体同士を補間して
-/// 瞬間移動に見せないため。マッチ不能（新規スポーン等）は `curr` をそのまま採用。
+/// 瞬間移動に見せないため。マッチ不能（新規スポーン・Particle 等）は `curr` をそのまま採用。
 /// UI / mesh / cursor / audio は最新（`curr`）を採用する。
 pub fn interpolate_render_frame(prev: &RenderFrame, curr: &RenderFrame, t: f32) -> RenderFrame {
     let t = t.clamp(0.0, 1.0);
@@ -393,13 +399,20 @@ impl SnapshotInterpolator {
     }
 
     /// 新しい権威スナップショットを取り込む。`audio_cues` は pending に移し、再再生を防ぐ。
-    /// 受信間隔から描画遅延を約 2× に追従させ、10Hz / 20Hz どちらでも補間区間に収める。
+    /// 受信間隔×2 を目標遅延とし、EMA で緩やかに追従する（ジッターによる render_time 跳ねを抑制）。
     pub fn push(&mut self, mut frame: RenderFrame, received_at: Instant) {
         if let Some((prev_at, _)) = &self.curr {
             let interval = received_at.saturating_duration_since(*prev_at);
             if !interval.is_zero() {
-                let doubled = interval.saturating_mul(2);
-                self.delay = doubled.clamp(INTERP_DELAY_MIN, INTERP_DELAY_MAX);
+                let target = interval
+                    .saturating_mul(2)
+                    .clamp(INTERP_DELAY_MIN, INTERP_DELAY_MAX);
+                let current_ms = self.delay.as_secs_f64() * 1000.0;
+                let target_ms = target.as_secs_f64() * 1000.0;
+                let next_ms =
+                    current_ms * (1.0 - DELAY_EMA_ALPHA) + target_ms * DELAY_EMA_ALPHA;
+                self.delay = Duration::from_secs_f64((next_ms / 1000.0).max(0.0))
+                    .clamp(INTERP_DELAY_MIN, INTERP_DELAY_MAX);
             }
         }
         let cues = std::mem::take(&mut frame.audio_cues);
@@ -609,12 +622,59 @@ mod tests {
     }
 
     #[test]
-    fn snapshot_delay_tracks_observed_interval() {
+    fn snapshot_delay_tracks_observed_interval_with_ema() {
         let mut interp = SnapshotInterpolator::with_delay(Duration::from_millis(100));
         let t0 = Instant::now();
         interp.push(player_at(0.0, 0.0), t0);
-        // 10Hz 相当: 100ms 間隔 → delay は 200ms に追従
+        // 10Hz 相当: 目標 200ms。1 ステップでは EMA により中間値へ（100*0.9 + 200*0.1 = 110）
         interp.push(player_at(1.0, 0.0), t0 + Duration::from_millis(100));
-        assert_eq!(interp.delay(), Duration::from_millis(200));
+        let ms = interp.delay().as_secs_f64() * 1000.0;
+        assert!((ms - 110.0).abs() < 1.0, "delay_ms={ms}");
+
+        // 同間隔を続けても急変せず、目標へ近づく
+        let mut t = t0 + Duration::from_millis(100);
+        for _ in 0..30 {
+            t += Duration::from_millis(100);
+            interp.push(player_at(1.0, 0.0), t);
+        }
+        let settled = interp.delay().as_secs_f64() * 1000.0;
+        assert!(settled > 180.0, "settled_ms={settled}");
+        assert!(settled <= 250.0, "settled_ms={settled}");
+    }
+
+    #[test]
+    fn interpolate_skips_nearest_match_for_particles() {
+        let prev = RenderFrame {
+            commands: vec![DrawCommand::Particle {
+                x: 0.0,
+                y: 0.0,
+                r: 1.0,
+                g: 0.0,
+                b: 0.0,
+                alpha: 1.0,
+                size: 1.0,
+            }],
+            ..Default::default()
+        };
+        let curr = RenderFrame {
+            commands: vec![DrawCommand::Particle {
+                x: 2.0,
+                y: 0.0,
+                r: 1.0,
+                g: 0.0,
+                b: 0.0,
+                alpha: 1.0,
+                size: 1.0,
+            }],
+            ..Default::default()
+        };
+        let mid = interpolate_render_frame(&prev, &curr, 0.5);
+        match &mid.commands[0] {
+            DrawCommand::Particle { x, .. } => {
+                // 近傍補間せず curr を採用
+                assert!((*x - 2.0).abs() < 1e-5, "x={x}");
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
     }
 }
