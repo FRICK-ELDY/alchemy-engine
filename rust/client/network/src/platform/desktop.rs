@@ -2,6 +2,7 @@
 //!
 //! - Publisher は key（＋ congestion モード）ごとに 1 度だけ declare して再利用する
 //! - セッション切断を検知したら指数バックオフで再接続し、subscriber を張り直す
+//! - put のネットワーク I/O 中は state ロックを持たない（描画スレッドのスタッター回避）
 
 use futures::future::{select, Either};
 use futures_timer::Delay;
@@ -23,9 +24,10 @@ const RECONNECT_FACTOR: u64 = 2;
 struct SessionState {
     session: Session,
     /// 既定 congestion（Block）の publisher キャッシュ。
-    publishers: HashMap<String, Publisher<'static>>,
+    /// `Arc` で持ち、ロック外の `put().wait()` に渡す（Publisher 自体は Clone 不可）。
+    publishers: HashMap<String, Arc<Publisher<'static>>>,
     /// `CongestionControl::Drop` の publisher キャッシュ。
-    publishers_drop: HashMap<String, Publisher<'static>>,
+    publishers_drop: HashMap<String, Arc<Publisher<'static>>>,
     /// 再接続のたびに増える。subscriber が古い session を捨てる判定に使う。
     generation: u64,
 }
@@ -34,6 +36,8 @@ struct SessionState {
 pub struct ClientSession {
     connect_config: String,
     state: Arc<Mutex<SessionState>>,
+    /// 再接続の単一実行用。復旧済みセッションを別スレッドが close し直すのを防ぐ。
+    reconnect_gate: Arc<Mutex<()>>,
 }
 
 impl ClientSession {
@@ -48,6 +52,7 @@ impl ClientSession {
                 publishers_drop: HashMap::new(),
                 generation: 0,
             })),
+            reconnect_gate: Arc::new(Mutex::new(())),
         })
     }
 
@@ -77,10 +82,10 @@ impl ClientSession {
         let session = Self {
             connect_config: self.connect_config.clone(),
             state: Arc::clone(&self.state),
+            reconnect_gate: Arc::clone(&self.reconnect_gate),
         };
         let key = key.to_string();
         thread::spawn(move || {
-            let mut backoff_ms = RECONNECT_INIT_MS;
             while !shutdown.load(Ordering::SeqCst) {
                 let (zenoh_session, generation) = {
                     match session.state.lock() {
@@ -105,30 +110,15 @@ impl ClientSession {
                         if shutdown.load(Ordering::SeqCst) {
                             break;
                         }
-                        log::warn!(
-                            "[zenoh] subscriber disconnected on {key}; reconnecting (backoff={backoff_ms}ms)"
-                        );
-                        match session.reconnect_with_backoff(&shutdown, backoff_ms) {
-                            Ok(()) => {
-                                log::info!("[zenoh] subscriber reconnected; resubscribing to {key}");
-                                backoff_ms = RECONNECT_INIT_MS;
-                            }
-                            Err(e) => {
-                                if shutdown.load(Ordering::SeqCst) {
-                                    break;
-                                }
-                                log::error!("[zenoh] reconnect aborted: {e}");
-                                if sleep_with_shutdown(
-                                    Duration::from_millis(backoff_ms),
-                                    &shutdown,
-                                )
-                                .is_err()
-                                {
-                                    break;
-                                }
-                                backoff_ms = next_backoff(backoff_ms);
-                            }
+                        log::warn!("[zenoh] subscriber disconnected on {key}; reconnecting");
+                        // バックオフは reconnect_with_backoff 内のみ。Err は shutdown / poison。
+                        if let Err(e) =
+                            session.reconnect_with_backoff(&shutdown, RECONNECT_INIT_MS)
+                        {
+                            log::error!("[zenoh] reconnect aborted: {e}");
+                            break;
                         }
+                        log::info!("[zenoh] subscriber reconnected; resubscribing to {key}");
                     }
                 }
             }
@@ -160,39 +150,86 @@ impl ClientSession {
         mode: CongestionMode,
         report_put_err: bool,
     ) -> Result<(), String> {
-        let mut state = self
-            .state
-            .lock()
-            .map_err(|e| format!("session state lock poisoned: {e}"))?;
+        let map_put_err = |e| {
+            if report_put_err {
+                Err(format!("put failed: {e}"))
+            } else {
+                Ok(())
+            }
+        };
 
-        if state.session.is_closed() {
-            return Err("session closed".to_string());
+        let (session, maybe_publisher) = {
+            let state = self
+                .state
+                .lock()
+                .map_err(|e| format!("session state lock poisoned: {e}"))?;
+
+            if state.session.is_closed() {
+                return Err("session closed".to_string());
+            }
+
+            let cache = match mode {
+                CongestionMode::Default => &state.publishers,
+                CongestionMode::Drop => &state.publishers_drop,
+            };
+
+            (state.session.clone(), cache.get(key).cloned())
+        };
+        // ここまででロック解放。以降の wait() は描画スレッドを他送信と直列化しない。
+
+        if let Some(publisher) = maybe_publisher {
+            return match publisher.put(payload).wait() {
+                Ok(()) => Ok(()),
+                Err(e) => map_put_err(e),
+            };
         }
 
-        // Session は Arc なので clone は軽い。maps への &mut と同時借用を避ける。
-        let session = state.session.clone();
-        let cache = match mode {
-            CongestionMode::Default => &mut state.publishers,
-            CongestionMode::Drop => &mut state.publishers_drop,
-        };
         let congestion = match mode {
             CongestionMode::Default => CongestionControl::DEFAULT,
             CongestionMode::Drop => CongestionControl::Drop,
         };
 
-        put_with_cached_publisher(
-            &session,
-            cache,
-            key,
-            congestion,
-            payload,
-            report_put_err,
-        )
+        let publisher = session
+            .declare_publisher(key.to_string())
+            .congestion_control(congestion)
+            .wait()
+            .map_err(|e| format!("publisher declare failed: {e}"))?;
+        let publisher = Arc::new(publisher);
+
+        let put_result = match publisher.put(payload).wait() {
+            Ok(()) => Ok(()),
+            Err(e) => map_put_err(e),
+        };
+
+        if let Ok(mut state) = self.state.lock() {
+            // 再接続で session が差し替わっていたら古い publisher は捨てる。
+            if !state.session.is_closed() {
+                let cache = match mode {
+                    CongestionMode::Default => &mut state.publishers,
+                    CongestionMode::Drop => &mut state.publishers_drop,
+                };
+                cache.entry(key.to_string()).or_insert(publisher);
+            }
+        }
+
+        put_result
     }
 
-    /// put ホットパス向け: 現セッションを閉じて 1 回だけ open し直す。
+    /// put 経路向け: 壊れたセッションを 1 回だけ open し直す。
+    ///
+    /// `is_closed()` だけで早期 return すると、broken-but-open（ルータ切断直後など）を
+    /// 取りこぼす。generation + reconnect_gate で「誰かが既に復旧したか」を判定する。
+    /// 描画スレッドを長く塞がないよう gate は `try_lock`（subscriber 再接続中は即放棄）。
     fn try_recover_session(&self) -> Result<(), String> {
-        self.close_current();
+        let gen_before = self.generation()?;
+        let Ok(_gate) = self.reconnect_gate.try_lock() else {
+            // subscriber 側が指数バックオフ再接続中。描画スレッドは待たない。
+            return Err("session closed".to_string());
+        };
+        if self.generation()? != gen_before {
+            return Ok(());
+        }
+        self.close_current_if_generation(gen_before);
         let new_session = open_session(&self.connect_config)?;
         self.install_session(new_session);
         log::info!("[zenoh] session recovered");
@@ -205,7 +242,24 @@ impl ClientSession {
         shutdown: &AtomicBool,
         initial_backoff_ms: u64,
     ) -> Result<(), String> {
-        self.close_current();
+        let gen_before = self.generation()?;
+        let _gate = self
+            .reconnect_gate
+            .lock()
+            .map_err(|e| format!("reconnect gate poisoned: {e}"))?;
+
+        {
+            let state = self
+                .state
+                .lock()
+                .map_err(|e| format!("session state lock poisoned: {e}"))?;
+            // 待ちの間に別スレッドが復旧済みなら、そのセッションを閉じない。
+            if !state.session.is_closed() && state.generation != gen_before {
+                return Ok(());
+            }
+        }
+
+        self.close_current_if_generation(gen_before);
         let mut delay_ms = initial_backoff_ms.max(RECONNECT_INIT_MS);
         loop {
             if shutdown.load(Ordering::SeqCst) {
@@ -236,10 +290,21 @@ impl ClientSession {
         }
     }
 
-    fn close_current(&self) {
+    fn generation(&self) -> Result<u64, String> {
+        self.state
+            .lock()
+            .map(|s| s.generation)
+            .map_err(|e| format!("session state lock poisoned: {e}"))
+    }
+
+    /// `expected_generation` のままだったときだけ close する（新しい世代を壊さない）。
+    fn close_current_if_generation(&self, expected_generation: u64) {
         let Ok(mut state) = self.state.lock() else {
             return;
         };
+        if state.generation != expected_generation {
+            return;
+        }
         state.publishers.clear();
         state.publishers_drop.clear();
         if !state.session.is_closed() {
@@ -290,48 +355,6 @@ fn open_session(connect_config: &str) -> Result<Session, String> {
     zenoh::open(config)
         .wait()
         .map_err(|e| format!("zenoh open failed: {e}"))
-}
-
-/// ホットパスではキャッシュヒットが常態。`get` 1 回で put まで完了し、
-/// miss 時のみ declare + insert する。
-///
-/// 参照を返す `get` → その後 `entry` という案は、現行の借用検査では
-/// ヒット参照の lifetime が関数全体に延びてコンパイルできないため、put まで
-/// をこの関数内で完結させる。
-fn put_with_cached_publisher(
-    session: &Session,
-    cache: &mut HashMap<String, Publisher<'static>>,
-    key: &str,
-    congestion: CongestionControl,
-    payload: &[u8],
-    report_put_err: bool,
-) -> Result<(), String> {
-    let map_put_err = |e| {
-        if report_put_err {
-            Err(format!("put failed: {e}"))
-        } else {
-            Ok(())
-        }
-    };
-
-    if let Some(publisher) = cache.get(key) {
-        return match publisher.put(payload).wait() {
-            Ok(()) => Ok(()),
-            Err(e) => map_put_err(e),
-        };
-    }
-
-    let publisher = session
-        .declare_publisher(key.to_string())
-        .congestion_control(congestion)
-        .wait()
-        .map_err(|e| format!("publisher declare failed: {e}"))?;
-    let put_result = match publisher.put(payload).wait() {
-        Ok(()) => Ok(()),
-        Err(e) => map_put_err(e),
-    };
-    cache.insert(key.to_string(), publisher);
-    put_result
 }
 
 fn run_subscriber_until_disconnect<F>(
