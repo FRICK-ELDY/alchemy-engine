@@ -56,8 +56,13 @@ impl ClientSession {
     }
 
     pub fn put_drop(&self, key: &str, payload: &[u8]) -> Result<(), String> {
-        // put 自体の失敗は握りつぶす（従来どおり）。declare / 再接続失敗は Err。
-        self.publish(key, payload, CongestionMode::Drop, false)
+        // ホットパス: 切断中も毎フレーム呼ばれるため、session closed は握りつぶす。
+        // 再接続は subscriber 側の指数バックオフに任せる（描画スレッドを塞がない）。
+        match self.publish(key, payload, CongestionMode::Drop, false) {
+            Ok(()) => Ok(()),
+            Err(e) if e.contains("session closed") => Ok(()),
+            Err(e) => Err(e),
+        }
     }
 
     pub fn spawn_subscriber<F>(
@@ -166,32 +171,23 @@ impl ClientSession {
 
         // Session は Arc なので clone は軽い。maps への &mut と同時借用を避ける。
         let session = state.session.clone();
-        let put_result = match mode {
-            CongestionMode::Default => {
-                let publisher = get_or_declare_publisher(
-                    &session,
-                    &mut state.publishers,
-                    key,
-                    CongestionControl::DEFAULT,
-                )?;
-                publisher.put(payload).wait()
-            }
-            CongestionMode::Drop => {
-                let publisher = get_or_declare_publisher(
-                    &session,
-                    &mut state.publishers_drop,
-                    key,
-                    CongestionControl::Drop,
-                )?;
-                publisher.put(payload).wait()
-            }
+        let cache = match mode {
+            CongestionMode::Default => &mut state.publishers,
+            CongestionMode::Drop => &mut state.publishers_drop,
+        };
+        let congestion = match mode {
+            CongestionMode::Default => CongestionControl::DEFAULT,
+            CongestionMode::Drop => CongestionControl::Drop,
         };
 
-        match put_result {
-            Ok(()) => Ok(()),
-            Err(e) if report_put_err => Err(format!("put failed: {e}")),
-            Err(_) => Ok(()),
-        }
+        put_with_cached_publisher(
+            &session,
+            cache,
+            key,
+            congestion,
+            payload,
+            report_put_err,
+        )
     }
 
     /// put ホットパス向け: 現セッションを閉じて 1 回だけ open し直す。
@@ -296,24 +292,46 @@ fn open_session(connect_config: &str) -> Result<Session, String> {
         .map_err(|e| format!("zenoh open failed: {e}"))
 }
 
-fn get_or_declare_publisher<'a>(
+/// ホットパスではキャッシュヒットが常態。`get` 1 回で put まで完了し、
+/// miss 時のみ declare + insert する。
+///
+/// 参照を返す `get` → その後 `entry` という案は、現行の借用検査では
+/// ヒット参照の lifetime が関数全体に延びてコンパイルできないため、put まで
+/// をこの関数内で完結させる。
+fn put_with_cached_publisher(
     session: &Session,
-    cache: &'a mut HashMap<String, Publisher<'static>>,
+    cache: &mut HashMap<String, Publisher<'static>>,
     key: &str,
     congestion: CongestionControl,
-) -> Result<&'a Publisher<'static>, String> {
-    if !cache.contains_key(key) {
-        let owned_key = key.to_string();
-        let publisher = session
-            .declare_publisher(owned_key)
-            .congestion_control(congestion)
-            .wait()
-            .map_err(|e| format!("publisher declare failed: {e}"))?;
-        cache.insert(key.to_string(), publisher);
+    payload: &[u8],
+    report_put_err: bool,
+) -> Result<(), String> {
+    let map_put_err = |e| {
+        if report_put_err {
+            Err(format!("put failed: {e}"))
+        } else {
+            Ok(())
+        }
+    };
+
+    if let Some(publisher) = cache.get(key) {
+        return match publisher.put(payload).wait() {
+            Ok(()) => Ok(()),
+            Err(e) => map_put_err(e),
+        };
     }
-    cache
-        .get(key)
-        .ok_or_else(|| "publisher cache insert vanished".to_string())
+
+    let publisher = session
+        .declare_publisher(key.to_string())
+        .congestion_control(congestion)
+        .wait()
+        .map_err(|e| format!("publisher declare failed: {e}"))?;
+    let put_result = match publisher.put(payload).wait() {
+        Ok(()) => Ok(()),
+        Err(e) => map_put_err(e),
+    };
+    cache.insert(key.to_string(), publisher);
+    put_result
 }
 
 fn run_subscriber_until_disconnect<F>(
@@ -367,9 +385,12 @@ where
 
 fn looks_like_session_error(err: &str) -> bool {
     let e = err.to_ascii_lowercase();
-    e.contains("session closed")
-        || e.contains("session replaced")
-        || e.contains("disconnected")
+    // session closed / replaced は subscriber 側が既に再接続中のことが多い。
+    // 送信ホットパスで同期 recover すると描画スレッドがフレームごとにブロックするので除外する。
+    if e.contains("session closed") || e.contains("session replaced") {
+        return false;
+    }
+    e.contains("disconnected")
         || e.contains("not connected")
         || e.contains("connection refused")
         || e.contains("broken pipe")
