@@ -41,6 +41,7 @@ defmodule Core.RoomSupervisor do
     case Core.RoomRegistry.get_loop(room_id) do
       {:ok, pid} ->
         DynamicSupervisor.terminate_child(__MODULE__, pid)
+        Core.FrameCache.delete(room_id)
         Logger.info("[ROOM] Stopped room #{inspect(room_id)}")
         :ok
 

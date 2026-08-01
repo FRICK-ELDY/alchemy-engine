@@ -17,6 +17,8 @@ defmodule Server.Application do
     System.put_env("ASSETS_ID", assets_path)
 
     children = [
+      # FrameCache ETS の所有者（ルームより先に起動し、アプリ寿命で保持する）
+      Core.FrameCache,
       {Registry, [keys: :unique, name: Core.RoomRegistry]},
       Core.FormulaStore.LocalBackend,
       {Contents.Scenes.Stack, [content_module: content]},

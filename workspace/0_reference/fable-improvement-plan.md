@@ -77,7 +77,7 @@ ping を活かしたハートビート淘汰を追加。`last_seen_ms` を JOIN 
 
 ## フェーズ 3: 価値命題の配線（2〜6週間、-25 点解消）
 
-### 3-1. マルチルームのゲームループ駆動 `-7 解消（-4 + -3）`
+### 3-1. マルチルームのゲームループ駆動 `-7 解消（-4 + -3）` ✅
 
 `:elixir_frame_tick` の `:main` 限定を撤廃し、コンポーネントの `flow_runner(:main)` 直書き（`render.ex:28`, `helpers.ex:15`）を room_id 引き回しに変更。`Events.Game` 本体は既に `flow_runner(state.room_id)` へ移行済みなので、残りはコンポーネント側。
 
@@ -136,7 +136,8 @@ auth にも hex.audit / dialyzer を追加（auth 残 -1 解消）。
 
 ## フェーズ 5: 整理・負債返済（随時、-10 点強）
 
-- core → contents 語彙分離の完遂（`Core.Config` の `@default_content`、StressMonitor の wave_label、Core.Stats、FrameCache のルーム対応） `-3 -2 -1`
+- FrameCache のルーム対応 `-2` ✅
+- core → contents 語彙分離の完遂（`Core.Config` の `@default_content`、StressMonitor の wave_label、Core.Stats） `-3 -1`
 - 死にコード削除（InputHandler、`features: []`） `-1`
 - contents → network の MFA 注入化（FormulaStore と同型の解決） `-2`
 - 命名統一（Content. / Contents.） `-1`

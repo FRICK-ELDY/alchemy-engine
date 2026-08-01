@@ -2,7 +2,7 @@ defmodule Contents.Events.Game do
   @moduledoc """
   メインゲームループとコンポーネント委譲を行う GenServer（旧名 GameEvents）。
 
-  `:main` ルームでは Elixir タイマー（権威 tick・推奨 20Hz）で `scene_update` を駆動する。
+  全ルームで Elixir タイマー（権威 tick・推奨 20Hz）で `scene_update` を駆動する。
   間隔は `Core.Config.tick_ms/0`（`config :server, :tick_hz`）。
   ゲーム用 NIF / Rust ゲームループは使わない。`{:frame_events, events}` も従来どおり受け付ける。
 
@@ -43,10 +43,7 @@ defmodule Contents.Events.Game do
       init_component(component, world_ref)
     end)
 
-    if room_id == :main do
-      Core.FrameCache.init()
-      schedule_elixir_frame_tick()
-    end
+    schedule_elixir_frame_tick()
 
     start_ms = now_ms()
 
@@ -65,12 +62,15 @@ defmodule Contents.Events.Game do
   end
 
   @impl true
-  def terminate(_reason, %{room_id: :main}) do
-    Core.RoomRegistry.unregister(:main)
+  def terminate(_reason, %{room_id: room_id}) do
+    Core.FrameCache.delete(room_id)
+
+    if room_id == :main do
+      Core.RoomRegistry.unregister(:main)
+    end
+
     :ok
   end
-
-  def terminate(_reason, _state), do: :ok
 
   defp init_component(component, world_ref) do
     Code.ensure_loaded(component)
@@ -314,41 +314,15 @@ defmodule Contents.Events.Game do
       )
     end
 
-    throttled? =
-      case Process.info(self(), :message_queue_len) do
-        {:message_queue_len, depth} ->
-          if depth > backpressure_threshold() do
-            :telemetry.execute([:game, :frame_dropped], %{depth: depth}, %{room_id: state.room_id})
-
-            true
-          else
-            false
-          end
-
-        _ ->
-          false
-      end
-
-    if state.room_id != :main do
-      # frame_count は「受信したフレーム数」として管理する（ドロップ分も含む）
-      # last_tick はここで更新する（:main は handle_frame_events_main の末尾で更新）
-      {:noreply, %{state | last_tick: now_ms(), frame_count: state.frame_count + 1}}
-    else
-      # :main ルームの last_tick は handle_frame_events_main の末尾で常に更新される
-      handle_frame_events_main(events, state, throttled?)
-    end
+    # last_tick / frame_count は handle_frame_events の末尾で常に更新される
+    handle_frame_events(events, state, mailbox_throttled?(state.room_id))
   end
 
-  # `:main` のローカル駆動（ゲーム用 NIF ループの代替）
-  def handle_info(:elixir_frame_tick, %{room_id: :main} = state) do
+  # 全ルームのローカル駆動（ゲーム用 NIF ループの代替）
+  def handle_info(:elixir_frame_tick, state) do
     schedule_elixir_frame_tick()
-
-    case handle_frame_events_main([], state, false) do
-      {:noreply, new_state} -> {:noreply, new_state}
-    end
+    handle_frame_events([], state, mailbox_throttled?(state.room_id))
   end
-
-  def handle_info(:elixir_frame_tick, state), do: {:noreply, state}
 
   # ── メインフレームループ ──────────────────────────────────────────
 
@@ -356,9 +330,24 @@ defmodule Contents.Events.Game do
   # マウス / VR ポーズ等の高頻度入力も同一メールボックスに来るため、下限 120 で誤判定を防ぐ。
   defp backpressure_threshold, do: max(Core.Config.tick_hz() * 2, 120)
 
+  defp mailbox_throttled?(room_id) do
+    case Process.info(self(), :message_queue_len) do
+      {:message_queue_len, depth} ->
+        if depth > backpressure_threshold() do
+          :telemetry.execute([:game, :frame_dropped], %{depth: depth}, %{room_id: room_id})
+          true
+        else
+          false
+        end
+
+      _ ->
+        false
+    end
+  end
+
   # throttled?: true のとき、ゲーム整合性に影響するイベント処理（スコア・HP 等）は
   # 維持しつつ、Zenoh フレーム publish・診断キャッシュ等の重い副作用をスキップして追いつく。
-  defp handle_frame_events_main(events, state, throttled?) do
+  defp handle_frame_events(events, state, throttled?) do
     now = now_ms()
     elapsed = now - state.start_ms
     content = current_content()
@@ -379,22 +368,22 @@ defmodule Contents.Events.Game do
       runner: runner
     }
 
-    handle_frame_events_main_dispatch(runner_result, opts)
+    handle_frame_events_dispatch(runner_result, opts)
   end
 
-  defp handle_frame_events_main_dispatch(nil, %{state: state, now: now}) do
+  defp handle_frame_events_dispatch(nil, %{state: state, now: now}) do
     if state.frame_count < 5,
       do: Logger.warning("[Events.Game] runner=nil (flow_runner unavailable)")
 
     {:noreply, %{state | last_tick: now, frame_count: state.frame_count + 1}}
   end
 
-  defp handle_frame_events_main_dispatch(:empty, %{state: state, now: now}) do
+  defp handle_frame_events_dispatch(:empty, %{state: state, now: now}) do
     if state.frame_count < 5, do: Logger.warning("[Events.Game] scene stack empty")
     {:noreply, %{state | last_tick: now, frame_count: state.frame_count + 1}}
   end
 
-  defp handle_frame_events_main_dispatch(
+  defp handle_frame_events_dispatch(
          {:ok, %{scene_type: scene_type, state: scene_state}},
          %{
            events: events,
@@ -617,7 +606,7 @@ defmodule Contents.Events.Game do
   defp extract_state_and_opts({:transition, _action, scene_state, opts}),
     do: {scene_state, opts || %{}}
 
-  # runner は handle_frame_events_main の {:ok, ...} 経路からのみ渡されるため常に non-nil
+  # runner は handle_frame_events の {:ok, ...} 経路からのみ渡されるため常に non-nil
   defp process_transition({:continue, _}, state, _now, _content, _runner), do: state
   defp process_transition({:continue, _, _}, state, _now, _content, _runner), do: state
 

@@ -28,12 +28,12 @@ defmodule Contents.Events.Game.Diagnostics do
     # 約 3 秒ごと（tick_hz に追従）
     every = max(Core.Config.tick_hz() * 3, 1)
 
-    if state.room_id == :main and rem(state.frame_count, every) == 0 do
+    if rem(state.frame_count, every) == 0 do
       do_log_and_cache(state, elapsed, content, runner, physics_ms)
     end
   end
 
-  defp do_log_and_cache(_state, elapsed, content, runner, physics_ms) do
+  defp do_log_and_cache(state, elapsed, content, runner, physics_ms) do
     playing_state = get_playing_scene_state(content, runner)
     player_hp = Map.get(playing_state, :player_hp, 100.0)
     player_max_hp = Map.get(playing_state, :player_max_hp, 100.0)
@@ -53,6 +53,7 @@ defmodule Contents.Events.Game.Diagnostics do
     bullet_count = bullet_count_from_playing_state(playing_state)
 
     Core.FrameCache.put(
+      state.room_id,
       enemy_count,
       bullet_count,
       physics_ms,
