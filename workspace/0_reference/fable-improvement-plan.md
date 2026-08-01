@@ -26,6 +26,8 @@
 
 ---
 
+
+
 ## フェーズ 2: セキュリティ防御線（1〜2週間、-21 点解消）
 
 **優先原則: 「一番弱い経路」から塞ぐ。2-1 / 2-2 / 2-3 / 2-4 / 2-5 は実施済み。残りは 2-6。**
@@ -75,7 +77,11 @@ ping を活かしたハートビート淘汰を追加。`last_seen_ms` を JOIN 
 
 ---
 
+
+
 ## フェーズ 3: 価値命題の配線（2〜6週間、-25 点解消）
+
+
 
 ### 3-1. マルチルームのゲームループ駆動 `-7 解消（-4 + -3）` ✅
 
@@ -99,20 +105,28 @@ optional feature `openxr` と `run_xr_input_loop` の枠組みは追加済み。
 
 対象: `engine/rust/client/xr/`
 
-### 3-5. 連合層の第一歩（read-only S2S） `-4 は段階解消`
+### 3-5. 連合層の第一歩（read-only S2S） `-4 は段階解消` ✅
 
-方針ドキュメント（PR #319）は作成済み。ソースへの着地（署名付き HTTP のワールド一覧 API 等）が次の一歩。
+インスタンス自己記述（`GET /.well-known/alchemy-s2s.json`）、署名付き `GET /api/s2s/worlds`、取得クライアントを `Network.S2S.*` に着地。既定オフ（`S2S_ENABLED`）。訪問トークン（4-3）は未着手。
+
+対象: `engine/apps/network/lib/network/s2s/`
 
 ### 3-6. engine の永続化層 `-2 解消`
 
 ---
 
+
+
 ## フェーズ 4: 品質基盤（2〜3週間、-16 点解消）
+
+
 
 ### 4-1. Rust テストの整備 `-6 解消`
 
 - CI の `cargo test -p nif` → `cargo test --workspace` に変更（1 行、`mix alchemy.ci` も同様）。既存 29 テスト（system_ui 16 / auth_client 8 / audio 2 / render_frame_proto 2 / network 1）が回帰検出に乗る `-3`
 - nif クレートに単体テスト追加（decode 境界・VM 型昇格。1-1 の除算バグはこの空白の直接的帰結） `-3`
+
+
 
 ### 4-2. contents のテスト補強 `-3 解消`
 
@@ -120,11 +134,15 @@ lib 119 ファイルに対しテスト 4 ファイル。dt 化のような全域
 
 ### 4-3. NifBridge の DI 配線 `-2 解消`
 
+
+
 ### 4-4. プロパティテスト・監査の導入 `-3 解消（-2 + -1）`
 
 auth にも hex.audit / dialyzer を追加（auth 残 -1 解消）。
 
 ### 4-5. VM の資源上限 `-1 解消`
+
+
 
 ### 4-6. auth 運用仕上げ `-3 解消`
 
@@ -133,6 +151,8 @@ auth にも hex.audit / dialyzer を追加（auth 残 -1 解消）。
 - 分散レート制限（Redis 等）検討 `-1`
 
 ---
+
+
 
 ## フェーズ 5: 整理・負債返済（随時、-10 点強）
 
@@ -145,6 +165,8 @@ auth にも hex.audit / dialyzer を追加（auth 残 -1 解消）。
 - render テスト / observability 外部化 / find_room_node キャッシュ等
 
 ---
+
+
 
 ## 実施順序サマリ
 

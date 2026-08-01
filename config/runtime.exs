@@ -90,3 +90,67 @@ if auth_required? and not (jwks_ok? or base_ok?) do
   Example: AUTH_BASE_URL=http://localhost:4002
   """
 end
+
+# ── 連合 read-only S2S ─────────────────────────────────────────────
+# S2S_ENABLED=true|1 で GET /.well-known/alchemy-s2s.json と
+# GET /api/s2s/worlds（呼び出し元インスタンス JWT 必須）を公開する。
+# 環境変数が無い項目は config.exs の値を維持する。
+s2s_opts = []
+
+s2s_opts =
+  case System.get_env("S2S_ENABLED") do
+    v when v in ~w(true 1) -> Keyword.put(s2s_opts, :enabled, true)
+    v when v in ~w(false 0) -> Keyword.put(s2s_opts, :enabled, false)
+    _ -> s2s_opts
+  end
+
+s2s_domain_env = System.get_env("S2S_DOMAIN")
+
+s2s_opts =
+  if is_binary(s2s_domain_env) and String.trim(s2s_domain_env) != "" do
+    Keyword.put(s2s_opts, :domain, String.trim(s2s_domain_env))
+  else
+    s2s_opts
+  end
+
+s2s_canonical_env = System.get_env("S2S_CANONICAL_URL")
+
+s2s_opts =
+  if is_binary(s2s_canonical_env) and String.trim(s2s_canonical_env) != "" do
+    Keyword.put(
+      s2s_opts,
+      :canonical_url,
+      String.trim_trailing(String.trim(s2s_canonical_env), "/")
+    )
+  else
+    s2s_opts
+  end
+
+s2s_status_env = System.get_env("S2S_MAX_CONTENT_STATUS")
+
+s2s_opts =
+  if is_binary(s2s_status_env) and String.trim(s2s_status_env) != "" do
+    Keyword.put(s2s_opts, :max_content_status, String.trim(s2s_status_env))
+  else
+    s2s_opts
+  end
+
+s2s_pem_env = System.get_env("S2S_PRIVATE_KEY_PEM")
+s2s_path_env = System.get_env("S2S_PRIVATE_KEY_PATH")
+
+s2s_opts =
+  cond do
+    is_binary(s2s_pem_env) and String.trim(s2s_pem_env) != "" ->
+      Keyword.put(s2s_opts, :private_key_pem, s2s_pem_env)
+
+    is_binary(s2s_path_env) and String.trim(s2s_path_env) != "" ->
+      Keyword.put(s2s_opts, :private_key_path, String.trim(s2s_path_env))
+
+    true ->
+      s2s_opts
+  end
+
+if s2s_opts != [] do
+  existing_s2s = Application.get_env(:network, Network.S2S, [])
+  config :network, Network.S2S, Keyword.merge(existing_s2s, s2s_opts)
+end

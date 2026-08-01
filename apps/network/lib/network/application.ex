@@ -8,6 +8,7 @@ defmodule Network.Application do
   - `Network.PubSub` — Phoenix.PubSub（ルーム間ブロードキャスト）
   - `Network.Local` — ローカルマルチルーム管理 GenServer
   - `Network.AuthVerifier` — alchemy-auth JWKS による Bearer JWT 検証（`AUTH_REQUIRED` 時に room_token で使用）
+  - `Network.S2S.Instance` — 連合 read-only S2S（インスタンス自己記述・署名鍵）
   - `Network.Endpoint` — Phoenix Endpoint（WebSocket + HTTP）
   - `Network.UDP` — UDP トランスポートサーバー（デフォルトポート 4001）
   - `Network.ZenohBridge` — Zenoh フレーム配信・入力受信（`config :network, :zenoh_enabled, true` のときのみ起動）
@@ -52,6 +53,7 @@ defmodule Network.Application do
         {Phoenix.PubSub, name: Network.PubSub},
         Network.Local,
         Network.AuthVerifier,
+        Network.S2S.Instance,
         Network.Endpoint,
         Network.UDP
       ] ++ zenoh_children
