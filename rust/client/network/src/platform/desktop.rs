@@ -432,11 +432,15 @@ where
         if session.is_closed() {
             return Err("session closed".to_string());
         }
-        let guard = state
-            .lock()
-            .map_err(|e| format!("session state lock poisoned: {e}"))?;
-        if guard.generation != generation || !guard.has_live_session() {
-            return Err("session replaced".to_string());
+        // ロックは世代チェックだけに使い、recv 待ち（最大 SHUTDOWN_POLL_MS）の間は持たない。
+        // 保持したままだと毎フレームの put_drop がロック待ちで描画スレッドが死ぬ。
+        {
+            let guard = state
+                .lock()
+                .map_err(|e| format!("session state lock poisoned: {e}"))?;
+            if guard.generation != generation || !guard.has_live_session() {
+                return Err("session replaced".to_string());
+            }
         }
 
         let recv_fut = subscriber.recv_async();
