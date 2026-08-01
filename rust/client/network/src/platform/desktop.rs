@@ -434,13 +434,14 @@ where
         }
         // 世代チェックだけロックし、recv 待ちの前に必ず解放する。
         // ここを握ったままだと描画スレッドの put_drop が最大 SHUTDOWN_POLL_MS 詰まる。
-        {
+        let session_replaced = {
             let guard = state
                 .lock()
                 .map_err(|e| format!("session state lock poisoned: {e}"))?;
-            if guard.generation != generation || !guard.has_live_session() {
-                return Err("session replaced".to_string());
-            }
+            guard.generation != generation || !guard.has_live_session()
+        };
+        if session_replaced {
+            return Err("session replaced".to_string());
         }
 
         let recv_fut = subscriber.recv_async();
