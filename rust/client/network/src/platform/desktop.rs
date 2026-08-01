@@ -108,7 +108,9 @@ impl ClientSession {
                                 if let Err(e) =
                                     session.reconnect_with_backoff(&shutdown, RECONNECT_INIT_MS)
                                 {
-                                    log::error!("[zenoh] reconnect aborted: {e}");
+                                    if !shutdown.load(Ordering::SeqCst) {
+                                        log::error!("[zenoh] reconnect aborted: {e}");
+                                    }
                                     break;
                                 }
                                 continue;
@@ -130,6 +132,10 @@ impl ClientSession {
                     &on_payload,
                 ) {
                     Ok(()) if shutdown.load(Ordering::SeqCst) => break,
+                    Err(e) if e.contains("lock poisoned") => {
+                        log::error!("[zenoh] subscriber aborted: {e}");
+                        break;
+                    }
                     Ok(()) | Err(_) => {
                         if shutdown.load(Ordering::SeqCst) {
                             break;
@@ -139,7 +145,9 @@ impl ClientSession {
                         if let Err(e) =
                             session.reconnect_with_backoff(&shutdown, RECONNECT_INIT_MS)
                         {
-                            log::error!("[zenoh] reconnect aborted: {e}");
+                            if !shutdown.load(Ordering::SeqCst) {
+                                log::error!("[zenoh] reconnect aborted: {e}");
+                            }
                             break;
                         }
                         log::info!("[zenoh] subscriber reconnected; resubscribing to {key}");
@@ -159,9 +167,9 @@ impl ClientSession {
         match self.publish_once(key, payload, mode, report_put_err) {
             Ok(()) => Ok(()),
             Err(e) if looks_like_session_error(&e) => {
-                log::warn!("[zenoh] publish session error ({e}); recovering session");
-                self.try_recover_session()?;
-                self.publish_once(key, payload, mode, report_put_err)
+                log::warn!("[zenoh] publish session error ({e}); invalidating session");
+                // try_recover_session は常に Err（再接続は subscriber 側）。unreachable を避ける。
+                self.try_recover_session()
             }
             Err(e) => Err(e),
         }
@@ -424,10 +432,11 @@ where
         if session.is_closed() {
             return Err("session closed".to_string());
         }
-        if let Ok(guard) = state.lock() {
-            if guard.generation != generation || !guard.has_live_session() {
-                return Err("session replaced".to_string());
-            }
+        let guard = state
+            .lock()
+            .map_err(|e| format!("session state lock poisoned: {e}"))?;
+        if guard.generation != generation || !guard.has_live_session() {
+            return Err("session replaced".to_string());
         }
 
         let recv_fut = subscriber.recv_async();
