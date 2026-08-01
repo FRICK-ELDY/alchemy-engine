@@ -41,6 +41,7 @@ impl SessionState {
 }
 
 /// Zenoh セッションのラッパー。publish / subscribe を抽象化。
+#[derive(Clone)]
 pub struct ClientSession {
     connect_config: String,
     state: Arc<Mutex<SessionState>>,
@@ -87,11 +88,7 @@ impl ClientSession {
     where
         F: Fn(Vec<u8>) + Send + 'static,
     {
-        let session = Self {
-            connect_config: self.connect_config.clone(),
-            state: Arc::clone(&self.state),
-            reconnect_gate: Arc::clone(&self.reconnect_gate),
-        };
+        let session = self.clone();
         let key = key.to_string();
         thread::spawn(move || {
             while !shutdown.load(Ordering::SeqCst) {
@@ -245,25 +242,32 @@ impl ClientSession {
         put_result
     }
 
-    /// put 経路向け: 壊れたセッションを 1 回だけ open し直す。
+    /// put 経路向け: 壊れたセッションを無効化するだけ。
     ///
-    /// `is_closed()` だけで早期 return すると、broken-but-open（ルータ切断直後など）を
-    /// 取りこぼす。generation + reconnect_gate で「誰かが既に復旧したか」を判定する。
-    /// 描画スレッドを長く塞がないよう gate は `try_lock`（subscriber 再接続中は即放棄）。
+    /// `open_session` は数秒ブロックし得るため描画スレッドでは行わない。
+    /// 再接続は subscriber 側の `reconnect_with_backoff` に完全に委ねる。
     fn try_recover_session(&self) -> Result<(), String> {
         let gen_before = self.generation()?;
-        let Ok(_gate) = self.reconnect_gate.try_lock() else {
-            // subscriber 側が指数バックオフ再接続中。描画スレッドは待たない。
-            return Err("session closed".to_string());
+        // close().wait() も描画を止め得るので、take だけして close は別スレッドへ。
+        let session_to_close = {
+            let Ok(mut state) = self.state.lock() else {
+                return Err("session closed".to_string());
+            };
+            if state.generation != gen_before {
+                return Err("session closed".to_string());
+            }
+            state.publishers.clear();
+            state.publishers_drop.clear();
+            state.session.take()
         };
-        if self.generation()? != gen_before {
-            return Ok(());
+        if let Some(session) = session_to_close {
+            let _ = thread::Builder::new()
+                .name("zenoh-session-close".into())
+                .spawn(move || {
+                    let _ = session.close().wait();
+                });
         }
-        self.close_current_if_generation(gen_before);
-        let new_session = open_session(&self.connect_config)?;
-        self.install_session(new_session);
-        log::info!("[zenoh] session recovered");
-        Ok(())
+        Err("session closed".to_string())
     }
 
     /// subscriber 向け: 閉じてから指数バックオフで open を繰り返す。
