@@ -128,6 +128,128 @@ defmodule Network.S2STest do
 
       assert [%{"id" => "remote"}] = body["worlds"]
     end
+
+    test "iss が HTTP URL でも未設定ピアなら fetch せず拒否する（SSRF）" do
+      fetch_count = :counters.new(1, [])
+
+      cfg = [
+        enabled: true,
+        domain: @local_domain,
+        canonical_url: "http://local.test",
+        ephemeral_keys: true,
+        worlds: [],
+        peers: [],
+        fetch_fun: fn _url ->
+          :counters.add(fetch_count, 1, 1)
+          {:ok, %{"keys" => []}}
+        end
+      ]
+
+      Application.put_env(:network, Network.S2S, cfg)
+      assert :ok = Instance.configure(cfg)
+
+      {kid, pem, _jwks} = generate_rsa_jwks()
+      token = sign_s2s_token(pem, kid, "http://169.254.169.254", @local_domain)
+
+      conn =
+        Phoenix.ConnTest.build_conn()
+        |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
+        |> Phoenix.ConnTest.get("/api/s2s/worlds")
+
+      assert %{"error" => "unauthorized"} = Phoenix.ConnTest.json_response(conn, 401)
+      assert :counters.get(fetch_count, 1) == 0
+    end
+
+    test "設定済みピアの未知 kid は JWKS 再取得で鍵ローテに追従する" do
+      {kid1, pem1, jwks1} = generate_rsa_jwks()
+      {kid2, pem2, jwks2} = generate_rsa_jwks()
+      fetch_count = :counters.new(1, [])
+
+      cfg = [
+        enabled: true,
+        domain: @local_domain,
+        canonical_url: "http://local.test",
+        ephemeral_keys: true,
+        worlds: [%{id: "alpha", title: "Alpha", status: "General", path: "/w"}],
+        peers: [%{domain: @peer_domain, jwks_url: "http://peer.test/jwks", jwks: jwks1}],
+        fetch_fun: fn url ->
+          assert url == "http://peer.test/jwks"
+          :counters.add(fetch_count, 1, 1)
+          {:ok, jwks2}
+        end
+      ]
+
+      Application.put_env(:network, Network.S2S, cfg)
+      assert :ok = Instance.configure(cfg)
+
+      # 初回: 静的 JWKS の鍵で成功（fetch なし）
+      token1 = sign_s2s_token(pem1, kid1, @peer_domain, @local_domain)
+
+      conn1 =
+        Phoenix.ConnTest.build_conn()
+        |> Plug.Conn.put_req_header("authorization", "Bearer #{token1}")
+        |> Phoenix.ConnTest.get("/api/s2s/worlds")
+
+      assert %{"caller" => @peer_domain} = Phoenix.ConnTest.json_response(conn1, 200)
+      assert :counters.get(fetch_count, 1) == 0
+
+      # ローテ後の kid: 再取得して受け入れる
+      token2 = sign_s2s_token(pem2, kid2, @peer_domain, @local_domain)
+
+      conn2 =
+        Phoenix.ConnTest.build_conn()
+        |> Plug.Conn.put_req_header("authorization", "Bearer #{token2}")
+        |> Phoenix.ConnTest.get("/api/s2s/worlds")
+
+      assert %{"caller" => @peer_domain} = Phoenix.ConnTest.json_response(conn2, 200)
+      assert :counters.get(fetch_count, 1) == 1
+    end
+
+    test "不正な JWKS keys でも GenServer が落ちない" do
+      fetch_count = :counters.new(1, [])
+
+      cfg = [
+        enabled: true,
+        domain: @local_domain,
+        canonical_url: "http://local.test",
+        ephemeral_keys: true,
+        worlds: [],
+        peers: [%{domain: @peer_domain, jwks_url: "http://peer.test/jwks"}],
+        fetch_fun: fn _url ->
+          :counters.add(fetch_count, 1, 1)
+          {:ok, %{"keys" => "not-a-list"}}
+        end
+      ]
+
+      Application.put_env(:network, Network.S2S, cfg)
+      assert :ok = Instance.configure(cfg)
+
+      {kid, pem, _jwks} = generate_rsa_jwks()
+      token = sign_s2s_token(pem, kid, @peer_domain, @local_domain)
+
+      conn =
+        Phoenix.ConnTest.build_conn()
+        |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
+        |> Phoenix.ConnTest.get("/api/s2s/worlds")
+
+      assert %{"error" => "unauthorized"} = Phoenix.ConnTest.json_response(conn, 401)
+      assert Process.whereis(Instance)
+      assert :counters.get(fetch_count, 1) == 1
+    end
+
+    test "enabled 時に domain 欠落なら configure が失敗する" do
+      assert {:error, {:s2s_config_invalid, :missing_domain}} =
+               Instance.configure(
+                 enabled: true,
+                 domain: "",
+                 ephemeral_keys: true,
+                 worlds: []
+               )
+
+      # 失敗後も前回設定で生存している
+      assert Instance.enabled?()
+      assert Instance.runtime_config()[:domain] == @local_domain
+    end
   end
 
   # ── helpers ──────────────────────────────────────────────────────

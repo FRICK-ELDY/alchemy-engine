@@ -15,6 +15,8 @@ defmodule Network.S2S.Instance do
   @purpose_worlds_read "s2s.worlds.read"
   @token_ttl_seconds 300
   @skew_seconds 60
+  # 未知 kid 時の JWKS 再取得最小間隔（鍵ローテ対応と DoS 緩和）
+  @peer_jwks_min_refetch_ms 60_000
 
   # ── Public API ───────────────────────────────────────────────────
 
@@ -215,10 +217,15 @@ defmodule Network.S2S.Instance do
           state
       end
 
-    if state.enabled and is_nil(state.signer) do
-      {:error, {:s2s_keys_unavailable, :missing_private_key}}
-    else
-      {:ok, seed_static_peer_jwks(state)}
+    cond do
+      state.enabled and (is_nil(state.domain) or String.trim(state.domain) == "") ->
+        {:error, {:s2s_config_invalid, :missing_domain}}
+
+      state.enabled and is_nil(state.signer) ->
+        {:error, {:s2s_keys_unavailable, :missing_private_key}}
+
+      true ->
+        {:ok, seed_static_peer_jwks(state)}
     end
   end
 
@@ -238,6 +245,7 @@ defmodule Network.S2S.Instance do
            Joken.verify_and_validate(token_config_for_verify(state.domain), token, signer) do
       {{:ok, claims}, state2}
     else
+      {:error, reason, new_state} -> {{:error, reason}, new_state}
       {:error, reason} -> {{:error, reason}, state}
     end
   end
@@ -271,54 +279,70 @@ defmodule Network.S2S.Instance do
   defp fetch_iss(%{"iss" => iss}) when is_binary(iss) and iss != "", do: {:ok, iss}
   defp fetch_iss(_), do: {:error, :missing_iss}
 
-  defp resolve_peer_signer(state, iss, kid) do
-    case Map.get(state.peer_signers, iss) do
-      %{} = by_kid when map_size(by_kid) > 0 ->
-        pick_signer(state, iss, by_kid, kid)
+  defp resolve_peer_signer(state, iss, kid) when is_binary(kid) do
+    by_kid = Map.get(state.peer_signers, iss, %{})
 
-      _ ->
-        case fetch_peer_jwks(state, iss) do
-          {:ok, new_state} ->
-            by_kid = Map.get(new_state.peer_signers, iss, %{})
-            pick_signer(new_state, iss, by_kid, kid)
+    case Map.fetch(by_kid, kid) do
+      {:ok, signer} ->
+        {:ok, state, signer}
 
-          {:error, reason} ->
-            {:error, reason}
+      :error ->
+        if should_fetch_jwks?(state, iss) do
+          case fetch_peer_jwks(state, iss) do
+            {:ok, new_state} ->
+              case Map.fetch(Map.get(new_state.peer_signers, iss, %{}), kid) do
+                {:ok, signer} -> {:ok, new_state, signer}
+                :error -> {:error, :unknown_kid, new_state}
+              end
+
+            {:error, reason, new_state} ->
+              {:error, reason, new_state}
+          end
+        else
+          {:error, :unknown_kid, state}
         end
     end
   end
 
-  defp pick_signer(state, _iss, by_kid, kid) when is_binary(kid) do
-    case Map.fetch(by_kid, kid) do
-      {:ok, signer} -> {:ok, state, signer}
-      :error -> {:error, :unknown_kid}
+  defp resolve_peer_signer(state, _iss, _), do: {:error, :missing_kid, state}
+
+  defp should_fetch_jwks?(state, iss) do
+    case Map.get(state.peer_fetched_at, iss) do
+      nil ->
+        true
+
+      fetched_at ->
+        System.monotonic_time(:millisecond) - fetched_at > @peer_jwks_min_refetch_ms
     end
   end
-
-  defp pick_signer(_state, _iss, _by_kid, _), do: {:error, :missing_kid}
 
   defp fetch_peer_jwks(state, iss) do
     case peer_well_known_url(state, iss) do
       nil ->
-        {:error, :unknown_peer}
+        {:error, :unknown_peer, state}
 
       url ->
+        # 失敗時も取得時刻を記録し、未知 kid 連打によるピアへの DoS を抑える
+        state = mark_peer_fetched(state, iss)
+
         case state.fetch_fun.(url) do
-          {:ok, %{"jwks" => %{"keys" => _} = jwks}} ->
-            {:ok, apply_peer_jwks(state, iss, jwks)}
-
-          {:ok, %{"keys" => _} = jwks} ->
-            {:ok, apply_peer_jwks(state, iss, jwks)}
-
-          {:ok, _} ->
-            {:error, :invalid_peer_document}
+          {:ok, body} ->
+            case extract_jwks(body) do
+              {:ok, jwks} -> {:ok, apply_peer_jwks(state, iss, jwks)}
+              :error -> {:error, :invalid_peer_document, state}
+            end
 
           {:error, reason} ->
-            {:error, {:peer_fetch_failed, reason}}
+            {:error, {:peer_fetch_failed, reason}, state}
         end
     end
   end
 
+  defp extract_jwks(%{"jwks" => %{"keys" => keys} = jwks}) when is_list(keys), do: {:ok, jwks}
+  defp extract_jwks(%{"keys" => keys} = jwks) when is_list(keys), do: {:ok, jwks}
+  defp extract_jwks(_), do: :error
+
+  # SSRF 防止: iss からの任意 URL 組み立てはしない。設定済み peers のみ。
   defp peer_well_known_url(state, iss) do
     case Enum.find(state.peers, fn p -> p.domain == iss end) do
       %{canonical_url: url} when is_binary(url) and url != "" ->
@@ -328,17 +352,18 @@ defmodule Network.S2S.Instance do
         url
 
       _ ->
-        if looks_like_http_url?(iss) do
-          String.trim_trailing(iss, "/") <> "/.well-known/alchemy-s2s.json"
-        else
-          nil
-        end
+        nil
     end
   end
 
-  defp looks_like_http_url?(s), do: String.starts_with?(s, "http://") or String.starts_with?(s, "https://")
+  defp mark_peer_fetched(state, domain) do
+    %{
+      state
+      | peer_fetched_at: Map.put(state.peer_fetched_at, domain, System.monotonic_time(:millisecond))
+    }
+  end
 
-  defp apply_peer_jwks(state, domain, %{"keys" => keys}) do
+  defp apply_peer_jwks(state, domain, %{"keys" => keys}) when is_list(keys) do
     signers =
       keys
       |> Enum.filter(&is_map/1)
@@ -359,12 +384,11 @@ defmodule Network.S2S.Instance do
       end)
       |> Map.new()
 
-    %{
-      state
-      | peer_signers: Map.put(state.peer_signers, domain, signers),
-        peer_fetched_at: Map.put(state.peer_fetched_at, domain, System.monotonic_time(:millisecond))
-    }
+    # peer_fetched_at は HTTP 取得時のみ更新する（静的 seed 直後の鍵ローテ再取得を妨げない）
+    %{state | peer_signers: Map.put(state.peer_signers, domain, signers)}
   end
+
+  defp apply_peer_jwks(state, _domain, _jwks), do: state
 
   defp seed_static_peer_jwks(state) do
     Enum.reduce(state.peers, state, fn
@@ -495,6 +519,7 @@ defmodule Network.S2S.Instance do
   defp default_fetch(url) do
     case Req.get(url, receive_timeout: 5_000) do
       {:ok, %{status: 200, body: body}} when is_map(body) -> {:ok, body}
+      {:ok, %{status: 200}} -> {:error, :invalid_response_format}
       {:ok, %{status: status}} -> {:error, {:http_status, status}}
       {:error, reason} -> {:error, reason}
     end

@@ -45,6 +45,7 @@ defmodule Network.S2S.Client do
   defp default_get(url, nil) do
     case Req.get(url, receive_timeout: 5_000) do
       {:ok, %{status: 200, body: body}} when is_map(body) -> {:ok, body}
+      {:ok, %{status: 200}} -> {:error, :invalid_response_format}
       {:ok, %{status: status}} -> {:error, {:http_status, status}}
       {:error, reason} -> {:error, reason}
     end
@@ -56,6 +57,7 @@ defmodule Network.S2S.Client do
            receive_timeout: 5_000
          ) do
       {:ok, %{status: 200, body: body}} when is_map(body) -> {:ok, body}
+      {:ok, %{status: 200, body: body}} -> {:error, {:invalid_response_format, body}}
       {:ok, %{status: status, body: body}} -> {:error, {:http_status, status, body}}
       {:error, reason} -> {:error, reason}
     end
