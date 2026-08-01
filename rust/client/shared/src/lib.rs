@@ -12,7 +12,10 @@ pub mod render_frame;
 pub mod store;
 pub mod types;
 
-pub use interp::{lerp, lerp_vec2};
+pub use interp::{
+    interpolate_render_frame, lerp, lerp_draw_command, lerp_vec2, SnapshotInterpolator,
+    INTERP_DELAY,
+};
 pub use predict::predict_input;
 pub use store::Store;
 pub use types::*;
