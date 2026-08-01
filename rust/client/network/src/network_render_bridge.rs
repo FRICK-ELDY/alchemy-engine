@@ -2,11 +2,14 @@
 //!
 //! クライアント exe 用。サーバーと分離された別プロセスで動作する。
 //! Zenoh 通信は platform/desktop.rs の ClientSession を経由する。
+//! 受信スナップショットは `shared::SnapshotInterpolator` で直近 2 枚を保持し、
+//! ~100ms の描画遅延バッファ上で座標を線形補間して 60fps 描画へ渡す。
 
 use crate::{action_key, client_info_key, frame_key, movement_key, ClientInfo, ClientSession};
 use audio::AudioCommandSender;
 use render::window::{KeyCode, KeyState, RenderBridge};
 use render::RenderFrame;
+use shared::SnapshotInterpolator;
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -26,10 +29,9 @@ fn move_vector_from_keys(keys: &HashSet<KeyCode>) -> (f32, f32) {
 }
 
 pub struct NetworkRenderBridge {
-    frame_buffer: Arc<Mutex<Option<RenderFrame>>>,
-    /// 前回描画したフレーム。欠損時はこれを使用してフリッカーを防ぐ。
-    last_frame: Arc<Mutex<Option<RenderFrame>>>,
-    /// 新規フレーム受信時に `audio_cues` を再生する。欠損時の再利用では再再生しない。
+    /// 直近 2 スナップショット + 描画遅延バッファによる補間器。
+    snapshots: Arc<Mutex<SnapshotInterpolator>>,
+    /// 新規フレーム受信時に `audio_cues` を再生する。補間サンプルでは再再生しない。
     audio_tx: Option<AudioCommandSender>,
     keys_held: Arc<Mutex<HashSet<KeyCode>>>,
     session: ClientSession,
@@ -61,13 +63,13 @@ impl NetworkRenderBridge {
     ) -> Result<Self, String> {
         let session = ClientSession::open(connect_config)?;
 
-        let frame_buffer: Arc<Mutex<Option<RenderFrame>>> = Arc::new(Mutex::new(None));
-        let last_frame: Arc<Mutex<Option<RenderFrame>>> = Arc::new(Mutex::new(None));
+        let snapshots: Arc<Mutex<SnapshotInterpolator>> =
+            Arc::new(Mutex::new(SnapshotInterpolator::new()));
         let keys_held = Arc::new(Mutex::new(HashSet::new()));
         let shutdown = Arc::new(AtomicBool::new(false));
 
         let sub_key = frame_key(room_id);
-        let buf_clone = Arc::clone(&frame_buffer);
+        let snapshots_clone = Arc::clone(&snapshots);
         let shutdown_clone = Arc::clone(&shutdown);
         let frame_count = Arc::new(AtomicU64::new(0));
         let creation_time = Instant::now();
@@ -83,10 +85,11 @@ impl NetworkRenderBridge {
                         if prev == 0 {
                             log::info!("[frame receiver] first frame received and decoded");
                         }
+                        let received_at = Instant::now();
                         let elapsed = creation_time.elapsed().as_millis() as u64;
                         last_frame_elapsed_ms_clone.store(elapsed, Ordering::Relaxed);
-                        if let Ok(mut guard) = buf_clone.lock() {
-                            *guard = Some(frame);
+                        if let Ok(mut guard) = snapshots_clone.lock() {
+                            guard.push(frame, received_at);
                         }
                     }
                     Err(e) => {
@@ -100,8 +103,7 @@ impl NetworkRenderBridge {
         };
 
         let bridge = Self {
-            frame_buffer,
-            last_frame,
+            snapshots,
             audio_tx,
             keys_held,
             session,
@@ -187,46 +189,24 @@ impl RenderBridge for NetworkRenderBridge {
         };
         self.publish_movement(dx, dy);
 
-        // 新フレームの取得を試みる
-        let new_frame = match self.frame_buffer.lock() {
-            Ok(mut guard) => guard.take(),
-            Err(e) => {
-                log::warn!("[network_render_bridge] frame_buffer lock failed (poisoned): {e}");
-                None
-            }
-        };
-
-        if let Some(frame) = new_frame {
-            if let Some(ref tx) = self.audio_tx {
-                for url in &frame.audio_cues {
-                    tx.play_se_from_relative_path(url.clone());
-                }
-            }
-            // 新フレームがあれば、last_frame を更新してそれを返す
-            match self.last_frame.lock() {
-                Ok(mut last_guard) => *last_guard = Some(frame.clone()),
-                Err(e) => log::warn!(
-                    "[network_render_bridge] last_frame lock failed (poisoned) on update: {e}"
-                ),
-            }
-            return frame;
-        }
-
-        // 新フレームがなければ、前回描画したフレームを返す（再利用時は SE を再送しない）。
-        // キャッシュ側の `audio_cues` を一度空にしておくと、以降の再利用で毎回フルクローン→クリアを繰り返さない。
-        match self.last_frame.lock() {
+        let now = Instant::now();
+        match self.snapshots.lock() {
             Ok(mut guard) => {
-                if let Some(frame) = guard.as_mut() {
-                    frame.audio_cues.clear();
-                    return frame.clone();
+                if let Some(ref tx) = self.audio_tx {
+                    for url in guard.take_pending_audio() {
+                        tx.play_se_from_relative_path(url);
+                    }
+                } else {
+                    // オーディオ未接続でもキューを捨て、次回に溜めない
+                    let _ = guard.take_pending_audio();
                 }
+                guard.sample(now).unwrap_or_default()
             }
             Err(e) => {
-                log::warn!("[network_render_bridge] last_frame lock failed (poisoned): {e}");
+                log::warn!("[network_render_bridge] snapshots lock failed (poisoned): {e}");
+                RenderFrame::default()
             }
         }
-
-        RenderFrame::default()
     }
 
     fn on_ui_action(&self, action: String) {

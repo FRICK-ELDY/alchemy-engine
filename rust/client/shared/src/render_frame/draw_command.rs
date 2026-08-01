@@ -7,7 +7,7 @@ use super::MeshVertex;
 #[derive(Clone, Debug)]
 pub enum DrawCommand {
     /// プレイヤースプライト描画。
-    /// `render_bridge.rs` が補間後にこのバリアントの座標を書き換える。
+    /// `SnapshotInterpolator`（`network_render_bridge`）が補間後に座標を書き換える。
     /// `Sprite` と分離することで、補間対象を型安全に特定できる。
     PlayerSprite { x: f32, y: f32, frame: u8 },
     /// パーティクル描画

@@ -83,7 +83,7 @@ ping を活かしたハートビート淘汰を追加。`last_seen_ms` を JOIN 
 
 対象: `engine/apps/contents/lib/events/game.ex`, `components/category/`
 
-### 3-2. スナップショット補間の配線 `-4 解消`
+### 3-2. スナップショット補間の配線 `-4 解消` ✅
 
 `interp.rs`（実装済み・未使用）をブリッジに接続。**権威 tick の 10〜20Hz 化により前回より優先度が上昇**（60fps 描画に対し 10〜20Hz スナップショット表示のため）。
 
