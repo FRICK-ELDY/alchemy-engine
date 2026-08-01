@@ -2,7 +2,7 @@
 //!
 //! - Publisher は key（＋ congestion モード）ごとに 1 度だけ declare して再利用する
 //! - セッション切断を検知したら指数バックオフで再接続し、subscriber を張り直す
-//! - put のネットワーク I/O 中は state ロックを持たない（描画スレッドのスタッター回避）
+//! - put / close のネットワーク I/O 中は state ロックを持たない（描画スレッドのスタッター回避）
 
 use futures::future::{select, Either};
 use futures_timer::Delay;
@@ -22,7 +22,9 @@ const RECONNECT_MAX_MS: u64 = 8_000;
 const RECONNECT_FACTOR: u64 = 2;
 
 struct SessionState {
-    session: Session,
+    /// 再接続の close 中は `None`（ロック外の `close().wait()` 中に古い publisher が
+    /// キャッシュへ戻るのを防ぐ）。
+    session: Option<Session>,
     /// 既定 congestion（Block）の publisher キャッシュ。
     /// `Arc` で持ち、ロック外の `put().wait()` に渡す（Publisher 自体は Clone 不可）。
     publishers: HashMap<String, Arc<Publisher<'static>>>,
@@ -30,6 +32,12 @@ struct SessionState {
     publishers_drop: HashMap<String, Arc<Publisher<'static>>>,
     /// 再接続のたびに増える。subscriber が古い session を捨てる判定に使う。
     generation: u64,
+}
+
+impl SessionState {
+    fn has_live_session(&self) -> bool {
+        self.session.as_ref().is_some_and(|s| !s.is_closed())
+    }
 }
 
 /// Zenoh セッションのラッパー。publish / subscribe を抽象化。
@@ -47,7 +55,7 @@ impl ClientSession {
         Ok(Self {
             connect_config: connect_config.to_string(),
             state: Arc::new(Mutex::new(SessionState {
-                session,
+                session: Some(session),
                 publishers: HashMap::new(),
                 publishers_drop: HashMap::new(),
                 generation: 0,
@@ -89,7 +97,26 @@ impl ClientSession {
             while !shutdown.load(Ordering::SeqCst) {
                 let (zenoh_session, generation) = {
                     match session.state.lock() {
-                        Ok(guard) => (guard.session.clone(), guard.generation),
+                        Ok(guard) => match guard.session.clone() {
+                            Some(s) => (s, guard.generation),
+                            None => {
+                                // close 進行中。再接続ループへ。
+                                drop(guard);
+                                if shutdown.load(Ordering::SeqCst) {
+                                    break;
+                                }
+                                log::warn!(
+                                    "[zenoh] subscriber has no session on {key}; reconnecting"
+                                );
+                                if let Err(e) =
+                                    session.reconnect_with_backoff(&shutdown, RECONNECT_INIT_MS)
+                                {
+                                    log::error!("[zenoh] reconnect aborted: {e}");
+                                    break;
+                                }
+                                continue;
+                            }
+                        },
                         Err(e) => {
                             log::error!("[zenoh] subscriber state lock poisoned: {e}");
                             return;
@@ -158,13 +185,16 @@ impl ClientSession {
             }
         };
 
-        let (session, maybe_publisher) = {
+        let (session, maybe_publisher, generation) = {
             let state = self
                 .state
                 .lock()
                 .map_err(|e| format!("session state lock poisoned: {e}"))?;
 
-            if state.session.is_closed() {
+            let Some(session) = state.session.clone() else {
+                return Err("session closed".to_string());
+            };
+            if session.is_closed() {
                 return Err("session closed".to_string());
             }
 
@@ -173,7 +203,7 @@ impl ClientSession {
                 CongestionMode::Drop => &state.publishers_drop,
             };
 
-            (state.session.clone(), cache.get(key).cloned())
+            (session, cache.get(key).cloned(), state.generation)
         };
         // ここまででロック解放。以降の wait() は描画スレッドを他送信と直列化しない。
 
@@ -202,8 +232,8 @@ impl ClientSession {
         };
 
         if let Ok(mut state) = self.state.lock() {
-            // 再接続で session が差し替わっていたら古い publisher は捨てる。
-            if !state.session.is_closed() {
+            // 再接続で generation が進んでいたら、古い session 由来の publisher は捨てる。
+            if state.generation == generation && state.has_live_session() {
                 let cache = match mode {
                     CongestionMode::Default => &mut state.publishers,
                     CongestionMode::Drop => &mut state.publishers_drop,
@@ -254,7 +284,7 @@ impl ClientSession {
                 .lock()
                 .map_err(|e| format!("session state lock poisoned: {e}"))?;
             // 待ちの間に別スレッドが復旧済みなら、そのセッションを閉じない。
-            if !state.session.is_closed() && state.generation != gen_before {
+            if state.has_live_session() && state.generation != gen_before {
                 return Ok(());
             }
         }
@@ -271,7 +301,7 @@ impl ClientSession {
                     .state
                     .lock()
                     .map_err(|e| format!("session state lock poisoned: {e}"))?;
-                if !state.session.is_closed() {
+                if state.has_live_session() {
                     return Ok(());
                 }
             }
@@ -298,17 +328,24 @@ impl ClientSession {
     }
 
     /// `expected_generation` のままだったときだけ close する（新しい世代を壊さない）。
+    /// `close().wait()` はロック外で行い、描画スレッドのロック待ちを防ぐ。
+    /// ロック内では `session.take()` し、close 完了前に古い publisher がキャッシュへ
+    /// 戻るのを防ぐ。
     fn close_current_if_generation(&self, expected_generation: u64) {
-        let Ok(mut state) = self.state.lock() else {
-            return;
+        let session_to_close = {
+            let Ok(mut state) = self.state.lock() else {
+                return;
+            };
+            if state.generation != expected_generation {
+                return;
+            }
+            state.publishers.clear();
+            state.publishers_drop.clear();
+            state.session.take()
         };
-        if state.generation != expected_generation {
-            return;
-        }
-        state.publishers.clear();
-        state.publishers_drop.clear();
-        if !state.session.is_closed() {
-            let _ = state.session.close().wait();
+
+        if let Some(session) = session_to_close {
+            let _ = session.close().wait();
         }
     }
 
@@ -316,14 +353,14 @@ impl ClientSession {
         let Ok(mut state) = self.state.lock() else {
             return;
         };
-        if !state.session.is_closed() {
+        if state.has_live_session() {
             // 別スレッドが先に復旧済み。余分なセッションは捨てる。
             drop(new_session);
             return;
         }
         state.publishers.clear();
         state.publishers_drop.clear();
-        state.session = new_session;
+        state.session = Some(new_session);
         state.generation = state.generation.wrapping_add(1);
     }
 }
@@ -384,7 +421,7 @@ where
             return Err("session closed".to_string());
         }
         if let Ok(guard) = state.lock() {
-            if guard.generation != generation {
+            if guard.generation != generation || !guard.has_live_session() {
                 return Err("session replaced".to_string());
             }
         }
