@@ -7,7 +7,7 @@
 use std::collections::VecDeque;
 use std::time::{Duration, Instant};
 
-use crate::render_frame::{CameraParams, DrawCommand, RenderFrame};
+use crate::render_frame::{CameraParams, DrawCommand, RenderFrame, UiCanvas};
 use crate::types::Vec2;
 
 /// 描画遅延バッファの既定値。実運用では観測したスナップショット間隔の約 2 倍に追従する。
@@ -339,6 +339,12 @@ fn find_nearest_prev(
 /// - デスポーン（prev のみ）: `t < 1.0` の間は prev 座標で維持（早期消滅防止）
 /// 非位置コマンド（Skybox 等）と Particle は `curr` を採用。
 /// UI / mesh / cursor / audio は最新（`curr`）を採用する。
+///
+/// # 性能（将来）
+/// 60fps で `ui` / `mesh_definitions` / `GridPlaneVerts` 等のクローンが積み重なる。
+/// 契約型を崩さず抑える本命は、変化の少ないデータを `Arc` 化し clone を O(1) にすること。
+/// グローバルアロケータ（mimalloc 等）の導入も別途検討。いずれも RenderFrame 契約〜描画経路の
+/// 横断変更になるため、補間配線のスコープ外とする。
 pub fn interpolate_render_frame(prev: &RenderFrame, curr: &RenderFrame, t: f32) -> RenderFrame {
     let t = t.clamp(0.0, 1.0);
     if t <= 0.0 {
@@ -349,23 +355,22 @@ pub fn interpolate_render_frame(prev: &RenderFrame, curr: &RenderFrame, t: f32) 
     }
 
     let mut used = vec![false; prev.commands.len()];
-    let mut commands: Vec<DrawCommand> = curr
-        .commands
-        .iter()
-        .filter_map(|curr_cmd| {
-            if command_position(curr_cmd).is_none() {
-                return Some(curr_cmd.clone());
+    let mut commands: Vec<DrawCommand> =
+        Vec::with_capacity(curr.commands.len() + prev.commands.len());
+    for curr_cmd in &curr.commands {
+        if command_position(curr_cmd).is_none() {
+            commands.push(curr_cmd.clone());
+            continue;
+        }
+        match find_nearest_prev(&prev.commands, curr_cmd, &used, MAX_MATCH_DISTANCE) {
+            Some(i) => {
+                used[i] = true;
+                commands.push(lerp_draw_command(&prev.commands[i], curr_cmd, t));
             }
-            match find_nearest_prev(&prev.commands, curr_cmd, &used, MAX_MATCH_DISTANCE) {
-                Some(i) => {
-                    used[i] = true;
-                    Some(lerp_draw_command(&prev.commands[i], curr_cmd, t))
-                }
-                // t < 1.0 の間は新規スポーンを出さず、curr 到達まで待つ
-                None => None,
-            }
-        })
-        .collect();
+            // t < 1.0 の間は新規スポーンを出さず、curr 到達まで待つ
+            None => {}
+        }
+    }
 
     // デスポーン体: 論理的な消滅（t = 1.0）まで prev 座標で残す
     for (i, was_used) in used.iter().enumerate() {
@@ -381,9 +386,18 @@ pub fn interpolate_render_frame(prev: &RenderFrame, curr: &RenderFrame, t: f32) 
     RenderFrame {
         commands,
         camera: lerp_camera(&prev.camera, &curr.camera, t),
-        ui: curr.ui.clone(),
+        // 空なら clone を避け、アロケーションを抑える
+        ui: if curr.ui.nodes.is_empty() {
+            UiCanvas::default()
+        } else {
+            curr.ui.clone()
+        },
         cursor_grab: curr.cursor_grab,
-        mesh_definitions: curr.mesh_definitions.clone(),
+        mesh_definitions: if curr.mesh_definitions.is_empty() {
+            Vec::new()
+        } else {
+            curr.mesh_definitions.clone()
+        },
         // 補間サンプルでは SE を再送しない（新規受信時に別途 drain する）
         audio_cues: Vec::new(),
     }
