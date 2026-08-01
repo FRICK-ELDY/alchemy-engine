@@ -77,7 +77,7 @@ ping を活かしたハートビート淘汰を追加。`last_seen_ms` を JOIN 
 
 ## フェーズ 3: 価値命題の配線（2〜6週間、-25 点解消）
 
-### 3-1. マルチルームのゲームループ駆動 `-7 解消（-4 + -3）`
+### 3-1. マルチルームのゲームループ駆動 `-7 解消（-4 + -3）` ✅
 
 `:elixir_frame_tick` の `:main` 限定を撤廃し、コンポーネントの `flow_runner(:main)` 直書き（`render.ex:28`, `helpers.ex:15`）を room_id 引き回しに変更。`Events.Game` 本体は既に `flow_runner(state.room_id)` へ移行済みなので、残りはコンポーネント側。
 

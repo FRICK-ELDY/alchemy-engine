@@ -11,16 +11,16 @@ defmodule Contents.Components.Category.Device.Mouse do
   alias Contents.Components.Category.Device.Helpers
 
   @impl Core.Component
-  def on_event({:move_input, dx, dz}, _context) when is_float(dx) and is_float(dz) do
-    Helpers.with_playing_scene(fn state ->
+  def on_event({:move_input, dx, dz}, context) when is_float(dx) and is_float(dz) do
+    Helpers.with_playing_scene(Map.get(context, :room_id, :main), fn state ->
       Map.put(state, :move_input, {dx, dz})
     end)
 
     :ok
   end
 
-  def on_event({:mouse_delta, dx, dy}, _context) when is_float(dx) and is_float(dy) do
-    Helpers.with_playing_scene(fn state ->
+  def on_event({:mouse_delta, dx, dy}, context) when is_float(dx) and is_float(dy) do
+    Helpers.with_playing_scene(Map.get(context, :room_id, :main), fn state ->
       Map.put(state, :mouse_delta, {dx, dy})
     end)
 

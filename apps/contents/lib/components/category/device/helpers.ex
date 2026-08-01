@@ -9,10 +9,10 @@ defmodule Contents.Components.Category.Device.Helpers do
 
   runner（flow_runner）が nil の場合は何もしない。
   """
-  @spec with_scene_type(atom(), (map() -> map())) :: :ok
-  def with_scene_type(scene_type, fun) when is_function(fun, 1) do
+  @spec with_scene_type(term(), atom(), (map() -> map())) :: :ok
+  def with_scene_type(room_id, scene_type, fun) when is_function(fun, 1) do
     content = Core.Config.current()
-    runner = content.flow_runner(:main)
+    runner = content.flow_runner(room_id)
 
     if runner do
       Contents.Scenes.Stack.update_by_scene_type(runner, scene_type, fun)
@@ -26,9 +26,9 @@ defmodule Contents.Components.Category.Device.Helpers do
 
   runner（flow_runner）が nil の場合は何もしない。
   """
-  @spec with_playing_scene((map() -> map())) :: :ok
-  def with_playing_scene(fun) when is_function(fun, 1) do
+  @spec with_playing_scene(term(), (map() -> map())) :: :ok
+  def with_playing_scene(room_id, fun) when is_function(fun, 1) do
     content = Core.Config.current()
-    with_scene_type(content.playing_scene(), fun)
+    with_scene_type(room_id, content.playing_scene(), fun)
   end
 end

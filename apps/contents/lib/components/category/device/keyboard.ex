@@ -29,30 +29,31 @@ defmodule Contents.Components.Category.Device.Keyboard do
   alias Contents.Components.Category.Device.Helpers
 
   @impl Core.Component
-  def on_event({:sprint, value}, _context) when is_boolean(value) do
-    Helpers.with_playing_scene(fn state ->
+  def on_event({:sprint, value}, context) when is_boolean(value) do
+    Helpers.with_playing_scene(room_id(context), fn state ->
       Map.put(state, :sprint, value)
     end)
 
     :ok
   end
 
-  def on_event({:key_pressed, :escape}, _context) do
-    Helpers.with_playing_scene(&toggle_hud_and_cursor/1)
+  def on_event({:key_pressed, :escape}, context) do
+    Helpers.with_playing_scene(room_id(context), &toggle_hud_and_cursor/1)
     :ok
   end
 
   def on_event({:ui_action, action}, context) when is_binary(action) do
     content = Core.Config.current()
     handlers = get_effective_handlers(content)
+    room_id = room_id(context)
 
     case Map.get(handlers, action) do
       {scene_type, fun} when is_function(fun, 1) ->
-        Helpers.with_scene_type(scene_type, fun)
+        Helpers.with_scene_type(room_id, scene_type, fun)
         :ok
 
       :quit ->
-        pid = content.event_handler(Map.get(context, :room_id, :main))
+        pid = content.event_handler(room_id)
         if pid, do: send(pid, :quit_requested)
         :ok
 
@@ -85,6 +86,8 @@ defmodule Contents.Components.Category.Device.Keyboard do
   defp maybe_put_retry(acc, content) do
     Map.put(acc, "__retry__", {content.game_over_scene(), fn s -> Map.put(s, :retry, true) end})
   end
+
+  defp room_id(context), do: Map.get(context, :room_id, :main)
 
   defp toggle_hud_and_cursor(state) do
     if Map.get(state, :hud_visible, false) do
