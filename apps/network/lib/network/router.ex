@@ -4,6 +4,8 @@ defmodule Network.Router do
 
   - `POST /api/room_token` — ルーム参加用トークン発行（`AUTH_REQUIRED` 時は Bearer JWT 必須）
   - `GET /health` — ヘルスチェック
+  - `GET /.well-known/alchemy-s2s.json` — 連合インスタンス自己記述（S2S 有効時）
+  - `GET /api/s2s/worlds` — 署名付き read-only ワールド一覧（S2S 有効時）
   """
 
   use Plug.Router
@@ -24,6 +26,62 @@ defmodule Network.Router do
           })
 
         send_json(conn, 401, body)
+    end
+  end
+
+  get "/.well-known/alchemy-s2s.json" do
+    case Network.S2S.Instance.describe() do
+      {:ok, body} ->
+        send_json(conn, 200, Phoenix.json_library().encode!(body))
+
+      {:error, :disabled} ->
+        send_json(
+          conn,
+          404,
+          Phoenix.json_library().encode!(%{error: "s2s_disabled", message: "federation S2S is disabled"})
+        )
+
+      {:error, _} ->
+        send_json(
+          conn,
+          503,
+          Phoenix.json_library().encode!(%{error: "s2s_unavailable", message: "S2S instance not ready"})
+        )
+    end
+  end
+
+  get "/api/s2s/worlds" do
+    cond do
+      not Network.S2S.Instance.enabled?() ->
+        send_json(
+          conn,
+          404,
+          Phoenix.json_library().encode!(%{error: "s2s_disabled", message: "federation S2S is disabled"})
+        )
+
+      true ->
+        case authorize_s2s(conn) do
+          {:ok, claims} ->
+            worlds = Network.S2S.Catalog.list_worlds()
+
+            body =
+              Phoenix.json_library().encode!(%{
+                "domain" => s2s_domain(),
+                "worlds" => worlds,
+                "caller" => claims["iss"]
+              })
+
+            send_json(conn, 200, body)
+
+          {:error, reason} ->
+            body =
+              Phoenix.json_library().encode!(%{
+                error: "unauthorized",
+                message: s2s_unauthorized_message(reason)
+              })
+
+            send_json(conn, 401, body)
+        end
     end
   end
 
@@ -113,6 +171,30 @@ defmodule Network.Router do
   defp unauthorized_message({:jwks_unavailable, _}), do: "JWKS unavailable"
   defp unauthorized_message({:token_validation_failed, _}), do: "JWT validation failed"
   defp unauthorized_message(_), do: "unauthorized"
+
+  defp authorize_s2s(conn) do
+    case bearer_token(conn) do
+      {:ok, token} -> Network.S2S.Instance.verify_request_token(token)
+      :error -> {:error, :missing_bearer}
+    end
+  end
+
+  defp s2s_unauthorized_message(:missing_bearer), do: "Bearer instance token is required"
+  defp s2s_unauthorized_message(:missing_kid), do: "JWT kid is required"
+  defp s2s_unauthorized_message(:invalid_alg), do: "JWT alg must be RS256"
+  defp s2s_unauthorized_message(:unknown_kid), do: "JWT kid is unknown"
+  defp s2s_unauthorized_message(:unknown_peer), do: "caller instance is unknown"
+  defp s2s_unauthorized_message(:aud_mismatch), do: "JWT aud mismatch"
+  defp s2s_unauthorized_message(:invalid_purpose), do: "JWT purpose must be s2s.worlds.read"
+  defp s2s_unauthorized_message(:missing_iss), do: "JWT iss is required"
+  defp s2s_unauthorized_message({:peer_fetch_failed, _}), do: "failed to fetch caller JWKS"
+  defp s2s_unauthorized_message({:token_validation_failed, _}), do: "JWT validation failed"
+  defp s2s_unauthorized_message(_), do: "unauthorized"
+
+  defp s2s_domain do
+    Network.S2S.Instance.runtime_config()
+    |> Keyword.get(:domain)
+  end
 
   defp send_json(conn, status, body) do
     conn

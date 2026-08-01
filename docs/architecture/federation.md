@@ -1,7 +1,7 @@
 # 方針: 連合層アーキテクチャ
 
 > 作成日: 2026-07-13  
-> ステータス: 採用（設計方針。連合 API の実装は Phase 4。Phase 1–3 は本書の制約に従う）  
+> ステータス: 採用（設計方針。Phase 4-2 read-only S2S の第一歩は `Network.S2S` に着地済み。identity federation 以降は未実装）  
 > 背景: 分散連合型 VRSNS へ向け、スケールアウト層と連合層を分離して明文化する。
 
 ---
@@ -143,7 +143,8 @@ Phase 4 以前に連合 API を実装しなくてよいが、以下は守る。�
 | リアルタイム配信 | Zenoh, UDP, Phoenix Channel | 同一インスタンス（または同一クラスタ）内 |
 | ルームトークン | `Network.RoomToken`, `Network.Router` | Phase 3 で auth 接続、Phase 4 で訪問検証へ |
 | 認証サービス | `auth/`（別リポジトリ） | Phase 4 の identity federation の起点 |
-| ActivityPub / WebFinger / S2S | — | **ソース上ゼロ**（Phase 4 着手前） |
+| ActivityPub / WebFinger | — | **未実装** |
+| read-only S2S（ワールド一覧） | `Network.S2S.*`, `GET /api/s2s/worlds` | **第一歩あり**（`S2S_ENABLED`、既定オフ） |
 
 ---
 

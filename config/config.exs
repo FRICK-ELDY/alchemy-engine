@@ -60,6 +60,26 @@ config :network, :auth_jwks_url, nil
 config :network, :jwt_issuer, "alchemy-auth"
 config :network, :jwt_audience, "alchemy-platform"
 
+# ── 連合 read-only S2S（運営者間。libcluster スケールアウトとは別層）────
+# 既定オフ。有効化は S2S_ENABLED=true（runtime.exs）または下記 enabled: true。
+# ワールド一覧はゲーム状態ではなくメタデータのみ（カタログ）。
+config :network, Network.S2S,
+  enabled: false,
+  domain: "alchemy.localhost",
+  canonical_url: "http://localhost:4000",
+  max_content_status: "General",
+  # private_key_pem / private_key_path 未設定時は起動時にエフェメラル RSA を生成（開発用）
+  ephemeral_keys: true,
+  worlds: [
+    %{
+      id: "bullet-hell-3d",
+      title: "Bullet Hell 3D",
+      status: "General",
+      path: "/worlds/bullet-hell-3d"
+    }
+  ],
+  peers: []
+
 # ── 使用するコンテンツを指定する。
 # 第一級コンテンツ（維持）:
 #   Content.CanvasTest    — Canvas / ワールド空間 UI デバッグ

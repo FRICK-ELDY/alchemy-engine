@@ -17,6 +17,8 @@ defmodule Network do
   - `Network.UDP` — `:gen_udp` による UDP トランスポート（フェーズ3）。
     デフォルトポート 4001 で待ち受け。クライアントは JOIN パケットでルームに参加し、
     INPUT/ACTION を送信してフレームイベントを受信する。
+  - `Network.S2S` — 運営者間の read-only 連合 API（インスタンス自己記述・ワールド一覧）。
+    libcluster スケールアウトとは別層。既定オフ（`S2S_ENABLED`）。
   """
 
   @doc """
