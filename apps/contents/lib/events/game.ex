@@ -43,8 +43,6 @@ defmodule Contents.Events.Game do
       init_component(component, world_ref)
     end)
 
-    # FrameCache はルーム別キーの共有 ETS。init は冪等（競合時も安全）。
-    Core.FrameCache.init()
     schedule_elixir_frame_tick()
 
     start_ms = now_ms()

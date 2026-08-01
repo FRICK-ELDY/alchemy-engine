@@ -4,17 +4,37 @@ defmodule Core.FrameCache do
 
   キーは `room_id`。値のスキーマ（enemy_count 等）は監視用途の現状契約で、
   コンテンツ語彙の分離は別タスクとする。
+
+  ETS テーブルは本 GenServer（アプリ寿命の OTP 子）が所有する。
+  ルーム GenServer から `init/0` してはならない（所有プロセス終了で
+  テーブルごと消えるため）。
   """
 
+  use GenServer
+
   @table :frame_cache
+
+  def start_link(opts \\ []) do
+    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+  end
+
+  @impl true
+  def init(_opts) do
+    :ok = ensure_table()
+    {:ok, %{}}
+  end
 
   @doc """
   名前付き ETS テーブルを用意する。既に存在する場合は何もしない（冪等）。
 
-  複数ルーム起動時の同時 `init/0` に備え、`:ets.new/2` の競合は
-  `ArgumentError` を捕捉して無視する。
+  本番では `start_link/1` 経由でのみ呼ぶこと。テスト用に公開している。
   """
-  def init do
+  def init_table, do: ensure_table()
+
+  # 後方互換エイリアス（テスト）
+  def init, do: ensure_table()
+
+  defp ensure_table do
     case :ets.whereis(@table) do
       :undefined ->
         try do
