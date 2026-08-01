@@ -72,10 +72,25 @@ defmodule Network.S2S.Instance do
     :exit, {:noproc, _} -> {:error, :not_ready}
   end
 
-  @doc "他インスタンスからのリクエスト JWT を検証する。"
+  @doc """
+  他インスタンスからのリクエスト JWT を検証する。
+
+  JWKS の HTTP 取得は呼び出し側プロセスで行い、GenServer をブロックしない。
+  """
   @spec verify_request_token(String.t()) :: {:ok, map()} | {:error, term()}
   def verify_request_token(token) when is_binary(token) do
-    GenServer.call(__MODULE__, {:verify_request_token, token})
+    with {:ok, header} <- peek_header(token),
+         :ok <- check_alg(header),
+         {:ok, claims_map} <- peek_claims(token),
+         :ok <- check_purpose(claims_map),
+         {:ok, iss} <- fetch_iss(claims_map),
+         {:ok, local_domain} <- local_domain(),
+         :ok <- check_aud(claims_map, local_domain),
+         {:ok, signer} <- resolve_peer_signer_external(iss, header["kid"]),
+         {:ok, claims} <-
+           Joken.verify_and_validate(token_config_for_verify(local_domain), token, signer) do
+      {:ok, claims}
+    end
   catch
     :exit, {:noproc, _} -> {:error, :not_ready}
   end
@@ -170,8 +185,28 @@ defmodule Network.S2S.Instance do
     {:reply, reply, state}
   end
 
-  def handle_call({:verify_request_token, token}, _from, state) do
-    {reply, new_state} = do_verify(token, state)
+  def handle_call(:local_domain, _from, state) do
+    cond do
+      not state.enabled ->
+        {:reply, {:error, :disabled}, state}
+
+      is_binary(state.domain) and state.domain != "" ->
+        {:reply, {:ok, state.domain}, state}
+
+      true ->
+        {:reply, {:error, :not_ready}, state}
+    end
+  end
+
+  # キャッシュ命中または fetch 指示のみ返す（HTTP は行わない）
+  def handle_call({:lookup_peer_signer, iss, kid}, _from, state) do
+    {reply, new_state} = lookup_peer_signer(state, iss, kid)
+    {:reply, reply, new_state}
+  end
+
+  # 呼び出し側で取得した JWKS をキャッシュへ反映し、signer を返す
+  def handle_call({:apply_peer_fetch_result, iss, kid, fetch_result}, _from, state) do
+    {reply, new_state} = apply_peer_fetch_result(state, iss, kid, fetch_result)
     {:reply, reply, new_state}
   end
 
@@ -218,7 +253,7 @@ defmodule Network.S2S.Instance do
       end
 
     cond do
-      state.enabled and (is_nil(state.domain) or String.trim(state.domain) == "") ->
+      state.enabled and (not is_binary(state.domain) or String.trim(state.domain) == "") ->
         {:error, {:s2s_config_invalid, :missing_domain}}
 
       state.enabled and is_nil(state.signer) ->
@@ -229,26 +264,29 @@ defmodule Network.S2S.Instance do
     end
   end
 
-  # ── verify / peers ───────────────────────────────────────────────
+  # ── verify / peers（HTTP は GenServer 外）─────────────────────────
 
-  defp do_verify(_token, %{enabled: false} = state), do: {{:error, :disabled}, state}
+  defp local_domain do
+    GenServer.call(__MODULE__, :local_domain)
+  end
 
-  defp do_verify(token, state) do
-    with {:ok, header} <- peek_header(token),
-         :ok <- check_alg(header),
-         {:ok, claims_map} <- peek_claims(token),
-         :ok <- check_aud(claims_map, state.domain),
-         :ok <- check_purpose(claims_map),
-         {:ok, iss} <- fetch_iss(claims_map),
-         {:ok, state2, signer} <- resolve_peer_signer(state, iss, header["kid"]) do
-      # JWKS 取得済みの state2 は署名検証失敗時も捨てない（再フェッチ DoS を防ぐ）
-      case Joken.verify_and_validate(token_config_for_verify(state.domain), token, signer) do
-        {:ok, claims} -> {{:ok, claims}, state2}
-        {:error, reason} -> {{:error, reason}, state2}
-      end
-    else
-      {:error, reason, new_state} -> {{:error, reason}, new_state}
-      {:error, reason} -> {{:error, reason}, state}
+  defp resolve_peer_signer_external(iss, kid) do
+    case GenServer.call(__MODULE__, {:lookup_peer_signer, iss, kid}) do
+      {:ok, signer} ->
+        {:ok, signer}
+
+      {:fetch, url, fetch_fun} ->
+        fetch_result =
+          case fetch_fun.(url) do
+            {:ok, body} -> {:ok, body}
+            {:error, reason} -> {:error, reason}
+            other -> {:error, {:unexpected_fetch_result, other}}
+          end
+
+        GenServer.call(__MODULE__, {:apply_peer_fetch_result, iss, kid, fetch_result})
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -281,32 +319,55 @@ defmodule Network.S2S.Instance do
   defp fetch_iss(%{"iss" => iss}) when is_binary(iss) and iss != "", do: {:ok, iss}
   defp fetch_iss(_), do: {:error, :missing_iss}
 
-  defp resolve_peer_signer(state, iss, kid) when is_binary(kid) do
+  defp lookup_peer_signer(state, iss, kid) when is_binary(kid) do
     by_kid = Map.get(state.peer_signers, iss, %{})
 
     case Map.fetch(by_kid, kid) do
       {:ok, signer} ->
-        {:ok, state, signer}
+        {{:ok, signer}, state}
 
       :error ->
         if should_fetch_jwks?(state, iss) do
-          case fetch_peer_jwks(state, iss) do
-            {:ok, new_state} ->
-              case Map.fetch(Map.get(new_state.peer_signers, iss, %{}), kid) do
-                {:ok, signer} -> {:ok, new_state, signer}
-                :error -> {:error, :unknown_kid, new_state}
-              end
+          case peer_well_known_url(state, iss) do
+            nil ->
+              {{:error, :unknown_peer}, state}
 
-            {:error, reason, new_state} ->
-              {:error, reason, new_state}
+            url ->
+              # 取得開始時点でレート制限を記録（並列未知 kid 連打の DoS 緩和）
+              state = mark_peer_fetched(state, iss)
+              {{:fetch, url, state.fetch_fun}, state}
           end
         else
-          {:error, :unknown_kid, state}
+          {{:error, :unknown_kid}, state}
         end
     end
   end
 
-  defp resolve_peer_signer(state, _iss, _), do: {:error, :missing_kid, state}
+  defp lookup_peer_signer(state, _iss, _), do: {{:error, :missing_kid}, state}
+
+  defp apply_peer_fetch_result(state, iss, kid, {:ok, body}) do
+    state =
+      case extract_jwks(body) do
+        {:ok, jwks} -> apply_peer_jwks(state, iss, jwks)
+        :error -> state
+      end
+
+    case Map.fetch(Map.get(state.peer_signers, iss, %{}), kid) do
+      {:ok, signer} -> {{:ok, signer}, state}
+      :error ->
+        reason =
+          case extract_jwks(body) do
+            :error -> :invalid_peer_document
+            {:ok, _} -> :unknown_kid
+          end
+
+        {{:error, reason}, state}
+    end
+  end
+
+  defp apply_peer_fetch_result(state, _iss, _kid, {:error, reason}) do
+    {{:error, {:peer_fetch_failed, reason}}, state}
+  end
 
   defp should_fetch_jwks?(state, iss) do
     case Map.get(state.peer_fetched_at, iss) do
@@ -315,28 +376,6 @@ defmodule Network.S2S.Instance do
 
       fetched_at ->
         System.monotonic_time(:millisecond) - fetched_at > @peer_jwks_min_refetch_ms
-    end
-  end
-
-  defp fetch_peer_jwks(state, iss) do
-    case peer_well_known_url(state, iss) do
-      nil ->
-        {:error, :unknown_peer, state}
-
-      url ->
-        # 失敗時も取得時刻を記録し、未知 kid 連打によるピアへの DoS を抑える
-        state = mark_peer_fetched(state, iss)
-
-        case state.fetch_fun.(url) do
-          {:ok, body} ->
-            case extract_jwks(body) do
-              {:ok, jwks} -> {:ok, apply_peer_jwks(state, iss, jwks)}
-              :error -> {:error, :invalid_peer_document, state}
-            end
-
-          {:error, reason} ->
-            {:error, {:peer_fetch_failed, reason}, state}
-        end
     end
   end
 

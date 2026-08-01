@@ -293,6 +293,71 @@ defmodule Network.S2STest do
       assert Instance.enabled?()
       assert Instance.runtime_config()[:domain] == @local_domain
     end
+
+    test "domain が atom でも GenServer を落とさず configure が失敗する" do
+      assert {:error, {:s2s_config_invalid, :missing_domain}} =
+               Instance.configure(
+                 enabled: true,
+                 domain: :not_a_string,
+                 ephemeral_keys: true,
+                 worlds: []
+               )
+
+      assert Process.whereis(Instance)
+      assert Instance.enabled?()
+    end
+
+    test "Catalog は atom の status / max_content_status を受け入れる" do
+      worlds =
+        Catalog.list_worlds(
+          worlds: [%{id: "a", title: "A", status: :General, path: "/a"}],
+          max_content_status: :General
+        )
+
+      assert [%{"id" => "a", "status" => "General"}] = worlds
+    end
+
+    test "JWKS fetch 中も GenServer が他リクエストに応答する" do
+      parent = self()
+      {kid, pem, jwks} = generate_rsa_jwks()
+
+      cfg = [
+        enabled: true,
+        domain: @local_domain,
+        canonical_url: "http://local.test",
+        ephemeral_keys: true,
+        worlds: [],
+        peers: [%{domain: @peer_domain, jwks_url: "http://peer.test/jwks"}],
+        fetch_fun: fn url ->
+          assert url == "http://peer.test/jwks"
+          send(parent, :fetch_started)
+          Process.sleep(300)
+          {:ok, jwks}
+        end
+      ]
+
+      Application.put_env(:network, Network.S2S, cfg)
+      assert :ok = Instance.configure(cfg)
+
+      token = sign_s2s_token(pem, kid, @peer_domain, @local_domain)
+
+      task =
+        Task.async(fn ->
+          Phoenix.ConnTest.build_conn()
+          |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
+          |> Phoenix.ConnTest.get("/api/s2s/worlds")
+        end)
+
+      assert_receive :fetch_started, 1_000
+
+      {elapsed_us, enabled?} = :timer.tc(fn -> Instance.enabled?() end)
+      assert enabled? == true
+      # GenServer が HTTP 待ちで詰まっていなければ数十 ms 未満で返る
+      assert elapsed_us < 100_000
+
+      conn = Task.await(task, 2_000)
+      assert %{"caller" => @peer_domain} = Phoenix.ConnTest.json_response(conn, 200)
+    end
   end
 
   # ── helpers ──────────────────────────────────────────────────────

@@ -31,8 +31,8 @@ defmodule Network.S2S.Catalog do
   end
 
   @doc false
-  @spec status_rank(String.t()) :: non_neg_integer() | nil
-  def status_rank(status) when is_binary(status), do: Map.get(@status_rank, status)
+  @spec status_rank(String.t() | atom()) :: non_neg_integer() | nil
+  def status_rank(status), do: Map.get(@status_rank, to_string(status))
 
   defp normalize_world(world, canonical) when is_map(world) do
     id = world_get(world, :id) || world_get(world, "id") || ""
