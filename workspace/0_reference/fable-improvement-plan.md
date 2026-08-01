@@ -89,7 +89,7 @@ ping を活かしたハートビート淘汰を追加。`last_seen_ms` を JOIN 
 
 対象: `engine/rust/client/network/src/network_render_bridge.rs`, `shared/src/interp.rs`
 
-### 3-3. Zenoh publisher の再利用 + 再接続 `-5 解消（-3 + -2）`
+### 3-3. Zenoh publisher の再利用 + 再接続 `-5 解消（-3 + -2）` ✅
 
 対象: `engine/rust/client/network/src/platform/desktop.rs`
 
