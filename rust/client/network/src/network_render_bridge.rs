@@ -88,8 +88,11 @@ impl NetworkRenderBridge {
                         let received_at = Instant::now();
                         let elapsed = creation_time.elapsed().as_millis() as u64;
                         last_frame_elapsed_ms_clone.store(elapsed, Ordering::Relaxed);
-                        if let Ok(mut guard) = snapshots_clone.lock() {
-                            guard.push(frame, received_at);
+                        match snapshots_clone.lock() {
+                            Ok(mut guard) => guard.push(frame, received_at),
+                            Err(e) => log::warn!(
+                                "[frame receiver] snapshots lock failed (poisoned): {e}"
+                            ),
                         }
                     }
                     Err(e) => {

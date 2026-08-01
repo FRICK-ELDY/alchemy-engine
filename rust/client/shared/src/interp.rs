@@ -1,9 +1,10 @@
 //! 線形補間 (Lerp) ロジック
 //!
 //! サーバーの低頻度更新（10〜20Hz）を描画タイミング（~60Hz）に合わせて補間。
-//! `SnapshotInterpolator` が直近 2 スナップショットを保持し、描画遅延バッファ
-//! （既定 100ms）上の表示時刻で座標を線形補間する。
+//! `SnapshotInterpolator` が複数スナップショットをキュー保持し、描画遅延バッファ
+//! （観測間隔の約 2 倍）上の表示時刻を挟む 2 枚で座標を線形補間する。
 
+use std::collections::VecDeque;
 use std::time::{Duration, Instant};
 
 use crate::render_frame::{CameraParams, DrawCommand, RenderFrame};
@@ -18,6 +19,11 @@ const INTERP_DELAY_MAX: Duration = Duration::from_millis(250);
 
 /// 描画遅延の EMA 係数。ジッターで `render_time` が跳ねないよう緩やかに追従する。
 const DELAY_EMA_ALPHA: f64 = 0.1;
+
+/// 保持するスナップショット上限。
+/// 遅延 ≈ 2×interval のため、直近 2 枚だけでは `render_time` が履歴より過去になり補間できない。
+/// 10Hz・遅延 250ms でも余裕を持たせる。
+const MAX_SNAPSHOTS: usize = 8;
 
 /// 同一バリアント内で「同じエンティティ」とみなす最大移動距離。
 /// bullet_hell の弾速 7.0 × 欠落込み ~0.3s ≈ 2.1 に余裕を持たせた値。
@@ -58,34 +64,7 @@ pub fn lerp_draw_command(prev: &DrawCommand, curr: &DrawCommand, t: f32) -> Draw
                 frame: *frame,
             }
         }
-        (
-            DrawCommand::Particle {
-                x: ax,
-                y: ay,
-                r: ar,
-                g: ag,
-                b: ab,
-                alpha: aa,
-                size: asz,
-            },
-            DrawCommand::Particle {
-                x: bx,
-                y: by,
-                r: br,
-                g: bg,
-                b: bb,
-                alpha: ba,
-                size: bsz,
-            },
-        ) => DrawCommand::Particle {
-            x: lerp(*ax, *bx, t),
-            y: lerp(*ay, *by, t),
-            r: lerp(*ar, *br, t),
-            g: lerp(*ag, *bg, t),
-            b: lerp(*ab, *bb, t),
-            alpha: lerp(*aa, *ba, t),
-            size: lerp(*asz, *bsz, t),
-        },
+        // Particle は近傍マッチ対象外のためここには来ない（curr をそのまま採用）
         (
             DrawCommand::Item { x: ax, y: ay, .. },
             DrawCommand::Item { x: bx, y: by, kind },
@@ -365,10 +344,9 @@ pub fn interpolate_render_frame(prev: &RenderFrame, curr: &RenderFrame, t: f32) 
     }
 }
 
-/// 受信時刻付きスナップショットの直近 2 枚を保持し、表示時刻で補間する。
+/// 受信時刻付きスナップショットをキュー保持し、表示時刻で補間する。
 pub struct SnapshotInterpolator {
-    prev: Option<(Instant, RenderFrame)>,
-    curr: Option<(Instant, RenderFrame)>,
+    snapshots: VecDeque<(Instant, RenderFrame)>,
     pending_audio: Vec<String>,
     delay: Duration,
 }
@@ -386,8 +364,7 @@ impl SnapshotInterpolator {
 
     pub fn with_delay(delay: Duration) -> Self {
         Self {
-            prev: None,
-            curr: None,
+            snapshots: VecDeque::new(),
             pending_audio: Vec::new(),
             delay,
         }
@@ -405,7 +382,7 @@ impl SnapshotInterpolator {
     /// push は破棄する（補間の時間逆行・SE 重複を防ぐ）。到着時刻だけのスタンプでは
     /// ペイロードのアウトオブオーダーは検知できない点に注意。
     pub fn push(&mut self, mut frame: RenderFrame, received_at: Instant) {
-        if let Some((curr_at, _)) = &self.curr {
+        if let Some((curr_at, _)) = self.snapshots.back() {
             if received_at < *curr_at {
                 // 順序逆転した古いフレームは無視する
                 return;
@@ -427,8 +404,10 @@ impl SnapshotInterpolator {
         if !cues.is_empty() {
             self.pending_audio.extend(cues);
         }
-        self.prev = self.curr.take();
-        self.curr = Some((received_at, frame));
+        self.snapshots.push_back((received_at, frame));
+        while self.snapshots.len() > MAX_SNAPSHOTS {
+            self.snapshots.pop_front();
+        }
     }
 
     /// 新規受信フレーム由来の SE キューを取り出す（描画サンプルとは独立）。
@@ -437,29 +416,42 @@ impl SnapshotInterpolator {
     }
 
     /// `now` 時点の表示用フレームを返す。スナップショットが無い場合は `None`。
+    ///
+    /// `render_time = now - delay` を挟む 2 枚をキューから選び補間する。
+    /// 遅延 ≈ 2×interval のため、履歴は 3 枚以上あることが望ましい。
     pub fn sample(&self, now: Instant) -> Option<RenderFrame> {
         let render_time = now.checked_sub(self.delay).unwrap_or(now);
 
-        match (&self.prev, &self.curr) {
-            (None, None) => None,
-            (None, Some((_, curr))) => Some(curr.clone()),
-            (Some((_, prev)), None) => Some(prev.clone()),
-            (Some((prev_at, prev)), Some((curr_at, curr))) => {
-                let span = curr_at.saturating_duration_since(*prev_at);
-                if span.is_zero() {
-                    return Some(curr.clone());
+        match self.snapshots.len() {
+            0 => None,
+            1 => self.snapshots.front().map(|(_, f)| f.clone()),
+            _ => {
+                let first_at = self.snapshots.front().unwrap().0;
+                if render_time <= first_at {
+                    return Some(self.snapshots.front().unwrap().1.clone());
+                }
+                let last_at = self.snapshots.back().unwrap().0;
+                if render_time >= last_at {
+                    return Some(self.snapshots.back().unwrap().1.clone());
                 }
 
-                let since_prev = render_time.saturating_duration_since(*prev_at);
-                let t = (since_prev.as_secs_f64() / span.as_secs_f64()) as f32;
-
-                if t <= 0.0 {
-                    Some(prev.clone())
-                } else if t >= 1.0 {
-                    Some(curr.clone())
-                } else {
-                    Some(interpolate_render_frame(prev, curr, t))
+                for i in 1..self.snapshots.len() {
+                    let (curr_at, curr) = &self.snapshots[i];
+                    if render_time > *curr_at {
+                        continue;
+                    }
+                    let (prev_at, prev) = &self.snapshots[i - 1];
+                    let span = curr_at.saturating_duration_since(*prev_at);
+                    if span.is_zero() {
+                        return Some(curr.clone());
+                    }
+                    let since_prev = render_time.saturating_duration_since(*prev_at);
+                    let t = (since_prev.as_secs_f64() / span.as_secs_f64()) as f32;
+                    return Some(interpolate_render_frame(prev, curr, t));
                 }
+
+                // 到達しないはずだが安全側で最新を返す
+                Some(self.snapshots.back().unwrap().1.clone())
             }
         }
     }
@@ -520,7 +512,7 @@ mod tests {
         interp.push(player_at(0.0, 0.0), t0);
         interp.push(player_at(2.0, 0.0), t0 + Duration::from_millis(50));
 
-        // render_time = now - 100ms = t0 + 25ms → t = 25/50 = 0.5
+        // render_time = now - 100ms = t0 + 25ms → 区間 [0,50] で t = 0.5
         let now = t0 + Duration::from_millis(125);
         let frame = interp.sample(now).expect("frame");
         match &frame.commands[0] {
@@ -529,6 +521,28 @@ mod tests {
                 assert!(y.abs() < 1e-4);
             }
             other => panic!("unexpected command: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn snapshot_interpolator_steady_state_with_delay_two_intervals() {
+        // 遅延 = 2×interval でも、3 枚以上あれば render_time が履歴内に入り補間できる。
+        let mut interp = SnapshotInterpolator::with_delay(Duration::from_millis(100));
+        let t0 = Instant::now();
+        interp.push(player_at(0.0, 0.0), t0);
+        interp.push(player_at(2.0, 0.0), t0 + Duration::from_millis(50));
+        interp.push(player_at(4.0, 0.0), t0 + Duration::from_millis(100));
+
+        // now = t0+100 直後相当 → render_time = t0、oldest
+        // now = t0+125 → render_time = t0+25 → [0,50] の中点 x=1
+        let frame = interp
+            .sample(t0 + Duration::from_millis(125))
+            .expect("frame");
+        match &frame.commands[0] {
+            DrawCommand::PlayerSprite { x, .. } => {
+                assert!((*x - 1.0).abs() < 1e-3, "x={x} (must interpolate, not stick to prev)");
+            }
+            other => panic!("unexpected: {other:?}"),
         }
     }
 
