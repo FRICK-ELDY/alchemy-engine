@@ -281,12 +281,8 @@ defmodule Network.UDP do
     {ip, port} = client
     :gen_udp.send(state.socket, ip, port, pong)
 
-    # 登録済みクライアントの PING はハートビートとして last_seen を延長する
-    if Map.has_key?(state.sessions, client) do
-      touch_session(state, client)
-    else
-      state
-    end
+    # 登録済みならハートビートとして last_seen を延長（未登録は touch_session が no-op）
+    touch_session(state, client)
   end
 
   defp handle_packet(packet, client, state) do
@@ -357,12 +353,12 @@ defmodule Network.UDP do
   end
 
   defp touch_session(state, client) do
-    case Map.get(state.sessions, client) do
-      nil ->
-        state
-
-      session ->
+    case state.sessions do
+      %{^client => session} ->
         %{state | sessions: Map.put(state.sessions, client, %{session | last_seen_ms: now_ms()})}
+
+      _ ->
+        state
     end
   end
 
