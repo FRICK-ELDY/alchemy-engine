@@ -6,6 +6,12 @@ defmodule Core.StressMonitorTest do
     Core.FrameCache.delete(:main)
     Core.FrameCache.delete("other")
 
+    if pid = Process.whereis(Core.StressMonitor) do
+      # 空き FrameCache で sample すると rooms が prune され、テスト間の状態汚染を防ぐ
+      send(pid, :sample)
+      _ = :sys.get_state(pid)
+    end
+
     on_exit(fn ->
       Core.FrameCache.delete(:main)
       Core.FrameCache.delete("other")
@@ -44,4 +50,20 @@ defmodule Core.StressMonitorTest do
     # other の peak が :main のログ用 peak を汚染していない
     refute stats.peak_enemies == 100
   end
+
+  test "physics_ms が整数でも Float.round でクラッシュしない" do
+    pid = Process.whereis(Core.StressMonitor)
+    assert is_pid(pid)
+
+    hud = {100.0, 100.0, 0, 0.0}
+    assert :ok = Core.FrameCache.put(:main, 1, 0, 3, hud)
+
+    send(pid, :sample)
+    _ = :sys.get_state(pid)
+    stats = Core.StressMonitor.get_stats()
+
+    assert stats.rooms[:main].peak_physics_ms == 3.0
+    assert is_float(stats.rooms[:main].peak_physics_ms)
+  end
 end
+

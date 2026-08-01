@@ -63,7 +63,8 @@ defmodule Core.StressMonitor do
     content_module = Core.Config.current()
     wave = content_module.wave_label(elapsed_s)
     frame_budget_ms = Core.Config.tick_ms() * 1.0
-    overrun? = physics_ms > frame_budget_ms
+    physics_ms_f = physics_ms * 1.0
+    overrun? = physics_ms_f > frame_budget_ms
 
     room_stats = Map.get(state.rooms, room_id, empty_room_stats())
 
@@ -71,7 +72,7 @@ defmodule Core.StressMonitor do
       room_stats
       | samples: room_stats.samples + 1,
         peak_enemies: max(room_stats.peak_enemies, enemy_count),
-        peak_physics_ms: Float.round(max(room_stats.peak_physics_ms, physics_ms), 2),
+        peak_physics_ms: Float.round(max(room_stats.peak_physics_ms, physics_ms_f), 2),
         overrun_count: room_stats.overrun_count + if(overrun?, do: 1, else: 0),
         last_enemy_count: enemy_count
     }
@@ -83,7 +84,7 @@ defmodule Core.StressMonitor do
       "[STRESS] room=#{inspect(room_id)} #{wave} | " <>
         "enemies=#{enemy_count}/#{new_room_stats.peak_enemies} " <>
         "bullets=#{bullet_count} score=#{score} HP=#{hp_pct}% " <>
-        "physics=#{Float.round(physics_ms, 2)}ms " <>
+        "physics=#{Float.round(physics_ms_f, 2)}ms " <>
         "overruns=#{new_room_stats.overrun_count}/#{new_room_stats.samples}"
     )
 
