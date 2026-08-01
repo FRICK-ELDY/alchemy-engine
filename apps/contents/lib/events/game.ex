@@ -43,11 +43,8 @@ defmodule Contents.Events.Game do
       init_component(component, world_ref)
     end)
 
-    # FrameCache は名前付き ETS 1 本（フェーズ 5 でルーム対応予定）。二重 init を避ける。
-    if room_id == :main do
-      Core.FrameCache.init()
-    end
-
+    # FrameCache は名前付き ETS 1 本（ルーム別キー化はフェーズ 5）。init は冪等。
+    Core.FrameCache.init()
     schedule_elixir_frame_tick()
 
     start_ms = now_ms()
@@ -316,30 +313,15 @@ defmodule Contents.Events.Game do
       )
     end
 
-    throttled? =
-      case Process.info(self(), :message_queue_len) do
-        {:message_queue_len, depth} ->
-          if depth > backpressure_threshold() do
-            :telemetry.execute([:game, :frame_dropped], %{depth: depth}, %{room_id: state.room_id})
-
-            true
-          else
-            false
-          end
-
-        _ ->
-          false
-      end
-
     # last_tick / frame_count は handle_frame_events の末尾で常に更新される
-    handle_frame_events(events, state, throttled?)
+    handle_frame_events(events, state, mailbox_throttled?(state.room_id))
   end
 
   # 全ルームのローカル駆動（ゲーム用 NIF ループの代替）
   def handle_info(:elixir_frame_tick, state) do
     schedule_elixir_frame_tick()
 
-    case handle_frame_events([], state, false) do
+    case handle_frame_events([], state, mailbox_throttled?(state.room_id)) do
       {:noreply, new_state} -> {:noreply, new_state}
     end
   end
@@ -349,6 +331,21 @@ defmodule Contents.Events.Game do
   # 権威 tick × 約 2 秒分のバッファ。超えたらフレームをドロップして追いつく。
   # マウス / VR ポーズ等の高頻度入力も同一メールボックスに来るため、下限 120 で誤判定を防ぐ。
   defp backpressure_threshold, do: max(Core.Config.tick_hz() * 2, 120)
+
+  defp mailbox_throttled?(room_id) do
+    case Process.info(self(), :message_queue_len) do
+      {:message_queue_len, depth} ->
+        if depth > backpressure_threshold() do
+          :telemetry.execute([:game, :frame_dropped], %{depth: depth}, %{room_id: room_id})
+          true
+        else
+          false
+        end
+
+      _ ->
+        false
+    end
+  end
 
   # throttled?: true のとき、ゲーム整合性に影響するイベント処理（スコア・HP 等）は
   # 維持しつつ、Zenoh フレーム publish・診断キャッシュ等の重い副作用をスキップして追いつく。

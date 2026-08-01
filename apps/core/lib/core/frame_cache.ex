@@ -1,12 +1,25 @@
 defmodule Core.FrameCache do
   @moduledoc """
   フレームごとのゲーム状態を ETS に書き込む。
+
+  現状はプロセス全体で 1 スロット（`{:snapshot, data}`）。
+  ルーム別キー化はフェーズ 5（FrameCache のルーム対応）で行う。
   """
 
   @table :frame_cache
 
+  @doc """
+  名前付き ETS テーブルを用意する。既に存在する場合は何もしない（冪等）。
+  """
   def init do
-    :ets.new(@table, [:named_table, :public, :set, read_concurrency: true])
+    case :ets.whereis(@table) do
+      :undefined ->
+        :ets.new(@table, [:named_table, :public, :set, read_concurrency: true])
+        :ok
+
+      _tid ->
+        :ok
+    end
   end
 
   def put(
