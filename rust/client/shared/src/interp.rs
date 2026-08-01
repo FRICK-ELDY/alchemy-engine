@@ -22,8 +22,15 @@ const DELAY_EMA_ALPHA: f64 = 0.1;
 
 /// 保持するスナップショット上限。
 /// 遅延 ≈ 2×interval のため、直近 2 枚だけでは `render_time` が履歴より過去になり補間できない。
-/// 10Hz・遅延 250ms でも余裕を持たせる。
-const MAX_SNAPSHOTS: usize = 8;
+/// バースト到着時の押し出しにも余裕を持たせる。
+const MAX_SNAPSHOTS: usize = 16;
+
+/// これ未満の受信間隔はバーストとみなし、間隔 EMA を更新しない。
+const BURST_RECV_GAP: Duration = Duration::from_millis(5);
+
+/// 観測 tick 間隔の下限 / 上限（10〜60Hz 相当）。
+const INTERVAL_MIN: Duration = Duration::from_millis(16);
+const INTERVAL_MAX: Duration = Duration::from_millis(120);
 
 /// 同一バリアント内で「同じエンティティ」とみなす最大移動距離。
 /// bullet_hell の弾速 7.0 × 欠落込み ~0.3s ≈ 2.1 に余裕を持たせた値。
@@ -266,7 +273,33 @@ fn dist_sq(a: [f32; 3], b: [f32; 3]) -> f32 {
     dx * dx + dy * dy + dz * dz
 }
 
-/// 同一バリアント・未使用のうち、距離が閾値以内で最も近い prev コマンドを探す。
+/// 補間ペアとして互換か（バリアント + kind / UV 等の識別子）。
+fn is_compatible_command(a: &DrawCommand, b: &DrawCommand) -> bool {
+    match (a, b) {
+        (DrawCommand::Item { kind: ak, .. }, DrawCommand::Item { kind: bk, .. }) => ak == bk,
+        (DrawCommand::Obstacle { kind: ak, .. }, DrawCommand::Obstacle { kind: bk, .. }) => {
+            ak == bk
+        }
+        (
+            DrawCommand::SpriteRaw {
+                uv_offset: ao,
+                uv_size: asz,
+                ..
+            },
+            DrawCommand::SpriteRaw {
+                uv_offset: bo,
+                uv_size: bsz,
+                ..
+            },
+        ) => ao == bo && asz == bsz,
+        _ => std::mem::discriminant(a) == std::mem::discriminant(b),
+    }
+}
+
+/// 互換・未使用のうち、距離が閾値以内で最も近い prev コマンドを探す。
+///
+/// 現状は線形走査 O(N×M)。オブジェクト数が数百〜数千規模になったら
+/// 種別ごとのバケットや空間分割での絞り込みを検討する。
 fn find_nearest_prev(
     prev_commands: &[DrawCommand],
     curr_cmd: &DrawCommand,
@@ -275,11 +308,10 @@ fn find_nearest_prev(
 ) -> Option<usize> {
     let curr_pos = command_position(curr_cmd)?;
     let max_dist_sq = max_dist * max_dist;
-    let curr_kind = std::mem::discriminant(curr_cmd);
 
     let mut best: Option<(usize, f32)> = None;
     for (i, prev_cmd) in prev_commands.iter().enumerate() {
-        if used[i] || std::mem::discriminant(prev_cmd) != curr_kind {
+        if used[i] || !is_compatible_command(prev_cmd, curr_cmd) {
             continue;
         }
         let Some(prev_pos) = command_position(prev_cmd) else {
@@ -303,8 +335,8 @@ fn find_nearest_prev(
 /// `prev` → `curr` を `t` (0.0..=1.0) で補間した描画フレームを返す。
 ///
 /// 位置コマンドは **インデックスではなく近傍マッチ**で突き合わせる。
-/// 弾・敵のスポーン／デスポーンでコマンド列がずれても、別個体同士を補間して
-/// 瞬間移動に見せないため。マッチ不能（新規スポーン・Particle 等）は `curr` をそのまま採用。
+/// マッチ不能な新規スポーンは `t < 1.0` の間は描画せず、フライング出現を防ぐ。
+/// 非位置コマンド（Skybox 等）と Particle は `curr` を採用。
 /// UI / mesh / cursor / audio は最新（`curr`）を採用する。
 pub fn interpolate_render_frame(prev: &RenderFrame, curr: &RenderFrame, t: f32) -> RenderFrame {
     let t = t.clamp(0.0, 1.0);
@@ -319,16 +351,17 @@ pub fn interpolate_render_frame(prev: &RenderFrame, curr: &RenderFrame, t: f32) 
     let commands = curr
         .commands
         .iter()
-        .map(|curr_cmd| {
+        .filter_map(|curr_cmd| {
             if command_position(curr_cmd).is_none() {
-                return curr_cmd.clone();
+                return Some(curr_cmd.clone());
             }
             match find_nearest_prev(&prev.commands, curr_cmd, &used, MAX_MATCH_DISTANCE) {
                 Some(i) => {
                     used[i] = true;
-                    lerp_draw_command(&prev.commands[i], curr_cmd, t)
+                    Some(lerp_draw_command(&prev.commands[i], curr_cmd, t))
                 }
-                None => curr_cmd.clone(),
+                // t < 1.0 の間は新規スポーンを出さず、curr 到達まで待つ
+                None => None,
             }
         })
         .collect();
@@ -344,9 +377,16 @@ pub fn interpolate_render_frame(prev: &RenderFrame, curr: &RenderFrame, t: f32) 
     }
 }
 
-/// 受信時刻付きスナップショットをキュー保持し、表示時刻で補間する。
+/// 再生タイムライン上のスナップショットをキュー保持し、表示時刻で補間する。
+///
+/// キューの時刻は受信 `Instant` そのものではなく、推定 tick 間隔で進める再生時刻。
+/// ジッター／バーストで到着間隔が歪んでも補間速度が暴れにくい。
+/// 本命は RenderFrame へのサーバー tick／生成時刻付与（要プロトコル拡張）。
 pub struct SnapshotInterpolator {
+    /// `(playback_at, frame)` — playback_at は再生タイムライン上の時刻
     snapshots: VecDeque<(Instant, RenderFrame)>,
+    last_received_at: Option<Instant>,
+    estimated_interval: Duration,
     pending_audio: Vec<String>,
     delay: Duration,
 }
@@ -363,8 +403,11 @@ impl SnapshotInterpolator {
     }
 
     pub fn with_delay(delay: Duration) -> Self {
+        let estimated_interval = (delay / 2).clamp(INTERVAL_MIN, INTERVAL_MAX);
         Self {
             snapshots: VecDeque::new(),
+            last_received_at: None,
+            estimated_interval,
             pending_audio: Vec::new(),
             delay,
         }
@@ -375,36 +418,51 @@ impl SnapshotInterpolator {
         self.delay
     }
 
+    fn ema_duration(current: Duration, sample: Duration) -> Duration {
+        let current_ms = current.as_secs_f64() * 1000.0;
+        let sample_ms = sample.as_secs_f64() * 1000.0;
+        let next_ms = current_ms * (1.0 - DELAY_EMA_ALPHA) + sample_ms * DELAY_EMA_ALPHA;
+        Duration::from_secs_f64((next_ms / 1000.0).max(0.0))
+    }
+
     /// 新しい権威スナップショットを取り込む。`audio_cues` は pending に移し、再再生を防ぐ。
-    /// 受信間隔×2 を目標遅延とし、EMA で緩やかに追従する（ジッターによる render_time 跳ねを抑制）。
     ///
-    /// `received_at` はフレーム権威順で単調非減少であること。最新より古い時刻の
-    /// push は破棄する（補間の時間逆行・SE 重複を防ぐ）。到着時刻だけのスタンプでは
-    /// ペイロードのアウトオブオーダーは検知できない点に注意。
+    /// 受信間隔から推定 tick を EMA 更新し、キューには `last_playback + estimated_interval`
+    /// でスタンプする（バースト時も等間隔に載せる）。描画遅延は推定間隔×2 へ追従。
+    ///
+    /// `received_at` は受信順で単調非減少であること。最新より古い受信時刻の push は破棄する。
+    /// ペイロード内容のアウトオブオーダー検知にはサーバー tick が必要。
     pub fn push(&mut self, mut frame: RenderFrame, received_at: Instant) {
-        if let Some((curr_at, _)) = self.snapshots.back() {
-            if received_at < *curr_at {
+        if let Some(last_recv) = self.last_received_at {
+            if received_at < last_recv {
                 // 順序逆転した古いフレームは無視する
                 return;
             }
-            let interval = received_at.saturating_duration_since(*curr_at);
-            if !interval.is_zero() {
-                let target = interval
+            let recv_gap = received_at.saturating_duration_since(last_recv);
+            if recv_gap >= BURST_RECV_GAP {
+                let sample = recv_gap.clamp(INTERVAL_MIN, INTERVAL_MAX);
+                self.estimated_interval = Self::ema_duration(self.estimated_interval, sample)
+                    .clamp(INTERVAL_MIN, INTERVAL_MAX);
+                let target_delay = self
+                    .estimated_interval
                     .saturating_mul(2)
                     .clamp(INTERP_DELAY_MIN, INTERP_DELAY_MAX);
-                let current_ms = self.delay.as_secs_f64() * 1000.0;
-                let target_ms = target.as_secs_f64() * 1000.0;
-                let next_ms =
-                    current_ms * (1.0 - DELAY_EMA_ALPHA) + target_ms * DELAY_EMA_ALPHA;
-                self.delay = Duration::from_secs_f64((next_ms / 1000.0).max(0.0))
+                self.delay = Self::ema_duration(self.delay, target_delay)
                     .clamp(INTERP_DELAY_MIN, INTERP_DELAY_MAX);
             }
         }
+
+        let playback_at = match self.snapshots.back() {
+            None => received_at,
+            Some((last_play, _)) => *last_play + self.estimated_interval,
+        };
+
         let cues = std::mem::take(&mut frame.audio_cues);
         if !cues.is_empty() {
             self.pending_audio.extend(cues);
         }
-        self.snapshots.push_back((received_at, frame));
+        self.last_received_at = Some(received_at);
+        self.snapshots.push_back((playback_at, frame));
         while self.snapshots.len() > MAX_SNAPSHOTS {
             self.snapshots.pop_front();
         }
@@ -417,8 +475,7 @@ impl SnapshotInterpolator {
 
     /// `now` 時点の表示用フレームを返す。スナップショットが無い場合は `None`。
     ///
-    /// `render_time = now - delay` を挟む 2 枚をキューから選び補間する。
-    /// 遅延 ≈ 2×interval のため、履歴は 3 枚以上あることが望ましい。
+    /// `render_time = now - delay` を挟む 2 枚を再生タイムライン上から選び補間する。
     pub fn sample(&self, now: Instant) -> Option<RenderFrame> {
         let render_time = now.checked_sub(self.delay).unwrap_or(now);
 
@@ -624,23 +681,48 @@ mod tests {
     }
 
     #[test]
-    fn interpolate_snaps_new_spawn_without_far_match() {
+    fn interpolate_hides_unmatched_spawn_until_curr() {
         let prev = RenderFrame {
             commands: vec![sphere_at(0.0, 0.0)],
             ..Default::default()
         };
-        // 距離 10 > MAX_MATCH_DISTANCE → 新規スポーン扱い、補間せず curr
+        // 距離 10 > MAX_MATCH_DISTANCE → 新規スポーン。t < 1 では非表示
         let curr = RenderFrame {
             commands: vec![sphere_at(10.0, 0.0)],
             ..Default::default()
         };
         let mid = interpolate_render_frame(&prev, &curr, 0.5);
-        match &mid.commands[0] {
-            DrawCommand::Sphere3D { x, .. } => {
-                assert!((*x - 10.0).abs() < 1e-5, "x={x}");
-            }
-            other => panic!("unexpected: {other:?}"),
-        }
+        assert!(
+            mid.commands.is_empty(),
+            "unmatched spawn must be hidden while t < 1"
+        );
+        let at_curr = interpolate_render_frame(&prev, &curr, 1.0);
+        assert_eq!(at_curr.commands.len(), 1);
+    }
+
+    #[test]
+    fn interpolate_does_not_match_different_item_kinds() {
+        let prev = RenderFrame {
+            commands: vec![DrawCommand::Item {
+                x: 0.0,
+                y: 0.0,
+                kind: 1,
+            }],
+            ..Default::default()
+        };
+        let curr = RenderFrame {
+            commands: vec![DrawCommand::Item {
+                x: 0.5,
+                y: 0.0,
+                kind: 2,
+            }],
+            ..Default::default()
+        };
+        let mid = interpolate_render_frame(&prev, &curr, 0.5);
+        assert!(
+            mid.commands.is_empty(),
+            "different Item kind must not lerp into each other"
+        );
     }
 
     #[test]
@@ -648,20 +730,42 @@ mod tests {
         let mut interp = SnapshotInterpolator::with_delay(Duration::from_millis(100));
         let t0 = Instant::now();
         interp.push(player_at(0.0, 0.0), t0);
-        // 10Hz 相当: 目標 200ms。1 ステップでは EMA により中間値へ（100*0.9 + 200*0.1 = 110）
+        // est: 50→55, target_delay: 110, delay: 100*0.9+110*0.1 = 101
         interp.push(player_at(1.0, 0.0), t0 + Duration::from_millis(100));
         let ms = interp.delay().as_secs_f64() * 1000.0;
-        assert!((ms - 110.0).abs() < 1.0, "delay_ms={ms}");
+        assert!((ms - 101.0).abs() < 1.0, "delay_ms={ms}");
 
-        // 同間隔を続けても急変せず、目標へ近づく
+        // 同間隔を続けても急変せず、目標（≈200ms）へ近づく
         let mut t = t0 + Duration::from_millis(100);
-        for _ in 0..30 {
+        for _ in 0..40 {
             t += Duration::from_millis(100);
             interp.push(player_at(1.0, 0.0), t);
         }
         let settled = interp.delay().as_secs_f64() * 1000.0;
         assert!(settled > 180.0, "settled_ms={settled}");
         assert!(settled <= 250.0, "settled_ms={settled}");
+    }
+
+    #[test]
+    fn snapshot_burst_arrival_still_spaces_playback_timeline() {
+        let mut interp = SnapshotInterpolator::with_delay(Duration::from_millis(100));
+        let t0 = Instant::now();
+        // バースト: 受信時刻はほぼ同時でも再生時刻は estimated_interval で等間隔
+        interp.push(player_at(0.0, 0.0), t0);
+        interp.push(player_at(2.0, 0.0), t0 + Duration::from_millis(1));
+        interp.push(player_at(4.0, 0.0), t0 + Duration::from_millis(2));
+
+        // est=50ms のまま → playback t0, t0+50, t0+100
+        // now=t0+125, delay=100 → render_time=t0+25 → x=1
+        let frame = interp
+            .sample(t0 + Duration::from_millis(125))
+            .expect("frame");
+        match &frame.commands[0] {
+            DrawCommand::PlayerSprite { x, .. } => {
+                assert!((*x - 1.0).abs() < 1e-3, "x={x}");
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
     }
 
     #[test]
