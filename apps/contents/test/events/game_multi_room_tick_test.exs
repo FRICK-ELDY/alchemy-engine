@@ -34,7 +34,10 @@ defmodule Contents.Events.GameMultiRoomTickTest do
   defp ensure_room_registry! do
     case Process.whereis(Core.RoomRegistry) do
       nil ->
-        {:ok, _} = Registry.start_link(keys: :unique, name: Core.RoomRegistry)
+        case Registry.start_link(keys: :unique, name: Core.RoomRegistry) do
+          {:ok, _pid} -> :ok
+          {:error, {:already_started, _pid}} -> :ok
+        end
 
       _pid ->
         :ok

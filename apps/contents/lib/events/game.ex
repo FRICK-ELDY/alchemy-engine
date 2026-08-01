@@ -43,7 +43,7 @@ defmodule Contents.Events.Game do
       init_component(component, world_ref)
     end)
 
-    # FrameCache は名前付き ETS 1 本（ルーム別キー化はフェーズ 5）。init は冪等。
+    # FrameCache はルーム別キーの共有 ETS。init は冪等（競合時も安全）。
     Core.FrameCache.init()
     schedule_elixir_frame_tick()
 
@@ -64,12 +64,15 @@ defmodule Contents.Events.Game do
   end
 
   @impl true
-  def terminate(_reason, %{room_id: :main}) do
-    Core.RoomRegistry.unregister(:main)
+  def terminate(_reason, %{room_id: room_id}) do
+    Core.FrameCache.delete(room_id)
+
+    if room_id == :main do
+      Core.RoomRegistry.unregister(:main)
+    end
+
     :ok
   end
-
-  def terminate(_reason, _state), do: :ok
 
   defp init_component(component, world_ref) do
     Code.ensure_loaded(component)
@@ -320,10 +323,7 @@ defmodule Contents.Events.Game do
   # 全ルームのローカル駆動（ゲーム用 NIF ループの代替）
   def handle_info(:elixir_frame_tick, state) do
     schedule_elixir_frame_tick()
-
-    case handle_frame_events([], state, mailbox_throttled?(state.room_id)) do
-      {:noreply, new_state} -> {:noreply, new_state}
-    end
+    handle_frame_events([], state, mailbox_throttled?(state.room_id))
   end
 
   # ── メインフレームループ ──────────────────────────────────────────

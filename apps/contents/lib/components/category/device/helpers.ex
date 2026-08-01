@@ -16,7 +16,8 @@ defmodule Contents.Components.Category.Device.Helpers do
   end
 
   @spec with_scene_type(term(), atom(), (map() -> map())) :: :ok
-  def with_scene_type(room_id, scene_type, fun) when is_function(fun, 1) do
+  def with_scene_type(room_id, scene_type, fun)
+      when is_atom(scene_type) and is_function(fun, 1) do
     content = Core.Config.current()
     runner = content.flow_runner(room_id)
 
