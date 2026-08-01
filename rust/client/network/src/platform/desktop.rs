@@ -269,11 +269,15 @@ impl ClientSession {
             state.session.take()
         };
         if let Some(session) = session_to_close {
-            let _ = thread::Builder::new()
+            if let Err(e) = thread::Builder::new()
                 .name("zenoh-session-close".into())
                 .spawn(move || {
                     let _ = session.close().wait();
-                });
+                })
+            {
+                // spawn 失敗時は closure ごと drop され、Session::Drop で閉じる想定。
+                log::error!("[zenoh] failed to spawn session close thread: {e}");
+            }
         }
         Err("session closed".to_string())
     }
