@@ -65,5 +65,28 @@ defmodule Core.StressMonitorTest do
     assert stats.rooms[:main].peak_physics_ms == 3.0
     assert is_float(stats.rooms[:main].peak_physics_ms)
   end
+
+  test "physics_ms が nil でもクラッシュせず 0.0 として扱う" do
+    pid = Process.whereis(Core.StressMonitor)
+    assert is_pid(pid)
+
+    # put/7 経由では nil を入れにくいので ETS に直接不完全エントリを書く
+    true =
+      :ets.insert(:frame_cache, {
+        :main,
+        %{
+          enemy_count: 0,
+          bullet_count: 0,
+          physics_ms: nil,
+          hud_data: {100.0, 100.0, 0, 0.0}
+        }
+      })
+
+    send(pid, :sample)
+    _ = :sys.get_state(pid)
+    stats = Core.StressMonitor.get_stats()
+
+    assert stats.rooms[:main].peak_physics_ms == 0.0
+  end
 end
 

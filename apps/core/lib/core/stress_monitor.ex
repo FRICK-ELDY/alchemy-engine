@@ -63,7 +63,7 @@ defmodule Core.StressMonitor do
     content_module = Core.Config.current()
     wave = content_module.wave_label(elapsed_s)
     frame_budget_ms = Core.Config.tick_ms() * 1.0
-    physics_ms_f = physics_ms * 1.0
+    physics_ms_f = physics_ms_to_float(physics_ms)
     overrun? = physics_ms_f > frame_budget_ms
 
     room_stats = Map.get(state.rooms, room_id, empty_room_stats())
@@ -92,6 +92,9 @@ defmodule Core.StressMonitor do
   end
 
   defp sample_room(_entry, state), do: state
+
+  defp physics_ms_to_float(n) when is_number(n), do: n * 1.0
+  defp physics_ms_to_float(_), do: 0.0
 
   defp prune_inactive_rooms(state, active_ids) do
     rooms =
