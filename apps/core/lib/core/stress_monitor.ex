@@ -3,6 +3,9 @@ defmodule Core.StressMonitor do
   独立したパフォーマンス監視プロセス。
   クラッシュしてもゲームは継続する（one_for_one 戦略）。
 
+  `Core.FrameCache` の汎用スナップショット（`:physics_ms` / `:label` / `:counters` / `:meta`）
+  のみを参照する。コンテンツモジュールや wave / enemy 等の語彙には依存しない。
+
   統計はルーム別に `state.rooms` へ保持する。
   後方互換のため、`:main` ルームの統計をトップレベルにもミラーする。
   """
@@ -37,7 +40,7 @@ defmodule Core.StressMonitor do
   end
 
   defp empty_room_stats do
-    %{samples: 0, peak_enemies: 0, peak_physics_ms: 0.0, overrun_count: 0, last_enemy_count: 0}
+    %{samples: 0, peak_physics_ms: 0.0, overrun_count: 0, peak_counters: %{}, last_counters: %{}}
   end
 
   defp sample_and_log(state) do
@@ -50,48 +53,82 @@ defmodule Core.StressMonitor do
     |> mirror_main_stats()
   end
 
-  defp sample_room(
-         {room_id,
-          %{
-            enemy_count: enemy_count,
-            bullet_count: bullet_count,
-            physics_ms: physics_ms,
-            hud_data: {hp, max_hp, score, elapsed_s}
-          }},
-         state
-       ) do
-    content_module = Core.Config.current()
-    wave = content_module.wave_label(elapsed_s)
-    frame_budget_ms = Core.Config.tick_ms() * 1.0
-    physics_ms_f = physics_ms_to_float(physics_ms)
-    overrun? = physics_ms_f > frame_budget_ms
+  defp sample_room({room_id, snapshot}, state) when is_map(snapshot) do
+    case Map.fetch(snapshot, :physics_ms) do
+      :error ->
+        state
 
-    room_stats = Map.get(state.rooms, room_id, empty_room_stats())
+      {:ok, physics_ms} ->
+        label = Map.get(snapshot, :label, "")
+        counters = normalize_counters(Map.get(snapshot, :counters, %{}))
+        meta = Map.get(snapshot, :meta, %{})
+        frame_budget_ms = Core.Config.tick_ms() * 1.0
+        physics_ms_f = physics_ms_to_float(physics_ms)
+        overrun? = physics_ms_f > frame_budget_ms
 
-    new_room_stats = %{
-      room_stats
-      | samples: room_stats.samples + 1,
-        peak_enemies: max(room_stats.peak_enemies, enemy_count),
-        peak_physics_ms: Float.round(max(room_stats.peak_physics_ms, physics_ms_f), 2),
-        overrun_count: room_stats.overrun_count + if(overrun?, do: 1, else: 0),
-        last_enemy_count: enemy_count
-    }
+        room_stats = Map.get(state.rooms, room_id, empty_room_stats())
 
-    hp_pct = if max_hp > 0, do: Float.round(hp / max_hp * 100, 1), else: 0.0
-    log_fn = if overrun?, do: &Logger.warning/1, else: &Logger.info/1
+        new_room_stats = %{
+          room_stats
+          | samples: room_stats.samples + 1,
+            peak_physics_ms: Float.round(max(room_stats.peak_physics_ms, physics_ms_f), 2),
+            overrun_count: room_stats.overrun_count + if(overrun?, do: 1, else: 0),
+            peak_counters: merge_peak_counters(room_stats.peak_counters, counters),
+            last_counters: counters
+        }
 
-    log_fn.(
-      "[STRESS] room=#{inspect(room_id)} #{wave} | " <>
-        "enemies=#{enemy_count}/#{new_room_stats.peak_enemies} " <>
-        "bullets=#{bullet_count} score=#{score} HP=#{hp_pct}% " <>
-        "physics=#{Float.round(physics_ms_f, 2)}ms " <>
-        "overruns=#{new_room_stats.overrun_count}/#{new_room_stats.samples}"
-    )
+        log_fn = if overrun?, do: &Logger.warning/1, else: &Logger.info/1
 
-    %{state | rooms: Map.put(state.rooms, room_id, new_room_stats)}
+        log_fn.(
+          "[STRESS] room=#{inspect(room_id)}" <>
+            label_part(label) <>
+            " | " <>
+            counters_part(counters, new_room_stats.peak_counters) <>
+            meta_part(meta) <>
+            "physics=#{Float.round(physics_ms_f, 2)}ms " <>
+            "overruns=#{new_room_stats.overrun_count}/#{new_room_stats.samples}"
+        )
+
+        %{state | rooms: Map.put(state.rooms, room_id, new_room_stats)}
+    end
   end
 
   defp sample_room(_entry, state), do: state
+
+  defp normalize_counters(counters) when is_map(counters), do: counters
+  defp normalize_counters(_), do: %{}
+
+  defp merge_peak_counters(peaks, counters) do
+    Enum.reduce(counters, peaks, fn {key, value}, acc ->
+      if is_number(value) do
+        Map.update(acc, key, value, &max(&1, value))
+      else
+        acc
+      end
+    end)
+  end
+
+  defp label_part(""), do: ""
+  defp label_part(label) when is_binary(label), do: " #{label}"
+  defp label_part(label), do: " #{inspect(label)}"
+
+  defp counters_part(counters, _peaks) when map_size(counters) == 0, do: ""
+
+  defp counters_part(counters, peaks) do
+    Enum.map_join(counters, " ", fn {key, value} ->
+      peak = Map.get(peaks, key, value)
+      "#{key}=#{value}/#{peak}"
+    end) <> " "
+  end
+
+  defp meta_part(meta) when not is_map(meta) or map_size(meta) == 0, do: ""
+
+  defp meta_part(meta) do
+    Enum.map_join(meta, " ", fn {key, value} -> "#{key}=#{format_meta_value(value)}" end) <> " "
+  end
+
+  defp format_meta_value(v) when is_float(v), do: Float.round(v, 1)
+  defp format_meta_value(v), do: v
 
   defp physics_ms_to_float(n) when is_number(n), do: n * 1.0
   defp physics_ms_to_float(_), do: 0.0

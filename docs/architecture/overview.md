@@ -226,7 +226,7 @@ graph LR
     GE --> COMP
 ```
 
-**第一級コンテンツ（現行）**: `Content.CanvasTest`, `Content.BulletHell3D`, `Content.FormulaTest`（`Core.Config` のフォールバック既定は `BulletHell3D`）。
+**第一級コンテンツ（現行）**: `Content.CanvasTest`, `Content.BulletHell3D`, `Content.FormulaTest`（`config :server, :current` で明示。core にフォールバック既定は持たない）。
 
 ---
 

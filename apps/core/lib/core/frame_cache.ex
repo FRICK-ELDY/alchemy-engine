@@ -2,8 +2,9 @@ defmodule Core.FrameCache do
   @moduledoc """
   ルーム別のフレームスナップショットを ETS に書き込む。
 
-  キーは `room_id`。値のスキーマ（enemy_count 等）は監視用途の現状契約で、
-  コンテンツ語彙の分離は別タスクとする。
+  キーは `room_id`。値は診断用の汎用マップで、エンジンが解釈するのは
+  `:physics_ms`（必須）のみ。`:label` / `:counters` / `:meta` 等は contents が
+  注入するメタデータであり、core はコンテンツ語彙を持たない。
 
   ETS テーブルは本 GenServer（アプリ寿命の OTP 子）が所有する。
   ルーム GenServer から `init/0` してはならない（所有プロセス終了で
@@ -49,25 +50,25 @@ defmodule Core.FrameCache do
     end
   end
 
-  def put(
-        room_id,
-        enemy_count,
-        bullet_count,
-        physics_ms,
-        hud_data,
-        render_type \\ :playing,
-        high_scores \\ nil
-      ) do
-    base = %{
-      enemy_count: enemy_count,
-      bullet_count: bullet_count,
-      physics_ms: physics_ms,
-      hud_data: hud_data,
-      render_type: render_type,
-      updated_at: System.monotonic_time(:millisecond)
-    }
+  @doc """
+  ルームの診断スナップショットを書き込む。
 
-    data = if high_scores, do: Map.put(base, :high_scores, high_scores), else: base
+  ## 必須キー
+  - `:physics_ms` — 直近 tick の処理時間（ms）
+
+  ## 任意キー（エンジンは意味を解釈しない）
+  - `:label` — ログ用ラベル（contents が注入）
+  - `:counters` — `%{term => number}` 任意カウンタ
+  - `:meta` — 任意マップ
+  - `:render_type` — シーン種別など
+  - その他のキーはそのまま保持される
+  """
+  def put(room_id, attrs) when is_map(attrs) do
+    unless Map.has_key?(attrs, :physics_ms) do
+      raise ArgumentError, "FrameCache.put/2 requires :physics_ms"
+    end
+
+    data = Map.put(attrs, :updated_at, System.monotonic_time(:millisecond))
     true = :ets.insert(@table, {room_id, data})
     :ok
   end

@@ -45,22 +45,23 @@ defmodule Contents.Events.Game.Diagnostics do
         do: GenServer.call(runner, :render_type),
         else: content.scene_render_type(content.playing_scene())
 
-    hud_data = {player_hp, player_max_hp, score, elapsed_s}
-
-    high_scores = if render_type == :game_over, do: [], else: nil
-
     enemy_count = enemy_count_from_playing_state(playing_state)
     bullet_count = bullet_count_from_playing_state(playing_state)
+    wave = content.wave_label(elapsed_s)
+    hp_pct = if player_max_hp > 0, do: Float.round(player_hp / player_max_hp * 100, 1), else: 0.0
 
-    Core.FrameCache.put(
-      state.room_id,
-      enemy_count,
-      bullet_count,
-      physics_ms,
-      hud_data,
-      render_type,
-      high_scores
-    )
+    snapshot = %{
+      physics_ms: physics_ms,
+      label: wave,
+      render_type: render_type,
+      counters: %{enemies: enemy_count, bullets: bullet_count},
+      meta: %{score: score, hp_pct: hp_pct, elapsed_s: elapsed_s}
+    }
+
+    snapshot =
+      if render_type == :game_over, do: Map.put(snapshot, :high_scores, []), else: snapshot
+
+    Core.FrameCache.put(state.room_id, snapshot)
 
     log_tick(content, elapsed_s, render_type, enemy_count, physics_ms, playing_state)
   end

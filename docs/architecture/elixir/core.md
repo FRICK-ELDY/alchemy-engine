@@ -47,9 +47,11 @@
 ## `config.ex`
 
 ```elixir
-Core.Config.current()     # :server :current または @default_content
+Core.Config.current()     # :server :current（必須。未設定時 raise）
 Core.Config.components()  # current().components()
 ```
+
+コンテンツモジュール名のフォールバックは持たない。`config :server, :current` を明示すること。
 
 ---
 
@@ -68,6 +70,12 @@ Elixir プロセス間のイベント配信。フレームイベントの購読�
 ## `frame_cache.ex`
 
 診断・Telemetry 用スナップショット ETS。`Contents.Events.Game.Diagnostics` が更新。
+スキーマは汎用マップ（必須は `:physics_ms` のみ）。`:label` / `:counters` / `:meta` は contents 注入。
+
+## `stress_monitor.ex` / `stats.ex`
+
+`StressMonitor` は FrameCache の汎用フィールドのみを監視し、`wave_label` 等のコンテンツ API を呼ばない。
+`Stats` は汎用カウンタ（`increment` / `set`、EventBus の `{:stat, _}`）のみを持ち、kills 等の語彙は持たない。
 
 ---
 

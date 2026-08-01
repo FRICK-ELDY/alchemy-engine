@@ -157,7 +157,7 @@ auth にも hex.audit / dialyzer を追加（auth 残 -1 解消）。
 ## フェーズ 5: 整理・負債返済（随時、-10 点強）
 
 - FrameCache のルーム対応 `-2` ✅
-- core → contents 語彙分離の完遂（`Core.Config` の `@default_content`、StressMonitor の wave_label、Core.Stats） `-3 -1`
+- core → contents 語彙分離の完遂（`Core.Config` の `@default_content`、StressMonitor の wave_label、Core.Stats） `-3 -1` ✅
 - 死にコード削除（InputHandler、`features: []`） `-1`
 - contents → network の MFA 注入化（FormulaStore と同型の解決） `-2`
 - 命名統一（Content. / Contents.） `-1`
