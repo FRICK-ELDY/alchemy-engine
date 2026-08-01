@@ -66,7 +66,7 @@ config :server, :map, :plain
 config :server, :game_events_module, Contents.Events.Game
 ```
 
-実際のリポジトリの `config :server, :current` は開発都合で変えてよい。未設定時は `Core.Config` の `@default_content`（`BulletHell3D`）。
+実際のリポジトリの `config :server, :current` は開発都合で変えてよい。未設定時は `Core.Config.current/0` および `Server.Application` が raise する。
 
 ---
 

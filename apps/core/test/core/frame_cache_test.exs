@@ -20,30 +20,35 @@ defmodule Core.FrameCacheTest do
   end
 
   test "put/get は room_id ごとに独立する" do
-    hud = {100.0, 100.0, 0, 0.0}
+    assert :ok =
+             Core.FrameCache.put(:room_a, %{
+               physics_ms: 1.0,
+               counters: %{enemies: 1, bullets: 2}
+             })
 
-    assert :ok = Core.FrameCache.put(:room_a, 1, 2, 1.0, hud)
-    assert :ok = Core.FrameCache.put(:room_b, 3, 4, 2.0, hud)
+    assert :ok =
+             Core.FrameCache.put(:room_b, %{
+               physics_ms: 2.0,
+               counters: %{enemies: 3, bullets: 4}
+             })
 
-    assert {:ok, %{enemy_count: 1, bullet_count: 2, physics_ms: 1.0}} =
+    assert {:ok, %{physics_ms: 1.0, counters: %{enemies: 1, bullets: 2}}} =
              Core.FrameCache.get(:room_a)
 
-    assert {:ok, %{enemy_count: 3, bullet_count: 4, physics_ms: 2.0}} =
+    assert {:ok, %{physics_ms: 2.0, counters: %{enemies: 3, bullets: 4}}} =
              Core.FrameCache.get(:room_b)
   end
 
   test "delete/1 でルームのスナップショットを消せる" do
-    hud = {100.0, 100.0, 0, 0.0}
-    assert :ok = Core.FrameCache.put("room_c", 1, 0, 3.0, hud)
+    assert :ok = Core.FrameCache.put("room_c", %{physics_ms: 3.0, counters: %{enemies: 1}})
     assert {:ok, _} = Core.FrameCache.get("room_c")
     assert :ok = Core.FrameCache.delete("room_c")
     assert :empty = Core.FrameCache.get("room_c")
   end
 
   test "list/0 は全ルームを返す" do
-    hud = {100.0, 100.0, 0, 0.0}
-    assert :ok = Core.FrameCache.put(:room_a, 1, 0, 1.0, hud)
-    assert :ok = Core.FrameCache.put(:room_b, 2, 0, 2.0, hud)
+    assert :ok = Core.FrameCache.put(:room_a, %{physics_ms: 1.0})
+    assert :ok = Core.FrameCache.put(:room_b, %{physics_ms: 2.0})
 
     rooms =
       Core.FrameCache.list()
@@ -51,5 +56,11 @@ defmodule Core.FrameCacheTest do
       |> MapSet.new()
 
     assert MapSet.subset?(MapSet.new([:room_a, :room_b]), rooms)
+  end
+
+  test "put/2 は :physics_ms 必須" do
+    assert_raise ArgumentError, ~r/physics_ms/, fn ->
+      Core.FrameCache.put(:room_a, %{counters: %{enemies: 1}})
+    end
   end
 end

@@ -2,20 +2,20 @@ defmodule Core.Config do
   @moduledoc """
   ゲームエンジンの設定解決ヘルパー。
 
-  `:current` の設定キーを使用する。
+  `:current` の設定キーを使用する（必須。コンテンツモジュール名のフォールバックは持たない）。
   コンテンツモジュールは `components/0` を実装し、
   使用する `Core.Component` モジュールのリストを返す。
 
   権威 tick（主時間）は `:tick_hz`（許容 10 / 20 / 30 / 60、デフォルト 20）。
   """
 
-  @default_content Content.BulletHell3D
   @allowed_tick_hz [10, 20, 30, 60]
   @default_tick_hz 20
 
-  @doc "コンテンツモジュールを返す（`components/0` を実装したモジュール）"
+  @doc "コンテンツモジュールを返す（`components/0` を実装したモジュール）。未設定時は raise。"
   def current do
-    Application.get_env(:server, :current, @default_content)
+    Application.get_env(:server, :current) ||
+      raise "config :server, :current is required"
   end
 
   @doc "コンテンツが提供するコンポーネントモジュールのリストを返す"

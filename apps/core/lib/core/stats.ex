@@ -1,6 +1,10 @@
 defmodule Core.Stats do
   @moduledoc """
   ゲームセッション統計をリアルタイム収集する GenServer。
+
+  コンテンツ固有の語彙（kills / enemy / weapon 等）は持たない。
+  contents は `increment/1`・`increment/2`・`set/2`、または EventBus 経由の
+  `{:stat, key}` / `{:stat, key, n}` / `{:stat_set, key, value}` で記録する。
   """
 
   use GenServer
@@ -8,16 +12,17 @@ defmodule Core.Stats do
 
   def start_link(opts \\ []), do: GenServer.start_link(__MODULE__, opts, name: __MODULE__)
 
-  def record_kill(enemy_kind, weapon_kind) do
-    GenServer.cast(__MODULE__, {:kill, enemy_kind, weapon_kind})
+  @doc "カウンタ `key` を 1 増やす。"
+  def increment(key), do: increment(key, 1)
+
+  @doc "カウンタ `key` を `n` 増やす。"
+  def increment(key, n) when is_number(n) do
+    GenServer.cast(__MODULE__, {:increment, key, n})
   end
 
-  def record_item_pickup(item_kind) do
-    GenServer.cast(__MODULE__, {:item_pickup, item_kind})
-  end
-
-  def record_level_up(level) do
-    GenServer.cast(__MODULE__, {:level_up, level})
+  @doc "値 `key` を `value` に設定する。"
+  def set(key, value) do
+    GenServer.cast(__MODULE__, {:set, key, value})
   end
 
   def new_session do
@@ -38,30 +43,14 @@ defmodule Core.Stats do
   def handle_info({:game_events, events}, state) do
     new_state =
       Enum.reduce(events, state, fn
-        {:enemy_killed, enemy_kind, weapon_kind}, acc ->
-          acc
-          |> Map.update(
-            :kills_by_enemy,
-            %{enemy_kind => 1},
-            &Map.update(&1, enemy_kind, 1, fn n -> n + 1 end)
-          )
-          |> Map.update(
-            :kills_by_weapon,
-            %{weapon_kind => 1},
-            &Map.update(&1, weapon_kind, 1, fn n -> n + 1 end)
-          )
-          |> Map.update(:total_kills, 1, &(&1 + 1))
+        {:stat, key}, acc ->
+          bump(acc, key, 1)
 
-        {:level_up_event, new_level, _}, acc ->
-          Map.put(acc, :max_level_reached, new_level)
+        {:stat, key, n}, acc when is_number(n) ->
+          bump(acc, key, n)
 
-        {:item_pickup, item_kind, _}, acc ->
-          Map.update(
-            acc,
-            :items_collected,
-            %{item_kind => 1},
-            &Map.update(&1, item_kind, 1, fn n -> n + 1 end)
-          )
+        {:stat_set, key, value}, acc ->
+          put_value(acc, key, value)
 
         _, acc ->
           acc
@@ -71,29 +60,10 @@ defmodule Core.Stats do
   end
 
   @impl true
-  def handle_cast({:kill, enemy_kind, weapon_kind}, state) do
-    kills_by_enemy = Map.update(state.kills_by_enemy, enemy_kind, 1, &(&1 + 1))
-    kills_by_weapon = Map.update(state.kills_by_weapon, weapon_kind, 1, &(&1 + 1))
-
-    {:noreply,
-     %{
-       state
-       | kills_by_enemy: kills_by_enemy,
-         kills_by_weapon: kills_by_weapon,
-         total_kills: state.total_kills + 1
-     }}
-  end
+  def handle_cast({:increment, key, n}, state), do: {:noreply, bump(state, key, n)}
 
   @impl true
-  def handle_cast({:item_pickup, item_kind}, state) do
-    items = Map.update(state.items_collected, item_kind, 1, &(&1 + 1))
-    {:noreply, %{state | items_collected: items}}
-  end
-
-  @impl true
-  def handle_cast({:level_up, level}, state) do
-    {:noreply, %{state | max_level_reached: max(state.max_level_reached, level)}}
-  end
+  def handle_cast({:set, key, value}, state), do: {:noreply, put_value(state, key, value)}
 
   @impl true
   def handle_cast(:new_session, _state) do
@@ -107,24 +77,26 @@ defmodule Core.Stats do
 
     summary = %{
       elapsed_seconds: elapsed_s,
-      total_kills: state.total_kills,
-      kills_by_enemy: state.kills_by_enemy,
-      kills_by_weapon: state.kills_by_weapon,
-      items_collected: state.items_collected,
-      max_level_reached: state.max_level_reached
+      counters: state.counters,
+      values: state.values
     }
 
     {:reply, summary, state}
   end
 
+  defp bump(state, key, n) do
+    %{state | counters: Map.update(state.counters, key, n, &(&1 + n))}
+  end
+
+  defp put_value(state, key, value) do
+    %{state | values: Map.put(state.values, key, value)}
+  end
+
   defp initial_state do
     %{
       session_start_ms: System.monotonic_time(:millisecond),
-      total_kills: 0,
-      kills_by_enemy: %{},
-      kills_by_weapon: %{},
-      items_collected: %{},
-      max_level_reached: 1
+      counters: %{},
+      values: %{}
     }
   end
 end

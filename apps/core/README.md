@@ -11,7 +11,7 @@ SSoT（Single Source of Truth）コアエンジン。ゲームは **Core モジ�
 - NifBridge（Rustler）— 現行は Formula 用 `run_formula_bytecode/3` のみ
 - EventBus、FrameCache（ローカル永続化は未実装）
 - Formula 式評価 API
-- RoomSupervisor、StressMonitor、Stats、Telemetry
+- RoomSupervisor、StressMonitor（FrameCache 汎用メタのみ）、Stats（汎用カウンタ）、Telemetry
 
 ## 主要モジュール
 

@@ -24,39 +24,48 @@ defmodule Core.StressMonitorTest do
     pid = Process.whereis(Core.StressMonitor)
     assert is_pid(pid)
 
-    hud_main = {100.0, 100.0, 10, 1.0}
-    hud_other = {80.0, 100.0, 20, 2.0}
+    assert :ok =
+             Core.FrameCache.put(:main, %{
+               physics_ms: 1.0,
+               label: "wave1",
+               counters: %{enemies: 5, bullets: 1},
+               meta: %{score: 10, hp_pct: 100.0}
+             })
 
-    assert :ok = Core.FrameCache.put(:main, 5, 1, 1.0, hud_main)
-    assert :ok = Core.FrameCache.put("other", 100, 2, 2.0, hud_other)
+    assert :ok =
+             Core.FrameCache.put("other", %{
+               physics_ms: 2.0,
+               label: "wave2",
+               counters: %{enemies: 100, bullets: 2},
+               meta: %{score: 20, hp_pct: 80.0}
+             })
 
     send(pid, :sample)
     _ = :sys.get_state(pid)
     stats = Core.StressMonitor.get_stats()
 
-    assert stats.rooms[:main].last_enemy_count == 5
-    assert stats.rooms[:main].peak_enemies == 5
+    assert stats.rooms[:main].last_counters.enemies == 5
+    assert stats.rooms[:main].peak_counters.enemies == 5
     assert stats.rooms[:main].samples == 1
 
-    assert stats.rooms["other"].last_enemy_count == 100
-    assert stats.rooms["other"].peak_enemies == 100
+    assert stats.rooms["other"].last_counters.enemies == 100
+    assert stats.rooms["other"].peak_counters.enemies == 100
     assert stats.rooms["other"].samples == 1
 
     # :main ミラー（後方互換）
-    assert stats.last_enemy_count == 5
-    assert stats.peak_enemies == 5
+    assert stats.last_counters.enemies == 5
+    assert stats.peak_counters.enemies == 5
     assert stats.samples == 1
 
     # other の peak が :main のログ用 peak を汚染していない
-    refute stats.peak_enemies == 100
+    refute stats.peak_counters.enemies == 100
   end
 
   test "physics_ms が整数でも Float.round でクラッシュしない" do
     pid = Process.whereis(Core.StressMonitor)
     assert is_pid(pid)
 
-    hud = {100.0, 100.0, 0, 0.0}
-    assert :ok = Core.FrameCache.put(:main, 1, 0, 3, hud)
+    assert :ok = Core.FrameCache.put(:main, %{physics_ms: 3, counters: %{entities: 1}})
 
     send(pid, :sample)
     _ = :sys.get_state(pid)
@@ -70,15 +79,14 @@ defmodule Core.StressMonitorTest do
     pid = Process.whereis(Core.StressMonitor)
     assert is_pid(pid)
 
-    # put/7 経由では nil を入れにくいので ETS に直接不完全エントリを書く
+    # put/2 経由では physics_ms 必須のため、ETS に直接不完全エントリを書く
     true =
       :ets.insert(:frame_cache, {
         :main,
         %{
-          enemy_count: 0,
-          bullet_count: 0,
           physics_ms: nil,
-          hud_data: {100.0, 100.0, 0, 0.0}
+          counters: %{},
+          meta: %{}
         }
       })
 
@@ -88,5 +96,39 @@ defmodule Core.StressMonitorTest do
 
     assert stats.rooms[:main].peak_physics_ms == 0.0
   end
-end
 
+  test "コンテンツモジュールを呼ばずに label メタデータだけをログ用に使う" do
+    pid = Process.whereis(Core.StressMonitor)
+    assert is_pid(pid)
+
+    # Core.Config.current/0 を呼ばないこと（wave_label 等の contents 語彙に触れない）
+    assert :ok =
+             Core.FrameCache.put(:main, %{
+               physics_ms: 1.0,
+               label: "injected-label",
+               counters: %{entities: 3}
+             })
+
+    send(pid, :sample)
+    _ = :sys.get_state(pid)
+    stats = Core.StressMonitor.get_stats()
+
+    assert stats.rooms[:main].last_counters.entities == 3
+    assert stats.rooms[:main].peak_counters.entities == 3
+  end
+
+  test "meta にネスト map があってもログでクラッシュしない" do
+    pid = Process.whereis(Core.StressMonitor)
+    assert is_pid(pid)
+
+    assert :ok =
+             Core.FrameCache.put(:main, %{
+               physics_ms: 1.0,
+               meta: %{nested: %{a: 1}, list: [1, 2, 3]}
+             })
+
+    send(pid, :sample)
+    state = :sys.get_state(pid)
+    assert state.rooms[:main].samples == 1
+  end
+end

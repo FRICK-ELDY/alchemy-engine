@@ -8,7 +8,7 @@
 
 描画は **Zenoh 専用**: Render コンポーネントが DrawCommand・Camera・UiCanvas を組み立て、`Content.FrameEncoder.encode_frame/5` で protobuf にし、`FrameBroadcaster.put(room_id, frame_binary)` で publish します。
 
-使用するコンテンツは `config/config.exs` の `config :server, :current, ...` で指定します。`Application.get_env` 未設定時のフォールバックは `Core.Config` の `@default_content`（`Content.BulletHell3D`）。
+使用するコンテンツは `config/config.exs` の `config :server, :current, ...` で指定します（必須。core 側にコンテンツ名のフォールバックはない）。
 
 ---
 
