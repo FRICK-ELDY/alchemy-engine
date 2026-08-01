@@ -93,7 +93,7 @@ ping を活かしたハートビート淘汰を追加。`last_seen_ms` を JOIN 
 
 対象: `engine/rust/client/network/src/platform/desktop.rs`
 
-### 3-4. OpenXR 最小実装 `-4 解消`
+### 3-4. OpenXR 最小実装 `-4 解消` ✅
 
 optional feature `openxr` と `run_xr_input_loop` の枠組みは追加済み。`run_openxr_loop` の TODO（即 Err 返却）を実装に置き換える。
 
