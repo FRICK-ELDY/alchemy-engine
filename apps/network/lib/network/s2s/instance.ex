@@ -240,10 +240,12 @@ defmodule Network.S2S.Instance do
          :ok <- check_aud(claims_map, state.domain),
          :ok <- check_purpose(claims_map),
          {:ok, iss} <- fetch_iss(claims_map),
-         {:ok, state2, signer} <- resolve_peer_signer(state, iss, header["kid"]),
-         {:ok, claims} <-
-           Joken.verify_and_validate(token_config_for_verify(state.domain), token, signer) do
-      {{:ok, claims}, state2}
+         {:ok, state2, signer} <- resolve_peer_signer(state, iss, header["kid"]) do
+      # JWKS 取得済みの state2 は署名検証失敗時も捨てない（再フェッチ DoS を防ぐ）
+      case Joken.verify_and_validate(token_config_for_verify(state.domain), token, signer) do
+        {:ok, claims} -> {{:ok, claims}, state2}
+        {:error, reason} -> {{:error, reason}, state2}
+      end
     else
       {:error, reason, new_state} -> {{:error, reason}, new_state}
       {:error, reason} -> {{:error, reason}, state}

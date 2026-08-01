@@ -237,6 +237,49 @@ defmodule Network.S2STest do
       assert :counters.get(fetch_count, 1) == 1
     end
 
+    test "署名検証失敗後も JWKS キャッシュを捨てず再フェッチしない" do
+      {kid_good, _pem_good, jwks_good} = generate_rsa_jwks()
+      {_kid_bad, pem_bad, _jwks_bad} = generate_rsa_jwks()
+      fetch_count = :counters.new(1, [])
+
+      cfg = [
+        enabled: true,
+        domain: @local_domain,
+        canonical_url: "http://local.test",
+        ephemeral_keys: true,
+        worlds: [],
+        peers: [%{domain: @peer_domain, jwks_url: "http://peer.test/jwks"}],
+        fetch_fun: fn url ->
+          assert url == "http://peer.test/jwks"
+          :counters.add(fetch_count, 1, 1)
+          {:ok, jwks_good}
+        end
+      ]
+
+      Application.put_env(:network, Network.S2S, cfg)
+      assert :ok = Instance.configure(cfg)
+
+      # 別鍵で署名したトークン（kid は取得 JWKS 側）→ フェッチ後に署名検証失敗
+      token = sign_s2s_token(pem_bad, kid_good, @peer_domain, @local_domain)
+
+      conn1 =
+        Phoenix.ConnTest.build_conn()
+        |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
+        |> Phoenix.ConnTest.get("/api/s2s/worlds")
+
+      assert %{"error" => "unauthorized"} = Phoenix.ConnTest.json_response(conn1, 401)
+      assert :counters.get(fetch_count, 1) == 1
+
+      # 直後の再試行でもキャッシュ維持のためフェッチしない
+      conn2 =
+        Phoenix.ConnTest.build_conn()
+        |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
+        |> Phoenix.ConnTest.get("/api/s2s/worlds")
+
+      assert %{"error" => "unauthorized"} = Phoenix.ConnTest.json_response(conn2, 401)
+      assert :counters.get(fetch_count, 1) == 1
+    end
+
     test "enabled 時に domain 欠落なら configure が失敗する" do
       assert {:error, {:s2s_config_invalid, :missing_domain}} =
                Instance.configure(
