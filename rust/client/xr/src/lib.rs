@@ -12,11 +12,14 @@
 pub mod common;
 pub(crate) mod platform;
 
+#[cfg(feature = "openxr")]
+mod openxr_loop;
+
 /// XR 入力ループを実行する。
 /// `on_event` が各イベントごとに呼ばれる。app が network 経由で Elixir へ送信する。
 ///
 /// VR ランタイムが利用できない場合は即座に戻る。
-/// `openxr` フィーチャー有効時は OpenXR セッションを試行する。
+/// `openxr` フィーチャー有効時は OpenXR セッション（`XR_MND_headless`）を試行する。
 #[cfg_attr(not(feature = "openxr"), allow(unused_variables, unused_mut))]
 pub fn run_xr_input_loop<F>(mut on_event: F)
 where
@@ -24,27 +27,15 @@ where
 {
     #[cfg(feature = "openxr")]
     {
-        if let Err(e) = run_openxr_loop(&mut on_event) {
+        if let Err(e) = openxr_loop::run_openxr_loop(&mut on_event) {
             log::warn!("OpenXR input loop failed: {e} — VR input disabled");
         }
-        return;
     }
 
     #[cfg(not(feature = "openxr"))]
     {
         log::debug!("OpenXR feature disabled — VR input unavailable");
     }
-}
-
-#[cfg(feature = "openxr")]
-fn run_openxr_loop<F>(_on_event: &mut F) -> Result<(), String>
-where
-    F: FnMut(XrInputEvent),
-{
-    // TODO: OpenXR インスタンス・ヘッドレスセッション作成
-    // xrLocateSpace で head/controller pose 取得
-    // ポーリングループで on_event を呼ぶ
-    Err("OpenXR integration not yet implemented".to_string())
 }
 
 /// OpenXR 入力ソースのトレイト。
