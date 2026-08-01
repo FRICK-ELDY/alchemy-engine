@@ -237,6 +237,19 @@ defmodule Network.UDPTest do
     test "不正なバイナリは :error を返す" do
       assert :error = Protocol.decompress_frame_payload(<<0xDE, 0xAD, 0xBE, 0xEF>>)
     end
+
+    test "展開後 64KB までは復元できる" do
+      frame_payload = :binary.copy(<<0>>, 64 * 1024)
+      assert {:ok, compressed} = Protocol.compress_frame_payload(frame_payload)
+      assert {:ok, ^frame_payload} = Protocol.decompress_frame_payload(compressed)
+    end
+
+    test "展開後 64KB 超は :error を返す（zip bomb 対策）" do
+      frame_payload = :binary.copy(<<0>>, 64 * 1024 + 1)
+      assert {:ok, compressed} = Protocol.compress_frame_payload(frame_payload)
+      assert byte_size(compressed) < byte_size(frame_payload)
+      assert :error = Protocol.decompress_frame_payload(compressed)
+    end
   end
 
   # ── UDP サーバー統合テスト ───────────────────────────────────────────

@@ -46,6 +46,9 @@ defmodule Network.UDP.Protocol do
   @type_pong 0x08
   @type_error 0x09
 
+  # zip bomb 対策: 展開後のフレーム payload 上限
+  @max_uncompressed_frame_bytes 64 * 1024
+
   @type frame_payload :: binary() | RenderFrame.t()
 
   @type packet ::
@@ -216,12 +219,51 @@ defmodule Network.UDP.Protocol do
 
   @doc """
   `compress_frame_payload/1` で圧縮したバイナリを復元する。
+
+  `:zlib.safeInflate/2` で段階展開し、展開後サイズが
+  #{@max_uncompressed_frame_bytes} バイトを超えたら `:error` を返す（zip bomb 対策）。
   """
   @spec decompress_frame_payload(binary()) :: {:ok, binary()} | :error
-  def decompress_frame_payload(compressed) do
-    {:ok, :zlib.uncompress(compressed)}
+  def decompress_frame_payload(compressed) when is_binary(compressed) do
+    z = :zlib.open()
+
+    try do
+      :zlib.inflateInit(z)
+      safe_inflate_limited(z, compressed, 0, [])
+    after
+      :zlib.close(z)
+    end
   rescue
     _ -> :error
+  end
+
+  def decompress_frame_payload(_), do: :error
+
+  defp safe_inflate_limited(z, input, acc_size, acc) do
+    case :zlib.safeInflate(z, input) do
+      {:continue, output} ->
+        chunk_size = IO.iodata_length(output)
+        new_size = acc_size + chunk_size
+
+        if new_size > @max_uncompressed_frame_bytes do
+          :error
+        else
+          safe_inflate_limited(z, [], new_size, [acc, output])
+        end
+
+      {:finished, output} ->
+        chunk_size = IO.iodata_length(output)
+        new_size = acc_size + chunk_size
+
+        if new_size > @max_uncompressed_frame_bytes do
+          :error
+        else
+          {:ok, IO.iodata_to_binary([acc, output])}
+        end
+
+      {:need_dictionary, _adler, _output} ->
+        :error
+    end
   end
 
   @doc """
