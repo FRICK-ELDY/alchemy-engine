@@ -100,8 +100,4 @@ config :server, :tick_hz, 20
 # core 単体利用（network 未ロード）の場合は config/test.exs のように nil を設定すること。
 config :core, :formula_store_broadcast, {Network.Distributed, :broadcast, []}
 
-# VR 対応 NIF をビルドする場合: features: ["xr"]
-# mix compile 時に nif に --features xr が渡される。
-config :core, Core.NifBridge, features: []
-
 import_config "#{config_env()}.exs"
