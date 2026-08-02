@@ -1,7 +1,7 @@
-defmodule Content.FrameEncoder.DrawCommands.Box3d do
+defmodule Contents.FrameEncoder.DrawCommands.Box3d do
   @moduledoc false
 
-  alias Content.FrameEncoder.Proto
+  alias Contents.FrameEncoder.Proto
 
   def to_pb({:box_3d, x, y, z, half_w, half_h, {half_d, r, g, b, a}}) do
     %Alchemy.Render.DrawCommand{

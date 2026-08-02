@@ -1,7 +1,7 @@
-defmodule Content.FrameEncoderAudioTest do
+defmodule Contents.FrameEncoderAudioTest do
   use ExUnit.Case, async: true
 
-  alias Content.FrameEncoder
+  alias Contents.FrameEncoder
 
   @minimal_camera {:camera_2d, 0.0, 0.0}
   @minimal_ui {:canvas, []}

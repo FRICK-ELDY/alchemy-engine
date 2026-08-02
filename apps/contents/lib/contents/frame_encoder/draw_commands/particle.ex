@@ -1,7 +1,7 @@
-defmodule Content.FrameEncoder.DrawCommands.Particle do
+defmodule Contents.FrameEncoder.DrawCommands.Particle do
   @moduledoc false
 
-  alias Content.FrameEncoder.Proto
+  alias Contents.FrameEncoder.Proto
 
   def to_pb({:particle, x, y, r, g, b, {alpha, size}}) do
     %Alchemy.Render.DrawCommand{

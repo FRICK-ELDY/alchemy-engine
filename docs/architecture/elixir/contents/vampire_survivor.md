@@ -120,7 +120,7 @@ EXP・レベル・スコア・プレイヤー HP・アイテムドロップ・�
 
 ## Render（Contents.Components.Category.Rendering.Render）
 
-描画データの組み立てと Zenoh 配信を担当。`on_nif_sync/1` で `content.build_frame/2` を呼び出し、DrawCommand リスト・CameraParams・UiCanvas を組み立て、`Content.FrameEncoder.encode_frame/5` で protobuf 化し `FrameBroadcaster.put` で Zenoh へ publish する。FrameBuilder・SpriteParams を参照してスプライト配置や HUD を決定する。
+描画データの組み立てと Zenoh 配信を担当。`on_nif_sync/1` で `content.build_frame/2` を呼び出し、DrawCommand リスト・CameraParams・UiCanvas を組み立て、`Contents.FrameEncoder.encode_frame/6` で protobuf 化し `FrameBroadcaster.put` で Zenoh へ publish する。FrameBuilder・SpriteParams を参照してスプライト配置や HUD を決定する。
 
 ---
 

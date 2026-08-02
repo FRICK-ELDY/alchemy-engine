@@ -1,7 +1,7 @@
-defmodule Content.FrameEncoder.DrawCommands.PlayerSprite do
+defmodule Contents.FrameEncoder.DrawCommands.PlayerSprite do
   @moduledoc false
 
-  alias Content.FrameEncoder.Proto
+  alias Contents.FrameEncoder.Proto
 
   def to_pb({:player_sprite, x, y, frame}) do
     %Alchemy.Render.DrawCommand{

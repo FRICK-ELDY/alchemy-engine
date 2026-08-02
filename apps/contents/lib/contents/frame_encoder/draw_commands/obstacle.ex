@@ -1,7 +1,7 @@
-defmodule Content.FrameEncoder.DrawCommands.Obstacle do
+defmodule Contents.FrameEncoder.DrawCommands.Obstacle do
   @moduledoc false
 
-  alias Content.FrameEncoder.Proto
+  alias Contents.FrameEncoder.Proto
 
   def to_pb({:obstacle, x, y, radius, kind}) do
     %Alchemy.Render.DrawCommand{

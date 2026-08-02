@@ -1,7 +1,7 @@
-defmodule Content.FrameEncoder.DrawCommands.GridPlane do
+defmodule Contents.FrameEncoder.DrawCommands.GridPlane do
   @moduledoc false
 
-  alias Content.FrameEncoder.Proto
+  alias Contents.FrameEncoder.Proto
 
   def to_pb({:grid_plane, size, divisions, {r, g, b, a}}) do
     %Alchemy.Render.DrawCommand{

@@ -27,4 +27,4 @@
 - スキーマの単一情報源と Elixir / Rust の契約整合が取りやすい
 - [zenoh-frame-serialization.md](./why_adopted/zenoh-frame-serialization.md)、[protobuf-migration.md](../architecture/protobuf-migration.md) の方針に従う
 
-**やるべきこと**: `Content.FrameEncoder` で protobuf バイナリを生成し、クライアント（Rust）は `decode_pb_render_frame` でデコードする。
+**やるべきこと**: `Contents.FrameEncoder` で protobuf バイナリを生成し、クライアント（Rust）は `decode_pb_render_frame` でデコードする。

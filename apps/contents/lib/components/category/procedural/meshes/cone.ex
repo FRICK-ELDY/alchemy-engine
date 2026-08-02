@@ -51,7 +51,7 @@ defmodule Contents.Components.Category.Procedural.Meshes.Cone do
   @doc """
   指定位置・半サイズ・色で Cone3D 描画コマンド用のタプルを返す。
 
-  戻り値は `Content.FrameEncoder` の `cone_3d` 句で期待する形式:
+  戻り値は `Contents.FrameEncoder` の `cone_3d` 句で期待する形式:
   `{:cone_3d, x, y, z, half_w, half_h, {half_d, r, g, b, a}}`
   """
   def cone_3d_command(x, y, z, half_w, half_h, half_d, {r, g, b, a}) do

@@ -160,7 +160,7 @@ auth にも hex.audit / dialyzer を追加（auth 残 -1 解消）。
 - core → contents 語彙分離の完遂（`Core.Config` の `@default_content`、StressMonitor の wave_label、Core.Stats） `-3 -1` ✅
 - 死にコード削除（InputHandler、`features: []`） `-1` ✅
 - contents → network の MFA 注入化（FormulaStore と同型の解決） `-2` ✅
-- 命名統一（Content. / Contents.） `-1`
+- 命名統一（Content. / Contents.） `-1` ✅ — `Content.*`＝個別コンテンツ、`Contents.*`＝一覧／インフラ
 - server テスト・release 定義 `-2`
 - render テスト / observability 外部化 / find_room_node キャッシュ等
 

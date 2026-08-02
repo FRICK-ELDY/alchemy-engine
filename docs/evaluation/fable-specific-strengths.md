@@ -275,7 +275,7 @@
   > 対象ファイル: `engine/rust/client/system_ui/src/lib.rs`
 
 - **golden E2E protobuf 契約テスト** `+4`
-  > Elixir `Content.FrameEncoder.encode_frame/6` が生成した golden バイナリ（`fixtures/render_frame_elixir_golden.bin`）を Rust 側でデコードし、commands（PlayerSprite/Particle/Box3D）・camera・UI text・mesh_definitions・cursor_grab・audio_cues を意味レベルで検証。言語間契約の自動検証は個人プロジェクトで滅多に見ない水準。
+  > Elixir `Contents.FrameEncoder.encode_frame/6` が生成した golden バイナリ（`fixtures/render_frame_elixir_golden.bin`）を Rust 側でデコードし、commands（PlayerSprite/Particle/Box3D）・camera・UI text・mesh_definitions・cursor_grab・audio_cues を意味レベルで検証。言語間契約の自動検証は個人プロジェクトで滅多に見ない水準。
   > 対象ファイル: `engine/rust/client/network/tests/render_frame_e2e_contract.rs`
 
 - **auth_client の資格情報管理** `+4`

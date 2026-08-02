@@ -1,7 +1,7 @@
-defmodule Content.FrameEncoder.DrawCommands.Item do
+defmodule Contents.FrameEncoder.DrawCommands.Item do
   @moduledoc false
 
-  alias Content.FrameEncoder.Proto
+  alias Contents.FrameEncoder.Proto
 
   def to_pb({:item, x, y, kind}) do
     %Alchemy.Render.DrawCommand{

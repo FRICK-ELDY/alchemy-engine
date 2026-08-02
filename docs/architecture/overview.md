@@ -13,7 +13,7 @@ AlchemyEngine は **サーバー上の権威あるゲーム状態とルール**�
 
 | 対象 | 主な担い手 | 例 |
 |:---|:---|:---|
-| **ドメイン**（公式状態、ルール、コンテンツ定義、「いつ何を送るか」の判断） | **Elixir**（contents / core / network のアプリロジック） | ルーム、tick、コンポーネント、`Content.FrameEncoder` が組み立てる論理データ |
+| **ドメイン**（公式状態、ルール、コンテンツ定義、「いつ何を送るか」の判断） | **Elixir**（contents / core / network のアプリロジック） | ルーム、tick、コンポーネント、`Contents.FrameEncoder` が組み立てる論理データ |
 | **ワイヤ契約（Protobuf ペイロード）** | **[alchemy-protocol](https://github.com/FRICK-ELDY/alchemy-protocol)** の **`proto/`**（本リポでは submodule **`3rdparty/alchemy-protocol/proto`**。Elixir / Rust は生成コードで従う） | Zenoh 等の `RenderFrame`、入力イベントなど **`.proto` で定義されるメッセージ** |
 | **ワイヤ契約（Protobuf 以外）** | **該当モジュールと設計ドキュメント**（単一のファイルに集約されないこともある） | UDP パケット外枠は `Network.UDP.Protocol`（`@moduledoc`）。Phoenix Channel は JSON イベント形（`Network.Channel` のモジュールドキュメント等） |
 

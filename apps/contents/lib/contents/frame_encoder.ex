@@ -1,18 +1,18 @@
-defmodule Content.FrameEncoder do
+defmodule Contents.FrameEncoder do
   require Logger
 
-  alias Content.FrameEncoder.DrawCommands.Box3d, as: DrawBox3d
-  alias Content.FrameEncoder.DrawCommands.Cone3d, as: DrawCone3d
-  alias Content.FrameEncoder.DrawCommands.GridPlane, as: DrawGridPlane
-  alias Content.FrameEncoder.DrawCommands.GridPlaneVerts, as: DrawGridPlaneVerts
-  alias Content.FrameEncoder.DrawCommands.Item, as: DrawItem
-  alias Content.FrameEncoder.DrawCommands.Obstacle, as: DrawObstacle
-  alias Content.FrameEncoder.DrawCommands.Particle, as: DrawParticle
-  alias Content.FrameEncoder.DrawCommands.PlayerSprite, as: DrawPlayerSprite
-  alias Content.FrameEncoder.DrawCommands.Skybox, as: DrawSkybox
-  alias Content.FrameEncoder.DrawCommands.Sphere3d, as: DrawSphere3d
-  alias Content.FrameEncoder.DrawCommands.SpriteRaw, as: DrawSpriteRaw
-  alias Content.FrameEncoder.Proto
+  alias Contents.FrameEncoder.DrawCommands.Box3d, as: DrawBox3d
+  alias Contents.FrameEncoder.DrawCommands.Cone3d, as: DrawCone3d
+  alias Contents.FrameEncoder.DrawCommands.GridPlane, as: DrawGridPlane
+  alias Contents.FrameEncoder.DrawCommands.GridPlaneVerts, as: DrawGridPlaneVerts
+  alias Contents.FrameEncoder.DrawCommands.Item, as: DrawItem
+  alias Contents.FrameEncoder.DrawCommands.Obstacle, as: DrawObstacle
+  alias Contents.FrameEncoder.DrawCommands.Particle, as: DrawParticle
+  alias Contents.FrameEncoder.DrawCommands.PlayerSprite, as: DrawPlayerSprite
+  alias Contents.FrameEncoder.DrawCommands.Skybox, as: DrawSkybox
+  alias Contents.FrameEncoder.DrawCommands.Sphere3d, as: DrawSphere3d
+  alias Contents.FrameEncoder.DrawCommands.SpriteRaw, as: DrawSpriteRaw
+  alias Contents.FrameEncoder.Proto
 
   @moduledoc """
   Zenoh フレーム配信用 protobuf エンコーダ。

@@ -12,7 +12,7 @@
 
 ## 1. 概要
 
-**運用上の既定**: Zenoh フレームは `Content.FrameEncoder.encode_frame/5` が **`Alchemy.Render.RenderFrame`** の protobuf バイナリを出力する。Rust は **`decode_pb_render_frame`** のみ（ETF フォールバックなし）。
+**運用上の既定**: Zenoh フレームは `Contents.FrameEncoder.encode_frame/6` が **`Alchemy.Render.RenderFrame`** の protobuf バイナリを出力する。Rust は **`decode_pb_render_frame`** のみ（ETF フォールバックなし）。
 
 以下の各節は、歴史的に **ETF（`:erlang.term_to_binary/1`）** で表現していた map 構造の参照である。現行ワイヤでは使用しない。
 
@@ -53,7 +53,7 @@
 
 ### 7.1 現在の送信形式（protobuf）
 
-`Content.FrameEncoder.encode_injection_map/1` は **`Alchemy.Frame.FrameInjection`** の protobuf バイナリを返す（スキーマ: [frame_injection.proto（alchemy-protocol `v0.1.1`）](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/frame_injection.proto)）。
+`Contents.FrameEncoder.encode_injection_map/1` は **`Alchemy.Frame.FrameInjection`** の protobuf バイナリを返す（スキーマ: [frame_injection.proto（alchemy-protocol `v0.1.1`）](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/frame_injection.proto)）。
 
 ### 7.2 サーバー上の適用（NIF はない）
 
@@ -78,7 +78,7 @@
 
 ## 8. 参照
 
-- `Content.FrameEncoder` — フレーム・injection の protobuf エンコード
+- `Contents.FrameEncoder` — フレーム・injection の protobuf エンコード
 - [render_frame.proto](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/render_frame.proto)、[frame_injection.proto](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/frame_injection.proto)（alchemy-protocol `v0.1.1`）— 契約スキーマ（本リポ: `3rdparty/alchemy-protocol/proto/`）
 - `render_frame_proto::decode_pb_render_frame` — クライアント側フレーム protobuf デコード（`rust/client/render_frame_proto`）
 - `Contents.Events.Game` — `apply_frame_injection_binary` スタブ（`apps/contents/lib/events/game.ex`）
