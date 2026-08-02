@@ -1,7 +1,7 @@
-defmodule Content.FrameEncoder.DrawCommands.Skybox do
+defmodule Contents.FrameEncoder.DrawCommands.Skybox do
   @moduledoc false
 
-  alias Content.FrameEncoder.Proto
+  alias Contents.FrameEncoder.Proto
 
   def to_pb({:skybox, {tr, tg, tb, ta}, {br, bg, bb, ba}}) do
     %Alchemy.Render.DrawCommand{

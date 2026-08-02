@@ -6,7 +6,9 @@
 
 `contents` は上記コンテンツの実装と、シーン管理・`Contents.Events.Game` によるディスパッチを担当します。エンジン本体（[core](./core.md)）はゲームロジックを知らず、`Contents.Behaviour.Content` に従ってコンポーネントへ委譲します。
 
-描画は **Zenoh 専用**: Render コンポーネントが DrawCommand・Camera・UiCanvas を組み立て、`Content.FrameEncoder.encode_frame/5` で protobuf にし、`FrameBroadcaster.put(room_id, frame_binary)` で publish します。
+命名: `Content.*`＝個別コンテンツ、`Contents.*`＝一覧／共有インフラ。
+
+描画は **Zenoh 専用**: Render コンポーネントが DrawCommand・Camera・UiCanvas を組み立て、`Contents.FrameEncoder.encode_frame/5` で protobuf にし、`FrameBroadcaster.put(room_id, frame_binary)` で publish します。
 
 使用するコンテンツは `config/config.exs` の `config :server, :current, ...` で指定します（必須。core 側にコンテンツ名のフォールバックはない）。
 
@@ -113,7 +115,7 @@ VR 入力は **`handle_info`**（`:head_pose` / `:controller_pose` / `:controlle
 |:---|:---|
 | `Contents.ComponentList` | LocalUser・Telemetry 等の解決・注入 |
 | `Contents.FrameBroadcaster` | Zenoh 向けフレーム配送 |
-| `Content.FrameEncoder` | RenderFrame protobuf エンコード |
+| `Contents.FrameEncoder` | RenderFrame protobuf エンコード |
 
 ---
 

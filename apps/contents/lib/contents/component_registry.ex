@@ -1,4 +1,4 @@
-defmodule Content.ComponentRegistry do
+defmodule Contents.ComponentRegistry do
   @moduledoc """
   将来: descriptor ベースのコンテンツを実行する汎用エンジン。
 

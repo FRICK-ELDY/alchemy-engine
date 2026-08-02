@@ -1,7 +1,7 @@
-defmodule Content.FrameEncoder.DrawCommands.SpriteRaw do
+defmodule Contents.FrameEncoder.DrawCommands.SpriteRaw do
   @moduledoc false
 
-  alias Content.FrameEncoder.Proto
+  alias Contents.FrameEncoder.Proto
 
   def to_pb({:sprite_raw, x, y, width, height, {{uv_ox, uv_oy}, {uv_sx, uv_sy}, {r, g, b, a}}}) do
     %Alchemy.Render.DrawCommand{

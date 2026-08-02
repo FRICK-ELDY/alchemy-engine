@@ -1,7 +1,7 @@
-defmodule Content.FrameEncoder.DrawCommands.Sphere3d do
+defmodule Contents.FrameEncoder.DrawCommands.Sphere3d do
   @moduledoc false
 
-  alias Content.FrameEncoder.Proto
+  alias Contents.FrameEncoder.Proto
 
   def to_pb({:sphere_3d, x, y, z, radius, {r, g, b, a}}) do
     %Alchemy.Render.DrawCommand{

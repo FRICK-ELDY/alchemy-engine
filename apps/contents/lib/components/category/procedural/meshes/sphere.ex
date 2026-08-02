@@ -49,7 +49,7 @@ defmodule Contents.Components.Category.Procedural.Meshes.Sphere do
   @doc """
   中心 `(x, y, z)`・半径 `radius`・色 `rgba` で Sphere3D 描画コマンド用のタプルを返す。
 
-  戻り値は `Content.FrameEncoder` の sphere_3d 句で期待する形式:
+  戻り値は `Contents.FrameEncoder` の sphere_3d 句で期待する形式:
   `{:sphere_3d, x, y, z, radius, {r, g, b, a}}`
   """
   def sphere_3d_command(x, y, z, radius, {r, g, b, a}) do

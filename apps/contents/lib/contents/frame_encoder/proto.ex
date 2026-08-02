@@ -1,4 +1,4 @@
-defmodule Content.FrameEncoder.Proto do
+defmodule Contents.FrameEncoder.Proto do
   @moduledoc false
 
   # DrawCommand / Camera / Ui / MeshDef / injection エンコード用の共有ヘルパー。

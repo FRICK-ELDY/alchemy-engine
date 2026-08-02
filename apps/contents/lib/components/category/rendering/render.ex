@@ -38,7 +38,7 @@ defmodule Contents.Components.Category.Rendering.Render do
     audio_cues = fetch_audio_cues(content, playing_state)
 
     frame_binary =
-      Content.FrameEncoder.encode_frame(
+      Contents.FrameEncoder.encode_frame(
         commands,
         camera,
         ui,

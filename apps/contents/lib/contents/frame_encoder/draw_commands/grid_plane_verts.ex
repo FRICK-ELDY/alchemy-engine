@@ -1,7 +1,7 @@
-defmodule Content.FrameEncoder.DrawCommands.GridPlaneVerts do
+defmodule Contents.FrameEncoder.DrawCommands.GridPlaneVerts do
   @moduledoc false
 
-  alias Content.FrameEncoder.Proto
+  alias Contents.FrameEncoder.Proto
 
   def to_pb({:grid_plane_verts, vertices}) do
     verts =
