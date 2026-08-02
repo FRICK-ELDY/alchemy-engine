@@ -533,9 +533,9 @@ defmodule Contents.Events.Game do
 
   defp publish_zenoh_frame_via_mfa(room_id, frame_binary, state, debug_first_frames) do
     case Application.get_env(:contents, :zenoh_frame_publish) do
-      {mod, fun, []} when is_atom(mod) and is_atom(fun) ->
+      {mod, fun, args} when is_atom(mod) and is_atom(fun) and is_list(args) ->
         maybe_publish_zenoh_frame_log_publish(room_id, frame_binary, state, debug_first_frames)
-        apply(mod, fun, [room_id, frame_binary])
+        apply(mod, fun, args ++ [room_id, frame_binary])
 
       fun when is_function(fun, 2) ->
         maybe_publish_zenoh_frame_log_publish(room_id, frame_binary, state, debug_first_frames)
