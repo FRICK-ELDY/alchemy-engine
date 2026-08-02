@@ -73,7 +73,7 @@ defmodule Contents.Behaviour.Content do
   @doc """
   そのルームのイベントハンドラ（`Contents.Events.Game`。旧名 GameEvents）の pid を返す。
 
-  InputHandler・Network 等がイベント送信先を取得する際に使用する。
+  Network 等がイベント送信先を取得する際に使用する。
   nil はイベントハンドラ未起動状態を表す。
   """
   @callback event_handler(room_id :: term()) :: pid() | nil

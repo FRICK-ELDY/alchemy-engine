@@ -101,13 +101,12 @@
 
 ---
 
-### D-7: `Core.InputHandler` の残骸
+### D-7: `Core.InputHandler` の残骸 ✅
 
 **優先度**: 低
 
-**問題**: LocalUser 系移行後も `apps/core/lib/core/input_handler.ex` が残っている可能性。デッドコードなら削除。
-
-**方針**: 参照 grep → 未使用なら削除、使用中なら責務をドキュメント化。
+**実施済み**: 参照なしを確認し `apps/core/lib/core/input_handler.ex` を削除。
+入力は `Contents.LocalUserComponent` が `raw_key` / `focus_lost` を処理する。
 
 ---
 

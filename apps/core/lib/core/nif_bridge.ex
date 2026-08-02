@@ -6,8 +6,6 @@ defmodule Core.NifBridge do
 
   **XR / VR 入力**は NIF を経由しない。クライアント側 `rust/client/xr`・`network` 経由で
   Zenoh 等に乗り、サーバでは `Contents.Events.Game` へメッセージとして届く。
-  `config :core, Core.NifBridge, features: ["xr"]` は歴史的な mix フックの残りで、
-  現行 `rust/nif` に XR 専用コードは無い。
   """
 
   use Rustler,
