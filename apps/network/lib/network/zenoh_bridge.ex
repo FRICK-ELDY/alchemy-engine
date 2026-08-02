@@ -34,9 +34,18 @@ defmodule Network.ZenohBridge do
   @doc """
   フレームを Zenoh で publish する。
   GenServer.cast で非同期実行（60Hz を考慮）。
+
+  ブリッジ未起動時（`zenoh_enabled` オフ・起動失敗など）は no-op。
+  contents 側は MFA 注入で本関数を呼ぶため、プロセス有無を contents が知らなくてよい。
   """
   def publish_frame(room_id, frame_binary) when is_binary(frame_binary) do
-    GenServer.cast(__MODULE__, {:publish_frame, normalize_room_id(room_id), frame_binary})
+    case Process.whereis(__MODULE__) do
+      nil ->
+        :ok
+
+      _pid ->
+        GenServer.cast(__MODULE__, {:publish_frame, normalize_room_id(room_id), frame_binary})
+    end
   end
 
   defp normalize_room_id(:main), do: "main"

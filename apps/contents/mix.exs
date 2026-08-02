@@ -29,6 +29,8 @@ defmodule Content.MixProject do
     [
       {:core, in_umbrella: true},
       {:decimal, "~> 2.0"},
+      # FrameEncoder が Alchemy.Render.*（network 配下の protobuf 生成物）を参照するため。
+      # Zenoh publish 自体は config :contents, :zenoh_frame_publish の MFA 注入で疎結合化済み。
       {:network, in_umbrella: true}
     ]
   end

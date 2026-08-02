@@ -100,4 +100,10 @@ config :server, :tick_hz, 20
 # core 単体利用（network 未ロード）の場合は config/test.exs のように nil を設定すること。
 config :core, :formula_store_broadcast, {Network.Distributed, :broadcast, []}
 
+# Zenoh フレーム publish 用 MFA（contents → network のコンパイル時依存を避ける）。
+# 形式: {Mod, Fun, []}。apply(Mod, Fun, [room_id, frame_binary]) が呼ばれる。
+# 未設定・nil のときは publish しない（FrameBroadcaster.put もスキップ）。
+# contents 単体利用（network 未ロード）の場合は config/test.exs のように nil を設定すること。
+config :contents, :zenoh_frame_publish, {Network.ZenohBridge, :publish_frame, []}
+
 import_config "#{config_env()}.exs"
