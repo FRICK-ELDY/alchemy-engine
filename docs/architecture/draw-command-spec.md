@@ -10,7 +10,7 @@
 
 ## 1. 概要
 
-**DrawCommand** は Elixir 側（contents の Render コンポーネント等）が **タプル**として組み立てる描画命令リストの要素である。**サーバーからクライアントへは NIF を経由しない。** `Contents.FrameEncoder.encode_frame/5` が **`Alchemy.Render.RenderFrame` の protobuf** に変換し、Zenoh 等で配信する。クライアント（Rust）は `render_frame_proto::decode_pb_render_frame` でデコードし、`render` が描画する。
+**DrawCommand** は Elixir 側（contents の Render コンポーネント等）が **タプル**として組み立てる描画命令リストの要素である。**サーバーからクライアントへは NIF を経由しない。** `Contents.FrameEncoder.encode_frame/6` が **`Alchemy.Render.RenderFrame` の protobuf** に変換し、Zenoh 等で配信する。クライアント（Rust）は `render_frame_proto::decode_pb_render_frame` でデコードし、`render` が描画する。
 
 - **ワイヤ契約（SSoT）**: [alchemy-protocol `render_frame.proto`（`v0.1.1`）](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/render_frame.proto)（protobuf）。Elixir 側の対応実装は `Contents.FrameEncoder`（`command_to_pb/1` 等）。
 - **実行**: クライアント Rust（`rust/client/render_frame_proto` → `rust/client/shared` の `DrawCommand`、`rust/client/render`）。`Core.NifBridge` は **`run_formula_bytecode/3` のみ**であり、DrawCommand 型や描画 NIF は持たない。

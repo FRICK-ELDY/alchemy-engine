@@ -23,7 +23,7 @@
 ### 2.1 形式
 
 - **protobuf** の `alchemy.render.RenderFrame`（[render_frame.proto（alchemy-protocol `v0.1.1`）](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/render_frame.proto)）。
-- Elixir は `Contents.FrameEncoder.encode_frame/5` が生成するバイナリを publish する。
+- Elixir は `Contents.FrameEncoder.encode_frame/6` が生成するバイナリを publish する。
 - Rust は `render_frame_proto::decode_pb_render_frame`（または `network` / `render` の再エクスポート）でデコードする。
 
 意味論・フィールドは [draw-command-spec.md](draw-command-spec.md) および [render_frame.proto（alchemy-protocol `v0.1.1`）](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/render_frame.proto) を参照。

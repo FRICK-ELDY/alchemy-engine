@@ -76,7 +76,7 @@ sequenceDiagram
 
 ### フレーム（サーバー → クライアント）
 
-- **Elixir**: `Contents.FrameEncoder.encode_frame/5` → `Alchemy.Render.RenderFrame.encode/1`（`proto/render_frame.proto`）。
+- **Elixir**: `Contents.FrameEncoder.encode_frame/6` → `Alchemy.Render.RenderFrame.encode/1`（`proto/render_frame.proto`）。
 - **Rust**: `network::protobuf_render_frame::decode_pb_render_frame`（`render_frame_proto` と同一ロジック）で `render::RenderFrame`（`shared::render_frame` 由来）に変換。実装は `rust/client/network/src/network_render_bridge.rs` の購読コールバック。
 
 ### 入力（クライアント → サーバー）

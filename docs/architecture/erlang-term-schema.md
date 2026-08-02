@@ -12,7 +12,7 @@
 
 ## 1. 概要
 
-**運用上の既定**: Zenoh フレームは `Contents.FrameEncoder.encode_frame/5` が **`Alchemy.Render.RenderFrame`** の protobuf バイナリを出力する。Rust は **`decode_pb_render_frame`** のみ（ETF フォールバックなし）。
+**運用上の既定**: Zenoh フレームは `Contents.FrameEncoder.encode_frame/6` が **`Alchemy.Render.RenderFrame`** の protobuf バイナリを出力する。Rust は **`decode_pb_render_frame`** のみ（ETF フォールバックなし）。
 
 以下の各節は、歴史的に **ETF（`:erlang.term_to_binary/1`）** で表現していた map 構造の参照である。現行ワイヤでは使用しない。
 
