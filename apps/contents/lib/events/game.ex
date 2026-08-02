@@ -515,31 +515,34 @@ defmodule Contents.Events.Game do
   defp flow_runner(state), do: current_content().flow_runner(state.room_id)
 
   # P3: Zenoh 経由でフレームをリモートクライアントへ配信。
-  # Contents.FrameBroadcaster が zenoh_enabled 時のみ Process.put(:zenoh_frame) を設定する。
-  # contents は network に依存するが、テスト等で network がロードされない構成では
-  # Code.ensure_loaded?/1 が false、または Process.whereis/1 が nil となり publish はスキップされ実害は小さい。
+  # Contents.FrameBroadcaster が :zenoh_frame_publish MFA 設定時のみ Process.put(:zenoh_frame) する。
+  # publish 自体は config :contents, :zenoh_frame_publish の MFA 注入（FormulaStore と同型）。
+  # contents は network をコンパイル時依存しない。未設定・nil のときはスキップ。
   defp maybe_publish_zenoh_frame(state) do
     debug_first_frames = state.frame_count < 5
 
     case Process.get(:zenoh_frame) do
       {room_id, frame_binary} when is_binary(frame_binary) ->
         Process.delete(:zenoh_frame)
-        maybe_publish_zenoh_frame_when_available(room_id, frame_binary, state, debug_first_frames)
+        publish_zenoh_frame_via_mfa(room_id, frame_binary, state, debug_first_frames)
 
       _ ->
         maybe_publish_zenoh_frame_log_no_frame(state, debug_first_frames)
     end
   end
 
-  defp maybe_publish_zenoh_frame_when_available(room_id, frame_binary, state, debug_first_frames) do
-    zenoh_available? =
-      Code.ensure_loaded?(Network.ZenohBridge) and Process.whereis(Network.ZenohBridge)
+  defp publish_zenoh_frame_via_mfa(room_id, frame_binary, state, debug_first_frames) do
+    case Application.get_env(:contents, :zenoh_frame_publish) do
+      {mod, fun, args} when is_atom(mod) and is_atom(fun) and is_list(args) ->
+        maybe_publish_zenoh_frame_log_publish(room_id, frame_binary, state, debug_first_frames)
+        apply(mod, fun, args ++ [room_id, frame_binary])
 
-    if zenoh_available? do
-      maybe_publish_zenoh_frame_log_publish(room_id, frame_binary, state, debug_first_frames)
-      Network.ZenohBridge.publish_frame(room_id, frame_binary)
-    else
-      maybe_publish_zenoh_frame_log_unavailable(state, debug_first_frames)
+      fun when is_function(fun, 2) ->
+        maybe_publish_zenoh_frame_log_publish(room_id, frame_binary, state, debug_first_frames)
+        fun.(room_id, frame_binary)
+
+      _ ->
+        maybe_publish_zenoh_frame_log_unavailable(state, debug_first_frames)
     end
   end
 
@@ -553,7 +556,7 @@ defmodule Contents.Events.Game do
 
   defp maybe_publish_zenoh_frame_log_unavailable(state, debug_first_frames) do
     if debug_first_frames or rem(state.frame_count, 120) == 0 do
-      Logger.warning("[Zenoh] ZenohBridge not available, skipping publish (debug)")
+      Logger.warning("[Zenoh] zenoh_frame_publish MFA unset, skipping publish (debug)")
     end
   end
 

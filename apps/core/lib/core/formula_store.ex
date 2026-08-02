@@ -13,8 +13,8 @@ defmodule Core.FormulaStore do
 
   ## 設定（config :core, :formula_store_broadcast）
   synced 更新時のブロードキャスト用。未設定または `nil` のときはブロードキャストしない。
-  - `{Mod, Fun, []}` — `apply(Mod, Fun, [room_id, {:formula_store_synced, key, value}])` を呼ぶ。
-    `Network.Distributed.broadcast/2` 互換の 2 引数関数を指定すること。
+  - `{Mod, Fun, args}` — `apply(Mod, Fun, args ++ [room_id, {:formula_store_synced, key, value}])`。
+    `args` は静的引数（通常は `[]`）。`Network.Distributed.broadcast/2` 互換なら `args` は空。
   - `fun`（2 引数関数）— `fun.(room_id, {:formula_store_synced, key, value})` を呼ぶ。
   - core 単体利用（network 未ロード）の場合は必ず `nil` を設定すること。
 
@@ -187,8 +187,8 @@ defmodule Core.FormulaStore do
 
     result =
       case Application.get_env(:core, :formula_store_broadcast) do
-        {mod, fun, []} when is_atom(mod) and is_atom(fun) ->
-          apply(mod, fun, [room_id, event])
+        {mod, fun, args} when is_atom(mod) and is_atom(fun) and is_list(args) ->
+          apply(mod, fun, args ++ [room_id, event])
 
         fun when is_function(fun, 2) ->
           fun.(room_id, event)

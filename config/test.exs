@@ -10,3 +10,6 @@ config :network, Network.UDP, port: 0
 # FormulaStore のテストでは broadcast を無効化（Network への依存を避ける）
 config :core, :formula_store_broadcast, nil
 
+# contents のテストでは Zenoh publish を無効化（Network への依存を避ける）
+config :contents, :zenoh_frame_publish, nil
+
