@@ -69,7 +69,7 @@
 |:---|:---|
 | **所在（Assets）** | 実体をユーザー領域に置く |
 | **権威（engine）** | 誰のセーブか・いつ・どの版か・改ざん可否を決める |
-| **配線** | `__save__` → スナップショット → Assets 書込 ／ `__load__` → 検証 → ルーム適用 |
+| **配線** | `__save__` → **個人**スナップショット → Assets 書込 ／ `__load__` → 検証 → **本人のみ**適用 |
 
 ---
 
@@ -100,12 +100,13 @@ users/{user_id}/private/Save/{content_id}/save.{slot}
 | 項目 | 方針 |
 |:---|:---|
 | 形式 | JSON または MessagePack（初期は JSON 可） |
-| 必須フィールド | `schema_version`, `content_id`, `user_id`, `created_at`, `payload` |
+| 必須フィールド | `schema_version`, `content_id`, `user_id`, `created_at`, `payload`（個人状態） |
 | 改ざん対策 | engine が HMAC または署名付きダイジェストを付与し、load 時に検証 |
 | サイズ上限 | 要決定（例: 1 MiB）。Assets API で拒否 |
 | スロット数 | MVP: コンテンツあたり 1〜3 |
+| マルチプレイ | load はセーブ所有者の個人状態のみ。ルーム共有状態は対象外（§4 Phase 3） |
 
-`payload` の中身（どのゲーム状態を含めるか）はコンテンツ／共通レイヤの ADR で確定する（§6）。
+`payload` の中身（どの**個人**ゲーム状態を含めるか）はコンテンツ／共通レイヤの ADR で確定する（§6）。
 
 ---
 
@@ -116,8 +117,11 @@ users/{user_id}/private/Save/{content_id}/save.{slot}
 - [ ] オンライン永続化 ADR を起草（所在＝Assets LocalAssets、権威＝engine）
 - [ ] engine ↔ Assets の API 契約（パス・認証・エラーコード）を 1 枚にまとめる
 - [ ] `content_id` / スロット / スキーマ版の命名を確定
+- [ ] `AssetMetadata` 所有者モデル: `owner_type` + `owner_id`（分類設計と一致。MVP は `user` のみ）
+- [ ] サービス間認可 A/B と **JWT 有効期限・長時間セッション対策**（リフレッシュ／委譲再発行／B 採用基準）
+- [ ] `__save__` / `__load__` の**適用範囲**: MVP は「起動プレイヤーの個人進捗のみ」。ルーム全体 load は将来＋オーナー認可前提
 
-**完了条件**: ADR 草案がレビュー可能。実装フェーズに未決事項が残らない。
+**完了条件**: ADR 草案がレビュー可能。上記未決事項（所有者モデル・認可 A/B＋JWT 寿命・load 適用範囲）が実装着手前に閉じている。
 
 ---
 
@@ -127,9 +131,11 @@ auth と同型の Elixir/Phoenix + Ash（または同等）サービスを `Asse
 
 - [ ] リポジトリ／ディレクトリ作成（`mix phx.new` 系、auth を雛形に）
 - [ ] PostgreSQL + Ash: `AssetMetadata`（最小）
-  - `id`, `owner_user_id`, `storage_category`（`local_private`）, `logical_path`, `uri`, `byte_size`, `content_type`, timestamps
+  - [asset-storage-classification.md](asset-storage-classification.md) §データモデルに合わせ、**ポリモーフィック所有者**を MVP から採用する
+  - `id`, `owner_type`（MVP 固定: `user`）, `owner_id`, `storage_category`（`local_private`）, `logical_path`, `uri`, `byte_size`, `content_type`, timestamps
+  - 認可は `owner_type == :user` かつ `owner_id == JWT sub`（Group は後続。列・API 形状は変更しない）
 - [ ] ストレージアダプタ（MVP: ローカルディスク。将来 R2 に差し替え可能な behaviour）
-- [ ] JWT 検証（auth JWKS）。`sub` と `owner_user_id` の一致を強制
+- [ ] JWT 検証（auth JWKS）。`sub` と `owner_id`（`owner_type=user`）の一致を強制
 - [ ] MVP API
 
 | Method | Path | 認証 | 説明 |
@@ -152,9 +158,13 @@ auth と同型の Elixir/Phoenix + Ash（または同等）サービスを `Asse
 
 - [ ] engine に Assets HTTP クライアント（設定: `ASSETS_BASE_URL`、既定オフまたは dev ローカル）
 - [ ] 環境変数切替（例: `ASSETS_PERSISTENCE=off|on`）。オフ時は現行どおりログのみ
-- [ ] サービス間呼び出し方針の確定（下記どちらかを ADR で選ぶ）
+- [ ] サービス間呼び出し方針の確定（下記どちらかを ADR で選ぶ。**JWT 有効期限と長時間セッション**を必ず明記）
   - **A（推奨 MVP）**: engine がユーザー JWT（または短命委譲トークン）を受け取り、Assets に代理 PUT/GET
+    - リスク: 長時間ゲームセッション中にキャッシュ JWT が期限切れし、後続の `__save__` / `__load__` が 401 になる
+    - ADR に書く対策候補: (1) save/load 直前にクライアントから最新 Bearer を渡す (2) auth リフレッシュ経路 (3) 短命委譲トークンの再発行 (4) 期限切れ時は明確なエラーをクライアントへ返し再ログイン誘導
   - **B**: engine サービス資格情報 + `X-On-Behalf-Of: user_id`（要追加認可）
+    - 長時間セッションでも engine 資格情報で安定動作しやすい
+    - 採用基準（例）: セッション長 ≫ JWT 寿命、または A のリフレッシュが運用上難しい場合に B へ切替
 
 **完了条件**: engine からテスト用バイト列を Assets のユーザー Save パスへ往復できる。
 
@@ -164,11 +174,15 @@ auth と同型の Elixir/Phoenix + Ash（または同等）サービスを `Asse
 
 対象: `engine/apps/contents/lib/events/game.ex` ほか
 
-- [ ] `__save__`: ルーム／コンテンツ状態から権威スナップショットを組み立て → Assets PUT
-- [ ] `__load__` / `__load_confirm__`: Assets GET → 検証 → 状態適用（確認 UI フローは既存アクション名を維持）
-- [ ] プレイヤー ID（JWT `sub`）とセーブ `user_id` の一致チェック
+**適用範囲（MVP 確定方針）**: セーブは**起動プレイヤー単位の個人進捗**を LocalAssets に置く。`__load__` は当該プレイヤー自身の状態のみを適用し、**ルーム共有状態（他プレイヤー・共有シーンの権威状態）を上書きしない**。
+
+- [ ] `__save__`: 起動プレイヤーの個人スナップショットを組み立て → Assets PUT（所在パスは当該 `user_id`）
+- [ ] `__load__` / `__load_confirm__`: Assets GET → 検証 → **本人の個人状態のみ**適用（確認 UI フローは既存アクション名を維持）
+- [ ] プレイヤー ID（JWT `sub`）とセーブ `user_id` の一致チェック（他者セーブの load は拒否）
+- [ ] 明示的に **out of scope（MVP）**: ルーム全体スナップショットの save/load、任意参加者による共有状態の巻き戻し
+- [ ] （将来）ルーム全体ロードを許容する場合は、ルームオーナー等の認可と影響範囲を別 ADR で定義してから実装
 - [ ] スキーマ版不一致時の明示エラー（黙って壊さない）
-- [ ] テスト: save → load で状態が復元される／改ざんペイロードは拒否
+- [ ] テスト: save → load で**当該プレイヤー**の状態が復元される／他プレイヤー状態は不変／改ざんペイロードは拒否
 
 **完了条件**: `ASSETS_PERSISTENCE=on` 時、UI アクション経由でセーブ／ロードが機能する。オフ時は従来動作。
 
@@ -210,10 +224,11 @@ auth と同型の Elixir/Phoenix + Ash（または同等）サービスを `Asse
 
 | 項目 | 候補 | メモ |
 |:---|:---|:---|
-| スナップショットに含める状態 | シーン／プレイヤー進捗／Formula store／スコア | コンテンツ共通ヘッダ＋コンテンツ固有 payload |
-| engine→Assets 認可 | ユーザー JWT 代理 / サービス資格情報 | MVP は代理が単純 |
+| スナップショットに含める**個人**状態 | 進捗／インベントリ／スコア等 | ルーム共有状態は MVP 対象外。共通ヘッダ＋コンテンツ固有 payload |
+| マルチプレイでの load 影響 | **本人個人状態のみ（MVP）** / ルーム全体（将来） | 全体 load はオーナー認可必須。Phase 0 でユースケースを固定 |
+| engine→Assets 認可 | **A** ユーザー JWT 代理 / **B** サービス資格情報 | A は JWT 期限切れ対策を ADR 必須。セッション長で B 採用基準も書く |
 | ストレージ実体 | ローカル FS → R2 | behaviour で隠蔽 |
-| 競合（同時 save） | last-write-wins + `updated_at` / 楽観ロック | オンライン前提で必須 |
+| 競合（同時 save） | last-write-wins + `updated_at` / 楽観ロック | 同一 user の同一 slot。オンライン前提で必須 |
 | オフラインセーブ | 当面なし | クライアント直書きは禁止を維持 |
 | リポジトリ形態 | monorepo 内 `Assets/` / 独立 git | auth と同じ並びを優先 |
 
