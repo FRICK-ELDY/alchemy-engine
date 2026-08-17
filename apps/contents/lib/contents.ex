@@ -10,5 +10,6 @@ defmodule Contents do
   - `Content.BulletHell3D` — 3D 弾幕避け
   - `Content.FormulaTest`  — Formula / Nodes 検証
   - `Content.Tetris`       — Tetris (title / play / game over)
+  - `Content.SampleOsc`    — OSC 送受信サンプル（`config/sample_osc.exs`）
   """
 end

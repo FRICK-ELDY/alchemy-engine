@@ -85,8 +85,9 @@ config :network, Network.S2S,
 #   Content.CanvasTest    — Canvas / ワールド空間 UI デバッグ
 #   Content.BulletHell3D  — 3D 弾幕避け（開発既定）
 #   Content.FormulaTest   — Formula / Nodes 検証（`config/formula_test.exs` 参照）
+#   Content.SampleOsc     — OSC 送受信サンプル（`config/sample_osc.exs` 参照）
 # ローカル開発・動作検証時は上記いずれかに切り替える。本番は config/runtime.exs で設定すること。
-config :server, :current, Content.BulletHell3D
+config :server, :current, Content.SampleOsc
 config :server, :map, :plain
 config :server, :game_events_module, Contents.Events.Game
 
