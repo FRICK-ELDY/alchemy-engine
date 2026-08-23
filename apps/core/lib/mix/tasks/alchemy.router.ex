@@ -47,7 +47,10 @@ defmodule Mix.Tasks.Alchemy.Router do
   defp format_listen(args) do
     args
     |> Enum.chunk_every(2)
-    |> Enum.map(fn ["-l", endpoint] -> endpoint end)
+    |> Enum.flat_map(fn
+      ["-l", endpoint] -> [endpoint]
+      _ -> []
+    end)
     |> Enum.join("  ")
   end
 end
