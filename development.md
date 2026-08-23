@@ -123,6 +123,24 @@ Zenoh 経由でサーバーとクライアントを分離して起動します�
    mix alchemy.client --connect tcp/127.0.0.1:7447 --room main
    ```
 
+### リモート Client（Windows ホスト + Mac Client）
+
+Windows をホスト（Router / Server / Client）、Mac を Client のみにする場合。iPhone テザリングでも、両機が同じホットスポットに入っていれば同じ手順です。
+
+1. **Windows（ホスト）** — 3 ターミナル
+   ```bash
+   mix alchemy.router
+   mix alchemy.server
+   mix alchemy.client
+   ```
+   `mix alchemy.router` は `tcp/0.0.0.0:7447` で待ち受ける。Windows のテザリング側 IPv4 を控える（例: `ipconfig` で `172.20.10.x`）。初回は TCP 7447 の受信をファイアウォールで許可する。
+
+2. **Mac（Client のみ）** — 同じコンテンツ・同じプロトコル世代のリポジトリで:
+   ```bash
+   mix alchemy.client --connect tcp/<WINDOWS_IP>:7447 --room main
+   ```
+   `<WINDOWS_IP>` はホストのテザリング IPv4。`127.0.0.1` では Mac から Windows に届かない。
+
 ### 分散クラスタ起動（複数ノード）
 
 `config/runtime.exs` に libcluster の topologies を設定し、別ターミナルで各ノードを起動します。

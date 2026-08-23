@@ -14,6 +14,7 @@ defmodule Mix.Tasks.Alchemy.Client do
 
       mix alchemy.client
       mix alchemy.client --connect tcp/127.0.0.1:7447 --room main
+      mix alchemy.client --connect tcp/<HOST_IP>:7447 --room main
   """
 
   use Mix.Task
