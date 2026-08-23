@@ -4,14 +4,13 @@
 //! - セッション切断を検知したら指数バックオフで再接続し、subscriber を張り直す
 //! - put / close のネットワーク I/O 中は state ロックを持たない（描画スレッドのスタッター回避）
 
-use futures::future::{select, Either};
-use futures_timer::Delay;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 use zenoh::config::Config;
+use zenoh::handlers::RingChannel;
 use zenoh::pubsub::Publisher;
 use zenoh::qos::CongestionControl;
 use zenoh::{Session, Wait};
@@ -142,8 +141,7 @@ impl ClientSession {
                         }
                         log::warn!("[zenoh] subscriber disconnected on {key}; reconnecting");
                         // バックオフは reconnect_with_backoff 内のみ。Err は shutdown / poison。
-                        if let Err(e) =
-                            session.reconnect_with_backoff(&shutdown, RECONNECT_INIT_MS)
+                        if let Err(e) = session.reconnect_with_backoff(&shutdown, RECONNECT_INIT_MS)
                         {
                             if !shutdown.load(Ordering::SeqCst) {
                                 log::error!("[zenoh] reconnect aborted: {e}");
@@ -385,6 +383,7 @@ enum CongestionMode {
 
 fn open_session(connect_config: &str) -> Result<Session, String> {
     let mut config = Config::default();
+    let connect_config = prefer_udp_if_remote(connect_config);
     if !connect_config.is_empty() {
         // Elixir Network.ZenohBridge と同様に zenohd へ接続する **client** モードを明示する。
         // connect/endpoints のみ指定した場合、既定は peer に寄り、PUT がルータ上の
@@ -406,6 +405,28 @@ fn open_session(connect_config: &str) -> Result<Session, String> {
         .map_err(|e| format!("zenoh open failed: {e}"))
 }
 
+/// loopback 以外の `tcp/` は UDP に読み替える。
+/// テザリング等の TCP バッファ膨張でフレーム遅延が時間とともに伸びるのを避ける。
+fn prefer_udp_if_remote(connect_config: &str) -> String {
+    let Some(rest) = connect_config.strip_prefix("tcp/") else {
+        return connect_config.to_string();
+    };
+    let host = rest.rsplit_once(':').map(|(h, _)| h).unwrap_or(rest);
+    if is_loopback_host(host) {
+        return connect_config.to_string();
+    }
+    let udp = format!("udp/{rest}");
+    log::info!("[zenoh] remote tcp endpoint rewritten to {udp} to avoid TCP bufferbloat");
+    udp
+}
+
+fn is_loopback_host(host: &str) -> bool {
+    matches!(
+        host,
+        "127.0.0.1" | "localhost" | "[::1]" | "::1" | "0.0.0.0" | "[::]"
+    )
+}
+
 fn run_subscriber_until_disconnect<F>(
     session: &Session,
     key_expr: &str,
@@ -423,6 +444,7 @@ where
 
     let subscriber = session
         .declare_subscriber(key_expr)
+        .with(RingChannel::new(1))
         .wait()
         .map_err(|e| format!("subscribe failed: {e}"))?;
 
@@ -444,18 +466,29 @@ where
             return Err("session replaced".to_string());
         }
 
-        let recv_fut = subscriber.recv_async();
-        let timeout = Delay::new(Duration::from_millis(SHUTDOWN_POLL_MS));
-
-        match futures::executor::block_on(select(recv_fut, timeout)) {
-            Either::Left((Ok(sample), _)) => {
-                let payload = sample.payload().to_bytes();
+        match subscriber.recv_timeout(Duration::from_millis(SHUTDOWN_POLL_MS)) {
+            Ok(Some(sample)) => {
+                let mut latest = sample;
+                let mut skipped = 0u32;
+                loop {
+                    match subscriber.try_recv() {
+                        Ok(Some(queued)) => {
+                            skipped += 1;
+                            latest = queued;
+                        }
+                        Ok(None) | Err(_) => break,
+                    }
+                }
+                if skipped > 0 {
+                    log::debug!("[zenoh subscriber] skipped {skipped} stale frame(s)");
+                }
+                let payload = latest.payload().to_bytes();
                 on_payload(payload.to_vec());
             }
-            Either::Left((Err(e), _)) => {
+            Ok(None) => {}
+            Err(e) => {
                 return Err(format!("recv error: {e}"));
             }
-            Either::Right((_, _)) => {}
         }
     }
     Ok(())
@@ -493,4 +526,50 @@ fn sleep_with_shutdown(total: Duration, shutdown: &AtomicBool) -> Result<(), Str
         remaining = remaining.saturating_sub(slice);
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{is_loopback_host, prefer_udp_if_remote};
+
+    #[test]
+    fn loopback_tcp_is_kept() {
+        assert_eq!(
+            prefer_udp_if_remote("tcp/127.0.0.1:7447"),
+            "tcp/127.0.0.1:7447"
+        );
+        assert_eq!(
+            prefer_udp_if_remote("tcp/localhost:7447"),
+            "tcp/localhost:7447"
+        );
+        assert_eq!(prefer_udp_if_remote("tcp/[::1]:7447"), "tcp/[::1]:7447");
+    }
+
+    #[test]
+    fn remote_tcp_is_rewritten_to_udp() {
+        assert_eq!(
+            prefer_udp_if_remote("tcp/192.168.200.8:7447"),
+            "udp/192.168.200.8:7447"
+        );
+        assert_eq!(
+            prefer_udp_if_remote("tcp/172.20.10.2:7447"),
+            "udp/172.20.10.2:7447"
+        );
+    }
+
+    #[test]
+    fn udp_and_empty_are_unchanged() {
+        assert_eq!(
+            prefer_udp_if_remote("udp/192.168.200.8:7447"),
+            "udp/192.168.200.8:7447"
+        );
+        assert_eq!(prefer_udp_if_remote(""), "");
+    }
+
+    #[test]
+    fn loopback_hosts() {
+        assert!(is_loopback_host("127.0.0.1"));
+        assert!(is_loopback_host("localhost"));
+        assert!(!is_loopback_host("192.168.200.8"));
+    }
 }

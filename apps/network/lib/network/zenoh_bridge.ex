@@ -134,8 +134,8 @@ defmodule Network.ZenohBridge do
   end
 
   defp put_opts do
-    # 60Hz フレームは CongestionControl::Drop で古いフレームをドロップ
-    [congestion_control: :drop]
+    # 古いフレームをキューに溜めず、バッチ待ちもせずすぐ送る（テザリングの TCP 遅延蓄積対策）
+    [congestion_control: :drop, express: true, priority: :real_time]
   end
 
   @impl true
