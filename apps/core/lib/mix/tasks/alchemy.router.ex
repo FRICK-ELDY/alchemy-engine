@@ -6,7 +6,8 @@ defmodule Mix.Tasks.Alchemy.Router do
   前提: `cargo install eclipse-zenoh` で zenohd をインストール済みであること。
   Ctrl+C で終了します。
 
-  IPv4 は `0.0.0.0:7447`（localhost と LAN / テザリングの両方）、IPv6 は `[::]:7447`。
+  待ち受けは OS で切り替える。Windows は `tcp/0.0.0.0:7447` と `tcp/[::]:7447`、
+  Unix（macOS / Linux）は `tcp/[::]:7447` のみ（デュアルスタックで IPv4 もカバー）。
   リモート Client はホストの IPv4 に接続する:
 
       mix alchemy.client --connect tcp/<HOST_IP>:7447 --room main
@@ -20,16 +21,33 @@ defmodule Mix.Tasks.Alchemy.Router do
 
   @impl Mix.Task
   def run(_args) do
+    args = listen_args()
+
     Mix.shell().info("")
     Mix.shell().info("Starting Zenoh Router (zenohd)...")
-    Mix.shell().info("listen: tcp/0.0.0.0:7447  tcp/[::]:7447")
+    Mix.shell().info("listen: #{format_listen(args)}")
     Mix.shell().info("Remote client: mix alchemy.client --connect tcp/<HOST_IP>:7447")
     Mix.shell().info("Press Ctrl+C to stop")
     Mix.shell().info("")
 
-    # Windows では tcp/[::]:7447 だけだと IPv4（127.0.0.1 / LAN）に届かない。
-    # 0.0.0.0 で localhost とテザリング / LAN の IPv4 を同時に待つ。
-    args = ["-l", "tcp/0.0.0.0:7447", "-l", "tcp/[::]:7447"]
     System.cmd("zenohd", args, into: IO.stream(:stdio, :line))
+  end
+
+  # Windows では tcp/[::]:7447 だけだと IPv4（127.0.0.1 / LAN）に届かないため、
+  # 0.0.0.0 と [::] の両方を明示する。
+  # macOS/Linux では [::] へのバインドがデフォルトで IPv4（0.0.0.0）もカバーするため、
+  # 両方を指定すると Address already in use になる。
+  defp listen_args do
+    case :os.type() do
+      {:win32, _} -> ["-l", "tcp/0.0.0.0:7447", "-l", "tcp/[::]:7447"]
+      _ -> ["-l", "tcp/[::]:7447"]
+    end
+  end
+
+  defp format_listen(args) do
+    args
+    |> Enum.chunk_every(2)
+    |> Enum.map(fn ["-l", endpoint] -> endpoint end)
+    |> Enum.join("  ")
   end
 end
