@@ -55,7 +55,7 @@ flowchart TB
 - **SuperCollider-inspired Audio**
 > Elixir が「指揮者」として非同期コマンドを発行し、Rust クライアントの専用経路が DSP 処理を行います。複雑な空間オーディオと動的ルーティングを低遅延で実現します。
 
-詳細は [プラス点 詳細一覧](./docs/evaluation/specific-strengths.md) を参照。
+詳細は [プラス点 詳細一覧](./docs/evaluation/specific-strengths-2026-08-25.md) を参照。
 
 ## 🚀 Getting Started
 
