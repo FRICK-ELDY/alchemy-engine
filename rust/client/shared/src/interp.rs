@@ -459,6 +459,11 @@ impl SnapshotInterpolator {
         self.delay
     }
 
+    #[cfg(test)]
+    fn playback_ats(&self) -> Vec<Instant> {
+        self.snapshots.iter().map(|(at, _)| *at).collect()
+    }
+
     fn ema_duration(current: Duration, sample: Duration) -> Duration {
         let current_ms = current.as_secs_f64() * 1000.0;
         let sample_ms = sample.as_secs_f64() * 1000.0;
@@ -515,6 +520,7 @@ impl SnapshotInterpolator {
     /// 受信間隔から推定 tick を EMA 更新し、キューには `last_playback + estimated_interval`
     /// でスタンプする（バースト時も等間隔に載せる）。描画遅延は推定間隔×2 へ追従。
     /// 再生時刻は `received_at + delay + interval` を超えない（先走り防止）。
+    /// EMA で上限が縮んでも `last_play` より逆行しない。
     ///
     /// 受信が大きく開いて再生タイムラインが実時間から遅れた場合はキューをリセットし、
     /// 以降も補間が効く状態に戻す（瞬断・一時停止対策）。
@@ -551,7 +557,7 @@ impl SnapshotInterpolator {
             Some((last_play, _)) => {
                 let raw = *last_play + self.estimated_interval;
                 let cap = received_at + self.max_playback_ahead();
-                raw.min(cap)
+                raw.min(cap).max(*last_play)
             }
         };
 
@@ -1064,6 +1070,37 @@ mod tests {
                 assert!(*x <= latest + 0.5, "x={x} latest={latest}");
             }
             other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn playback_timeline_does_not_go_backwards_when_ahead_cap_shrinks() {
+        let mut interp = SnapshotInterpolator::with_delay(Duration::from_millis(100));
+        let t0 = Instant::now();
+        interp.push(player_at(0.0, 0.0), t0);
+
+        // 間隔 EMA を上振れさせ、バースト再生スタンプが cap 近くまで先走る状態を作る
+        let mut t = t0;
+        for _ in 0..32 {
+            t += Duration::from_millis(100);
+            interp.push(player_at(0.0, 0.0), t);
+        }
+
+        // 16 フレーム窓の壁時計平均が急に縮み、max_playback_ahead が減少する
+        for i in 1..=RATE_WINDOW_FRAMES {
+            t += Duration::from_millis(1);
+            interp.push(player_at(i as f32, 0.0), t);
+        }
+
+        let ats = interp.playback_ats();
+        assert!(ats.len() >= 2, "snapshots={}", ats.len());
+        for pair in ats.windows(2) {
+            assert!(
+                pair[1] >= pair[0],
+                "playback went backwards: {:?} -> {:?}",
+                pair[0],
+                pair[1]
+            );
         }
     }
 }
