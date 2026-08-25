@@ -26,7 +26,7 @@
 **分散連合型VRプラットフォームの開発と研究**  
 Development and Research of a Distributed Federated VR Platform
 
-FRICK-LAB 松尾 英樹
+FRICK-LAB
 
 ---
 
