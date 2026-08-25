@@ -442,6 +442,7 @@ where
         return Err("session closed".to_string());
     }
 
+    // 容量 1 なので未消費の古いフレームは到着時点で捨てる。受信側で追加ドレインしない。
     let subscriber = session
         .declare_subscriber(key_expr)
         .with(RingChannel::new(1))
@@ -466,25 +467,11 @@ where
             return Err("session replaced".to_string());
         }
 
-        // RingChannelHandler::recv_timeout / try_recv は ZResult<Option<Sample>>。
+        // RingChannelHandler::recv_timeout は ZResult<Option<Sample>>。
         // タイムアウトは Ok(None)（flume の RecvTimeoutError は返さない）。
         match subscriber.recv_timeout(Duration::from_millis(SHUTDOWN_POLL_MS)) {
             Ok(Some(sample)) => {
-                let mut latest = sample;
-                let mut skipped = 0u32;
-                loop {
-                    match subscriber.try_recv() {
-                        Ok(Some(queued)) => {
-                            skipped += 1;
-                            latest = queued;
-                        }
-                        Ok(None) | Err(_) => break,
-                    }
-                }
-                if skipped > 0 {
-                    log::debug!("[zenoh subscriber] skipped {skipped} stale frame(s)");
-                }
-                let payload = latest.payload().to_bytes();
+                let payload = sample.payload().to_bytes();
                 on_payload(payload.to_vec());
             }
             Ok(None) => {}
