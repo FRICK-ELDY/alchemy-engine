@@ -466,6 +466,8 @@ where
             return Err("session replaced".to_string());
         }
 
+        // RingChannelHandler::recv_timeout / try_recv は ZResult<Option<Sample>>。
+        // タイムアウトは Ok(None)（flume の RecvTimeoutError は返さない）。
         match subscriber.recv_timeout(Duration::from_millis(SHUTDOWN_POLL_MS)) {
             Ok(Some(sample)) => {
                 let mut latest = sample;
