@@ -86,10 +86,8 @@ defmodule Network.S2S.Instance do
          {:ok, iss} <- fetch_iss(claims_map),
          {:ok, local_domain} <- local_domain(),
          :ok <- check_aud(claims_map, local_domain),
-         {:ok, signer} <- resolve_peer_signer_external(iss, header["kid"]),
-         {:ok, claims} <-
-           Joken.verify_and_validate(token_config_for_verify(local_domain), token, signer) do
-      {:ok, claims}
+         {:ok, signer} <- resolve_peer_signer_external(iss, header["kid"]) do
+      Joken.verify_and_validate(token_config_for_verify(local_domain), token, signer)
     end
   catch
     :exit, {:noproc, _} -> {:error, :not_ready}
@@ -372,7 +370,9 @@ defmodule Network.S2S.Instance do
       end
 
     case Map.fetch(Map.get(state.peer_signers, iss, %{}), kid) do
-      {:ok, signer} -> {{:ok, signer}, state}
+      {:ok, signer} ->
+        {{:ok, signer}, state}
+
       :error ->
         reason =
           case extract_jwks(body) do
@@ -419,7 +419,8 @@ defmodule Network.S2S.Instance do
   defp mark_peer_fetched(state, domain) do
     %{
       state
-      | peer_fetched_at: Map.put(state.peer_fetched_at, domain, System.monotonic_time(:millisecond))
+      | peer_fetched_at:
+          Map.put(state.peer_fetched_at, domain, System.monotonic_time(:millisecond))
     }
   end
 
@@ -496,24 +497,33 @@ defmodule Network.S2S.Instance do
         from_pem(pem)
 
       is_binary(path) and String.trim(path) != "" ->
-        case File.read(path) do
-          {:ok, contents} -> from_pem(contents)
-          {:error, reason} -> {:error, reason}
-        end
-
-      enabled? and Keyword.get(cfg, :ephemeral_keys, false) == true ->
-        generate_ephemeral()
+        read_key_file(path)
 
       enabled? ->
-        # 開発利便性: 鍵未設定ならエフェメラル鍵（再起動で変わる）
-        Logger.warning(
-          "[S2S.Instance] no private key configured; generating ephemeral RSA key (dev only)"
-        )
-
-        generate_ephemeral()
+        maybe_ephemeral_keys(cfg)
 
       true ->
         {:error, :disabled}
+    end
+  end
+
+  defp read_key_file(path) do
+    case File.read(path) do
+      {:ok, contents} -> from_pem(contents)
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp maybe_ephemeral_keys(cfg) do
+    if Keyword.get(cfg, :ephemeral_keys, false) == true do
+      generate_ephemeral()
+    else
+      # 開発利便性: 鍵未設定ならエフェメラル鍵（再起動で変わる）
+      Logger.warning(
+        "[S2S.Instance] no private key configured; generating ephemeral RSA key (dev only)"
+      )
+
+      generate_ephemeral()
     end
   end
 

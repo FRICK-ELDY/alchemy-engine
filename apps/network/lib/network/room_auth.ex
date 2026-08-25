@@ -50,28 +50,29 @@ defmodule Network.RoomAuth do
     case payload do
       <<len::16-big, token::binary-size(len), rest::binary>>
       when len > 0 and len <= @max_token_bytes ->
-        case Network.RoomToken.verify(token, room_id) do
-          :ok ->
-            {:ok, rest}
-
-          {:error, reason} ->
-            if required?() do
-              {:error, reason}
-            else
-              # オフ時: 封筒らしいペイロードなら rest を採用し、そうでなければ生 protobuf とみなす
-              if (reason in [:expired, :scope_mismatch] or len > 30) and looks_like_token?(token) do
-                {:ok, rest}
-              else
-                {:ok, payload}
-              end
-            end
-        end
+        unwrap_wrapped(payload, room_id, token, rest, len)
 
       _ ->
-        if required?() do
-          {:error, :missing_token}
-        else
-          {:ok, payload}
+        if required?(), do: {:error, :missing_token}, else: {:ok, payload}
+    end
+  end
+
+  defp unwrap_wrapped(payload, room_id, token, rest, len) do
+    case Network.RoomToken.verify(token, room_id) do
+      :ok ->
+        {:ok, rest}
+
+      {:error, reason} ->
+        cond do
+          required?() ->
+            {:error, reason}
+
+          # オフ時: 封筒らしいペイロードなら rest を採用し、そうでなければ生 protobuf とみなす
+          (reason in [:expired, :scope_mismatch] or len > 30) and looks_like_token?(token) ->
+            {:ok, rest}
+
+          true ->
+            {:ok, payload}
         end
     end
   end

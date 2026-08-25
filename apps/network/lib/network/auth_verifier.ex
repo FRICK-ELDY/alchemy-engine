@@ -257,15 +257,13 @@ defmodule Network.AuthVerifier do
 
   defp jwk_to_signer(%{"kty" => "RSA", "kid" => kid} = jwk)
        when is_binary(kid) and kid != "" do
-    try do
-      jose_jwk = JOSE.JWK.from_map(jwk)
-      {_type, pem} = JOSE.JWK.to_pem(jose_jwk)
-      {kid, Joken.Signer.create("RS256", %{"pem" => pem}, %{"kid" => kid})}
-    rescue
-      error ->
-        Logger.warning("[AuthVerifier] skip invalid JWK kid=#{kid}: #{inspect(error)}")
-        nil
-    end
+    jose_jwk = JOSE.JWK.from_map(jwk)
+    {_type, pem} = JOSE.JWK.to_pem(jose_jwk)
+    {kid, Joken.Signer.create("RS256", %{"pem" => pem}, %{"kid" => kid})}
+  rescue
+    error ->
+      Logger.warning("[AuthVerifier] skip invalid JWK kid=#{kid}: #{inspect(error)}")
+      nil
   end
 
   defp jwk_to_signer(_), do: nil

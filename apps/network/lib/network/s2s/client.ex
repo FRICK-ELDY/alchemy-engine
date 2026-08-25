@@ -17,9 +17,8 @@ defmodule Network.S2S.Client do
     get_fun = Keyword.get(opts, :get_fun, &default_get/2)
 
     with {:ok, audience} <- resolve_audience(base, opts, get_fun),
-         {:ok, token} <- Network.S2S.Instance.sign_request_token(audience),
-         {:ok, body} <- get_fun.("#{base}/api/s2s/worlds", token) do
-      {:ok, body}
+         {:ok, token} <- Network.S2S.Instance.sign_request_token(audience) do
+      get_fun.("#{base}/api/s2s/worlds", token)
     end
   end
 

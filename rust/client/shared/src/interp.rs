@@ -345,6 +345,7 @@ fn find_nearest_prev(
 /// 位置コマンドは **インデックスではなく近傍マッチ**で突き合わせる。
 /// - 新規スポーン（curr のみ）: `t < 1.0` の間は非表示（フライング出現防止）
 /// - デスポーン（prev のみ）: `t < 1.0` の間は prev 座標で維持（早期消滅防止）
+///
 /// 非位置コマンド（Skybox 等）と Particle は `curr` を採用。
 /// UI / mesh / cursor / audio は最新（`curr`）を採用する。
 ///
@@ -370,13 +371,10 @@ pub fn interpolate_render_frame(prev: &RenderFrame, curr: &RenderFrame, t: f32) 
             commands.push(curr_cmd.clone());
             continue;
         }
-        match find_nearest_prev(&prev.commands, curr_cmd, &used, MAX_MATCH_DISTANCE) {
-            Some(i) => {
-                used[i] = true;
-                commands.push(lerp_draw_command(&prev.commands[i], curr_cmd, t));
-            }
-            // t < 1.0 の間は新規スポーンを出さず、curr 到達まで待つ
-            None => {}
+        // t < 1.0 の間は新規スポーンを出さず、curr 到達まで待つ
+        if let Some(i) = find_nearest_prev(&prev.commands, curr_cmd, &used, MAX_MATCH_DISTANCE) {
+            used[i] = true;
+            commands.push(lerp_draw_command(&prev.commands[i], curr_cmd, t));
         }
     }
 

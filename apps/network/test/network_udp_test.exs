@@ -72,6 +72,7 @@ defmodule Network.UDPTest do
       # room_id <<0>> （空 token）相当
       assert {:ok, {:join, 1, "room_a", nil}} =
                Protocol.decode(<<0x01, 1::32, "room_a", 0>>)
+
       _ = bin
     end
 

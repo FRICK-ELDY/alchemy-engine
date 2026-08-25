@@ -21,9 +21,7 @@ where
         .enumerate_extensions()
         .map_err(|e| format!("enumerate_extensions: {e}"))?;
     if !available.mnd_headless {
-        return Err(
-            "XR_MND_headless is not supported by the active OpenXR runtime".to_string(),
-        );
+        return Err("XR_MND_headless is not supported by the active OpenXR runtime".to_string());
     }
 
     let mut enabled = xr::ExtensionSet::default();
@@ -92,7 +90,11 @@ where
         .create_action::<bool>("right_menu", "Right Menu", &[])
         .map_err(|e| format!("right_menu: {e}"))?;
 
-    let path = |s: &str| instance.string_to_path(s).map_err(|e| format!("path {s}: {e}"));
+    let path = |s: &str| {
+        instance
+            .string_to_path(s)
+            .map_err(|e| format!("path {s}: {e}"))
+    };
     instance
         .suggest_interaction_profile_bindings(
             path("/interaction_profiles/khr/simple_controller")?,
@@ -150,9 +152,7 @@ where
                         log::info!("OpenXR session READY → begun");
                     }
                     xr::SessionState::STOPPING => {
-                        session
-                            .end()
-                            .map_err(|e| format!("session.end: {e}"))?;
+                        session.end().map_err(|e| format!("session.end: {e}"))?;
                         session_running = false;
                         log::info!("OpenXR session STOPPING → ended");
                     }
@@ -174,9 +174,7 @@ where
             continue;
         }
 
-        let frame_state = frame_wait
-            .wait()
-            .map_err(|e| format!("frame_wait: {e}"))?;
+        let frame_state = frame_wait.wait().map_err(|e| format!("frame_wait: {e}"))?;
         frame_stream
             .begin()
             .map_err(|e| format!("frame_stream.begin: {e}"))?;

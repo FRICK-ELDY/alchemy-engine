@@ -38,50 +38,57 @@ defmodule Network.Router do
         send_json(
           conn,
           404,
-          Phoenix.json_library().encode!(%{error: "s2s_disabled", message: "federation S2S is disabled"})
+          Phoenix.json_library().encode!(%{
+            error: "s2s_disabled",
+            message: "federation S2S is disabled"
+          })
         )
 
       {:error, _} ->
         send_json(
           conn,
           503,
-          Phoenix.json_library().encode!(%{error: "s2s_unavailable", message: "S2S instance not ready"})
+          Phoenix.json_library().encode!(%{
+            error: "s2s_unavailable",
+            message: "S2S instance not ready"
+          })
         )
     end
   end
 
   get "/api/s2s/worlds" do
-    cond do
-      not Network.S2S.Instance.enabled?() ->
-        send_json(
-          conn,
-          404,
-          Phoenix.json_library().encode!(%{error: "s2s_disabled", message: "federation S2S is disabled"})
-        )
+    if Network.S2S.Instance.enabled?() do
+      case authorize_s2s(conn) do
+        {:ok, claims} ->
+          worlds = Network.S2S.Catalog.list_worlds()
 
-      true ->
-        case authorize_s2s(conn) do
-          {:ok, claims} ->
-            worlds = Network.S2S.Catalog.list_worlds()
+          body =
+            Phoenix.json_library().encode!(%{
+              "domain" => s2s_domain(),
+              "worlds" => worlds,
+              "caller" => claims["iss"]
+            })
 
-            body =
-              Phoenix.json_library().encode!(%{
-                "domain" => s2s_domain(),
-                "worlds" => worlds,
-                "caller" => claims["iss"]
-              })
+          send_json(conn, 200, body)
 
-            send_json(conn, 200, body)
+        {:error, reason} ->
+          body =
+            Phoenix.json_library().encode!(%{
+              error: "unauthorized",
+              message: s2s_unauthorized_message(reason)
+            })
 
-          {:error, reason} ->
-            body =
-              Phoenix.json_library().encode!(%{
-                error: "unauthorized",
-                message: s2s_unauthorized_message(reason)
-              })
-
-            send_json(conn, 401, body)
-        end
+          send_json(conn, 401, body)
+      end
+    else
+      send_json(
+        conn,
+        404,
+        Phoenix.json_library().encode!(%{
+          error: "s2s_disabled",
+          message: "federation S2S is disabled"
+        })
+      )
     end
   end
 
