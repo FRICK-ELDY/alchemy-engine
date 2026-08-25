@@ -2,7 +2,7 @@
 
 > 評価日: 2026-03-23  
 > 出典: [evaluation-2026-03-23.md](../../docs/evaluation/archive/evaluation-2026-03-23.md)  
-> 参照: [specific-weaknesses.md](../evaluation/specific-weaknesses.md)
+> 参照: [specific-weaknesses-2026-04-01.md](../../docs/evaluation/archive/specific-weaknesses-2026-04-01.md)
 
 ---
 
