@@ -3,7 +3,7 @@
 評価者: Fable 5
 評価方法: **ソースコードのみ**に基づく評価（Markdown ドキュメント非参照）。前回評価（2026-07-07）の全指摘（プラス・マイナスとも）を現ソースで再検証し、前回以降の変更（engine PR #320〜#322、auth は変更なし）を反映。
 対象: `auth/`（Phoenix + Ash 認証サービス、lib 37 ファイル）+ `engine/`（umbrella 4 アプリ + Rust client 10 クレート + Rust NIF）
-前回レポート: `docs/evaluation/archive/2026-07-31/fable-evaluation-2026-07-07.md`
+前回レポート: `docs/evaluation/fable/archive/2026-07-07/fable-evaluation-2026-07-07.md`
 
 ## 採点基準
 
@@ -37,11 +37,11 @@
 > **前回スコアの訂正**: 前回レポートは総合 +77 と記載していたが、auth プラス小計に集計誤りがあった（記載 +52、個別項目の実合計 +56）。訂正後の前回総合は **+81**。本表の「前回小計」「差分」は訂正後の値を基準とする。
 
 > 詳細な個別項目は以下を参照:
-> - プラス点: `docs/evaluation/fable-specific-strengths.md`（68 項目）
-> - マイナス点: `docs/evaluation/fable-specific-weaknesses.md`（48 項目）
-> - 提案(0点): `docs/evaluation/fable-specific-proposals.md`（15 件）
+> - プラス点: `docs/evaluation/fable/archive/2026-07-31/fable-specific-strengths.md`（68 項目）
+> - マイナス点: `docs/evaluation/fable/archive/2026-07-31/fable-specific-weaknesses.md`（48 項目）
+> - 提案(0点): `docs/evaluation/fable/archive/2026-07-31/fable-specific-proposals.md`（15 件）
 > - 改善計画: `workspace/0_reference/fable-improvement-plan.md`
-> - 前回版: `docs/evaluation/archive/2026-07-31/`
+> - 前回版: `docs/evaluation/fable/archive/2026-07-07/`
 
 ---
 
@@ -146,7 +146,7 @@
 
 ## アーカイブ
 
-前回評価（2026-07-07）のドキュメント 4 点は `docs/evaluation/archive/2026-07-31/` に移動済み:
+前回評価（2026-07-07）のドキュメント 4 点は `docs/evaluation/fable/archive/2026-07-07/` に移動済み:
 
 - `fable-evaluation-2026-07-07.md`
 - `fable-specific-strengths.md`

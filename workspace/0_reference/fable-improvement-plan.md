@@ -1,8 +1,8 @@
 # Fable 改善提案書 — マイナス点に基づく改善計画
 
 作成日: 2026-07-31 / 作成者: Fable 5
-根拠: `docs/evaluation/fable-specific-weaknesses.md`（総合評価 +89、マイナス合計 -96）
-前回版: `docs/evaluation/archive/2026-07-31/`（2026-07-07 評価。総合は集計訂正後 +81）
+根拠: `docs/evaluation/fable/archive/2026-07-31/fable-specific-weaknesses.md`（総合評価 +89、マイナス合計 -96）
+前回版: `docs/evaluation/fable/archive/2026-07-07/`（2026-07-07 評価。総合は集計訂正後 +81）
 
 ---
 

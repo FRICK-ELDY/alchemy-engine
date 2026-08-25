@@ -227,17 +227,54 @@ alwaysApply: false
 
 ## 出力ドキュメント
 
-評価完了後、以下のファイルを**必ず日本語で作成**する：
+評価は **第1評価者（Opus）と第2評価者（GPT）が互いに独立** して行い、その後 **まとめ** を作成する。
+`YYYY-MM-DD` は評価日。評価完了後、以下のファイルを**必ず日本語で作成**する。
 
-1. `docs/evaluation/specific-strengths.md` — プラス点の詳細一覧（日本語）
-2. `docs/evaluation/specific-weaknesses.md` — マイナス点の詳細一覧（日本語）
-3. `docs/evaluation/specific-proposals.md` — 提案（0点）の詳細一覧（日本語）
-4. `docs/evaluation/evaluation-YYYY-MM-DD.md` — 当日の総合評価レポート（日本語）
-5. `workspace/0_reference/improvement-plan.md` — マイナス点に基づく改善提案書（日本語）
+各評価者は **相手の当日評価文書を参照しない**。判断は必ず当該コードの再検証に基づく。
+
+### 第1評価者（Claude Opus 5）
+
+当日分は `docs/evaluation/opus/` 直下に置く。
+
+1. `docs/evaluation/opus/opus-specific-weaknesses-YYYY-MM-DD.md` — マイナス点の詳細一覧
+2. `docs/evaluation/opus/opus-specific-strengths-YYYY-MM-DD.md` — プラス点の詳細一覧
+3. `docs/evaluation/opus/opus-specific-proposals-YYYY-MM-DD.md` — 提案（0点）の詳細一覧
+4. `docs/evaluation/opus/opus-evaluation-YYYY-MM-DD.md` — 当日の総合評価レポート
+
+次回評価時、前回分を `docs/evaluation/opus/archive/YYYY-MM-DD/` へ移す。
+
+### 第2評価者（GPT-5.6 Sol）
+
+当日分は `docs/evaluation/gpt/` 直下に置く。第1評価者の `opus/` 配下は読まない。
+
+1. `docs/evaluation/gpt/gpt-specific-weaknesses-YYYY-MM-DD.md` — マイナス点の詳細一覧
+2. `docs/evaluation/gpt/gpt-specific-strengths-YYYY-MM-DD.md` — プラス点の詳細一覧
+3. `docs/evaluation/gpt/gpt-specific-proposals-YYYY-MM-DD.md` — 提案（0点）の詳細一覧
+4. `docs/evaluation/gpt/gpt-evaluation-YYYY-MM-DD.md` — 当日の総合評価レポート
+
+次回評価時、前回分を `docs/evaluation/gpt/archive/YYYY-MM-DD/` へ移す。
+
+### まとめ
+
+両評価者の出力が出揃った後に作成する。合意・相違・採用判断を明示する。
+
+1. `docs/evaluation/specific-weaknesses-YYYY-MM-DD.md` — マイナス点の統合一覧
+2. `docs/evaluation/specific-strengths-YYYY-MM-DD.md` — プラス点の統合一覧
+3. `docs/evaluation/specific-proposals-YYYY-MM-DD.md` — 提案（0点）の統合一覧
+4. `docs/evaluation/evaluation-YYYY-MM-DD.md` — 当日の総合評価レポート
+5. `workspace/0_reference/improvement-plan.md` — まとめのマイナス点に基づく改善提案書
+
+次回評価時、前回のまとめ（上記 1〜4）を `docs/evaluation/archive/` へ移す。`improvement-plan.md` は最新版を置き換える。
+
+### アーカイブ
+
+- **まとめ**の前回分: `docs/evaluation/archive/`
+- **Fable 5**（新規評価は行わない）: `docs/evaluation/fable/archive/YYYY-MM-DD/`（フォルダ名は評価日）
+- **Fable 以前**（2026-03 系など）: `docs/evaluation/archive/`
 
 ### ドキュメントの書き方
 
-`specific-strengths.md` / `specific-weaknesses.md` / `specific-proposals.md` は以下の構造で記述する：
+`*-specific-strengths-*.md` / `*-specific-weaknesses-*.md` / `*-specific-proposals-*.md` およびまとめの同種ファイルは以下の構造で記述する：
 
 - ファイル冒頭に採点基準を表形式で掲載する
 - セクションは `##`（大分類）→ `###`（小分類）の 2 階層にまとめる
@@ -251,7 +288,8 @@ alwaysApply: false
 
 **過去の評価文書を参照するだけで判断しない。必ず当該コードを直接読み、現状を検証してから採点する。**
 
-- 前回評価（`docs/evaluation/evaluation-YYYY-MM-DD.md`）や `specific-weaknesses.md` に記載された「マイナス点」が解決済みかどうかは、**対象ファイルを読み直して確認する**
+- 前回評価は直近のまとめ `docs/evaluation/evaluation-YYYY-MM-DD.md` を起点とする。まとめがまだ無い場合は `docs/evaluation/fable/archive/2026-07-31/` を前回とする
+- 各評価者は自系統の前回詳細（`opus/` または `gpt/`、初回は Fable アーカイブ）のマイナス点が解決済みかどうかを、**対象ファイルを読み直して確認する**
 - 前回「解決済み」でなかった項目を「解決済み」と書く前に、コードの該当箇所を確認する
 - `mix alchemy.ci`（または同等の個別コマンド）の通過可否など、実行で確認すべき項目は可能な限り実行して結果を見る（実行環境の制約がある場合はその旨を明記する）
 
