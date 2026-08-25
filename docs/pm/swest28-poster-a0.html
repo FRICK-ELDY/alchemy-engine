@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>SWEST28 ポスター — 分散連合型VRプラットフォーム</title>
+  <style>
+    @page {
+      size: 841mm 1189mm;
+      margin: 0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 841mm;
+      height: 1189mm;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: "Yu Gothic UI", "Meiryo", "Hiragino Sans", sans-serif;
+      background: #fff;
+      color: #1a1a1a;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .poster {
+      width: 841mm;
+      height: 1189mm;
+      padding: 10mm;
+      display: flex;
+      flex-direction: column;
+      gap: 8mm;
+      background: #fff;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: #b8d4e8;
+      border-radius: 6mm 6mm 0 0;
+      padding: 8mm 12mm;
+      text-align: center;
+      position: relative;
+      flex: 0 0 52mm;
+    }
+
+    .header h1 {
+      font-size: 44pt;
+      font-weight: 700;
+      line-height: 1.25;
+      margin-bottom: 3mm;
+    }
+
+    .header .subtitle {
+      font-size: 22pt;
+      color: #333;
+    }
+
+    .header .author {
+      position: absolute;
+      right: 12mm;
+      bottom: 8mm;
+      font-size: 20pt;
+      font-weight: 600;
+    }
+
+    /* ── Body: 2 columns ── */
+    .body {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8mm;
+      min-height: 0;
+    }
+
+    .left-col {
+      display: flex;
+      flex-direction: column;
+      gap: 8mm;
+      min-height: 0;
+    }
+
+    .section-overview {
+      flex: 0 0 auto;
+    }
+
+    .left-col > .section:not(.section-overview) {
+      flex: 1;
+      min-height: 0;
+    }
+
+    .right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 8mm;
+      min-height: 0;
+    }
+
+    .right-col > .section {
+      flex: 1;
+      min-height: 0;
+    }
+
+    .section {
+      border: 1.5pt solid #999;
+      border-radius: 3mm;
+      padding: 7mm 9mm;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .section h2 {
+      font-size: 40pt;
+      font-weight: 700;
+      margin-bottom: 5mm;
+      padding-bottom: 2mm;
+      border-bottom: 2.5pt solid rgba(0,0,0,0.18);
+      flex-shrink: 0;
+    }
+
+    .section-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 4mm;
+      min-height: 0;
+    }
+
+    .section p,
+    .section li {
+      font-size: 28pt;
+      line-height: 1.42;
+    }
+
+    /* 概要セクション固有 */
+    .section-overview .section-content {
+      flex: 0 0 auto;
+    }
+
+    .section-overview .overview-lead {
+      font-size: 30pt;
+      font-weight: 700;
+      line-height: 1.38;
+    }
+
+    .section-overview ul {
+      padding-left: 8mm;
+      margin-top: 1mm;
+    }
+
+    .section-overview li {
+      margin-bottom: 2.5mm;
+    }
+
+    .overview-box {
+      background: rgba(255,255,255,0.55);
+      border: 2pt solid rgba(0,0,0,0.12);
+      border-radius: 3mm;
+      padding: 4mm 6mm;
+      margin-top: 1mm;
+    }
+
+    .overview-box-title {
+      font-size: 24pt;
+      font-weight: 700;
+      margin-bottom: 2mm;
+    }
+
+    .overview-box ul {
+      margin-top: 0;
+    }
+
+    .overview-box li {
+      font-size: 26pt;
+    }
+
+    .section ul {
+      padding-left: 8mm;
+    }
+
+    .section li {
+      margin-bottom: 2.5mm;
+    }
+
+    .section code {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.88em;
+      background: rgba(255,255,255,0.65);
+      padding: 0.1em 0.3em;
+      border-radius: 1mm;
+    }
+
+    /* Colors */
+    .bg-yellow { background: #fef9e0; }
+    .bg-orange { background: #fde8d0; }
+    .bg-green  { background: #e8f5e0; }
+    .bg-gray   { background: #ececec; }
+
+    /* Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 24pt;
+      margin-top: 2mm;
+      background: #fff;
+    }
+
+    th, td {
+      border: 1.5pt solid #888;
+      padding: 2.5mm 4mm;
+      text-align: left;
+      background: #fff;
+    }
+
+    th {
+      font-weight: 700;
+    }
+
+    /* Architecture */
+    .arch {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 3mm;
+      min-height: 0;
+    }
+
+    .arch-panel {
+      background: rgba(255,255,255,0.55);
+      border: 1.5pt solid rgba(0,0,0,0.14);
+      border-radius: 3mm;
+      padding: 2.5mm 4mm;
+      display: flex;
+      flex-direction: column;
+      gap: 2mm;
+      flex: 0 0 auto;
+      min-height: 0;
+    }
+
+    .arch-h3 {
+      font-size: 28pt;
+      font-weight: 700;
+      line-height: 1.2;
+      padding-bottom: 1.5mm;
+      border-bottom: 1.5pt solid rgba(0,0,0,0.12);
+      flex-shrink: 0;
+    }
+
+    .arch-h3 span {
+      font-size: 22pt;
+      font-weight: 400;
+      color: #444;
+      margin-left: 2mm;
+    }
+
+    .arch-goal {
+      border: 2pt dashed #777;
+      border-radius: 2mm;
+      padding: 2.5mm 4mm;
+      background: rgba(255,255,255,0.7);
+      text-align: center;
+      font-size: 24pt;
+      line-height: 1.35;
+      color: #333;
+    }
+
+    .arch-row {
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      gap: 3mm;
+    }
+
+    .arch-box {
+      border: 1.5pt solid #555;
+      border-radius: 2mm;
+      padding: 3mm 4mm;
+      text-align: center;
+      background: #fff;
+      font-size: 24pt;
+      line-height: 1.3;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .arch-box.highlight {
+      background: #d4e8f7;
+      border-color: #3a7aaa;
+      font-weight: 700;
+      font-size: 26pt;
+      flex: 1;
+    }
+
+    .arch-box.module {
+      font-size: 22pt;
+      padding: 3mm 3.5mm;
+      text-align: left;
+    }
+
+    .arch-box.crate {
+      font-size: 22pt;
+      padding: 3mm 3.5mm;
+      text-align: left;
+      background: #fff8e8;
+      border-color: #b08940;
+    }
+
+    .arch-box.nif {
+      background: #e8f0fa;
+      border-color: #4a7aaa;
+      font-size: 22pt;
+      padding: 3mm 4mm;
+      align-self: stretch;
+    }
+
+    .arch-mid {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-width: 16mm;
+      flex-shrink: 0;
+    }
+
+    .arch-arrow {
+      font-size: 28pt;
+      color: #444;
+      line-height: 1;
+    }
+
+    .arch-label {
+      font-size: 18pt;
+      color: #444;
+      text-align: center;
+      margin-top: 0.5mm;
+      line-height: 1.2;
+    }
+
+    .arch-note {
+      font-size: 22pt;
+      line-height: 1.4;
+      color: #333;
+    }
+
+    .arch-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 2.5mm;
+      align-items: stretch;
+    }
+
+    .arch-modules {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2mm;
+    }
+
+    .arch-modules-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 2mm;
+    }
+
+    .arch-flow-inline {
+      font-size: 22pt;
+      line-height: 1.4;
+      background: rgba(255,255,255,0.7);
+      border-radius: 2mm;
+      padding: 2.5mm 4mm;
+    }
+
+    .arch-footer {
+      font-size: 22pt;
+      line-height: 1.35;
+      border-top: 1.5pt solid rgba(0,0,0,0.12);
+      padding-top: 2mm;
+      margin-top: auto;
+      flex-shrink: 0;
+    }
+
+    .mod-title {
+      font-weight: 700;
+      font-size: 24pt;
+      margin-bottom: 1mm;
+    }
+
+    .mod-desc {
+      font-size: 20pt;
+      line-height: 1.3;
+      color: #333;
+    }
+
+    /* Mermaid diagrams */
+    .mermaid-wrap {
+      width: 100%;
+      flex-shrink: 0;
+      margin-top: 1mm;
+      background: rgba(255,255,255,0.7);
+      border-radius: 2mm;
+      padding: 4mm 3mm 3mm;
+      overflow: visible;
+    }
+
+    .mermaid-wrap-title {
+      font-size: 22pt;
+      font-weight: 700;
+      margin-bottom: 2mm;
+      color: #333;
+    }
+
+    .mermaid-wrap .mermaid {
+      display: flex;
+      justify-content: center;
+      overflow: visible;
+    }
+
+    .mermaid-wrap svg {
+      max-width: 100%;
+      height: auto;
+      overflow: visible;
+    }
+
+    .mermaid-wrap svg .label,
+    .mermaid-wrap svg .nodeLabel,
+    .mermaid-wrap svg .edgeLabel {
+      font-size: 16px !important;
+    }
+
+    .mermaid-wrap svg .label foreignObject div,
+    .mermaid-wrap svg .nodeLabel p,
+    .mermaid-wrap svg .edgeLabel p,
+    .mermaid-wrap svg text {
+      font-size: 16px !important;
+    }
+
+    .arch-panel.client {
+      overflow: visible;
+    }
+
+    .arch-panel.client .mermaid-wrap {
+      margin-top: 1mm;
+      padding: 3mm;
+    }
+
+    .arch-panel.client .mermaid-wrap svg {
+      max-width: 100%;
+      width: 100%;
+      height: auto;
+      min-height: 140mm;
+    }
+
+    .arch-panel.client .mermaid-wrap svg .label,
+    .arch-panel.client .mermaid-wrap svg .nodeLabel,
+    .arch-panel.client .mermaid-wrap svg .edgeLabel,
+    .arch-panel.client .mermaid-wrap svg .label foreignObject div,
+    .arch-panel.client .mermaid-wrap svg .nodeLabel p,
+    .arch-panel.client .mermaid-wrap svg text {
+      font-size: 18px !important;
+    }
+
+    .arch-panel.client .arch-note {
+      font-size: 18pt;
+      line-height: 1.3;
+    }
+
+    .command-card {
+      background: #1f2430;
+      color: #f5f7fa;
+      border-radius: 3mm;
+      padding: 3mm 4mm;
+      border: 1.5pt solid #0f131a;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+    }
+
+    .command-title {
+      font-size: 22pt;
+      font-weight: 700;
+      margin-bottom: 2mm;
+      color: #ffffff;
+    }
+
+    .command-line {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 20pt;
+      line-height: 1.45;
+      white-space: nowrap;
+      color: #d7e3ff;
+    }
+
+    .prompt {
+      color: #8bd5ca;
+      font-weight: 700;
+      margin-right: 0.35em;
+    }
+
+    /* References */
+    .refs {
+      font-size: 22pt;
+      line-height: 1.55;
+    }
+
+    .refs a {
+      color: #1a5276;
+      text-decoration: none;
+    }
+
+    /* GitHub star CTA */
+    .github-cta {
+      display: flex;
+      align-items: center;
+      gap: 5mm;
+      margin-top: 3mm;
+      padding-top: 2.5mm;
+      border-top: 0.35mm solid #c5c5c5;
+    }
+
+    .github-cta img {
+      width: 47mm;
+      height: 47mm;
+      flex-shrink: 0;
+      image-rendering: pixelated;
+      background: #fff;
+    }
+
+    .github-cta-text {
+      font-size: 20pt;
+      line-height: 1.45;
+      color: #333;
+    }
+
+    .github-cta-text a {
+      color: #1a5276;
+      text-decoration: none;
+      word-break: break-all;
+    }
+
+    strong { font-weight: 700; }
+
+    /* Screen preview: scale to fit viewport */
+    @media screen {
+      html {
+        background: #bbb;
+        overflow-x: auto;
+      }
+
+      body {
+        width: auto;
+        height: auto;
+        overflow-x: auto;
+        overflow-y: auto;
+        background: #bbb;
+        display: flex;
+        justify-content: center;
+        padding: 16px;
+      }
+
+      .poster {
+        background: #fff;
+        transform-origin: top center;
+        box-shadow: 0 4px 32px rgba(0,0,0,0.25);
+      }
+    }
+
+    /* Print: never keep the screen preview scale */
+    @media print {
+      html, body {
+        width: 841mm !important;
+        height: 1189mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        background: #fff !important;
+        display: block !important;
+      }
+
+      .poster {
+        width: 841mm !important;
+        height: 1189mm !important;
+        margin: 0 !important;
+        transform: none !important;
+        box-shadow: none !important;
+      }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'neutral',
+      themeVariables: {
+        fontSize: '20px',
+        fontFamily: '"Yu Gothic UI", "Meiryo", sans-serif',
+        primaryColor: '#fff8e8',
+        primaryBorderColor: '#b08940',
+        secondaryColor: '#f0f4f8',
+        tertiaryColor: '#fff'
+      },
+      flowchart: {
+        htmlLabels: true,
+        curve: 'basis',
+        padding: 14,
+        nodeSpacing: 28,
+        rankSpacing: 40,
+        useMaxWidth: true
+      }
+    });
+
+    /* Scale poster to fit browser window for preview */
+    function fitPoster() {
+      if (window.matchMedia && window.matchMedia('print').matches) return;
+      const poster = document.querySelector('.poster');
+      if (!poster) return;
+      const scale = Math.min(
+        (window.innerWidth - 32) / poster.offsetWidth,
+        (window.innerHeight - 32) / poster.offsetHeight,
+        1
+      );
+      poster.style.transform = `scale(${scale})`;
+      poster.style.marginBottom = `${poster.offsetHeight * (scale - 1)}px`;
+    }
+
+    function clearPosterScale() {
+      const poster = document.querySelector('.poster');
+      if (!poster) return;
+      poster.style.transform = 'none';
+      poster.style.marginBottom = '0';
+    }
+
+    window.addEventListener('beforeprint', clearPosterScale);
+    window.addEventListener('afterprint', fitPoster);
+
+    if (window.matchMedia) {
+      window.matchMedia('print').addListener(function (mql) {
+        if (mql.matches) clearPosterScale();
+        else fitPoster();
+      });
+    }
+
+    function fixMermaidSvgPadding() {
+      document.querySelectorAll('.mermaid-wrap svg').forEach(svg => {
+        try {
+          const pad = 8;
+          const bbox = svg.getBBox();
+          svg.setAttribute(
+            'viewBox',
+            `${bbox.x - pad} ${bbox.y - pad} ${bbox.width + pad * 2} ${bbox.height + pad * 2}`
+          );
+          svg.removeAttribute('width');
+          svg.removeAttribute('height');
+          svg.style.width = '100%';
+          svg.style.height = 'auto';
+        } catch (_) { /* ignore if bbox unavailable */ }
+      });
+    }
+
+    async function initPoster() {
+      await mermaid.run({ querySelector: '.mermaid' });
+      fixMermaidSvgPadding();
+      fitPoster();
+    }
+
+    window.addEventListener('load', initPoster);
+    window.addEventListener('resize', fitPoster);
+  </script>
+</head>
+<body>
+  <div class="poster">
+
+    <header class="header">
+      <h1>分散連合型VRプラットフォームの開発と研究</h1>
+      <div class="subtitle">Development and Research of a Distributed Federated VR Platform</div>
+      <div class="author">FRICK-LAB</div>
+    </header>
+
+    <div class="body">
+
+      <!-- ── Left column ── -->
+      <div class="left-col">
+
+        <section class="section section-overview bg-yellow">
+          <h2>概要</h2>
+          <div class="section-content">
+            <p class="overview-lead">
+              個人や組織が自分のドメインで VR 空間を運営し、
+              インスタンス同士が連合できる
+              <strong>分散連合型 VR プラットフォーム AlchemyEngine</strong>
+              の開発と研究について報告する。
+            </p>
+            <p>
+              既存の VR プラットフォームの多くは、単一運営者による
+              <strong>閉じたサービス</strong> か、特定エンジン前提の実装である。
+              テキスト SNS では Mastodon や Misskey のように
+              セルフホストと連合が成立しているが、
+              <strong>3D 空間とリアルタイム同期</strong> を対象にした
+              同様の基盤はまだ少ない。
+            </p>
+            <p>
+              AlchemyEngine は、エンジンが保証するものを
+              <strong>「無限の3D空間」</strong> と
+              <strong>「そこに存在するユーザー」</strong> に限定する。
+              空間の上に何を置くか——機器、資料、3D モデル、通信の可視化、体験——は
+              すべて <strong>コンテンツ</strong> であり、
+              利用者がコンポーネントとして持ち込む。
+            </p>
+            <div class="overview-box">
+              <div class="overview-box-title">エンジンが保証するもの</div>
+              <ul>
+                <li><strong>無限の3D空間</strong> — f64 精度の座標系</li>
+                <li><strong>ユーザーの存在</strong> — 位置・向きを持つプレイヤー</li>
+                <li><strong>ネットワーク基盤</strong> — 複数ユーザーが同じ空間を共有</li>
+                <li><strong>時間の流れ</strong> — サーバー側の権威 tick（20Hz）</li>
+                <li><strong>コンテンツのライフサイクル</strong> — Scenes / Objects / Components の契約</li>
+              </ul>
+            </div>
+            <p>
+              空間の正しい状態と時間の進み方は
+              <strong>サーバー（Elixir / OTP）</strong> が決め、
+              描画・入力・予測補間は <strong>Rust クライアント</strong> が担う。
+              最終的には <code>alchemy.{ドメイン}</code> のように
+              各運営者がインスタンスを立て、
+              合意したプロトコルで空間・ユーザーのアイデンティティ・コンテンツを
+              <strong>連合</strong> させることを目指す。
+            </p>
+          </div>
+        </section>
+
+        <section class="section bg-orange">
+          <h2>方法 — AlchemyEngine のアーキテクチャ</h2>
+          <div class="arch">
+
+            <div class="arch-panel">
+              <div class="arch-h3">起動方法</div>
+              <div class="command-card">
+                <div class="command-line"><span class="prompt">$</span>mix alchemy.router # Zenohd 起動</div>
+                <div class="command-line"><span class="prompt">$</span>mix alchemy.server # Elixir Server 起動</div>
+                <div class="command-line"><span class="prompt">$</span>mix alchemy.client # Rust Client 起動</div>
+                <div class="command-line"><span class="prompt">$</span>mix alchemy.client --connect tcp/&lt;ip address&gt;:7447 # 別PC接続</div>
+              </div>
+              <div class="arch-note">
+                一括起動には <code>alchemy-launcher</code> も利用できる。
+              </div>
+            </div>
+
+            <!-- 全体 -->
+            <div class="arch-panel overall">
+              <div class="arch-h3">全体構成 <span>サーバー権威 × クライアント描画</span></div>
+              <div class="arch-goal">
+                目指す姿（連合・将来）：
+                <strong>alchemy.example.com</strong> ⇄ <strong>alchemy.other.com</strong>
+              </div>
+              <div class="arch-row">
+                <div class="arch-box highlight">
+                  サーバー（Elixir）<br>
+                  contents · core · network<br>
+                  権威 tick 20Hz · ドメイン SSoT
+                </div>
+                <div class="arch-mid">
+                  <div class="arch-arrow">→</div>
+                  <div class="arch-label">RenderFrame<br>publish</div>
+                  <div class="arch-arrow" style="margin-top:2mm;">←</div>
+                  <div class="arch-label">入力<br>返送</div>
+                </div>
+                <div class="arch-box highlight">
+                  クライアント（Rust）<br>
+                  app / window / render / network<br>
+                  描画 ~60fps · 予測・補間 · 入力
+                </div>
+              </div>
+              <div class="arch-flow-inline">
+                <strong>データフロー：</strong>
+                (1) <code>contents</code> → Protobuf 化 → <code>network</code> が Zenoh publish<br>
+                → (2) クライアントが受信・wgpu 描画
+                → (3) <code>window</code> の入力を Zenoh で返送 → <code>contents</code> に反映
+              </div>
+            </div>
+
+            <!-- サーバー -->
+            <div class="arch-panel server">
+              <div class="arch-h3">サーバー構成 <span>Elixir Umbrella + Formula NIF</span></div>
+              <div class="arch-grid-2">
+                <div class="arch-modules">
+                  <div class="arch-box module">
+                    <div class="mod-title">contents</div>
+                    <div class="mod-desc">
+                      権威 tick（Events.Game）<br>
+                      シーン・コンポーネント<br>
+                      FrameEncoder → Protobuf
+                    </div>
+                  </div>
+                  <div class="arch-box module">
+                    <div class="mod-title">core</div>
+                    <div class="mod-desc">
+                      Config / Formula<br>
+                      NifBridge / EventBus<br>
+                      設定・橋渡し
+                    </div>
+                  </div>
+                  <div class="arch-box module">
+                    <div class="mod-title">network</div>
+                    <div class="mod-desc">
+                      Zenoh 送受信<br>
+                      フレーム publish<br>
+                      入力 subscribe
+                    </div>
+                  </div>
+                  <div class="arch-box module">
+                    <div class="mod-title">server</div>
+                    <div class="mod-desc">
+                      OTP 起動<br>
+                      RoomSupervisor<br>
+                      空間プロセス隔離
+                    </div>
+                  </div>
+                </div>
+                <div class="arch-box nif">
+                  <strong>Rust NIF</strong><br>
+                  Formula VM のみ<br>
+                  （物理ループなし）
+                </div>
+              </div>
+              <div class="arch-note">
+                <strong>ドメインの SSoT は Elixir。</strong>
+                ワイヤ契約（RenderFrame 等）は alchemy-protocol の Protobuf。<br>
+                各空間は OTP プロセスとして隔離。重い計算だけ NIF へ。<br>
+                認証は <code>alchemy-auth</code> が担当する別サービス。
+              </div>
+
+              <div class="arch-h3" style="margin-top:2mm;">contents のライフサイクル</div>
+              <div class="arch-note">
+                時間軸（Scenes）と空間軸（Objects）を分離する。
+                契約（Behaviour）とライフサイクルだけを提供する。
+              </div>
+              <div class="arch-row">
+                <div class="arch-box module">
+                  <div class="mod-title">Contents</div>
+                  <div class="mod-desc">体験の器<br>オーケストレータ</div>
+                </div>
+                <div class="arch-mid"><div class="arch-arrow">→</div></div>
+                <div class="arch-box module">
+                  <div class="mod-title">Scenes</div>
+                  <div class="mod-desc">時間軸<br>push / pop / replace</div>
+                </div>
+                <div class="arch-mid"><div class="arch-arrow">→</div></div>
+                <div class="arch-box module">
+                  <div class="mod-title">Objects</div>
+                  <div class="mod-desc">空間軸<br>Transform · 親子</div>
+                </div>
+                <div class="arch-mid"><div class="arch-arrow">→</div></div>
+                <div class="arch-box module">
+                  <div class="mod-title">Components</div>
+                  <div class="mod-desc">状態のピア<br>on_ready / on_process</div>
+                </div>
+                <div class="arch-mid"><div class="arch-arrow">→</div></div>
+                <div class="arch-box module">
+                  <div class="mod-title">Nodes</div>
+                  <div class="mod-desc">論理の原子<br>Action / Logic ports</div>
+                </div>
+                <div class="arch-mid"><div class="arch-arrow">→</div></div>
+                <div class="arch-box module">
+                  <div class="mod-title">Structs</div>
+                  <div class="mod-desc">データの形<br>defstruct / @type</div>
+                </div>
+              </div>
+              <div class="arch-note">
+                依存は下位から上位へ一方向：
+                <code>structs → nodes → components → objects → scenes → contents</code>。
+                Objects / Components は GenServer。Nodes はプロセス化せず関数として実行。
+              </div>
+
+              <div class="arch-h3" style="margin-top:2mm;">Behaviour の流れ</div>
+              <div class="arch-note">
+                契約は <code>Contents.Behaviour</code> 名前空間に集約。
+                共通の契約を頂点に、各層の Behaviour が同じ土台に乗る。
+              </div>
+              <div class="arch-row">
+                <div class="arch-box highlight" style="flex:0.9;">
+                  Contents.Behaviour<br>
+                  <span style="font-weight:400;font-size:0.85em;">共通契約（土台）</span>
+                </div>
+                <div class="arch-mid"><div class="arch-arrow">↓</div></div>
+                <div class="arch-box module">
+                  <div class="mod-title">Scenes</div>
+                  <div class="mod-desc">遷移 · origin</div>
+                </div>
+                <div class="arch-box module">
+                  <div class="mod-title">Objects</div>
+                  <div class="mod-desc">空間実体 · 子管理</div>
+                </div>
+                <div class="arch-box module">
+                  <div class="mod-title">Components</div>
+                  <div class="mod-desc">状態 · ライフサイクル</div>
+                </div>
+                <div class="arch-box module">
+                  <div class="mod-title">Nodes</div>
+                  <div class="mod-desc">Action / Logic ports</div>
+                </div>
+              </div>
+              <div class="arch-note">
+                実装は各層の Behaviour を <code>@behaviour</code> で指定。
+                積み上げ順は <strong>Node → Component → Object</strong>。
+              </div>
+            </div>
+
+            <!-- クライアント -->
+            <div class="arch-panel client">
+              <div class="arch-h3">クライアント構成 <span>クレート依存関係</span></div>
+              <div class="mermaid-wrap">
+                <div class="mermaid">
+graph TB
+    APP["app / VRAlchemy exe<br/>main · アセット読込(仮)<br/>ループ統合"]
+    NETWORK["network<br/>Zenoh 送受信<br/>RenderFrame / 入力"]
+    WINDOW["window<br/>winit イベントループ<br/>キー入力"]
+    RENDER["render<br/>wgpu 描画 ~60fps<br/>予測・補間"]
+    SHARED["shared<br/>契約型 · 解像度<br/>共通データ"]
+    XR["xr（任意）<br/>OpenXR<br/>ヘッドセット入力"]
+    AUDIO["audio<br/>rodio<br/>クライアント音声"]
+
+    APP --> NETWORK
+    APP --> WINDOW
+    APP --> RENDER
+    APP --> SHARED
+    APP --> XR
+    APP --> AUDIO
+    WINDOW --> RENDER
+    NETWORK --> RENDER
+    NETWORK --> SHARED
+    RENDER --> SHARED
+                </div>
+              </div>
+              <div class="arch-note">
+                クライアントは <strong>公式状態の真実にはならない</strong>。
+                権威 tick の間を予測・補間で埋める表示層。
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+      </div><!-- /left-col -->
+
+      <!-- ── Right column ── -->
+      <div class="right-col">
+
+        <section class="section bg-orange">
+          <h2>解決したい事</h2>
+          <div class="section-content">
+            <p class="overview-lead">
+              <strong>中央集権型</strong>のプラットフォームでは、
+              運営・規約・管轄が一つのサービスに集約される。<br>
+              表現として優れた作品でも、運営者の都合で一方的にはじかれうる。<br>
+              居場所が借り物だと、文化やマーケットの存続がホスト側の裁量に依存する。<br>
+            </p>
+            <p>
+              そこで <strong>分散連合型</strong> にする。
+              <strong>分散</strong>は、個人が自分のインスタンスを立てて運営できること。<br>
+              <strong>連合</strong>は、インスタンス同士が後からつながれること。<br>
+              プラットフォーム運営を特定サービスに任せず、個人に委ねる設計が意図である。
+            </p>
+            <table>
+              <tr>
+                <th></th>
+                <th>中央集権型</th>
+                <th>分散連合型</th>
+              </tr>
+              <tr>
+                <td>運営</td>
+                <td>一つのサービスに集約</td>
+                <td>個人がインスタンスを運営</td>
+              </tr>
+              <tr>
+                <td>規約・管轄</td>
+                <td>ホスト側の裁量</td>
+                <td>立てた側が担う</td>
+              </tr>
+              <tr>
+                <td>居場所</td>
+                <td>借り物（追い出されうる）</td>
+                <td>自前ホスト</td>
+              </tr>
+              <tr>
+                <td>他空間との関係</td>
+                <td>サービス内に閉じる</td>
+                <td>連合で後からつなぐ</td>
+              </tr>
+            </table>
+            <p>
+              テキスト SNS の Mastodon や Misskey のように、3D 空間でもこの二層を土台にしたい。<br>
+              本発表では、まず分散側の最小単位を解く。
+            </p>
+            <ul>
+              <li><strong>サーバー</strong>（Elixir）が空間の正しい状態を持つ</li>
+              <li><strong>複数クライアント</strong>（Windows / Mac）がその状態を同じ描画で見る</li>
+              <li>外部入力（OSC）もサーバー経由で空間に入り、全クライアントに届く</li>
+            </ul>
+            <p>
+              ※ <strong>連合</strong>は次の段階。
+              今日は「1 インスタンスを自前ホストで共有できるか」に集中する。
+            </p>
+          </div>
+        </section>
+
+        <section class="section bg-green">
+          <h2>実証デモ</h2>
+          <div class="section-content">
+            <p>
+              <strong>異種端末・同一ルーム</strong>で、同じ 3D 空間の描画が揃うことを示す。<br>
+              iPhone のテザリングで Windows / Mac を同一ネットワークにし、<br>
+              OSC 入力がサーバー経由で両クライアントに反映されることを確認する。
+            </p>
+            <div class="arch-panel" style="margin-top:1mm;">
+              <div class="arch-h3">デモ構成</div>
+              <div class="arch-row">
+                <div class="arch-box module">
+                  <div class="mod-title">iPhone</div>
+                  <div class="mod-desc">
+                    テザリング（同一 NW）<br>
+                    LittleOSC → Windows へ OSC
+                  </div>
+                </div>
+                <div class="arch-mid"><div class="arch-arrow">→</div></div>
+                <div class="arch-box highlight">
+                  Windows PC<br>
+                  router · server · client<br>
+                  main room（権威）
+                </div>
+                <div class="arch-mid"><div class="arch-arrow">⇄</div></div>
+                <div class="arch-box highlight">
+                  Mac PC<br>
+                  client のみ<br>
+                  main room に接続
+                </div>
+              </div>
+              <div class="arch-flow-inline">
+                (1) LittleOSC → OSC → Windows server<br>
+                (2) server が空間の状態を更新 → Zenoh publish<br>
+                (3) Windows / Mac の両クライアントが受信し、<strong>同じ描画</strong>
+              </div>
+            </div>
+            <p><strong>手順の要点</strong></p>
+            <ul>
+              <li>iPhone テザリングで Windows と Mac を同じネットワークに置く</li>
+              <li>Windows：<code>mix alchemy.router</code> → <code>server</code> → <code>client</code></li>
+              <li>Mac：<code>mix alchemy.client --connect tcp/&lt;ip&gt;:7447</code>（Windows の main room）</li>
+              <li>LittleOSC から Windows server へ OSC 送信</li>
+            </ul>
+            <p><strong>成功の見方</strong></p>
+            <ul>
+              <li>OSC の操作が Windows 側の空間に反映される</li>
+              <li>同じ変化が Mac クライアントの描画にも現れる</li>
+              <li>→ サーバー権威の状態が、Zenoh 経由で複数端末に同期できている</li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="section bg-gray">
+          <h2>今後</h2>
+          <div class="section-content">
+            <p>
+              現状できているのは、<strong>1 運営者の単一インスタンス</strong>のなかで、
+              Elixir サーバーが空間の正しい状態を持ち、Zenoh 経由で複数クライアント
+              （異種 OS 含む）へ同じ描画を同期し、OSC などの外部入力もサーバー経由で空間に載せることである。<br>
+              <br>
+              AlchemyEngine は最終的に、各運営者が
+              <code>alchemy.{ドメイン}</code> のようにインスタンスを立て、<br>
+              合意プロトコルで空間・ユーザーのアイデンティティ・コンテンツを連合させることを目指す。<br>
+              <br>
+            </p>
+            <p><strong>これから進めること</strong></p>
+            <ul>
+              <li>認証とアセットの追加</li>
+              <li>運営者間の<strong>連合</strong>（S2S / ポリシー / ユーザーのアイデンティティ）</li>
+              <li>空間・コンテンツの一覧（Hub）</li>
+              <li>ヘッドセット向け VR 入力（OpenXR）の本格化</li>
+              <li>contents 層（Scenes / Objects / Components / Nodes）の拡充</li>
+            </ul>
+            <div class="refs">
+              <strong>参考文献</strong><br>
+              [1] Elixir —
+              <a href="https://elixir-lang.org/">elixir-lang.org</a><br>
+              [2] Rust —
+              <a href="https://www.rust-lang.org/">rust-lang.org</a><br>
+              [3] Zenoh —
+              <a href="https://zenoh.io/">zenoh.io</a><br>
+              [4] Protobuf —
+              <a href="https://protobuf.dev/">protobuf.dev</a>
+            </div>
+            <div class="github-cta">
+              <div class="github-cta-text">
+                まだ未熟なプロジェクトですが、興味を持っていただけましたら
+                <a href="https://github.com/FRICK-ELDY/alchemy-engine">GitHub</a>
+                で Star を付けていただけると励みになります。
+              </div>
+              <img src="assets/github-qr.png" alt="GitHub QR: FRICK-ELDY/alchemy-engine" width="158" height="158">
+            </div>
+          </div>
+        </section>
+
+      </div><!-- /right-col -->
+
+    </div><!-- /body -->
+  </div><!-- /poster -->
+</body>
+</html>
