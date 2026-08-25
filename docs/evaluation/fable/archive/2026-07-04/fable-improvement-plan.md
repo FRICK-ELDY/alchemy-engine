@@ -1,7 +1,7 @@
 # Fable 改善提案書 — マイナス点に基づく改善計画
 
 作成日: 2026-07-04 / 作成者: Fable 5
-根拠: `docs/evaluation/fable-specific-weaknesses.md`（総合評価 +37、マイナス合計 -116）
+根拠: `docs/evaluation/fable/archive/2026-07-04/fable-specific-weaknesses.md`（総合評価 +37、マイナス合計 -116）
 
 マイナス点 55 項目を「即修正すべきバグ」「セキュリティ」「価値命題の配線」「品質基盤」「整理・負債返済」の 5 フェーズに再編し、依存関係と費用対効果の順に並べた。各項目に解消されるマイナス点数を付記する。
 
