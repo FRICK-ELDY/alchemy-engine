@@ -53,8 +53,7 @@ defmodule Network.UDP.Protocol do
 
   @type packet ::
           {:join, seq :: non_neg_integer(), room_id :: String.t()}
-          | {:join, seq :: non_neg_integer(), room_id :: String.t(),
-             token :: String.t() | nil}
+          | {:join, seq :: non_neg_integer(), room_id :: String.t(), token :: String.t() | nil}
           | {:join_ack, seq :: non_neg_integer(), room_id :: String.t()}
           | {:leave, seq :: non_neg_integer(), room_id :: String.t()}
           | {:input, seq :: non_neg_integer(), dx :: float(), dy :: float()}

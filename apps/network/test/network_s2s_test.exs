@@ -361,7 +361,9 @@ defmodule Network.S2STest do
       assert %{"caller" => @peer_domain} = Phoenix.ConnTest.json_response(conn1, 200)
 
       # worlds だけ変えて再 configure — ピア JWKS は再取得不要
-      cfg2 = Keyword.put(cfg, :worlds, [%{id: "beta", title: "Beta", status: "General", path: "/b"}])
+      cfg2 =
+        Keyword.put(cfg, :worlds, [%{id: "beta", title: "Beta", status: "General", path: "/b"}])
+
       Application.put_env(:network, Network.S2S, cfg2)
       assert :ok = Instance.configure(cfg2)
 

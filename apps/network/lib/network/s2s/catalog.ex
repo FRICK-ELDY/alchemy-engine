@@ -36,12 +36,12 @@ defmodule Network.S2S.Catalog do
   def status_rank(status), do: Map.get(@status_rank, to_string(status))
 
   defp normalize_world(world, canonical) when is_map(world) do
-    id = world_get(world, :id) || world_get(world, "id") || ""
-    title = world_get(world, :title) || world_get(world, "title") || id
-    status = world_get(world, :status) || world_get(world, "status") || "General"
-    path = world_get(world, :path) || world_get(world, "path") || "/worlds/#{id}"
-    thumb = world_get(world, :thumbnail_url) || world_get(world, "thumbnail_url")
-    uri = world_get(world, :uri) || world_get(world, "uri") || join_uri(canonical, path)
+    id = world_field(world, :id, "id", "")
+    title = world_field(world, :title, "title", id)
+    status = world_field(world, :status, "status", "General")
+    path = world_field(world, :path, "path", "/worlds/#{id}")
+    thumb = world_field(world, :thumbnail_url, "thumbnail_url", nil)
+    uri = world_field(world, :uri, "uri", join_uri(canonical, path))
 
     %{
       "id" => to_string(id),
@@ -54,6 +54,10 @@ defmodule Network.S2S.Catalog do
   end
 
   defp normalize_world(_, _), do: nil
+
+  defp world_field(world, atom_key, string_key, default) do
+    world_get(world, atom_key) || world_get(world, string_key) || default
+  end
 
   defp world_get(map, key) when is_map(map), do: Map.get(map, key)
 
