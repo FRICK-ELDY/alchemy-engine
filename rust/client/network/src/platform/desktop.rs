@@ -436,7 +436,7 @@ fn zenoh_endpoint_host(rest: &str) -> &str {
 fn is_loopback_host(host: &str) -> bool {
     matches!(
         host,
-        "127.0.0.1" | "localhost" | "[::1]" | "::1" | "0.0.0.0" | "[::]"
+        "127.0.0.1" | "localhost" | "[::1]" | "::1" | "0.0.0.0" | "[::]" | "::"
     )
 }
 
@@ -548,6 +548,8 @@ mod tests {
         assert_eq!(prefer_udp_if_remote("tcp/[::]:7447"), "tcp/[::]:7447");
         assert_eq!(prefer_udp_if_remote("tcp/[::1]"), "tcp/[::1]");
         assert_eq!(prefer_udp_if_remote("tcp/::1"), "tcp/::1");
+        assert_eq!(prefer_udp_if_remote("tcp/::"), "tcp/::");
+        assert_eq!(prefer_udp_if_remote("tcp/[::]"), "tcp/[::]");
     }
 
     #[test]
@@ -586,6 +588,7 @@ mod tests {
         assert!(is_loopback_host("[::1]"));
         assert!(is_loopback_host("::1"));
         assert!(is_loopback_host("[::]"));
+        assert!(is_loopback_host("::"));
         assert!(!is_loopback_host("192.168.200.8"));
         assert!(!is_loopback_host("[2001:db8::1]"));
     }
