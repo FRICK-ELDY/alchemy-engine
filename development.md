@@ -133,13 +133,13 @@ Windows をホスト（Router / Server / Client）、Mac を Client のみにす
    mix alchemy.server
    mix alchemy.client
    ```
-   Windows では `mix alchemy.router` が `tcp/0.0.0.0:7447` と `tcp/[::]:7447` で待ち受ける（Unix は `[::]` のみで IPv4 もカバー）。Windows のテザリング側 IPv4 を控える（例: `ipconfig` で `172.20.10.x`）。初回は TCP 7447 の受信をファイアウォールで許可する。
+   Windows では `mix alchemy.router` が TCP/UDP の `0.0.0.0:7447` と `[::]:7447` で待ち受ける（Unix は `[::]` のみで IPv4 もカバー）。Windows のテザリング側 IPv4 を控える（例: `ipconfig` で `172.20.10.x`）。初回は TCP/UDP 7447 の受信をファイアウォールで許可する。
 
 2. **Mac（Client のみ）** — 同じコンテンツ・同じプロトコル世代のリポジトリで:
    ```bash
-   mix alchemy.client --connect tcp/<WINDOWS_IP>:7447 --room main
+   mix alchemy.client --connect udp/<WINDOWS_IP>:7447 --room main
    ```
-   `<WINDOWS_IP>` はホストのテザリング IPv4。`127.0.0.1` では Mac から Windows に届かない。
+   `<WINDOWS_IP>` はホストのテザリング IPv4。`127.0.0.1` では Mac から Windows に届かない。リモートは **UDP** を使う（TCP だとテザリングで遅延が蓄積しうる）。`tcp/` を指定しても Client が loopback 以外なら UDP に読み替える。
 
 ### 分散クラスタ起動（複数ノード）
 

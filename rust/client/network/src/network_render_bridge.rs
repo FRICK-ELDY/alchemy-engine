@@ -90,9 +90,9 @@ impl NetworkRenderBridge {
                         last_frame_elapsed_ms_clone.store(elapsed, Ordering::Relaxed);
                         match snapshots_clone.lock() {
                             Ok(mut guard) => guard.push(frame, received_at),
-                            Err(e) => log::warn!(
-                                "[frame receiver] snapshots lock failed (poisoned): {e}"
-                            ),
+                            Err(e) => {
+                                log::warn!("[frame receiver] snapshots lock failed (poisoned): {e}")
+                            }
                         }
                     }
                     Err(e) => {

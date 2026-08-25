@@ -25,6 +25,9 @@ const DELAY_EMA_ALPHA: f64 = 0.1;
 /// バースト到着時の押し出しにも余裕を持たせる。
 const MAX_SNAPSHOTS: usize = 16;
 
+/// 到着レート観測の窓（フレーム数）。バースト隙間を無視した EMA の上振れを壁時計平均で戻す。
+const RATE_WINDOW_FRAMES: u32 = 16;
+
 /// これ未満の受信間隔はバーストとみなし、間隔 EMA を更新しない。
 const BURST_RECV_GAP: Duration = Duration::from_millis(5);
 
@@ -54,7 +57,11 @@ pub fn lerp(a: f32, b: f32, t: f32) -> f32 {
 
 #[inline]
 fn lerp3(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
-    [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]
+    [
+        lerp(a[0], b[0], t),
+        lerp(a[1], b[1], t),
+        lerp(a[2], b[2], t),
+    ]
 }
 
 /// 同一バリアントの位置成分を `t` で補間する。不一致・非位置コマンドは `curr` を返す。
@@ -62,7 +69,11 @@ pub fn lerp_draw_command(prev: &DrawCommand, curr: &DrawCommand, t: f32) -> Draw
     match (prev, curr) {
         (
             DrawCommand::PlayerSprite { x: ax, y: ay, .. },
-            DrawCommand::PlayerSprite { x: bx, y: by, frame },
+            DrawCommand::PlayerSprite {
+                x: bx,
+                y: by,
+                frame,
+            },
         ) => {
             let p = lerp_vec2(Vec2::new(*ax, *ay), Vec2::new(*bx, *by), t);
             DrawCommand::PlayerSprite {
@@ -72,10 +83,7 @@ pub fn lerp_draw_command(prev: &DrawCommand, curr: &DrawCommand, t: f32) -> Draw
             }
         }
         // Particle は近傍マッチ対象外のためここには来ない（curr をそのまま採用）
-        (
-            DrawCommand::Item { x: ax, y: ay, .. },
-            DrawCommand::Item { x: bx, y: by, kind },
-        ) => {
+        (DrawCommand::Item { x: ax, y: ay, .. }, DrawCommand::Item { x: bx, y: by, kind }) => {
             let p = lerp_vec2(Vec2::new(*ax, *ay), Vec2::new(*bx, *by), t);
             DrawCommand::Item {
                 x: p.x,
@@ -407,6 +415,8 @@ pub fn interpolate_render_frame(prev: &RenderFrame, curr: &RenderFrame, t: f32) 
 ///
 /// キューの時刻は受信 `Instant` そのものではなく、推定 tick 間隔で進める再生時刻。
 /// ジッター／バーストで到着間隔が歪んでも補間速度が暴れにくい。
+/// 再生時刻が実時間より先に出すぎないようクランプし、先走りで最古スナップショットに
+/// 張り付くのを防ぐ（テザリング等のバースト到着対策）。
 /// 本命は RenderFrame へのサーバー tick／生成時刻付与（要プロトコル拡張）。
 pub struct SnapshotInterpolator {
     /// `(playback_at, frame)` — playback_at は再生タイムライン上の時刻
@@ -415,6 +425,9 @@ pub struct SnapshotInterpolator {
     estimated_interval: Duration,
     pending_audio: Vec<String>,
     delay: Duration,
+    /// 壁時計の到着レート観測の起点。
+    recv_rate_anchor: Option<Instant>,
+    recv_rate_count: u32,
 }
 
 impl Default for SnapshotInterpolator {
@@ -436,12 +449,19 @@ impl SnapshotInterpolator {
             estimated_interval,
             pending_audio: Vec::new(),
             delay,
+            recv_rate_anchor: None,
+            recv_rate_count: 0,
         }
     }
 
     /// 現在の描画遅延（テスト・診断用）。
     pub fn delay(&self) -> Duration {
         self.delay
+    }
+
+    #[cfg(test)]
+    fn playback_ats(&self) -> Vec<Instant> {
+        self.snapshots.iter().map(|(at, _)| *at).collect()
     }
 
     fn ema_duration(current: Duration, sample: Duration) -> Duration {
@@ -451,10 +471,56 @@ impl SnapshotInterpolator {
         Duration::from_secs_f64((next_ms / 1000.0).max(0.0))
     }
 
+    fn reset_timeline(&mut self) {
+        self.snapshots.clear();
+        self.last_received_at = None;
+        self.recv_rate_anchor = None;
+        self.recv_rate_count = 0;
+    }
+
+    /// バースト間隔の再生スタンプを許しつつ、先走りで最古フレームに張り付かない上限。
+    fn max_playback_ahead(&self) -> Duration {
+        self.delay.saturating_add(self.estimated_interval)
+    }
+
+    fn apply_interval_sample(&mut self, sample: Duration) {
+        let sample = sample.clamp(INTERVAL_MIN, INTERVAL_MAX);
+        self.estimated_interval =
+            Self::ema_duration(self.estimated_interval, sample).clamp(INTERVAL_MIN, INTERVAL_MAX);
+        let target_delay = self
+            .estimated_interval
+            .saturating_mul(2)
+            .clamp(INTERP_DELAY_MIN, INTERP_DELAY_MAX);
+        self.delay =
+            Self::ema_duration(self.delay, target_delay).clamp(INTERP_DELAY_MIN, INTERP_DELAY_MAX);
+    }
+
+    fn observe_arrival_rate(&mut self, received_at: Instant) {
+        match self.recv_rate_anchor {
+            None => {
+                self.recv_rate_anchor = Some(received_at);
+                self.recv_rate_count = 0;
+            }
+            Some(anchor) => {
+                self.recv_rate_count += 1;
+                if self.recv_rate_count >= RATE_WINDOW_FRAMES {
+                    let span = received_at.saturating_duration_since(anchor);
+                    if span >= BURST_RECV_GAP {
+                        self.apply_interval_sample(span / self.recv_rate_count);
+                    }
+                    self.recv_rate_anchor = Some(received_at);
+                    self.recv_rate_count = 0;
+                }
+            }
+        }
+    }
+
     /// 新しい権威スナップショットを取り込む。`audio_cues` は pending に移し、再再生を防ぐ。
     ///
     /// 受信間隔から推定 tick を EMA 更新し、キューには `last_playback + estimated_interval`
     /// でスタンプする（バースト時も等間隔に載せる）。描画遅延は推定間隔×2 へ追従。
+    /// 再生時刻は `received_at + delay + interval` を超えない（先走り防止）。
+    /// EMA で上限が縮んでも `last_play` より逆行しない。
     ///
     /// 受信が大きく開いて再生タイムラインが実時間から遅れた場合はキューをリセットし、
     /// 以降も補間が効く状態に戻す（瞬断・一時停止対策）。
@@ -473,29 +539,26 @@ impl SnapshotInterpolator {
         if let Some((last_play, _)) = self.snapshots.back() {
             let next_expected = *last_play + self.estimated_interval;
             if received_at > next_expected + self.delay {
-                self.snapshots.clear();
-                self.last_received_at = None;
+                self.reset_timeline();
             }
         }
 
         if let Some(last_recv) = self.last_received_at {
             let recv_gap = received_at.saturating_duration_since(last_recv);
             if recv_gap >= BURST_RECV_GAP {
-                let sample = recv_gap.clamp(INTERVAL_MIN, INTERVAL_MAX);
-                self.estimated_interval = Self::ema_duration(self.estimated_interval, sample)
-                    .clamp(INTERVAL_MIN, INTERVAL_MAX);
-                let target_delay = self
-                    .estimated_interval
-                    .saturating_mul(2)
-                    .clamp(INTERP_DELAY_MIN, INTERP_DELAY_MAX);
-                self.delay = Self::ema_duration(self.delay, target_delay)
-                    .clamp(INTERP_DELAY_MIN, INTERP_DELAY_MAX);
+                self.apply_interval_sample(recv_gap);
             }
         }
 
+        self.observe_arrival_rate(received_at);
+
         let playback_at = match self.snapshots.back() {
             None => received_at,
-            Some((last_play, _)) => *last_play + self.estimated_interval,
+            Some((last_play, _)) => {
+                let raw = *last_play + self.estimated_interval;
+                let cap = received_at + self.max_playback_ahead();
+                raw.min(cap).max(*last_play)
+            }
         };
 
         let cues = std::mem::take(&mut frame.audio_cues);
@@ -638,7 +701,10 @@ mod tests {
             .expect("frame");
         match &frame.commands[0] {
             DrawCommand::PlayerSprite { x, .. } => {
-                assert!((*x - 1.0).abs() < 1e-3, "x={x} (must interpolate, not stick to prev)");
+                assert!(
+                    (*x - 1.0).abs() < 1e-3,
+                    "x={x} (must interpolate, not stick to prev)"
+                );
             }
             other => panic!("unexpected: {other:?}"),
         }
@@ -721,7 +787,11 @@ mod tests {
             })
             .collect();
         xs.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        assert!((xs[0] - 0.0).abs() < 1e-4, "despawned A kept at 0, got {}", xs[0]);
+        assert!(
+            (xs[0] - 0.0).abs() < 1e-4,
+            "despawned A kept at 0, got {}",
+            xs[0]
+        );
         assert!(
             (xs[1] - 10.25).abs() < 1e-4,
             "B should track to 10.25, got {}",
@@ -936,6 +1006,101 @@ mod tests {
                 assert!((*x - 2.0).abs() < 1e-5, "x={x}");
             }
             other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn snapshot_does_not_stick_to_oldest_after_overestimated_interval() {
+        let mut interp = SnapshotInterpolator::with_delay(Duration::from_millis(100));
+        let t0 = Instant::now();
+        interp.push(player_at(0.0, 0.0), t0);
+        let mut t = t0;
+        for _ in 0..40 {
+            t += Duration::from_millis(100);
+            interp.push(player_at(0.0, 0.0), t);
+        }
+
+        const FAST_FRAMES: i32 = 80;
+        for i in 1..=FAST_FRAMES {
+            t += Duration::from_millis(50);
+            interp.push(player_at(i as f32, 0.0), t);
+        }
+
+        let latest = FAST_FRAMES as f32;
+        let frame = interp.sample(t + Duration::from_millis(1)).expect("frame");
+        match &frame.commands[0] {
+            DrawCommand::PlayerSprite { x, .. } => {
+                assert!(
+                    *x > latest - 12.0,
+                    "x={x} latest={latest} (must not stick to ~16-frames-old snapshot)"
+                );
+                assert!(*x <= latest + 0.5, "x={x} latest={latest}");
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn snapshot_burst_jitter_does_not_stick_to_oldest_snapshot() {
+        let mut interp = SnapshotInterpolator::with_delay(Duration::from_millis(100));
+        let t0 = Instant::now();
+        interp.push(player_at(0.0, 0.0), t0);
+
+        let mut t = t0;
+        let mut latest = 0.0_f32;
+        for cycle in 0..200 {
+            t += Duration::from_millis(148);
+            latest = (cycle * 3) as f32 + 1.0;
+            interp.push(player_at(latest, 0.0), t);
+            t += Duration::from_millis(1);
+            latest += 1.0;
+            interp.push(player_at(latest, 0.0), t);
+            t += Duration::from_millis(1);
+            latest += 1.0;
+            interp.push(player_at(latest, 0.0), t);
+        }
+
+        let frame = interp.sample(t + Duration::from_millis(1)).expect("frame");
+        match &frame.commands[0] {
+            DrawCommand::PlayerSprite { x, .. } => {
+                assert!(
+                    *x > latest - 12.0,
+                    "x={x} latest={latest} (burst jitter must not pin display to oldest snapshot)"
+                );
+                assert!(*x <= latest + 0.5, "x={x} latest={latest}");
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn playback_timeline_does_not_go_backwards_when_ahead_cap_shrinks() {
+        let mut interp = SnapshotInterpolator::with_delay(Duration::from_millis(100));
+        let t0 = Instant::now();
+        interp.push(player_at(0.0, 0.0), t0);
+
+        // 間隔 EMA を上振れさせ、バースト再生スタンプが cap 近くまで先走る状態を作る
+        let mut t = t0;
+        for _ in 0..32 {
+            t += Duration::from_millis(100);
+            interp.push(player_at(0.0, 0.0), t);
+        }
+
+        // 16 フレーム窓の壁時計平均が急に縮み、max_playback_ahead が減少する
+        for i in 1..=RATE_WINDOW_FRAMES {
+            t += Duration::from_millis(1);
+            interp.push(player_at(i as f32, 0.0), t);
+        }
+
+        let ats = interp.playback_ats();
+        assert!(ats.len() >= 2, "snapshots={}", ats.len());
+        for pair in ats.windows(2) {
+            assert!(
+                pair[1] >= pair[0],
+                "playback went backwards: {:?} -> {:?}",
+                pair[0],
+                pair[1]
+            );
         }
     }
 }
