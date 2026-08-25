@@ -411,13 +411,26 @@ fn prefer_udp_if_remote(connect_config: &str) -> String {
     let Some(rest) = connect_config.strip_prefix("tcp/") else {
         return connect_config.to_string();
     };
-    let host = rest.rsplit_once(':').map(|(h, _)| h).unwrap_or(rest);
-    if is_loopback_host(host) {
+    let host = zenoh_endpoint_host(rest);
+    if is_loopback_host(host) || is_loopback_host(rest) {
         return connect_config.to_string();
     }
     let udp = format!("udp/{rest}");
     log::info!("[zenoh] remote tcp endpoint rewritten to {udp} to avoid TCP bufferbloat");
     udp
+}
+
+/// `host:port` / `[ipv6]:port` からホスト部分を取る。ポート省略の IPv6 もブラケットごと残す。
+fn zenoh_endpoint_host(rest: &str) -> &str {
+    if rest.starts_with('[') {
+        if let Some(end_idx) = rest.find(']') {
+            &rest[..=end_idx]
+        } else {
+            rest
+        }
+    } else {
+        rest.rsplit_once(':').map(|(h, _)| h).unwrap_or(rest)
+    }
 }
 
 fn is_loopback_host(host: &str) -> bool {
@@ -519,7 +532,7 @@ fn sleep_with_shutdown(total: Duration, shutdown: &AtomicBool) -> Result<(), Str
 
 #[cfg(test)]
 mod tests {
-    use super::{is_loopback_host, prefer_udp_if_remote};
+    use super::{is_loopback_host, prefer_udp_if_remote, zenoh_endpoint_host};
 
     #[test]
     fn loopback_tcp_is_kept() {
@@ -532,6 +545,9 @@ mod tests {
             "tcp/localhost:7447"
         );
         assert_eq!(prefer_udp_if_remote("tcp/[::1]:7447"), "tcp/[::1]:7447");
+        assert_eq!(prefer_udp_if_remote("tcp/[::]:7447"), "tcp/[::]:7447");
+        assert_eq!(prefer_udp_if_remote("tcp/[::1]"), "tcp/[::1]");
+        assert_eq!(prefer_udp_if_remote("tcp/::1"), "tcp/::1");
     }
 
     #[test]
@@ -543,6 +559,14 @@ mod tests {
         assert_eq!(
             prefer_udp_if_remote("tcp/172.20.10.2:7447"),
             "udp/172.20.10.2:7447"
+        );
+        assert_eq!(
+            prefer_udp_if_remote("tcp/[2001:db8::1]:7447"),
+            "udp/[2001:db8::1]:7447"
+        );
+        assert_eq!(
+            prefer_udp_if_remote("tcp/[2001:db8::1]"),
+            "udp/[2001:db8::1]"
         );
     }
 
@@ -559,6 +583,19 @@ mod tests {
     fn loopback_hosts() {
         assert!(is_loopback_host("127.0.0.1"));
         assert!(is_loopback_host("localhost"));
+        assert!(is_loopback_host("[::1]"));
+        assert!(is_loopback_host("::1"));
+        assert!(is_loopback_host("[::]"));
         assert!(!is_loopback_host("192.168.200.8"));
+        assert!(!is_loopback_host("[2001:db8::1]"));
+    }
+
+    #[test]
+    fn zenoh_endpoint_host_keeps_ipv6_brackets() {
+        assert_eq!(zenoh_endpoint_host("127.0.0.1:7447"), "127.0.0.1");
+        assert_eq!(zenoh_endpoint_host("[::1]:7447"), "[::1]");
+        assert_eq!(zenoh_endpoint_host("[::1]"), "[::1]");
+        assert_eq!(zenoh_endpoint_host("[2001:db8::1]:7447"), "[2001:db8::1]");
+        assert_eq!(zenoh_endpoint_host("localhost"), "localhost");
     }
 }
