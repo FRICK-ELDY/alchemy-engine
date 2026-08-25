@@ -264,8 +264,11 @@ alwaysApply: false
 4. `docs/evaluation/evaluation-YYYY-MM-DD.md` — 当日の総合評価レポート
 5. `workspace/0_reference/improvement-plan.md` — まとめのマイナス点に基づく改善提案書
 
+次回評価時、前回のまとめ（上記 1〜4）を `docs/evaluation/archive/` へ移す。`improvement-plan.md` は最新版を置き換える。
+
 ### アーカイブ
 
+- **まとめ**の前回分: `docs/evaluation/archive/`
 - **Fable 5**（新規評価は行わない）: `docs/evaluation/fable/archive/YYYY-MM-DD/`（フォルダ名は評価日）
 - **Fable 以前**（2026-03 系など）: `docs/evaluation/archive/`
 
