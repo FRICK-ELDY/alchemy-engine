@@ -1,7 +1,7 @@
 # 実施計画: Component / Node / Struct 強化、Resonite 寄せ、Node DSL
 
 > 作成日: 2026-04-07  
-> ステータス: 着手前（Definition of Ready 満たしたら `3_Inprogress` へ）
+> ステータス: 着手前（完了後に `7_done` へ）
 
 ---
 
@@ -128,5 +128,5 @@
 ## 8. 次のアクション
 
 1. フェーズ 0 の表を埋める（担当者を決める）。  
-2. フェーズ 1 で追加する Struct を 2〜3 個に絞って Issue または `3_Inprogress` 用タスクに落とす。  
+2. フェーズ 1 で追加する Struct を 2〜3 個に絞って Issue または実装タスクに落とす。  
 3. Component / Node の並行実装は**同じスプリント内で型の依存が循環しない**組み合わせに限定する。
