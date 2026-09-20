@@ -78,7 +78,7 @@
 ```
 
 - **パッケージ公開（Hex / crates.io）**は初回必須としない。まず **Git + tag** で十分なことが多い。  
-- 将来 **生成物だけ**を配布する場合は [protobuf-full-automation-procedure.md](../7_done/protobuf-full-automation-procedure.md) 完了後に再検討する。
+- 将来 **生成物だけ**を配布する場合は [protobuf-full-automation-procedure.md](../3_done/protobuf-full-automation-procedure.md) 完了後に再検討する。
 
 ---
 
@@ -141,7 +141,7 @@
 ### フェーズ 4 — ドキュメントとポリシー追随（0.5〜1 日）
 
 1. `docs/architecture/protobuf-migration.md`、`zenoh-protocol-spec.md`、`network-protocol-current.md` 内の **`../../proto/` リンク**を、新リポの **タグ付き URL**（例: `https://github.com/ORG/alchemy-protocol/blob/v0.1.0/proto/render_frame.proto`）に更新する。  
-2. `.workspace/7_done/protobuf-full-automation-procedure.md` の「`proto/*.proto` はリポジトリルート」という記述を、**PROTO_ROOT** 前提に更新する（別 PR 可）。  
+2. `.workspace/3_done/protobuf-full-automation-procedure.md` の「`proto/*.proto` はリポジトリルート」という記述を、**PROTO_ROOT** 前提に更新する（別 PR 可）。  
 3. `development.md` に **初回 clone 後に submodule 初期化**または **deps 取得**の手順を追記する。
 
 ### フェーズ 5 — クリーンアップとロック（0.5 日）
@@ -207,7 +207,7 @@ git submodule add https://github.com/ORG/alchemy-protocol.git 3rdparty/alchemy-p
 | # | 項目 | 指摘内容 |
 |:---|:---|:---|
 | 1 | **Buf / Schema Registry** | チームが増えたら `buf lint` / `buf breaking` で **互換破壊を機械検出**すると安全。初回から必須にしなくてよいが、**導入判断と時期**をメモしておく。 |
-| 2 | **多言語生成の単一パイプライン** | [protobuf-full-automation-procedure.md](../7_done/protobuf-full-automation-procedure.md) が未完のうちは、**二リポでも「生成コマンドはエンジン側に一本」**のままでよい。自動化完了後に **プロトリポで生成して配布**へ移行するか再評価する。 |
+| 2 | **多言語生成の単一パイプライン** | [protobuf-full-automation-procedure.md](../3_done/protobuf-full-automation-procedure.md) が未完のうちは、**二リポでも「生成コマンドはエンジン側に一本」**のままでよい。自動化完了後に **プロトリポで生成して配布**へ移行するか再評価する。 |
 | 3 | **契約テストの単一実行場所** | テストを両リポに複製すると二重メンテになる。**推奨**: 厳密な往復はプロトコルリポ（最小 Elixir/Rust ワークスペース）、エンジンは **統合テスト**に留める。 |
 | 4 | **Rust の prost-build** | `render_frame_proto` / `network` 等、**`build.rs` で `proto/` を参照する全クレート**を `grep`/Cargo で洗い出し、フェーズ 2 でパスを漏れなく更新する（現行の `nif` は protobuf を参照しないが、将来復活時に同様）。 |
 | 5 | **Windows 開発者** | `PROTOC` 環境変数と `PATH`（`protoc-gen-elixir`）の手順を **development.md に明記**。submodule の初期化も Windows で同じコマンドか確認する。`PROTO_ROOT` を **Cargo と Mix の両方**で揃える（sparse 時は `deps/<name>/` がルートで `/proto` 二重付与に注意）。 |
@@ -223,8 +223,8 @@ git submodule add https://github.com/ORG/alchemy-protocol.git 3rdparty/alchemy-p
 
 | ドキュメント | 内容 |
 |:---|:---|
-| [client-server-separation-procedure.md](../7_done/client-server-separation-procedure.md) | クライアント／サーバー分離の実施済み手順 |
-| [protobuf-full-automation-procedure.md](../7_done/protobuf-full-automation-procedure.md) | `mix alchemy.gen.proto` と生成物自動化の狙い |
+| [client-server-separation-procedure.md](../3_done/client-server-separation-procedure.md) | クライアント／サーバー分離の実施済み手順 |
+| [protobuf-full-automation-procedure.md](../3_done/protobuf-full-automation-procedure.md) | `mix alchemy.gen.proto` と生成物自動化の狙い |
 | [zenoh-protocol-spec.md](../../docs/architecture/zenoh-protocol-spec.md) | Zenoh 上の protobuf 契約（移設候補） |
 | [network-protocol-current.md](../../docs/architecture/network-protocol-current.md) | 現行ネットワーク経路の説明 |
 

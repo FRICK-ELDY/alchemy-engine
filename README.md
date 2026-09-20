@@ -38,7 +38,7 @@ flowchart TB
     Client -->|"Zenoh: movement / action"| Server
 ```
 
-> クライアント・サーバー分離の詳細と実装手順は [client-server-separation-procedure.md](./.workspace/7_done/client-server-separation-procedure.md) を参照。未実施項目は [client-server-separation-future.md](./.workspace/0_reference/client-server-separation-future.md)。主時間の正本は [authoritative-state-sync-policy.md](./docs/architecture/authoritative-state-sync-policy.md)。
+> クライアント・サーバー分離の詳細と実装手順は [client-server-separation-procedure.md](./.workspace/3_done/client-server-separation-procedure.md) を参照。未実施項目は [client-server-separation-future.md](./.workspace/0_reference/client-server-separation-future.md)。主時間の正本は [authoritative-state-sync-policy.md](./docs/architecture/authoritative-state-sync-policy.md)。
 
 ## ハイライト
 

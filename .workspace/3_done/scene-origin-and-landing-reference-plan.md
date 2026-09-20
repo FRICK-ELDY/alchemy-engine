@@ -1,7 +1,7 @@
 # Scene の原点と着地点参照の実施計画
 
 > 作成日: 2026-03-16  
-> 参照: [scene-and-object.md](../../docs/architecture/scene-and-object.md), [scene-concept-addition-plan.md](../7_done/scene-concept-addition-plan.md)  
+> 参照: [scene-and-object.md](../../docs/architecture/scene-and-object.md), [scene-concept-addition-plan.md](../3_done/scene-concept-addition-plan.md)  
 > 目的: Scene が空間の原点（origin）を持ち、着地点は Object への参照のみとする設計に移行する。root_object 必須を廃止し、シーンインスペクター等で「Scene ┣ user」のようにトップレベル Object を直下に扱えるようにする。
 
 ---
@@ -57,7 +57,7 @@
 ### Phase 4: コード実装（別計画で実施）
 
 - Scene の state 型や Stack が origin / children（トップレベル Object リスト）を扱う実装、および FormulaTest.Playing の root_object 置き換えは、実施計画書に委譲する。
-- 実施計画: [scene-origin-landing-implementation-plan.md](../7_done/scene-origin-landing-implementation-plan.md) に委譲（コード実装は同実施計画書に従う）。
+- 実施計画: [scene-origin-landing-implementation-plan.md](../3_done/scene-origin-landing-implementation-plan.md) に委譲（コード実装は同実施計画書に従う）。
 
 ---
 
@@ -66,7 +66,7 @@
 | ドキュメント | 役割 |
 |--------------|------|
 | [scene-and-object.md](../../docs/architecture/scene-and-object.md) | Scene と Object の責務。実施後は origin / 着地点参照の規約を記載。 |
-| [scene-concept-addition-plan.md](../7_done/scene-concept-addition-plan.md) | Scene 概念追加時の決定（root_object 必須化）。本計画で方針を発展させる。 |
+| [scene-concept-addition-plan.md](../3_done/scene-concept-addition-plan.md) | Scene 概念追加時の決定（root_object 必須化）。本計画で方針を発展させる。 |
 | [contents-migration-plan.md](contents-migration-plan.md) | 新規コンテンツの共通パターン。root_object 必須 → origin + 着地点参照に更新。 |
 
 ---
@@ -77,4 +77,4 @@
 - [x] docs/architecture/fix_contents.md の Scene 記述が更新されている
 - [x] Contents.Behaviour.Scenes の @moduledoc / init の @doc が新方針に更新されている
 - [x] Contents.SceneBehaviour の @moduledoc が現状の方針に更新されている
-- [x] .workspace/7_done/contents-migration-plan.md の該当箇所が更新されている
+- [x] .workspace/3_done/contents-migration-plan.md の該当箇所が更新されている

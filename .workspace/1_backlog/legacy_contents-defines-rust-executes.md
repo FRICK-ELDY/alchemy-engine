@@ -56,7 +56,7 @@
 
 | 課題     | 内容                                                      |
 | ------ | ------------------------------------------------------- |
-| 転送効率化（継続） | `get_render_entities` の O(n) コピー削減（差分更新・プール等）、必要に応じて計測。詳細は [p5-transfer-optimization-design.md](../7_done/p5-transfer-optimization-design.md) |
+| 転送効率化（継続） | `get_render_entities` の O(n) コピー削減（差分更新・プール等）、必要に応じて計測。詳細は [p5-transfer-optimization-design.md](../3_done/p5-transfer-optimization-design.md) |
 | セキュリティ | 不信頼コンテンツ利用時のサンドボックス化                                    |
 
 
@@ -76,7 +76,7 @@
 
 ## 4. 関連ドキュメント
 
-- [p5-transfer-protobuf-implementation-plan.md](../7_done/p5-transfer-protobuf-implementation-plan.md) — P5 Protobuf 実施プラン（完了）
+- [p5-transfer-protobuf-implementation-plan.md](../3_done/p5-transfer-protobuf-implementation-plan.md) — P5 Protobuf 実施プラン（完了）
 - [implementation.mdc](../../../.cursor/rules/implementation.mdc) — 保証の原則・層間インターフェース
 - [shader-path-traversal-design.md](../2_todo/shader-path-traversal-design.md) — P4-S Path Traversal 対策設計
 - [legacy_contents-to-physics-bottlenecks.md](../../docs/architecture/legacy_contents-to-physics-bottlenecks.md) — ボトルネック・改善案

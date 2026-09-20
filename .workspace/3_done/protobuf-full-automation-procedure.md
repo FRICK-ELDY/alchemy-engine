@@ -213,6 +213,6 @@ mix alchemy.gen.proto
 
 ## 8. 参照
 
-- [protobuf-migration-plan.md](../7_done/protobuf-migration-plan.md) — 移行フェーズ・バックログ（主経路の移行は完了）
+- [protobuf-migration-plan.md](../3_done/protobuf-migration-plan.md) — 移行フェーズ・バックログ（主経路の移行は完了）
 - [docs/architecture/protobuf-migration.md](../../docs/architecture/protobuf-migration.md) — 公開向け概要
 - [development.md](../../development.md) — 開発ガイド（生成エントリは `mix alchemy.gen.proto`）

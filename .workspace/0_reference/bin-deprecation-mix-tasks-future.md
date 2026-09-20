@@ -1,6 +1,6 @@
 # bin 廃止・Mix タスク移行 — 将来対応項目
 
-> 参照: [bin-deprecation-mix-tasks-plan.md](../7_done/bin-deprecation-mix-tasks-plan.md)（本編は完了済み）
+> 参照: [bin-deprecation-mix-tasks-plan.md](../3_done/bin-deprecation-mix-tasks-plan.md)（本編は完了済み）
 >
 > 本ドキュメントは、bin 廃止・Mix タスク移行プランで「将来対応時に追加」とされた未実施項目をまとめたものです。
 

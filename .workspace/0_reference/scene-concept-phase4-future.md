@@ -1,6 +1,6 @@
 # Scene 概念 将来拡張の検討（Phase 4）
 
-> 出典: [scene-concept-addition-plan](../7_done/scene-concept-addition-plan.md) Phase 4  
+> 出典: [scene-concept-addition-plan](../3_done/scene-concept-addition-plan.md) Phase 4  
 > 本プランでは実施しない。参照用として独立させた。
 
 ---

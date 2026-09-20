@@ -1,6 +1,6 @@
 # クライアント・サーバー分離 — 将来対応項目
 
-> 参照: [client-server-separation-procedure.md](../7_done/client-server-separation-procedure.md)（フェーズ 0〜3 は実施済み）
+> 参照: [client-server-separation-procedure.md](../3_done/client-server-separation-procedure.md)（フェーズ 0〜3 は実施済み）
 >
 > 本ドキュメントは、クライアント・サーバー分離手順書で未実施のフェーズ 4・5 をまとめたものです。
 
@@ -28,6 +28,6 @@
 
 ## 関連ドキュメント
 
-- [client-server-separation-procedure.md](../7_done/client-server-separation-procedure.md) — 実施済み手順（フェーズ 0〜3）
+- [client-server-separation-procedure.md](../3_done/client-server-separation-procedure.md) — 実施済み手順（フェーズ 0〜3）
 - [zenoh-protocol-spec.md](../../docs/architecture/zenoh-protocol-spec.md) — Zenoh プロトコル仕様
 - [asset-cdn-design.md](../1_backlog/asset-cdn-design.md) — アセット配布設計（将来検討）
