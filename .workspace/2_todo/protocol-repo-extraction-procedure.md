@@ -1,6 +1,6 @@
 # プロトコル周りの別リポジトリ化 — 実施手順書
 
-> **置き場**: `workspace/2_todo`（着手前の実施手順）  
+> **置き場**: `.workspace/2_todo`（着手前の実施手順）  
 > **作成日**: 2026-04-22  
 > **目的**: ワイヤ契約（`.proto`、Zenoh／UDP 等のペイロード仕様、契約テスト）を **alchemy-engine 本体から分離したリポジトリ**に移し、Elixir チームと Rust チームが **同じソースオブトゥルース**を参照できるようにする。将来の **Cap’n Proto 等への差し替え**は本手順のスコープ外とし、境界の置き方だけ後続で可能になるよう記載する。
 
@@ -141,7 +141,7 @@
 ### フェーズ 4 — ドキュメントとポリシー追随（0.5〜1 日）
 
 1. `docs/architecture/protobuf-migration.md`、`zenoh-protocol-spec.md`、`network-protocol-current.md` 内の **`../../proto/` リンク**を、新リポの **タグ付き URL**（例: `https://github.com/ORG/alchemy-protocol/blob/v0.1.0/proto/render_frame.proto`）に更新する。  
-2. `workspace/7_done/protobuf-full-automation-procedure.md` の「`proto/*.proto` はリポジトリルート」という記述を、**PROTO_ROOT** 前提に更新する（別 PR 可）。  
+2. `.workspace/7_done/protobuf-full-automation-procedure.md` の「`proto/*.proto` はリポジトリルート」という記述を、**PROTO_ROOT** 前提に更新する（別 PR 可）。  
 3. `development.md` に **初回 clone 後に submodule 初期化**または **deps 取得**の手順を追記する。
 
 ### フェーズ 5 — クリーンアップとロック（0.5 日）
@@ -234,5 +234,5 @@ git submodule add https://github.com/ORG/alchemy-protocol.git 3rdparty/alchemy-p
 
 | 日付 | 内容 |
 |:---|:---|
-| 2026-04-22 | 初版（`workspace/2_todo` に手順書として作成） |
+| 2026-04-22 | 初版（`.workspace/2_todo` に手順書として作成） |
 | 2026-04-22 | レビュー反映: `PROTO_ROOT` を `build.rs` / Mix の標準解決に明記。`sparse: "proto"` 時は `deps/<name>/` がルートで `/proto` を二重に付けない。方式 A/B とクレート深度による相対パス差を追記。 |

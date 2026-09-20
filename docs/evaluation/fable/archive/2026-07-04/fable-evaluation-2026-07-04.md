@@ -37,7 +37,7 @@
 > - プラス点: `docs/evaluation/fable/archive/2026-07-04/fable-specific-strengths.md`（56 項目）
 > - マイナス点: `docs/evaluation/fable/archive/2026-07-04/fable-specific-weaknesses.md`（55 項目）
 > - 提案(0点): `docs/evaluation/fable/archive/2026-07-04/fable-specific-proposals.md`（15 件）
-> - 改善計画: `workspace/0_reference/fable-improvement-plan.md`
+> - 改善計画: `.workspace/0_reference/fable-improvement-plan.md`
 
 ---
 

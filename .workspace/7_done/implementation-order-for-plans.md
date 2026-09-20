@@ -108,7 +108,7 @@ feat(contents): Contents.Behaviour 名前空間の追加と Content 契約の移
 - 全 @behaviour / @impl を Contents.Behaviour.* に更新
 - apps/core/lib/core/content_behaviour.ex を削除
 
-Ref: workspace/7_done/contents-behaviour-namespace-implementation-plan.md
+Ref: .workspace/7_done/contents-behaviour-namespace-implementation-plan.md
 ```
 
 **2-A. FormulaTest シーン移行**
@@ -120,7 +120,7 @@ feat(contents): FormulaTest Playing を Contents.Scenes.FormulaTest.Playing に�
 - Content.FormulaTest, InputComponent, RenderComponent の参照を新モジュールに更新
 - contents/formula_test/scenes/playing.ex を削除
 
-Ref: workspace/7_done/formula-test-scene-migration-procedure.md
+Ref: .workspace/7_done/formula-test-scene-migration-procedure.md
 ```
 
 **2-B. 案B（シーン種別＝atom）**
@@ -133,7 +133,7 @@ feat(contents): シーン種別＝atom・実装＝コンテンツ（案B）へ�
 - GameEvents で content.scene_*(scene_type, ...) を呼ぶ形に変更
 - FormulaTest（および必要に応じて他コンテンツ）を :playing の scene_* 実装に移行
 
-Ref: workspace/7_done/scene-type-as-atom-implementation-procedure.md
+Ref: .workspace/7_done/scene-type-as-atom-implementation-procedure.md
 ```
 
 **ドキュメント追加のみ（実装前に出した場合）**

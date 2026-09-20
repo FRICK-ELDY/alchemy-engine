@@ -439,4 +439,4 @@
 - [docs/warranty/ci.md](../../docs/warranty/ci.md) — ローカル CI（`mix alchemy.ci`）の定義
 - [docs/architecture/overview.md](../../docs/architecture/overview.md)
 - [docs/cross-compile.md](../../docs/cross-compile.md)
-- [workspace/README.md](../README.md) — レーン運用
+- [.workspace/README.md](../README.md) — レーン運用

@@ -262,7 +262,7 @@ alwaysApply: false
 2. `docs/evaluation/specific-strengths-YYYY-MM-DD.md` — プラス点の統合一覧
 3. `docs/evaluation/specific-proposals-YYYY-MM-DD.md` — 提案（0点）の統合一覧
 4. `docs/evaluation/evaluation-YYYY-MM-DD.md` — 当日の総合評価レポート
-5. `workspace/0_reference/improvement-plan.md` — まとめのマイナス点に基づく改善提案書
+5. `.workspace/0_reference/improvement-plan.md` — まとめのマイナス点に基づく改善提案書
 
 次回評価時、前回のまとめ（上記 1〜4）を `docs/evaluation/archive/` へ移す。`improvement-plan.md` は最新版を置き換える。
 

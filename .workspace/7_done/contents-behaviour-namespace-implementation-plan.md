@@ -182,7 +182,7 @@ Elixir の `@behaviour` は「そのモジュールが定義する `@callback`�
   - `Contents.Scenes.Core.Behaviour` / `Contents.SceneBehaviour` の記述を `Contents.Behaviour.Scenes` に合わせる。  
 - `docs/architecture/scene-and-object.md`  
   - 契約のモジュール名を `Contents.Behaviour.Scenes` に。  
-- `workspace/7_done/fix-contents-implementation-procedure.md`
+- `.workspace/7_done/fix-contents-implementation-procedure.md`
   - 参照用として「Behaviour は現在 Contents.Behaviour.* に集約済み」と追記。  
 - その他、grep でヒットした `docs/` 内のファイルを必要に応じて更新。
 

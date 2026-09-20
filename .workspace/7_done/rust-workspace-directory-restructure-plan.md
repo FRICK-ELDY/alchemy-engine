@@ -100,7 +100,7 @@ alchemy-engine/
 11. **`docs/architecture/overview.md`** — ディレクトリツリー、mermaid のパス、本文の `native/` 表記。
 12. **`docs/architecture/` 以下**（`rust/nif.md`, `elixir/core.md`, `vision.md`, `draw-command-spec.md`, `erlang-term-schema.md` 等）— **`native/` → `rust/`** への一括置換は **レビュー付き**で（歴史的文脈で `native` を残したい箇所がないか確認）。
 13. **`native/nif/README.md` は `rust/nif/README.md` に移る**ため、文中の `native/Cargo.toml` 等を更新。
-14. **`workspace/` 配下の古い計画**（`1_backlog/native-restructure-migration-plan.md` 等）は、冒頭に **「2026-04 以前のクレート再編計画。現行パスは `rust/`」** と注記するか、本ドキュメントへリンクする（任意）。
+14. **`.workspace/` 配下の古い計画**（`1_backlog/native-restructure-migration-plan.md` 等）は、冒頭に **「2026-04 以前のクレート再編計画。現行パスは `rust/`」** と注記するか、本ドキュメントへリンクする（任意）。
 
 ### フェーズ D — 検証
 
@@ -136,7 +136,7 @@ alchemy-engine/
 
 ## 8. 関連ドキュメント
 
-- 過去のクレート名再編（歴史）: [workspace/1_backlog/native-restructure-migration-plan.md](../1_backlog/native-restructure-migration-plan.md) — **現行の「フォルダ名 native → rust」タスクとは別フェーズの記録**。
+- 過去のクレート名再編（歴史）: [.workspace/1_backlog/native-restructure-migration-plan.md](../1_backlog/native-restructure-migration-plan.md) — **現行の「フォルダ名 native → rust」タスクとは別フェーズの記録**。
 - アーキ概要: [docs/architecture/overview.md](../../docs/architecture/overview.md)
 
 ---

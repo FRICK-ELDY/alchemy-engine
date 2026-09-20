@@ -29,7 +29,7 @@
 |:---|:---|
 | `POST /api/room_token` の発行ロジックを **差し替え可能**（プラグ／behaviour）に保つ | Phase 3 で JWT 必須化、Phase 4 で訪問先 JWKS 検証へ拡張 |
 | room token のペイロードに **room スコープ以外** を載せる場合は拡張可能な map 構造にする | 訪問者の `@user@host` クレーム追加に備える |
-| UDP / Zenoh の入力経路を **永久に無認証** と設計しない | Phase 2–3 で RoomToken 適用予定（[fable-improvement-plan.md](../../workspace/0_reference/fable-improvement-plan.md)） |
+| UDP / Zenoh の入力経路を **永久に無認証** と設計しない | Phase 2–3 で RoomToken 適用予定（[fable-improvement-plan.md](../../.workspace/0_reference/fable-improvement-plan.md)） |
 
 ### コンテンツ・メタデータ
 

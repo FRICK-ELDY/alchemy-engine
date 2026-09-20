@@ -37,7 +37,7 @@
 | [Category:Components](https://wiki.resonite.com/Category:Components) | `Contents.Components.Category.*` の**フォルダ名・モジュール階層・「次に足すコンポーネント候補」**のヒント。サブカテゴリ一覧の参照元とする。 |
 | [Category:ProtoFlux](https://wiki.resonite.com/Category:ProtoFlux) | `Contents.Nodes.Category.*` の**ノード群の分類・命名・優先バックログ**。Actions / Operators / Flow / Math 等の表をそのまま実装リストにはせず、依存の少ないものから選ぶ。 |
 
-**マッピング記録の置き場所（推奨）**: 本計画のフェーズ 0 で `workspace/1_backlog/` に短いインベントリ MD を切るか、本書に追記する。コード内コメントは「Resonite の（カテゴリ名）に相当」程度に留め、長文はドキュメント側へ。
+**マッピング記録の置き場所（推奨）**: 本計画のフェーズ 0 で `.workspace/1_backlog/` に短いインベントリ MD を切るか、本書に追記する。コード内コメントは「Resonite の（カテゴリ名）に相当」程度に留め、長文はドキュメント側へ。
 
 ---
 

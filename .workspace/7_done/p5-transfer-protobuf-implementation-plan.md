@@ -1,6 +1,6 @@
 # P5 転送効率化 — Protobuf 採用の実施プラン
 
-> **ステータス**: 完了（`workspace/2_todo` → `workspace/7_done` に移動済み）。  
+> **ステータス**: 完了（`.workspace/2_todo` → `.workspace/7_done` に移動済み）。  
 > 出典: [legacy_contents-defines-rust-executes.md](../1_backlog/legacy_contents-defines-rust-executes.md)（旧セクション 2・P5）  
 > **Protobuf でエンコード（Elixir）・デコード（Rust）** する。`proto/render_frame.proto`、`Content.FrameEncoder`、`render` / `network` の `decode_pb_render_frame`、`set_frame_injection_binary`（`FrameInjection`）と同じスタック。
 

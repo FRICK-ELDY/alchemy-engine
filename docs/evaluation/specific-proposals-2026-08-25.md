@@ -4,7 +4,7 @@
 検証対象コミット: engine `8f35a57`（PR #347 マージ後）
 統合元: `opus/opus-specific-proposals-2026-08-25.md`（16 件） / `gpt/gpt-specific-proposals-2026-08-25.md`（19 件）
 
-現時点では存在しないため加点も減点もしないが、実装すればプロジェクトの価値を高める提案。既にマイナス点として計上した「欠陥の修正」は `workspace/0_reference/improvement-plan.md` 側に記載し、ここには **新規の発展方向** のみを挙げる。
+現時点では存在しないため加点も減点もしないが、実装すればプロジェクトの価値を高める提案。既にマイナス点として計上した「欠陥の修正」は `.workspace/0_reference/improvement-plan.md` 側に記載し、ここには **新規の発展方向** のみを挙げる。
 
 各項目には出典を付す。
 

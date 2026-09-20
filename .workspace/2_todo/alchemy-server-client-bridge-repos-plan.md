@@ -1,6 +1,6 @@
 # 実施計画: `alchemy-server-bridge` / `alchemy-client-bridge` リポジトリ分割
 
-> **置き場**: `workspace/2_todo`（着手前。Definition of Ready を満たしたら `3_Inprogress` へ）  
+> **置き場**: `.workspace/2_todo`（着手前。Definition of Ready を満たしたら `3_Inprogress` へ）  
 > **作成日**: 2026-04-22  
 > **目的**: ワイヤと BEAM／ネイティブ内部表現の **変換・Zenoh セッション・購読ルーティング**など、**Elixir と Rust の両方に通じたレビューが必要な層**を `alchemy-engine` から分離し、**サーバー側**と**クライアント側**で責務とオーナーシップをはっきりさせる。  
 > **関連**: **ワイヤ**上のプロト契約の SSoT は [protocol-repo-extraction-procedure.md](./protocol-repo-extraction-procedure.md) と**別リポ**とし、ブリッジは **その契約を消費する実装**として依存する（順序は §6）。**ゲームドメイン**の SSoT は引き続き `alchemy-engine` 側の **Elixir**（[docs/architecture/overview.md](../../docs/architecture/overview.md#設計思想) の「二層の SSoT」）。
@@ -110,7 +110,7 @@ flowchart TB
 
 ### フェーズ 4: エンジンからの重複削除とドキュメント
 
-- [ ] `workspace/7_done/client-server-separation-procedure.md` 等の **アーキ図**を新リポ名に更新。  
+- [ ] `.workspace/7_done/client-server-separation-procedure.md` 等の **アーキ図**を新リポ名に更新。  
 - [ ] `development.md` に **clone / submodule / バージョン固定**手順を追記。
 
 ---
@@ -161,4 +161,4 @@ flowchart TB
 
 | 日付 | 内容 |
 |:---|:---|
-| 2026-04-22 | 初版（`alchemy-server-bridge` / `alchemy-client-bridge` 構成として `workspace/2_todo` に追加） |
+| 2026-04-22 | 初版（`alchemy-server-bridge` / `alchemy-client-bridge` 構成として `.workspace/2_todo` に追加） |

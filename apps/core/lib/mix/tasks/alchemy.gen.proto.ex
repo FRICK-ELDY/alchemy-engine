@@ -8,7 +8,7 @@ defmodule Mix.Tasks.Alchemy.Gen.Proto do
   ## 実装状況
 
   生成ロジックは段階的に本モジュールへ追加する。詳細・契約・CI 要件は
-  `workspace/7_done/protobuf-full-automation-procedure.md` を参照。
+  `.workspace/7_done/protobuf-full-automation-procedure.md` を参照。
 
   ## `.proto` の場所
 

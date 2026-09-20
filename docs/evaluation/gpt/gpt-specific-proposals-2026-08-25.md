@@ -20,7 +20,7 @@
   > 対象ファイル: `apps/network/lib/network/s2s/instance.ex`
 - **world/avatar/asset所有model** `0`
   > owner instance、revision、content hash、moderation statusを永続化する。
-  > 対象ファイル: `workspace/0_reference/`
+  > 対象ファイル: `.workspace/0_reference/`
 - **engine save/loadからassetsへ最小配線** `0`
   > Tetris/BulletHellの1 slotをschema_version付きJSONとしてPUT/GETする。
   > 対象ファイル: `../assets/lib/assets_web/controllers/object_controller.ex`

@@ -165,7 +165,7 @@ engine は 34 コミット（PR #326〜#347）。auth はドキュメント 2 �
 
 ### 横断評価層 — +18（前回 +15）
 
-`mix alchemy.ci` が 23 秒で ALL PASSED になる状態、`proto-verify` による生成物ドリフト検出、複合アクションによる CI セットアップの共通化、`workspace/` のレーン運用、そして評価サイクル自体の制度化は、いずれも同規模のプロジェクトの平均を明確に上回る。
+`mix alchemy.ci` が 23 秒で ALL PASSED になる状態、`proto-verify` による生成物ドリフト検出、複合アクションによる CI セットアップの共通化、`.workspace/` のレーン運用、そして評価サイクル自体の制度化は、いずれも同規模のプロジェクトの平均を明確に上回る。
 
 弱点は 3 つに集約される。第 1 に **`docs/warranty/ci.md` の陳腐化**（-2）。品質保証を説明する文書が `cargo test -p physics`（クレートは撤去済み）と `cargo bench -p physics`（ジョブは存在しない）を掲載し、`CyclomaticComplexity` を「本プロジェクト 15」と書くが `.credo.exs:9` は 10、`AliasUsage` を「3 回以上」と書くが実際は無効化、実在する `proto-verify` ジョブは未記載である。README の「main のみ `cargo bench` のリグレッション検知」も事実でない。第 2 に **CI 無効化と再有効化の反復**（-1）。現状は緑だが、`git log --follow -- .github/workflows/ci.yml` を数えると無効化側（`ci ignore`）が 6 件・再有効化側が 3 件以上あり、再発を防ぐ制度（branch protection の required checks、無効化時の文書同時更新）はゼロである。第 3 に **プロパティベーステスト・fuzz・ベンチマークの全体不在**（-2）。バイトコード VM・バイナリプロトコル・グラフコンパイラ・スナップショット補間という「ランダム入力と時間軸に晒される層」を 4 つ持つ構成に対して、example-based のみは防御が薄い。
 
