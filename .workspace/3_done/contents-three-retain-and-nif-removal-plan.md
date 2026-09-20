@@ -9,7 +9,7 @@
 
 ## フェーズ 0: インベントリ（着手前チェックリスト）
 
-- [x] `rg` / IDE で削除モジュール名・シーンモジュールの参照を一覧化（`config/`、`apps/server/`、`apps/core/lib/core/config.ex`、`Contents.Scenes.Stack`、テスト、`docs/`）。
+- [x] `rg` / IDE で削除モジュール名・シーンモジュールの参照を一覧化（`config/`、`apps/server/`、`apps/core/lib/core/config.ex`、`Contents.Scenes.Stack`、テスト、`.workspace/0_docs/`）。
 - [x] `builtin` について `.workspace/1_backlog/builtin-content-future.md` を最新化し、将来の役割が一言で追える状態にする（アーキテクチャ overview 等へのリンク追記は任意）。
 - [x] `Core.Formula.run/3` の呼び出し元を全列挙し、**FormulaTest 維持**に伴い `run_formula_bytecode` 等の経路をどう残すか（NIF 最小化 vs Elixir 化）を方針として 1 段落で書く。
 - [x] `Contents.Events.Game` から**ゲーム ECS 系** NIF を外した後のフレーム駆動モデル（Elixir のみ tick、インジェクション経路の単純化）を 1 段落で方針化する。
@@ -27,7 +27,7 @@
 | **パッケージ説明** | `apps/contents/lib/contents.ex`, `apps/contents/README.md` | 一覧・説明文の更新が必要 |
 | **ゲームイベント** | `apps/contents/lib/events/game.ex` | VampireSurvivor 向けコメント・分岐（フェーズ 2） |
 | **テスト** | `apps/contents/test/content/` | VS 専用 7 ファイルはフェーズ 1 で削除済み。`component_list_test.exs` は `Content.BulletHell3D` を使用 |
-| **ドキュメント（履歴・設計）** | `docs/architecture/elixir/contents.md`, `overview.md`, `contents/vampire_survivor.md`, `evaluation/*`, `.workspace/3_done/*` 等 | フェーズ 1 のコード削除後に追随更新するか、履歴として残すかは別判断。**フェーズ 1 のブロッカーではない** |
+| **ドキュメント（履歴・設計）** | `.workspace/0_docs/architecture/elixir/contents.md`, `overview.md`, `contents/vampire_survivor.md`, `evaluation/*`, `.workspace/3_done/*` 等 | フェーズ 1 のコード削除後に追随更新するか、履歴として残すかは別判断。**フェーズ 1 のブロッカーではない** |
 | **削除済み実装本体** | （同上ディレクトリ・トップ `*.ex`） | フェーズ 1 で削除済み |
 
 ### フェーズ 0 成果: `Core.Formula.run/3` と `run_formula_bytecode`（方針・1 段落）
@@ -71,19 +71,19 @@
 
 - [x] `native/nif` から**ゲーム ECS・物理**（`src/physics/`・旧ゲーム NIF 一式）を削除。**Formula** の `run_formula_bytecode` のみ残す。`prost` / `build.rs`・不要依存を除去。
 - [x] `native/app` は `nif` 依存を外し、既定解像度は **`shared::display`**（`SCREEN_WIDTH` / `SCREEN_HEIGHT`）。`native/Cargo.toml` の `members` は `nif` 維持。
-- [x] `development.md`・`native/nif/README.md`・`docs/architecture/rust/nif.md` 先頭に現行構成を追記。
+- [x] `development.md`・`native/nif/README.md`・`.workspace/0_docs/architecture/rust/nif.md` 先頭に現行構成を追記。
 
 ## フェーズ 5: 検証
 
 - [x] `mix test`（`apps/core`, `apps/contents` 中心）。
 - [x] サーバ起動し、`CanvasTest` / `BulletHell3D` / `FormulaTest` のシーン遷移・入力・描画（および Formula 検証表示）が従来通りであること（実施者確認）。
-- [x] 削除したコンテンツ名で `rg` し、**実行コード・設定に死んだ参照が無い**ことを確認（`*.ex` / `*.exs` / `config/` / `mix.exs` はゼロ。`docs/`・`.workspace/` は履歴・評価メモとして残存。Rust コメント 2 箇所を現行例に修正済み）。
+- [x] 削除したコンテンツ名で `rg` し、**実行コード・設定に死んだ参照が無い**ことを確認（`*.ex` / `*.exs` / `config/` / `mix.exs` はゼロ。`.workspace/0_docs/`・`.workspace/` は履歴・評価メモとして残存。Rust コメント 2 箇所を現行例に修正済み）。
 
 ## リスク・未決事項
 
 - **描画パイプライン用の Rust**（`native/render`, `native/window`, `native/app` 等）を今後も維持するか。ゲーム NIF だけ削っても `mix` と `cargo` の二段構えは残る可能性がある。
 - **VR / XR**: NIF とは独立。入力はクライアント `native/xr` → `network` / Zenoh 経由でサーバに届き、`Contents.Events.Game` が `handle_info` で受ける。`features: ["xr"]` は歴史的な mix フック（現行 `nif` に XR コードなし）。`Core.NifBridge` moduledoc を更新済み。
-- [x] `docs/architecture/overview.md`・`elixir/`・`rust/`（`nif`・`desktop_client` 等）を 2026-04 現行構成に更新。`elixir/contents/*.md` 削除コンテンツはアーカイブ注記。
+- [x] `.workspace/0_docs/architecture/overview.md`・`elixir/`・`rust/`（`nif`・`desktop_client` 等）を 2026-04 現行構成に更新。`elixir/contents/*.md` 削除コンテンツはアーカイブ注記。
 - **Formula 用 NIF を残すか否か**: 残す場合は `native/nif` の「ゲーム」と「式」の境界をコード上でも明確にする。残さない場合は `Core.Formula` の Elixir 実装を先に完了させる。
 
 ## Definition of Done（本計画書の完了）

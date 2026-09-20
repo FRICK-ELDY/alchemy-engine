@@ -1,8 +1,8 @@
 # AlchemyEngine — マイナス点に基づく改善提案書
 
 > 評価日: 2026-03-23  
-> 出典: [evaluation-2026-03-23.md](../../docs/evaluation/archive/evaluation-2026-03-23.md)  
-> 参照: [specific-weaknesses-2026-04-01.md](../../docs/evaluation/archive/specific-weaknesses-2026-04-01.md)
+> 出典: [evaluation-2026-03-23.md](../0_docs/evaluation/archive/evaluation-2026-03-23.md)  
+> 参照: [specific-weaknesses-2026-04-01.md](../0_docs/evaluation/archive/specific-weaknesses-2026-04-01.md)
 
 ---
 
@@ -15,7 +15,7 @@
 | 1 | Contents.SceneStack・GameEvents のテストがゼロ | リファクタリングの安全網がない。シーン遷移・フレームループの回帰リスク | `ExUnit` で SceneStack の push/pop 遷移、GameEvents の frame_events 受信→dispatch をテスト。StubRoom 同様に NIF 依存を排除したテスト設計 |
 | 2 | EntityParams と SpawnComponent のパラメータ二重管理 | 3箇所（entity_params / spawn_component / Rust）に同期漏れリスク | entity_params.ex を唯一の SSoT とし、spawn_component は EntityParams を呼ぶだけに。Rust は set_entity_params NIF で受け取るのみ |
 | 3 | build_instances 関数の重複（render/headless） | スプライト種別追加時に両方修正が必要。同期漏れ | `pub(crate)` の共通関数（例: `sprite_uv_and_size`）を抽出し、renderer/mod.rs と headless.rs の両方から利用 |
-| 4 | 分散ノード間フェイルオーバーが未実装 | 「なぜ Elixir + Rust か」の分散面の証明が不足 | libcluster によるクラスタリング・ルームのノード間移動のシナリオを実装。[improvement-plan.md](./improvement-plan.md) I-E と連携 |
+| 4 | 分散ノード間フェイルオーバーが未実装 | 「なぜ Elixir + Rust か」の分散面の証明が不足 | libcluster によるクラスタリング・ルームのノード間移動のシナリオを実装。[improvement-plan.md](improvement-plan.md) I-E と連携 |
 | 5 | プロパティベーステスト・ファジングがゼロ | 境界条件・不変条件の自動検証が未整備 | StreamData で LevelSystem / BossSystem / SpawnSystem の不変条件を検証。cargo-fuzz で decode 関数にファズターゲット追加 |
 | 6 | nif・render・audio・network・shared の Rust テストがゼロ | デコードロジック・ヘッドレス描画の回帰リスク | decode ロジック・headless 描画パスのテスト。shared の interp ユニットテスト |
 | 7 | xr の OpenXR 統合が未実装 | VR 入力が動作しない | run_openxr_loop に OpenXR インスタンス・ヘッドレスセッション・xrLocateSpace 実装 |
@@ -63,8 +63,8 @@
 | タスク | 説明 | 計画書 |
 |:---|:---|:---|
 | P5-2 Protobuf フレーム | 転送効率化（`proto/render_frame.proto`・`FrameEncoder`） | [p5-transfer-protobuf-implementation-plan.md](../3_done/p5-transfer-protobuf-implementation-plan.md) |
-| クライアント・サーバー分離 | render + input を別 exe 化、Elixir/Rust 状態・定義の切り分け | [client-server-separation-procedure.md](../3_done/client-server-separation-procedure.md)（未実施は [client-server-separation-future.md](./client-server-separation-future.md)） |
-| fix_contents: Elixir–Rust 境界 | 新アーキテクチャ（Node/Component/Object）における NIF・shared・レンダーとの境界が未定義。既存 `on_nif_sync` 相当の役割をどこで担うか、Node/Component の状態がいつ Rust に渡るかを文書化する | [fix_contents.md](../../docs/architecture/fix_contents.md) |
+| クライアント・サーバー分離 | render + input を別 exe 化、Elixir/Rust 状態・定義の切り分け | [client-server-separation-procedure.md](../3_done/client-server-separation-procedure.md)（未実施は [client-server-separation-future.md](client-server-separation-future.md)） |
+| fix_contents: Elixir–Rust 境界 | 新アーキテクチャ（Node/Component/Object）における NIF・shared・レンダーとの境界が未定義。既存 `on_nif_sync` 相当の役割をどこで担うか、Node/Component の状態がいつ Rust に渡るかを文書化する | [fix_contents.md](../0_docs/architecture/fix_contents.md) |
 
 ---
 

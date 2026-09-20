@@ -1,16 +1,16 @@
 # AlchemyEngine — 改善計画
 
 > このドキュメントは現在の弱点を整理し、各課題に対する具体的な改善方針を定義する。
-> 最新の評価: [evaluation-2026-08-25.md](../../docs/evaluation/evaluation-2026-08-25.md)（まとめ）
-> プラス点: [specific-strengths-2026-08-25.md](../../docs/evaluation/specific-strengths-2026-08-25.md) / マイナス点: [specific-weaknesses-2026-08-25.md](../../docs/evaluation/specific-weaknesses-2026-08-25.md) / 提案: [specific-proposals-2026-08-25.md](../../docs/evaluation/specific-proposals-2026-08-25.md)
-> 評価者別の詳細: [opus/](../../docs/evaluation/opus/)（第1評価者）/ [gpt/](../../docs/evaluation/gpt/)（第2評価者）
-> 過去のまとめ: [docs/evaluation/archive/](../../docs/evaluation/archive/) / Fable 系: [docs/evaluation/fable/archive/](../../docs/evaluation/fable/archive/)
+> 最新の評価: [evaluation-2026-08-25.md](../0_docs/evaluation/evaluation-2026-08-25.md)（まとめ）
+> プラス点: [specific-strengths-2026-08-25.md](../0_docs/evaluation/specific-strengths-2026-08-25.md) / マイナス点: [specific-weaknesses-2026-08-25.md](../0_docs/evaluation/specific-weaknesses-2026-08-25.md) / 提案: [specific-proposals-2026-08-25.md](../0_docs/evaluation/specific-proposals-2026-08-25.md)
+> 評価者別の詳細: [opus/](../0_docs/evaluation/opus)（第1評価者）/ [gpt/](../0_docs/evaluation/gpt)（第2評価者）
+> 過去のまとめ: [.workspace/0_docs/evaluation/archive/](../0_docs/evaluation/archive) / Fable 系: [.workspace/0_docs/evaluation/fable/archive/](../0_docs/evaluation/fable/archive)
 
 ---
 
 ## この計画の位置づけ
 
-本計画は **2026-08-25 のまとめ評価で採用したマイナス点 56 項目・合計 -104** をすべて課題として引き受け、費用対効果順に並べたものである。提案（0 点）は本計画には含めない。新規の発展方向は [specific-proposals-2026-08-25.md](../../docs/evaluation/specific-proposals-2026-08-25.md) を参照する。
+本計画は **2026-08-25 のまとめ評価で採用したマイナス点 56 項目・合計 -104** をすべて課題として引き受け、費用対効果順に並べたものである。提案（0 点）は本計画には含めない。新規の発展方向は [specific-proposals-2026-08-25.md](../0_docs/evaluation/specific-proposals-2026-08-25.md) を参照する。
 
 前版（2026-04-01 時点）は Fable 単独評価を前提に D-1〜D-7 の 7 課題を並べていた。今回の刷新で全面的に置き換えている。旧課題の帰結は末尾の「前版からの引き継ぎ」に整理した。
 
@@ -31,7 +31,7 @@
 | 横断（ゲームプレイ完成度） | -6 | 3 | P-13 / P-24 |
 | **合計** | **-104** | **56** | P-1〜P-25 |
 
-検証基準は現行どおり **`mix alchemy.ci` がエラーゼロで通過すること**（[docs/warranty/ci.md](../../docs/warranty/ci.md)）。2026-08-25 時点の `8f35a57` で `RESULT: ALL PASSED` を確認済みである。
+検証基準は現行どおり **`mix alchemy.ci` がエラーゼロで通過すること**（[.workspace/0_docs/warranty/ci.md](../0_docs/warranty/ci.md)）。2026-08-25 時点の `8f35a57` で `RESULT: ALL PASSED` を確認済みである。
 
 ## 優先度の考え方
 
@@ -43,7 +43,7 @@
 
 ### まとめレポートの優先順位との対応
 
-[evaluation-2026-08-25.md](../../docs/evaluation/evaluation-2026-08-25.md) の「次の優先改善」#1〜#12 は、本計画では次の課題に対応する。
+[evaluation-2026-08-25.md](../0_docs/evaluation/evaluation-2026-08-25.md) の「次の優先改善」#1〜#12 は、本計画では次の課題に対応する。
 
 | まとめ # | 本計画 | まとめ # | 本計画 |
 |:---:|:---|:---:|:---|
@@ -104,11 +104,11 @@
 
 **優先度**: 高（説明責任）
 
-**問題**: 品質保証を説明する文書自体が最も陳腐化している。`docs/warranty/ci.md` は撤去済みクレートの `cargo test -p physics` と存在しない `cargo bench -p physics` ジョブを掲載し、`CyclomaticComplexity` を 15 と書くが `.credo.exs` は 10、`AliasUsage` は実際には無効化、実在する `proto-verify` ジョブは未記載である。README の「main のみ `cargo bench` のリグレッション検知」も事実でない。加えて `.cursor/rules/evaluation.mdc` の技術評価層が旧レイアウト（`native/physics` / `native/tools/launcher`）を前提にしており、現行の `rust/nif` + `rust/client/*` と対応しない。
+**問題**: 品質保証を説明する文書自体が最も陳腐化している。`.workspace/0_docs/warranty/ci.md` は撤去済みクレートの `cargo test -p physics` と存在しない `cargo bench -p physics` ジョブを掲載し、`CyclomaticComplexity` を 15 と書くが `.credo.exs` は 10、`AliasUsage` は実際には無効化、実在する `proto-verify` ジョブは未記載である。README の「main のみ `cargo bench` のリグレッション検知」も事実でない。加えて `.cursor/rules/evaluation.mdc` の技術評価層が旧レイアウト（`native/physics` / `native/tools/launcher`）を前提にしており、現行の `rust/nif` + `rust/client/*` と対応しない。
 
 **方針**: (1) `ci.md` の CI ジョブ表と credo 設定表を `.github/workflows/ci.yml` と `.credo.exs` の現物に合わせて書き直す。(2) README の bench 記述を削除する。(3) `evaluation.mdc` の技術評価層を現行クレート構成に更新する。(4) 再発防止として、`ci.yml` / `.credo.exs` の変更時に `ci.md` を同時更新する旨を `ci.md` 冒頭に明記する（自動生成は提案側に切り出す）。
 
-**対象**: `docs/warranty/ci.md`, `README.md`, `.cursor/rules/evaluation.mdc`, `.credo.exs`（参照のみ）
+**対象**: `.workspace/0_docs/warranty/ci.md`, `README.md`, `.cursor/rules/evaluation.mdc`, `.credo.exs`（参照のみ）
 
 **期待効果**: 「保証ドキュメントと評価ルールが旧構成のまま」**-3** が消える。今回の評価で実際に齟齬を生じた箇所である。
 
@@ -436,7 +436,7 @@
 
 ## 関連リンク
 
-- [docs/warranty/ci.md](../../docs/warranty/ci.md) — ローカル CI（`mix alchemy.ci`）の定義
-- [docs/architecture/overview.md](../../docs/architecture/overview.md)
-- [docs/cross-compile.md](../../docs/cross-compile.md)
+- [.workspace/0_docs/warranty/ci.md](../0_docs/warranty/ci.md) — ローカル CI（`mix alchemy.ci`）の定義
+- [.workspace/0_docs/architecture/overview.md](../0_docs/architecture/overview.md)
+- [.workspace/0_docs/cross-compile.md](../0_docs/cross-compile.md)
 - [.workspace/README.md](../README.md) — レーン運用

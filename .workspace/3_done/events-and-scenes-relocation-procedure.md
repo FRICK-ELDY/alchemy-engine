@@ -47,7 +47,7 @@
 #### Step 1-2: 設定の更新
 
 - **config/config.exs**: `config :server, :game_events_module, Contents.GameEvents` を `config :server, :game_events_module, Contents.Events.Game` に変更する。
-- **docs/architecture/** 内で `Contents.GameEvents` や `game_events_module` を説明している箇所があれば、同様に `Contents.Events.Game` に合わせて更新する。
+- **.workspace/0_docs/architecture/** 内で `Contents.GameEvents` や `game_events_module` を説明している箇所があれば、同様に `Contents.Events.Game` に合わせて更新する。
 
 #### Step 1-3: 参照の一括置換
 

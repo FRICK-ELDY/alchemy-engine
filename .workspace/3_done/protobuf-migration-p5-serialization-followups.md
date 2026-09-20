@@ -1,8 +1,8 @@
 # protobuf 移行 — フェーズ P5 以降の直列化まわりフォローアップ
 
 > 作成日: 2026-03-27  
-> 親計画（完了）: [protobuf-migration-plan.md](../3_done/protobuf-migration-plan.md)  
-> コード生成の完全自動化（未完了）: [protobuf-full-automation-procedure.md](./protobuf-full-automation-procedure.md)
+> 親計画（完了）: [protobuf-migration-plan.md](protobuf-migration-plan.md)  
+> コード生成の完全自動化（未完了）: [protobuf-full-automation-procedure.md](protobuf-full-automation-procedure.md)
 
 ## 1. 位置づけ
 
@@ -39,7 +39,7 @@ Zenoh の **フレーム・movement/action・frame injection** は protobuf の�
 - [x] `msgpack_injection`: `native/nif` 内の `apply_injection_from_msgpack` 呼び出し有無を `rg` で確認。
 - [x] UDP: `apps/network/lib/network/udp/protocol.ex` の `compress_events` / `decompress_events` と利用箇所を列挙。
 - [x] リリース運用: 「サーバーとデスクトップクライアントは同時更新（片側更新は非サポート）」を運用手順・リリースノートへ明記する対象ドキュメントを確定。
-  - 反映先: `docs/architecture/protobuf-migration.md`, `development.md`
+  - 反映先: `.workspace/0_docs/architecture/protobuf-migration.md`, `development.md`
 
 ### 4.2 client_info を protobuf のみに（フォールバック削除）
 

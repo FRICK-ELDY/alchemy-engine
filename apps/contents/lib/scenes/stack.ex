@@ -8,7 +8,7 @@ defmodule Contents.Scenes.Stack do
 
   state の構造は Content に委ねる。推奨規約（origin / landing_object / children）は
   `Contents.Scenes` の `@type recommended_state` および
-  docs/architecture/scene-and-object.md を参照。
+  .workspace/0_docs/architecture/scene-and-object.md を参照。
 
   ## オプション
 

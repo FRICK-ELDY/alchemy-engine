@@ -2,7 +2,7 @@
 
 > 作成日: 2026-03-12  
 > 更新日: 2026-03-15（実施方針・維持方針の決定事項を追記、Phase 4 を reference へ分離）  
-> 参照: [fix_contents.md](../../docs/architecture/fix_contents.md), [formula-test-phase1-architecture.md](formula-test-phase1-architecture.md)  
+> 参照: [fix_contents.md](../0_docs/architecture/fix_contents.md), [formula-test-phase1-architecture.md](formula-test-phase1-architecture.md)  
 > 目的: Scene を第一級の概念としてアーキテクチャに追加し、時間軸（Scene）と空間軸（Object）を明確に分離する。
 >
 > **背景**: Resonite/VRChat には Object ツリーのみ存在する。AlchemyEngine は Scene（時間軸）を追加することで体験の「段階」を明示的に扱う差別化を行う。
@@ -91,7 +91,7 @@ Contents（体験）
 | タスク | 内容 |
 |--------|------|
 | fix_contents.md 更新 | Scene を Contents と Object の間に追加。時間軸・空間軸の分離を記載 |
-| 新規ドキュメント | `docs/architecture/scene-and-object.md` を作成。Scene と Object の責務、境界、例を記載 |
+| 新規ドキュメント | `.workspace/0_docs/architecture/scene-and-object.md` を作成。Scene と Object の責務、境界、例を記載 |
 | formula-test-phase1-architecture.md | Scene の位置づけを追記（既存図に Scene を明示） |
 
 ### Phase 2: scenes 層の骨格追加 ✅
@@ -188,7 +188,7 @@ Contents
 
 ## 8. 参照
 
-- [fix_contents.md](../../docs/architecture/fix_contents.md)
+- [fix_contents.md](../0_docs/architecture/fix_contents.md)
 - [formula-test-phase1-architecture.md](formula-test-phase1-architecture.md)
 - [contents-migration-plan.md](contents-migration-plan.md)
 - [scene-concept-phase4-future.md](../0_reference/scene-concept-phase4-future.md) — Phase 4 将来拡張の検討

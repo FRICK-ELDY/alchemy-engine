@@ -16,13 +16,13 @@
 | **alchemy-engine** | 上記を **バージョン付きで取り込み**、`mix alchemy.gen.proto` / `prost-build` が **取り込み先の `proto/`** を参照する。ルートの `proto/` は削除または薄いラッパにする。 |
 | **CI** | プロトコルリポ単体で **契約検証**（`protoc` での検証、既存の encode/decode 往復テストの移管または二重実行）が通る。エンジン側 CI は **ロックされたリビジョン**のプロトと整合することを確認する。 |
 
-**補足（二層の SSoT）**: 上表の **SSoT** は **アプリ間ワイヤの契約**に限る。ゲーム状態・ルールの **ドメイン SSoT** は alchemy-engine 側の **Elixir**（[docs/architecture/overview.md](../../docs/architecture/overview.md#設計思想)）。
+**補足（二層の SSoT）**: 上表の **SSoT** は **アプリ間ワイヤの契約**に限る。ゲーム状態・ルールの **ドメイン SSoT** は alchemy-engine 側の **Elixir**（[.workspace/0_docs/architecture/overview.md](../0_docs/architecture/overview.md#設計思想)）。
 
 ### 1.2 完了条件（Definition of Done）
 
 - [ ] GitHub 上に **プロトコル専用リポジトリ**が存在し、ライセンス・README・変更履歴がある。  
 - [ ] `alchemy-engine` が **Git の tag または commit SHA** でプロトを固定し、`mix test` / 主要な `cargo build` が通る。  
-- [ ] `docs/architecture/` および `docs/policy-as-code/` の **proto パス参照**が新リポまたはバージョン表記に更新されている。  
+- [ ] `.workspace/0_docs/architecture/` および `.workspace/0_docs/policy-as-code/` の **proto パス参照**が新リポまたはバージョン表記に更新されている。  
 - [ ] 旧パス（ルート `proto/`）を参照するドキュメント・スクリプト・CI が残っていない、または意図した互換ラッパのみである。  
 - [ ] **後任者向け**: プロトを変更する PR のレビュー担当と **破壊的変更の扱い**が README または CONTRIBUTING に書かれている。
 
@@ -35,16 +35,16 @@
 | 種別 | 現状（alchemy-engine） | 備考 |
 |:---|:---|:---|
 | **スキーマ** | `proto/**/*.proto`（エントリは `render_frame.proto` およびルート直下の各 `.proto`） | `import` ツリーごと移動。パッケージ名・フィールド番号は変えない。 |
-| **ワイヤ仕様ドキュメント** | `docs/architecture/zenoh-protocol-spec.md`、`docs/architecture/network-protocol-current.md` のうち **契約記述中心の節** | 長い歴史節はエンジン側に残し、リンクで分離してもよい。 |
+| **ワイヤ仕様ドキュメント** | `.workspace/0_docs/architecture/zenoh-protocol-spec.md`、`.workspace/0_docs/architecture/network-protocol-current.md` のうち **契約記述中心の節** | 長い歴史節はエンジン側に残し、リンクで分離してもよい。 |
 | **契約テスト** | `apps/network/test/network/proto/protobuf_contract_test.exs` 等、**ワイヤのみ**に依存するテスト | エンジン固有のモックに依存するものはエンジン側に残す。 |
-| **方針ドキュメント（任意）** | `docs/policy-as-code/elixir_zenoh.md` の protobuf 方針節の **要約＋リンク** | 全文移管するとエンジン固有ポリシーと混ざるため、**二重管理を避ける**なら要約のみ新リポへ。 |
+| **方針ドキュメント（任意）** | `.workspace/0_docs/policy-as-code/elixir_zenoh.md` の protobuf 方針節の **要約＋リンク** | 全文移管するとエンジン固有ポリシーと混ざるため、**二重管理を避ける**なら要約のみ新リポへ。 |
 
 ### 2.2 alchemy-engine に残す（境界）
 
 | 種別 | 理由 |
 |:---|:---|
 | **`Content.FrameEncoder` 等** | DrawCommand 等の **ドメイン型 → protobuf メッセージ**のマッピングはゲームエンジンの責務。生成モジュール（`Alchemy.Render.*`）を**呼ぶ側**はエンジンに残す。 |
-| **`Network.ZenohBridge`、UDP サーバ、トピック名の定数** | トランスポートとルーティングはデプロイ・OTP と結びつく。ただし **キー文字列とペイロード形式の表**はプロトコルリポへ寄せられる。**別途**、実装の多くを **`alchemy-server-bridge` / `alchemy-client-bridge`** リポへ寄せる計画は [alchemy-server-client-bridge-repos-plan.md](./alchemy-server-client-bridge-repos-plan.md) を参照（本手順の §2.2 は「当面エンジンに残る境界」の記述として読み替え可）。 |
+| **`Network.ZenohBridge`、UDP サーバ、トピック名の定数** | トランスポートとルーティングはデプロイ・OTP と結びつく。ただし **キー文字列とペイロード形式の表**はプロトコルリポへ寄せられる。**別途**、実装の多くを **`alchemy-server-bridge` / `alchemy-client-bridge`** リポへ寄せる計画は [alchemy-server-client-bridge-repos-plan.md](alchemy-server-client-bridge-repos-plan.md) を参照（本手順の §2.2 は「当面エンジンに残る境界」の記述として読み替え可）。 |
 | **`rust/client/render_frame_proto` のデコードロジック** | ワイヤ解釈は共有、**描画パイプラインへの変換**はクライアント。必要なら後続で「プロト用 Rust クレート」に切り出す別タスクとする。 |
 | **Phoenix Channel の JSON イベント** | ブラウザ経路が別契約なら、**フェーズ 2** で「Web 用契約」をプロトコルリポに含めるか別ドキュメントにするか決める（§6.1）。 |
 
@@ -71,7 +71,7 @@
     render_frame/
     input_events.proto
     ...
-  docs/
+  .workspace/0_docs/
     wire-overview.md        # zenoh-protocol-spec 相当の要約（移設または新撰）
   .github/workflows/
     proto-lint.yml          # buf 等は任意。最低限 protoc --descriptor_set_out 等で検証
@@ -140,13 +140,13 @@
 
 ### フェーズ 4 — ドキュメントとポリシー追随（0.5〜1 日）
 
-1. `docs/architecture/protobuf-migration.md`、`zenoh-protocol-spec.md`、`network-protocol-current.md` 内の **`../../proto/` リンク**を、新リポの **タグ付き URL**（例: `https://github.com/ORG/alchemy-protocol/blob/v0.1.0/proto/render_frame.proto`）に更新する。  
+1. `.workspace/0_docs/architecture/protobuf-migration.md`、`zenoh-protocol-spec.md`、`network-protocol-current.md` 内の **`../../proto/` リンク**を、新リポの **タグ付き URL**（例: `https://github.com/ORG/alchemy-protocol/blob/v0.1.0/proto/render_frame.proto`）に更新する。  
 2. `.workspace/3_done/protobuf-full-automation-procedure.md` の「`proto/*.proto` はリポジトリルート」という記述を、**PROTO_ROOT** 前提に更新する（別 PR 可）。  
 3. `development.md` に **初回 clone 後に submodule 初期化**または **deps 取得**の手順を追記する。
 
 ### フェーズ 5 — クリーンアップとロック（0.5 日）
 
-1. ルートに **`PROTO_VERSION` または `PROTO_GIT_REV`** を記録するファイル（例: `.proto-version` または `docs/protocol-lock.md`）を置き、**意図しない追従**を防ぐ。  
+1. ルートに **`PROTO_VERSION` または `PROTO_GIT_REV`** を記録するファイル（例: `.proto-version` または `.workspace/0_docs/protocol-lock.md`）を置き、**意図しない追従**を防ぐ。  
 2. Dependabot 等で submodule を上げる運用にするか、**月次で人が rev を更新**するか決める。  
 3. 古い `proto/` へのリンクを Web から辿れるように、alchemy-engine の README に **1 行の移設告知**を入れる（任意）。
 
@@ -225,8 +225,8 @@ git submodule add https://github.com/ORG/alchemy-protocol.git 3rdparty/alchemy-p
 |:---|:---|
 | [client-server-separation-procedure.md](../3_done/client-server-separation-procedure.md) | クライアント／サーバー分離の実施済み手順 |
 | [protobuf-full-automation-procedure.md](../3_done/protobuf-full-automation-procedure.md) | `mix alchemy.gen.proto` と生成物自動化の狙い |
-| [zenoh-protocol-spec.md](../../docs/architecture/zenoh-protocol-spec.md) | Zenoh 上の protobuf 契約（移設候補） |
-| [network-protocol-current.md](../../docs/architecture/network-protocol-current.md) | 現行ネットワーク経路の説明 |
+| [zenoh-protocol-spec.md](../0_docs/architecture/zenoh-protocol-spec.md) | Zenoh 上の protobuf 契約（移設候補） |
+| [network-protocol-current.md](../0_docs/architecture/network-protocol-current.md) | 現行ネットワーク経路の説明 |
 
 ---
 

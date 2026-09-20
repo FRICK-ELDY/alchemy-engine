@@ -3,9 +3,9 @@
 > 作成日: 2026-07-03  
 > 目的: 2026-07-03 時点の engine コードレビューで洗い出したリスクを、優先度付きバックログとして整理する。  
 > 対象: Elixir Server（`apps/core`, `apps/contents`, `apps/network`）/ Rust Client（`rust/client`）/ Formula NIF（`rust/nif`）  
-> 関連: [login-register-ui-plan.md](./login-register-ui-plan.md)（auth クライアント UI）、[network-scalability-priority-issues.md](./network-scalability-priority-issues.md)（性能系）
+> 関連: [login-register-ui-plan.md](login-register-ui-plan.md)（auth クライアント UI）、[network-scalability-priority-issues.md](network-scalability-priority-issues.md)（性能系）
 
-[← README](./README.md)
+[← README](README.md)
 
 ---
 
@@ -56,7 +56,7 @@ UDP も同様に、パケットを送れる相手から任意 `room_id` への�
 
 1. **経路ごとの認証方式を一覧化**する（Zenoh ACL、共有シークレット、JWT 付きメタデータ、入力パケットへの HMAC 等）
 2. **Channel と同じ trust モデルに揃える**か、**auth JWT をゲーム接続にも使う**かを `room_token` 再検討とセットで決める
-3. room / client 単位のレート制限（[network-scalability-priority-issues.md](./network-scalability-priority-issues.md) P2 と連携）
+3. room / client 単位のレート制限（[network-scalability-priority-issues.md](network-scalability-priority-issues.md) P2 と連携）
 
 ### 受け入れ条件（案）
 
@@ -84,7 +84,7 @@ post "/api/room_token" do
   %{"room_id" => room_id} -> {:ok, token} = Network.RoomToken.sign(room_id)
 ```
 
-[login-register-ui-plan.md](./login-register-ui-plan.md) では「engine サーバでの JWT 検証」はスコープ外とし、将来計画に回している。
+[login-register-ui-plan.md](login-register-ui-plan.md) では「engine サーバでの JWT 検証」はスコープ外とし、将来計画に回している。
 
 ### 懸念
 
@@ -117,8 +117,8 @@ post "/api/room_token" do
 
 ### 着手の方向性（確定ではない）
 
-- 専用の短い設計メモ（または ADR）を `.workspace/1_backlog` または `docs/architecture` に追加し、上記チェックリストに回答を書く
-- [login-register-ui-plan.md](./login-register-ui-plan.md) Phase 4 以降の「auth ↔ engine 連携」と一体で決める
+- 専用の短い設計メモ（または ADR）を `.workspace/1_backlog` または `.workspace/0_docs/architecture` に追加し、上記チェックリストに回答を書く
+- [login-register-ui-plan.md](login-register-ui-plan.md) Phase 4 以降の「auth ↔ engine 連携」と一体で決める
 - 実装前に **現状の `/api/room_token` を本番で公開しない**運用ルールを明文化してもよい
 
 ### 受け入れ条件（案）
@@ -151,7 +151,7 @@ if menu_button(ui, "Logout", BUTTON_NEUTRAL) {
 
 ### 着手案
 
-- [login-register-ui-plan.md](./login-register-ui-plan.md) Phase 4 に従い、`AuthClient::logout` + ローカルトークン破棄を接続
+- [login-register-ui-plan.md](login-register-ui-plan.md) Phase 4 に従い、`AuthClient::logout` + ローカルトークン破棄を接続
 - 失敗時 UX（オフライン時はローカルのみクリア等）を定義
 
 ### 受け入れ条件（案）
@@ -227,7 +227,7 @@ Channel / UDP / Zenoh のいずれも、アクション名文字列を検証せ�
 
 - クライアントの login/register UI は auth（`:4002`）との HTTPS 通信のみ
 - ゲーム接続（Zenoh）は `--room main` 等で **auth とは独立**に確立
-- [login-register-ui-plan.md](./login-register-ui-plan.md) で意図的にスコープ外
+- [login-register-ui-plan.md](login-register-ui-plan.md) で意図的にスコープ外
 
 ### 懸念
 
@@ -354,10 +354,10 @@ Channel / UDP / Zenoh のいずれも、アクション名文字列を検証せ�
 
 | 項目 | 参照 |
 |:---|:---|
-| auth クライアント UI | [login-register-ui-plan.md](./login-register-ui-plan.md) |
-| 性能・入力防御（レート制限） | [network-scalability-priority-issues.md](./network-scalability-priority-issues.md) |
-| 権威ある状態・入力方針 | `docs/architecture/authoritative-state-sync-policy.md` |
-| Zenoh プロトコル | `docs/` 配下の zenoh 関連仕様 |
+| auth クライアント UI | [login-register-ui-plan.md](login-register-ui-plan.md) |
+| 性能・入力防御（レート制限） | [network-scalability-priority-issues.md](network-scalability-priority-issues.md) |
+| 権威ある状態・入力方針 | `.workspace/0_docs/architecture/authoritative-state-sync-policy.md` |
+| Zenoh プロトコル | `.workspace/0_docs/` 配下の zenoh 関連仕様 |
 
 **推奨する次の一手**
 

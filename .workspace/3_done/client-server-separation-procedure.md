@@ -209,7 +209,7 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 
 | 項目 | 形式 | 説明 |
 |:---|:---|:---|
-| commands | protobuf | Elixir の RenderComponent が生成する DrawCommand リスト。スキーマは [draw-command-spec.md](../../docs/architecture/draw-command-spec.md)、`proto/render_frame.proto` |
+| commands | protobuf | Elixir の RenderComponent が生成する DrawCommand リスト。スキーマは [draw-command-spec.md](../0_docs/architecture/draw-command-spec.md)、`proto/render_frame.proto` |
 | camera | protobuf | Camera2D / Camera3D。同上 |
 | ui | protobuf | UI キャンバス。同上 |
 | mesh_definitions | protobuf | メッシュ定義リスト。同上 |
@@ -323,6 +323,6 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 - [Zenohex](https://github.com/biyooon-ex/zenohex) — Elixir API for Zenoh
 - [legacy_contents-defines-rust-executes.md](../1_backlog/legacy_contents-defines-rust-executes.md) — 定義 vs 実行の分離方針
 - [draw-command-spec.md](../../architecture/draw-command-spec.md) — DrawCommand スキーマ
-- [zenoh-protocol-spec.md](../../docs/architecture/zenoh-protocol-spec.md) — Zenoh ペイロード（protobuf）
+- [zenoh-protocol-spec.md](../0_docs/architecture/zenoh-protocol-spec.md) — Zenoh ペイロード（protobuf）
 - [legacy_contents-to-physics-bottlenecks.md](../../architecture/legacy_contents-to-physics-bottlenecks.md) — データフロー・ボトルネック
 - [implementation.mdc](../../.cursor/rules/implementation.mdc) — 層間インターフェース設計

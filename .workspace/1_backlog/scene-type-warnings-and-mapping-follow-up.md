@@ -1,7 +1,7 @@
 # mix compile 警告とマップ層の今後の方針
 
 > 作成日: 2026-03-15  
-> 関連: [scene-type-as-atom-implementation-procedure.md](./scene-type-as-atom-implementation-procedure.md)  
+> 関連: [scene-type-as-atom-implementation-procedure.md](scene-type-as-atom-implementation-procedure.md)  
 > 目的: `mix compile` で出ている「never used」警告の内容を記録し、`map_transition_module_to_scene_type` / `scene_module_to_type` をどう扱うかの検討事項をドキュメント化する。
 
 ---
@@ -81,7 +81,7 @@
 
 ### 3.3 ドキュメント・手順との対応
 
-- [scene-type-as-atom-implementation-procedure.md](./scene-type-as-atom-implementation-procedure.md) では、既存の `Content.XXX.Scenes.`* を「削除するか、scene_* から委譲用に残す」と記載しているが、**map_transition_module_to_scene_type や scene_module_to_type をどうするか**は明示していない。
+- [scene-type-as-atom-implementation-procedure.md](scene-type-as-atom-implementation-procedure.md) では、既存の `Content.XXX.Scenes.`* を「削除するか、scene_* から委譲用に残す」と記載しているが、**map_transition_module_to_scene_type や scene_module_to_type をどうするか**は明示していない。
 - 本ドキュメントで、その「マップ層の扱い」と「完全移行後の方針」を検討事項として残す。実施する場合は手順書に Step を追加するか、別の実施メモを用意するとよい。
 
 ---

@@ -2,7 +2,7 @@
 
 > 作成日: 2026-03-07  
 > 出典: [legacy_contents-defines-rust-executes.md](../1_backlog/legacy_contents-defines-rust-executes.md) P4-S  
-> 参照: CWE-22 (Path Traversal)、[shader-elixir-interface.md](../../docs/architecture/shader-elixir-interface.md)
+> 参照: CWE-22 (Path Traversal)、[shader-elixir-interface.md](../0_docs/architecture/shader-elixir-interface.md)
 
 ---
 
@@ -95,7 +95,7 @@
 | ファイル | 変更内容 |
 |:---|:---|
 | `native/nif/src/render_bridge.rs` | `load_shaders_from_atlas_path` にパス検証を追加。`load_atlas_png` にも同様の検証を追加 |
-| `docs/architecture/shader-elixir-interface.md` | 本設計への参照を追加 |
+| `.workspace/0_docs/architecture/shader-elixir-interface.md` | 本設計への参照を追加 |
 
 ---
 
@@ -115,4 +115,4 @@
 
 - [CWE-22: Improper Limitation of a Pathname to a Restricted Directory](https://cwe.mitre.org/data/definitions/22.html)
 - [std::fs::canonicalize - Rust](https://doc.rust-lang.org/std/fs/fn.canonicalize.html)
-- [shader-elixir-interface.md](../../docs/architecture/shader-elixir-interface.md) — パス導出ロジック
+- [shader-elixir-interface.md](../0_docs/architecture/shader-elixir-interface.md) — パス導出ロジック

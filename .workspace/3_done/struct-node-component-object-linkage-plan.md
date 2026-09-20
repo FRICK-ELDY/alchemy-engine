@@ -1,7 +1,7 @@
 # Struct → Node → Component → Object 紐づきの実施計画
 
 > 作成日: 2026-03-19  
-> 参照: [scene-and-object.md](../../docs/architecture/scene-and-object.md), [fix_contents.md](../../docs/architecture/fix_contents.md)  
+> 参照: [scene-and-object.md](../0_docs/architecture/scene-and-object.md), [fix_contents.md](../0_docs/architecture/fix_contents.md)  
 > 目的: 設計上の階層「Object → Components → Nodes → Structs」を、**contents 層のみの拡張**で実装する。エンジン（core）は変更せず、Object が Component リストを持ち、その Component が Node（および Struct）を使う紐づきを確立する。
 
 ---
@@ -131,9 +131,9 @@ Contents（体験）
 
 | ドキュメント | 役割 |
 |--------------|------|
-| [scene-and-object.md](../../docs/architecture/scene-and-object.md) | Scene と Object の責務。階層「Object → Components → Nodes → Structs」の記載。 |
-| [fix_contents.md](../../docs/architecture/fix_contents.md) | structs / nodes / components / objects の構成と依存方向。 |
-| [scene-origin-landing-implementation-plan.md](./scene-origin-landing-implementation-plan.md) | Scene state の origin / landing_object / children。Object の扱いと整合する。 |
+| [scene-and-object.md](../0_docs/architecture/scene-and-object.md) | Scene と Object の責務。階層「Object → Components → Nodes → Structs」の記載。 |
+| [fix_contents.md](../0_docs/architecture/fix_contents.md) | structs / nodes / components / objects の構成と依存方向。 |
+| [scene-origin-landing-implementation-plan.md](scene-origin-landing-implementation-plan.md) | Scene state の origin / landing_object / children。Object の扱いと整合する。 |
 
 ---
 

@@ -3,7 +3,7 @@
 > **置き場**: `.workspace/2_todo`（着手前。完了後に `3_done` へ）  
 > **作成日**: 2026-04-22  
 > **目的**: ワイヤと BEAM／ネイティブ内部表現の **変換・Zenoh セッション・購読ルーティング**など、**Elixir と Rust の両方に通じたレビューが必要な層**を `alchemy-engine` から分離し、**サーバー側**と**クライアント側**で責務とオーナーシップをはっきりさせる。  
-> **関連**: **ワイヤ**上のプロト契約の SSoT は [protocol-repo-extraction-procedure.md](./protocol-repo-extraction-procedure.md) と**別リポ**とし、ブリッジは **その契約を消費する実装**として依存する（順序は §6）。**ゲームドメイン**の SSoT は引き続き `alchemy-engine` 側の **Elixir**（[docs/architecture/overview.md](../../docs/architecture/overview.md#設計思想) の「二層の SSoT」）。
+> **関連**: **ワイヤ**上のプロト契約の SSoT は [protocol-repo-extraction-procedure.md](protocol-repo-extraction-procedure.md) と**別リポ**とし、ブリッジは **その契約を消費する実装**として依存する（順序は §6）。**ゲームドメイン**の SSoT は引き続き `alchemy-engine` 側の **Elixir**（[.workspace/0_docs/architecture/overview.md](../0_docs/architecture/overview.md#設計思想) の「二層の SSoT」）。
 
 ---
 
@@ -27,7 +27,7 @@
 
 - 現行のサーバー側の中心は `apps/network/lib/network/zenoh_bridge.ex`（`Network.ZenohBridge`）および、フレーム配信経路の `Contents.FrameBroadcaster` と `Contents.Events.Game` からの `publish_frame` 呼び出し等。  
 - 現行のクライアント側の中心は `rust/client/network`（`NetworkRenderBridge`、`protobuf_codec` 等）および `rust/client/render_frame_proto`（フレーム protobuf のデコード）。  
-- ワイヤの `.proto` 定義の移管方針は [protocol-repo-extraction-procedure.md](./protocol-repo-extraction-procedure.md) に従う（本計画では **スキーマの SSoT は持たない**）。
+- ワイヤの `.proto` 定義の移管方針は [protocol-repo-extraction-procedure.md](protocol-repo-extraction-procedure.md) に従う（本計画では **スキーマの SSoT は持たない**）。
 
 ### 2.2 非目標（この計画の初版スコープ外）
 
@@ -141,7 +141,7 @@ flowchart TB
 | 項目 | 内容 |
 |:---|:---|
 | **API 安定化** | エンジン側の `forward_move_input` 等の **内部イベント形式**がブリッジの前提になる。公開 API 化するまでモノレポ内フェーズ 1 を長めに取る。 |
-| **`render_frame_proto` の所在** | クライアントブリッジに含めるとリポが太る。**プロトリポ＋生成 Rust クレート**へ寄せる案は [protocol-repo-extraction-procedure.md](./protocol-repo-extraction-procedure.md) と統合検討。 |
+| **`render_frame_proto` の所在** | クライアントブリッジに含めるとリポが太る。**プロトリポ＋生成 Rust クレート**へ寄せる案は [protocol-repo-extraction-procedure.md](protocol-repo-extraction-procedure.md) と統合検討。 |
 | **Hex / crates.io** | 初回は **非公開 git 依存**で十分なことが多い。OSS 公開時にパッケージ名の衝突を確認する。 |
 | **CI 二重化** | ブリッジ単体 CI とエンジン統合 CI の役割分担を決める（契約テストの置き場）。 |
 
@@ -151,7 +151,7 @@ flowchart TB
 
 | ドキュメント | 内容 |
 |:---|:---|
-| [protocol-repo-extraction-procedure.md](./protocol-repo-extraction-procedure.md) | `.proto` とワイヤ仕様の別リポ化 |
+| [protocol-repo-extraction-procedure.md](protocol-repo-extraction-procedure.md) | `.proto` とワイヤ仕様の別リポ化 |
 | [client-server-separation-procedure.md](../3_done/client-server-separation-procedure.md) | 既存のクライアント／サーバー分離の実施済み手順 |
 | [client-server-separation-future.md](../0_reference/client-server-separation-future.md) | 未実施・将来項目 |
 

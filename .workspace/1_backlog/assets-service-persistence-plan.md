@@ -263,12 +263,12 @@ Phase 4  : 運用最低限・ドキュメント ──────────�
 | 文書 | 関係 |
 |:---|:---|
 | [fable-improvement-plan.md](../0_reference/fable-improvement-plan.md) §3-6 | 評価上の親タスク（`-2`） |
-| [fable-specific-weaknesses.md](../../docs/evaluation/fable/archive/2026-07-31/fable-specific-weaknesses.md) | 永続化層不在の根拠 |
-| [fable-specific-proposals.md](../../docs/evaluation/fable/archive/2026-07-31/fable-specific-proposals.md) | アバター・ワールド永続（後続） |
+| [fable-specific-weaknesses.md](../0_docs/evaluation/fable/archive/2026-07-31/fable-specific-weaknesses.md) | 永続化層不在の根拠 |
+| [fable-specific-proposals.md](../0_docs/evaluation/fable/archive/2026-07-31/fable-specific-proposals.md) | アバター・ワールド永続（後続） |
 | [improvement-plan.md](../0_reference/improvement-plan.md) D-2 | オンライン永続化 ADR |
 | [asset-storage-classification.md](asset-storage-classification.md) | LocalAssets 区分・プレフィックス |
 | [asset-cdn-design.md](asset-cdn-design.md) | URI／CDN（メディア後続） |
-| [architecture/overview.md](../../docs/architecture/overview.md) | 永続化節（現状未実装） |
+| [architecture/overview.md](../0_docs/architecture/overview.md) | 永続化節（現状未実装） |
 | `auth/README.md` | alchemy-assets 予定の記載元 |
 
 ---

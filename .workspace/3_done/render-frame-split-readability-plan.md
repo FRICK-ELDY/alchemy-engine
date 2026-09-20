@@ -133,7 +133,7 @@ rust/client/render_frame_proto/src/
 | 定義 | `Content.FrameEncoder.encode_frame(commands, camera, ui, mesh_definitions, cursor_grab \\ nil)` |
 | 戻り値 | `binary()` — `Alchemy.Render.RenderFrame` の protobuf エンコード結果 |
 | `cursor_grab` | `:grab` \| `:release` \| `:no_change` \| `nil`（省略時はフィールド未設定扱い） |
-| タプル形式 | `commands` / `camera` / `ui` の各要素は [draw-command-spec.md](../../docs/architecture/draw-command-spec.md) および本モジュールの `command_to_pb` 句と一致させる |
+| タプル形式 | `commands` / `camera` / `ui` の各要素は [draw-command-spec.md](../0_docs/architecture/draw-command-spec.md) および本モジュールの `command_to_pb` 句と一致させる |
 
 **実行時の呼び出し元（調査日: 2026-04-08）**
 
@@ -178,13 +178,13 @@ rust/client/render_frame_proto/src/
 
 - [ ] `Content.FrameEncoder.encode_frame/5` のシグネチャと意味が変わらない。
 - [ ] 既存の protobuf デコードテスト・golden（該当するもの）が通る。
-- [ ] 新規 DrawCommand を追加する手順が、本書または `docs/architecture/draw-command-spec.md` から**たどれる**（「中央に 1 行 + 新ファイル 1 つ」程度のチェックリスト）。
+- [ ] 新規 DrawCommand を追加する手順が、本書または `.workspace/0_docs/architecture/draw-command-spec.md` から**たどれる**（「中央に 1 行 + 新ファイル 1 つ」程度のチェックリスト）。
 
 ---
 
 ## 7. 参照
 
-- `docs/architecture/draw-command-spec.md`
+- `.workspace/0_docs/architecture/draw-command-spec.md`
 - `proto/render_frame.proto`
 - `apps/contents/lib/contents/frame_encoder.ex`
 - `rust/client/render_frame_proto/build.rs`

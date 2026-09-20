@@ -2,7 +2,7 @@
 
 > 作成日: 2026-03 頃
 > 完了日: 2026-03-15
-> 対象: [bin/](../../../bin/) 配下のバッチスクリプト（廃止済み）
+> 対象: [bin/](../../../bin) 配下のバッチスクリプト（廃止済み）
 > 成果物: `apps/core/lib/mix/tasks/` 配下の Mix カスタムタスク
 >
 > **実施結果**: フェーズ 0〜3 を完了。bin/ ディレクトリを削除し、すべての機能を `mix alchemy.*` タスクに移行済み。
@@ -31,8 +31,8 @@
 ### 実施内容
 
 - bin/ 配下のスクリプトはすべて削除
-- [development.md](../../../development.md)、[README.md](../../../README.md)、[docs/cross-compile.md](../../cross-compile.md) を `mix alchemy.*` と `-p app` に統一済み
-- [docs/architecture/rust/desktop_client.md](../../architecture/rust/desktop_client.md) は（※ docs からの相対パス）「app」に更新済み
+- [development.md](../../../development.md)、[README.md](../../../README.md)、[.workspace/0_docs/cross-compile.md](../../cross-compile.md) を `mix alchemy.*` と `-p app` に統一済み
+- [.workspace/0_docs/architecture/rust/desktop_client.md](../../architecture/rust/desktop_client.md) は（※ 0_docs からの相対パス）「app」に更新済み
 
 ---
 

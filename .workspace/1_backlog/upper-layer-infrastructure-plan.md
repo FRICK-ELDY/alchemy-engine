@@ -28,8 +28,8 @@
 
 ### 1.3 既存ドキュメントとの関係
 
-- `docs/vision-goal.md` — 分散型VR SNS のビジョン。Phase 3〜5 の前提となる
-- `docs/vision.md` — エンジン単体の保証範囲
+- `.workspace/0_docs/vision-goal.md` — 分散型VR SNS のビジョン。Phase 3〜5 の前提となる
+- `.workspace/0_docs/vision.md` — エンジン単体の保証範囲
 - 本計画は vision-goal の Phase 3（単一インスタンスのネットワーク公開）以降と整合する
 
 ---

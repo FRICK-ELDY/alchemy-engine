@@ -29,5 +29,5 @@
 ## 関連ドキュメント
 
 - [client-server-separation-procedure.md](../3_done/client-server-separation-procedure.md) — 実施済み手順（フェーズ 0〜3）
-- [zenoh-protocol-spec.md](../../docs/architecture/zenoh-protocol-spec.md) — Zenoh プロトコル仕様
+- [zenoh-protocol-spec.md](../0_docs/architecture/zenoh-protocol-spec.md) — Zenoh プロトコル仕様
 - [asset-cdn-design.md](../1_backlog/asset-cdn-design.md) — アセット配布設計（将来検討）

@@ -41,7 +41,7 @@
 
 | 課題 | 重要度 | 内容 |
 |:---|:---|:---|
-| **OpenXR ローダーが LoadLibraryExW で失敗** | 高 | Steam が標準パス外の場合、`openxr_loader.dll` が見つからない。ユーザー設定不要の解決策が未確立。→ [vr-openxr-loader-path-issue.md](./vr-openxr-loader-path-issue.md) |
+| **OpenXR ローダーが LoadLibraryExW で失敗** | 高 | Steam が標準パス外の場合、`openxr_loader.dll` が見つからない。ユーザー設定不要の解決策が未確立。→ [vr-openxr-loader-path-issue.md](vr-openxr-loader-path-issue.md) |
 | **XR → サーバ入力経路** | 中 | 旧案の NIF `spawn_xr_input_thread` は撤去済み。クライアント → `Contents.Events.Game` の配線を別途設計する必要がある |
 | **VR 専用コンテンツの設定** | 低 | `config :server, :current` を VRTest に切り替える必要 |
 | **head_pose の座標系** | 中 | OpenXR の reference space と render のカメラ座標系の対応を確認する必要がある |
@@ -168,6 +168,6 @@ Phase B まででデスクトップミラーリング＋head_pose カメラは�
 
 ## 6. 参考ドキュメント
 
-- [input-device-abstraction-design.md](./input-device-abstraction-design.md) — VR イベント形式・フロー
+- [input-device-abstraction-design.md](input-device-abstraction-design.md) — VR イベント形式・フロー
 - [vision-correction-pass-tech-spec.md](../paper/vision-correction-pass-tech-spec.md) — OpenXR / wgpu 連携の将来的な検討
 - [implementation.mdc](../../.cursor/rules/implementation.mdc) — レイヤー責務・アーキテクチャ原則

@@ -2,7 +2,7 @@
 
 > 作成日: 2026-03-15  
 > 完了日: 2026-03-15  
-> 参照: [fix_contents.md](../../docs/architecture/fix_contents.md), [scene-and-object.md](../../docs/architecture/scene-and-object.md)  
+> 参照: [fix_contents.md](../0_docs/architecture/fix_contents.md), [scene-and-object.md](../0_docs/architecture/scene-and-object.md)  
 > 目的: `apps/contents/lib` に **Behaviour** 名前空間を追加し、Content / Scene / Object / Component / Node の 5 種類の契約を `Contents.Behaviour.*` に集約する。コンテンツ作成時は Behaviour の修正は不要で、既存契約の実装のみ行う。
 
 ---
@@ -178,13 +178,13 @@ Elixir の `@behaviour` は「そのモジュールが定義する `@callback`�
 
 #### Step 3-2: ドキュメントの更新
 
-- `docs/architecture/fix_contents.md`  
+- `.workspace/0_docs/architecture/fix_contents.md`  
   - `Contents.Scenes.Core.Behaviour` / `Contents.SceneBehaviour` の記述を `Contents.Behaviour.Scenes` に合わせる。  
-- `docs/architecture/scene-and-object.md`  
+- `.workspace/0_docs/architecture/scene-and-object.md`  
   - 契約のモジュール名を `Contents.Behaviour.Scenes` に。  
 - `.workspace/3_done/fix-contents-implementation-procedure.md`
   - 参照用として「Behaviour は現在 Contents.Behaviour.* に集約済み」と追記。  
-- その他、grep でヒットした `docs/` 内のファイルを必要に応じて更新。
+- その他、grep でヒットした `.workspace/0_docs/` 内のファイルを必要に応じて更新。
 
 #### Step 3-3: 旧ファイルの削除（任意・後日）
 
@@ -219,7 +219,7 @@ Elixir の `@behaviour` は「そのモジュールが定義する `@callback`�
 
 ## 6. 参照
 
-- [fix_contents.md](../../docs/architecture/fix_contents.md) — アーキテクチャ概要
-- [scene-and-object.md](../../docs/architecture/scene-and-object.md) — Scene の責務
+- [fix_contents.md](../0_docs/architecture/fix_contents.md) — アーキテクチャ概要
+- [scene-and-object.md](../0_docs/architecture/scene-and-object.md) — Scene の責務
 - [contents-migration-plan.md](contents-migration-plan.md) — 既存コンテンツ移行
-- [scene-type-as-atom-implementation-procedure.md](./scene-type-as-atom-implementation-procedure.md) — 案B 実施時は Contents.Behaviour.Scenes の利用を前提にできる
+- [scene-type-as-atom-implementation-procedure.md](scene-type-as-atom-implementation-procedure.md) — 案B 実施時は Contents.Behaviour.Scenes の利用を前提にできる
