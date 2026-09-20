@@ -1,7 +1,7 @@
 # protobuf 移行 — フェーズ P5 以降の直列化まわりフォローアップ
 
 > 作成日: 2026-03-27  
-> 親計画（完了）: [protobuf-migration-plan.md](../7_done/protobuf-migration-plan.md)  
+> 親計画（完了）: [protobuf-migration-plan.md](../3_done/protobuf-migration-plan.md)  
 > コード生成の完全自動化（未完了）: [protobuf-full-automation-procedure.md](./protobuf-full-automation-procedure.md)
 
 ## 1. 位置づけ

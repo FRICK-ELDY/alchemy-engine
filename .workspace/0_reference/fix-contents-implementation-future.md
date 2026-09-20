@@ -1,6 +1,6 @@
 # fix_contents アーキテクチャ — 将来対応項目
 
-> 参照: [fix-contents-implementation-procedure.md](../7_done/fix-contents-implementation-procedure.md)（実施済み）
+> 参照: [fix-contents-implementation-procedure.md](../3_done/fix-contents-implementation-procedure.md)（実施済み）
 >
 > 本ドキュメントは、fix_contents 実施手順書で未実施の項目をまとめたものです。
 
@@ -30,7 +30,7 @@ Phase 3 ではディレクトリのみ作成。以下の数学関数ノードは
 
 ## 関連ドキュメント
 
-- [fix-contents-implementation-procedure.md](../7_done/fix-contents-implementation-procedure.md) — 実施済み手順
+- [fix-contents-implementation-procedure.md](../3_done/fix-contents-implementation-procedure.md) — 実施済み手順
 - [fix_contents.md](../../docs/architecture/fix_contents.md) — アーキテクチャ設計
 - [contents-components-reorganization-procedure.md](../1_backlog/contents-components-reorganization-procedure.md) — コンポーネント再編成（移行と整合）
 

@@ -22,16 +22,16 @@
 
 | 順序 | ドキュメント | フェーズ | 依存 | 状態 |
 |:---:|-------------|----------|------|------|
-| 1 | [fix-contents-implementation-procedure](7_done/fix-contents-implementation-procedure.md) | Phase 1〜5（structs → nodes → components → objects） | なし | 完了 |
-| 2 | [contents-migration-plan](7_done/contents-migration-plan.md) | Phase 1〜7（既存コンテンツ移行） | 1 の Phase 5 完了後 | 完了 |
+| 1 | [fix-contents-implementation-procedure](3_done/fix-contents-implementation-procedure.md) | Phase 1〜5（structs → nodes → components → objects） | なし | 完了 |
+| 2 | [contents-migration-plan](3_done/contents-migration-plan.md) | Phase 1〜7（既存コンテンツ移行） | 1 の Phase 5 完了後 | 完了 |
 | 3 | [contents-components-reorganization-procedure](1_backlog/contents-components-reorganization-procedure.md) | Phase 1〜3 | 1 と並行可能 | 未着手 |
-| 4 | [scene-concept-addition-plan](7_done/scene-concept-addition-plan.md) | Phase 1〜3 完了、Phase 4 は reference へ | 2 の Phase 3 以降と整合 | 完了 |
+| 4 | [scene-concept-addition-plan](3_done/scene-concept-addition-plan.md) | Phase 1〜3 完了、Phase 4 は reference へ | 2 の Phase 3 以降と整合 | 完了 |
 
 ### トラック B: クライアント・サーバー・ネットワーク
 
 | 順序 | ドキュメント | フェーズ | 依存 | 状態 |
 |:---:|-------------|----------|------|------|
-| 1 | [client-server-separation-procedure](7_done/client-server-separation-procedure.md) | 0〜3 実施済み、4〜5 は [client-server-separation-future](0_reference/client-server-separation-future.md) | なし | 一部完了 |
+| 1 | [client-server-separation-procedure](3_done/client-server-separation-procedure.md) | 0〜3 実施済み、4〜5 は [client-server-separation-future](0_reference/client-server-separation-future.md) | なし | 一部完了 |
 | 2 | [env-and-serialization-migration-plan](1_backlog/env-and-serialization-migration-plan.md) | 環境変数・Erlang term 化 | B-1 の Phase 1 と整合 | 一部完了（platform-info 実装済み） |
 | 3 | [render-thread-offload-plan](1_backlog/render-thread-offload-plan.md) | 1〜3 | B-1 の Phase 2 と並行検討可能 | 未着手 |
 
@@ -39,8 +39,8 @@
 
 | 順序 | ドキュメント | フェーズ | 依存 | 状態 |
 |:---:|-------------|----------|------|------|
-| 1 | [bin-deprecation-mix-tasks-plan](7_done/bin-deprecation-mix-tasks-plan.md) | 0〜3 | ランチャー安定後 | 完了 |
-| 2 | [parameters-types-implementation-procedure](7_done/parameters-types-implementation-procedure.md) | Phase 1 | なし | 完了 |
+| 1 | [bin-deprecation-mix-tasks-plan](3_done/bin-deprecation-mix-tasks-plan.md) | 0〜3 | ランチャー安定後 | 完了 |
+| 2 | [parameters-types-implementation-procedure](3_done/parameters-types-implementation-procedure.md) | Phase 1 | なし | 完了 |
 
 ### トラック D: VR・プラットフォーム
 
@@ -53,7 +53,7 @@
 
 | ドキュメント | 備考 |
 |-------------|------|
-| [platform-info-crate-and-local-user-execution-plan](7_done/platform-info-crate-and-local-user-execution-plan.md) | client_info 作成〜メニュー表示まで全フェーズ完了 |
+| [platform-info-crate-and-local-user-execution-plan](3_done/platform-info-crate-and-local-user-execution-plan.md) | client_info 作成〜メニュー表示まで全フェーズ完了 |
 
 ---
 
@@ -89,6 +89,6 @@
 ## 更新ルール
 
 1. プランを着手したら、該当行の状態を「進行中」に更新する
-2. 全フェーズ完了したら `7_done/` へ移動し、ロードマップの状態を更新する
+2. 全フェーズ完了したら `3_done/` へ移動し、ロードマップの状態を更新する
 3. 実施時期が決まった課題は `1_backlog/` から `2_todo/` へ移動する
 4. 新規プランはまず `1_backlog/` に配置し、優先度が上がったら `2_todo/` へ移動する

@@ -1,7 +1,7 @@
 # 実施計画: Component / Node / Struct 強化、Resonite 寄せ、Node DSL
 
 > 作成日: 2026-04-07  
-> ステータス: 着手前（完了後に `7_done` へ）
+> ステータス: 着手前（完了後に `3_done` へ）
 
 ---
 

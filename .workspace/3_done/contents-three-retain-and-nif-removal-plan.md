@@ -27,7 +27,7 @@
 | **パッケージ説明** | `apps/contents/lib/contents.ex`, `apps/contents/README.md` | 一覧・説明文の更新が必要 |
 | **ゲームイベント** | `apps/contents/lib/events/game.ex` | VampireSurvivor 向けコメント・分岐（フェーズ 2） |
 | **テスト** | `apps/contents/test/content/` | VS 専用 7 ファイルはフェーズ 1 で削除済み。`component_list_test.exs` は `Content.BulletHell3D` を使用 |
-| **ドキュメント（履歴・設計）** | `docs/architecture/elixir/contents.md`, `overview.md`, `contents/vampire_survivor.md`, `evaluation/*`, `.workspace/7_done/*` 等 | フェーズ 1 のコード削除後に追随更新するか、履歴として残すかは別判断。**フェーズ 1 のブロッカーではない** |
+| **ドキュメント（履歴・設計）** | `docs/architecture/elixir/contents.md`, `overview.md`, `contents/vampire_survivor.md`, `evaluation/*`, `.workspace/3_done/*` 等 | フェーズ 1 のコード削除後に追随更新するか、履歴として残すかは別判断。**フェーズ 1 のブロッカーではない** |
 | **削除済み実装本体** | （同上ディレクトリ・トップ `*.ex`） | フェーズ 1 で削除済み |
 
 ### フェーズ 0 成果: `Core.Formula.run/3` と `run_formula_bytecode`（方針・1 段落）

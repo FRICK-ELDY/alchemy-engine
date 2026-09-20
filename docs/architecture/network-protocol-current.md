@@ -111,6 +111,6 @@ DrawCommand は Elixir の Render コンポーネントが組み立て、`Conten
 
 - [Network.Channel](../../apps/network/lib/network/channel.ex)
 - [Network.UDP.Protocol](../../apps/network/lib/network/udp/protocol.ex)
-- [client-server-separation-procedure.md](../../.workspace/7_done/client-server-separation-procedure.md)（未実施項目は [client-server-separation-future.md](../plan/reference/client-server-separation-future.md)）
+- [client-server-separation-procedure.md](../../.workspace/3_done/client-server-separation-procedure.md)（未実施項目は [client-server-separation-future.md](../plan/reference/client-server-separation-future.md)）
 - [zenoh-protocol-spec.md](zenoh-protocol-spec.md)
 - [draw-command-spec.md](draw-command-spec.md)
