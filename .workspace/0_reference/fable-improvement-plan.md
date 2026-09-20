@@ -40,7 +40,7 @@ auth と同じ方式で `runtime.exs` に prod 時の raise を追加。今回 r
 
 ### 2-2. auth ↔ engine の接続（room token の認証発行） `-3 解消` ✅
 
-engine に JWKS クライアントを実装し、`POST /api/room_token` を Bearer JWT 必須に変更。**auth 強化の効果をゲームサーバに接続する最重要タスク。** 契約は `auth/docs/jwt-jwks-engine-contract.md`。
+engine に JWKS クライアントを実装し、`POST /api/room_token` を Bearer JWT 必須に変更。**auth 強化の効果をゲームサーバに接続する最重要タスク。** 契約は `auth/.workspace/0_docs/jwt-jwks-engine-contract.md`。
 
 **切替必須（デモ・ローカル向け）:** JWT 必須化は環境変数（例: `AUTH_REQUIRED`、既定はオフまたは dev オフ）で無効化できるようにする。オフ時は現行どおり無認証で room token を発行する。オン時のみ JWKS 検証を行い、失敗は 401。評価点の解消は **オン経路が本番／検証環境で有効であること** を前提とする。
 

@@ -2,7 +2,7 @@ defmodule Network.AuthVerifier do
   @moduledoc """
   alchemy-auth 発行の Bearer JWT を JWKS 公開鍵で検証する。
 
-  契約: `auth/docs/jwt-jwks-engine-contract.md`
+  契約: `auth/.workspace/0_docs/jwt-jwks-engine-contract.md`
   - RS256 / kid / iss / aud / exp / iat / sub / jti / status
   - clock skew ±60 秒
   - jti 失効 DB は参照しない（外部 verifier）
