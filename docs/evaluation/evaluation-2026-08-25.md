@@ -18,7 +18,7 @@
 | 第1評価者の 4 文書 | `docs/evaluation/opus/` |
 | 第2評価者の 4 文書 | `docs/evaluation/gpt/` |
 | 統合一覧（本まとめ） | `docs/evaluation/specific-{strengths,weaknesses,proposals}-2026-08-25.md` |
-| 改善提案書 | `workspace/0_reference/improvement-plan.md` |
+| 改善提案書 | `.workspace/0_reference/improvement-plan.md` |
 
 > **評価期間中に CI が修正された**: 両評価者とも初稿では「GitHub Actions が `ci.yml.ignore` で無効」「`mix alchemy.ci` が 4 ジョブ赤」を重い減点として計上していた（Opus 計 -9、GPT 計 -8）。評価中に PR #347（`988b9e1` → マージ `8f35a57`）が入り、`ci.yml` の復活と fmt / clippy / format / credo の全違反修正が行われた。両評価者が現 HEAD で `elixir -S mix alchemy.ci` を再実行し **`RESULT: ALL PASSED`**（exit 0、21 秒）を確認したため、該当項目を撤回・緩和して再集計している。
 
@@ -168,7 +168,7 @@
 
 ## 次の優先改善
 
-詳細と手順は `workspace/0_reference/improvement-plan.md` に記載する。ここでは順序と理由のみを示す。
+詳細と手順は `.workspace/0_reference/improvement-plan.md` に記載する。ここでは順序と理由のみを示す。
 
 | # | 改善 | 採用点への効果 | 見積 |
 |:---:|:---|:---|:---:|

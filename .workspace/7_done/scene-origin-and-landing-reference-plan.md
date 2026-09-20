@@ -77,4 +77,4 @@
 - [x] docs/architecture/fix_contents.md の Scene 記述が更新されている
 - [x] Contents.Behaviour.Scenes の @moduledoc / init の @doc が新方針に更新されている
 - [x] Contents.SceneBehaviour の @moduledoc が現状の方針に更新されている
-- [x] workspace/7_done/contents-migration-plan.md の該当箇所が更新されている
+- [x] .workspace/7_done/contents-migration-plan.md の該当箇所が更新されている

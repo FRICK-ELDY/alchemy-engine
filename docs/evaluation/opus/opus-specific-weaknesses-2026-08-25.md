@@ -162,7 +162,7 @@
 ### 未完成物
 
 - **未実装コンポーネント・死に実装の残存** `-1`
-  > `objects/core/` の 4 ファイルが「空間エンジンとの統合後に実装」の TODO スタブのまま（`destroy.ex:16`, `duplicate.ex:19`, `create_empty_parent.ex:18`, `create_empty_child.ex:18`）。`MenuComponent` は実装と `get_menu_ui/2` を持つが、どの Content の `components/0` にも登録されておらず（`bullet_hell_3d.ex:23-28`, `component_list.ex:15-22`）、`get_menu_ui/2` の呼び出し元も lib 内に存在しない。前回指摘から変化なし。改善方針: 統合予定が立っていないなら `workspace/` に設計メモとして退避し、lib からは消す。「動く実装」と「動かない実装」が同じ名前空間に同居している方が読み手のコストが高い。
+  > `objects/core/` の 4 ファイルが「空間エンジンとの統合後に実装」の TODO スタブのまま（`destroy.ex:16`, `duplicate.ex:19`, `create_empty_parent.ex:18`, `create_empty_child.ex:18`）。`MenuComponent` は実装と `get_menu_ui/2` を持つが、どの Content の `components/0` にも登録されておらず（`bullet_hell_3d.ex:23-28`, `component_list.ex:15-22`）、`get_menu_ui/2` の呼び出し元も lib 内に存在しない。前回指摘から変化なし。改善方針: 統合予定が立っていないなら `.workspace/` に設計メモとして退避し、lib からは消す。「動く実装」と「動かない実装」が同じ名前空間に同居している方が読み手のコストが高い。
   > 対象ファイル: `engine/apps/contents/lib/objects/core/`, `engine/apps/contents/lib/components/category/ui/menu_component.ex`
 
 ※前回指摘のうち以下 1 件は撤回する。
@@ -226,7 +226,7 @@
 ## engine — apps/server
 
 - **テストが 0 件** `-1`
-  > `apps/server/test/` ディレクトリが依然存在しない。lib は `server.ex` と `application.ex` の 2 ファイル 41 行で、`:main` ルーム起動失敗時に raise する fail-fast の起動シーケンス（プラス点として評価している箇所）そのものが無検証。改善方針: Supervisor ツリーが起動して `:main` ルームが Registry に登録されるところまでを見る smoke test 1 本。`workspace/0_reference/improvement-plan.md` の D-4 に同じ項目が挙がっており、今回も未着手のまま。
+  > `apps/server/test/` ディレクトリが依然存在しない。lib は `server.ex` と `application.ex` の 2 ファイル 41 行で、`:main` ルーム起動失敗時に raise する fail-fast の起動シーケンス（プラス点として評価している箇所）そのものが無検証。改善方針: Supervisor ツリーが起動して `:main` ルームが Registry に登録されるところまでを見る smoke test 1 本。`.workspace/0_reference/improvement-plan.md` の D-4 に同じ項目が挙がっており、今回も未着手のまま。
   > 対象ファイル: `engine/apps/server/`
 
 - **リリース定義の不在** `-1`

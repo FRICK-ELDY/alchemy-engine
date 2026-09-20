@@ -117,7 +117,7 @@ post "/api/room_token" do
 
 ### 着手の方向性（確定ではない）
 
-- 専用の短い設計メモ（または ADR）を `workspace/1_backlog` または `docs/architecture` に追加し、上記チェックリストに回答を書く
+- 専用の短い設計メモ（または ADR）を `.workspace/1_backlog` または `docs/architecture` に追加し、上記チェックリストに回答を書く
 - [login-register-ui-plan.md](./login-register-ui-plan.md) Phase 4 以降の「auth ↔ engine 連携」と一体で決める
 - 実装前に **現状の `/api/room_token` を本番で公開しない**運用ルールを明文化してもよい
 

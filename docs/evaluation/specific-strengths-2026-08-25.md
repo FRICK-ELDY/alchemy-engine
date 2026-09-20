@@ -324,9 +324,9 @@
   > 網羅率ではなく「守りたい設計」に向けて書かれている。`refute Map.has_key?(summary, :kills_by_enemy)` で core にゲーム語彙が戻らないことを固定（`stats_test.exs:28`）、`zenoh_frame_publish_mfa_test.exs` で MFA 注入の契約を固定、`game_multi_room_tick_test.exs:24-31` で非 `:main` ルームの tick を固定。リファクタの成果をテストで凍結する運用ができている。
   > 対象ファイル: `engine/apps/core/test/core/stats_test.exs`
 
-- **`workspace/` のレーン運用 + 自己評価サイクルの制度化** `+4`（2 項目合算） — **両者**
-  > `1_backlog` → `2_todo` → `3_Inprogress` → `4_human_review` → `6_merging` → `7_done` と差し戻し経路を定義し、「各タスクは 1 ディレクトリのみ」を明文化（`workspace/README.md:9-28`）。`7_done` 30 件 / `1_backlog` 25 件が実際に積まれ形骸化していない。評価は観点・基準・出力先・アーカイブ規約をルール化し（`.cursor/rules/evaluation.mdc`）、今回から第1・第2評価者の独立二重評価に拡張された。
-  > 対象ファイル: `engine/workspace/README.md`, `engine/.cursor/rules/evaluation.mdc`
+- **`.workspace/` のレーン運用 + 自己評価サイクルの制度化** `+4`（2 項目合算） — **両者**
+  > `1_backlog` → `2_todo` → `3_Inprogress` → `4_human_review` → `6_merging` → `7_done` と差し戻し経路を定義し、「各タスクは 1 ディレクトリのみ」を明文化（`.workspace/README.md:9-28`）。`7_done` 30 件 / `1_backlog` 25 件が実際に積まれ形骸化していない。評価は観点・基準・出力先・アーカイブ規約をルール化し（`.cursor/rules/evaluation.mdc`）、今回から第1・第2評価者の独立二重評価に拡張された。
+  > 対象ファイル: `engine/.workspace/README.md`, `engine/.cursor/rules/evaluation.mdc`
 
 - **ワイヤ正本の submodule 化 + 技術的負債の少なさ** `+4`（2 項目合算） — **両者**
   > protobuf 定義を `3rdparty/alchemy-protocol/proto` に外出しし Elixir・Rust 双方がそこから生成する（`ci.yml:84-89`, `rust/client/network/build.rs:57-75`）。「どちらが正か」問題を置き場所で解決している。削除した機能（GameWorld / SoA 物理）も legacy 文書として履歴を残し現行文書と命名で分離している（`docs/architecture/legacy_*`）。

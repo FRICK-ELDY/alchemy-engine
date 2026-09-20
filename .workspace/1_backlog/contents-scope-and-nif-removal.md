@@ -20,7 +20,7 @@ Vampire Survivors 系から VRSNS までを一気に載せる方針のもと、�
    - `vampire_survivor`
 
 3. **将来: `builtin` コンテンツ（削除対象外・ドキュメントで残す）**  
-   `apps/contents/lib/contents/builtin` は**コンテンツが増えた将来の整理用**に必要となる構成と位置づける。`apps/contents/content_definitions` と対で設計する前提（詳細は **`workspace/1_backlog/builtin-content-future.md`**）。現時点でこれらのディレクトリが未配置でもよい。  
+   `apps/contents/lib/contents/builtin` は**コンテンツが増えた将来の整理用**に必要となる構成と位置づける。`apps/contents/content_definitions` と対で設計する前提（詳細は **`.workspace/1_backlog/builtin-content-future.md`**）。現時点でこれらのディレクトリが未配置でもよい。  
    **方針**: 本縮小・NIF 整理のスコープからは外し、実装は後続タスクとする。意図は上記メモおよび必要に応じて `docs/` のアーキテクチャ記述に残し、消えないようにする。
 
 4. **ゲーム関連 NIF / Rust の縮退**  
@@ -41,7 +41,7 @@ Vampire Survivors 系から VRSNS までを一気に載せる方針のもと、�
 
 ## 関連ドキュメント
 
-- `workspace/1_backlog/builtin-content-future.md` — `contents/builtin` の将来方針（本バックログとセットで参照）
+- `.workspace/1_backlog/builtin-content-future.md` — `contents/builtin` の将来方針（本バックログとセットで参照）
 
 ## 関連コード（調査の起点）
 

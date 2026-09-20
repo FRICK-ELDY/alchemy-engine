@@ -493,13 +493,13 @@
   > テストが網羅率ではなく「守りたい設計」に向けて書かれている。`refute Map.has_key?(summary, :kills_by_enemy)` で core にゲーム語彙が戻らないことを固定し（`stats_test.exs:28`）、`zenoh_frame_publish_mfa_test.exs` で MFA 注入の契約を固定し、`game_multi_room_tick_test.exs:24-31` で非 `:main` ルームの tick 駆動を固定する。リファクタの成果をテストで凍結する運用ができている。
   > 対象ファイル: `engine/apps/core/test/core/stats_test.exs`, `engine/apps/contents/test/`
 
-- **`workspace/` のレーン運用** `+2`
-  > `1_backlog` → `2_todo` → `3_Inprogress` → `4_human_review` → `6_merging` → `7_done` のレーンと差し戻し経路（`5_rework`）を定義し、「各タスクは 1 ディレクトリのみ」「人間レビューは 4 / 6」というルールを明文化している（`workspace/README.md:9-28`）。時期非依存の参照物は `0_reference/` に分けてレーンから外す（`workspace/0_reference/README.md:13-14`）。`7_done` に 30 件、`1_backlog` に 25 件が実際に積まれており、運用が形骸化していない。
-  > 対象ファイル: `engine/workspace/README.md`
+- **`.workspace/` のレーン運用** `+2`
+  > `1_backlog` → `2_todo` → `3_Inprogress` → `4_human_review` → `6_merging` → `7_done` のレーンと差し戻し経路（`5_rework`）を定義し、「各タスクは 1 ディレクトリのみ」「人間レビューは 4 / 6」というルールを明文化している（`.workspace/README.md:9-28`）。時期非依存の参照物は `0_reference/` に分けてレーンから外す（`.workspace/0_reference/README.md:13-14`）。`7_done` に 30 件、`1_backlog` に 25 件が実際に積まれており、運用が形骸化していない。
+  > 対象ファイル: `engine/.workspace/README.md`
 
 - **自己評価サイクルの制度化** `+2`
   > 評価観点・採点基準・出力先・アーカイブ規約をルールとして固定し（`.cursor/rules/evaluation.mdc`）、`docs/evaluation/` に 29 ファイル分の履歴を残している。今回から第1評価者（Opus）と第2評価者（GPT）が互いの当日文書を読まずに独立評価し、その後まとめるという二重化まで入った。自分のプロジェクトの弱点を継続的に文書化し、`improvement-plan.md` に落として消化する仕組みを持つ個人プロジェクトは珍しい。
-  > 対象ファイル: `engine/.cursor/rules/evaluation.mdc`, `engine/workspace/0_reference/improvement-plan.md`
+  > 対象ファイル: `engine/.cursor/rules/evaluation.mdc`, `engine/.workspace/0_reference/improvement-plan.md`
 
 - **ワイヤ正本の submodule 化** `+2`（新規）
   > Zenoh 経路の protobuf 定義を `3rdparty/alchemy-protocol/proto` の submodule として外に出し、Elixir・Rust の双方がそこから生成する（`.github/workflows/ci.yml:84-89`, `rust/client/network/build.rs:57-75`, `rust/client/render_frame_proto/build.rs:22-35`）。片側のリポジトリに正本を置くと必ず起きる「どちらが正か」問題を、置き場所で解決している。

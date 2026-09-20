@@ -81,4 +81,4 @@ AlchemyEngine は、Elixir（OTP・コンテンツ SSoT）と Rust（NIF 物理�
 
 総合 **+82**。CI は PR 時・protobuf 生成物の検証まで含め、リポジトリの品質ゲートとして強化されている。一方、`mix alchemy.ci` は GHA の `proto-verify` と同等の検証を含まない、ローカルとリモートのわずかな差分が残る。
 
-引き続き **[improvement-plan.md](../../workspace/0_reference/improvement-plan.md)** に沿い、**Contents.Scenes.Stack / Contents.Events.Game のユニットテスト**、**EntityParams の SSoT 化**、**ネットワーク層と描画層の依存整理**を優先すると、ビジョン（[vision.md](../vision.md)）との整合と保守性がさらに上がる。
+引き続き **[improvement-plan.md](../../../.workspace/0_reference/improvement-plan.md)** に沿い、**Contents.Scenes.Stack / Contents.Events.Game のユニットテスト**、**EntityParams の SSoT 化**、**ネットワーク層と描画層の依存整理**を優先すると、ビジョン（[vision.md](../vision.md)）との整合と保守性がさらに上がる。

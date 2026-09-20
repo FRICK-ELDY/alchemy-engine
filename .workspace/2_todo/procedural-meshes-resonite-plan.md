@@ -99,7 +99,7 @@
 
 ### フェーズ 0: 調査
 
-- [Procedural Meshes カテゴリ](https://wiki.resonite.com/Category:Components:Assets:Procedural_Meshes) のページ一覧をコピーせず、**実装候補を 5 個程度**に絞ったメモを本ファイルまたは `workspace/1_backlog/` に追記する。
+- [Procedural Meshes カテゴリ](https://wiki.resonite.com/Category:Components:Assets:Procedural_Meshes) のページ一覧をコピーせず、**実装候補を 5 個程度**に絞ったメモを本ファイルまたは `.workspace/1_backlog/` に追記する。
 - `Content.FrameEncoder.mesh_def_to_pb/1` が想定する `mesh_def` マップのキー（`:name`, `:vertices`, `:indices`）を再確認する。
 
 ### フェーズ 1: BoxMesh 寄せ（API）
