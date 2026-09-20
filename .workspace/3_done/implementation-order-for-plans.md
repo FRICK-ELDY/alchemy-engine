@@ -10,7 +10,7 @@
 | 順番 | ドキュメント | 種別 | 説明 |
 |------|--------------|------|------|
 | **0** | scene-abstraction-and-engines.md（未配置） | 参照 | 実装手順ではなく**設計の参照**。案B と他エンジン比較。実装前に読んで方針を決める用。 |
-| **1** | [contents-behaviour-namespace-implementation-plan.md](./contents-behaviour-namespace-implementation-plan.md) | 実施済み | **最初に実施する**。Contents.Behaviour.* の土台（Content, Scenes, Objects, Nodes, Components）を整え、Core.ContentBehaviour を Contents.Behaviour.Content に移す。以降の手順はすべてこの後の状態を前提にする。 |
+| **1** | [contents-behaviour-namespace-implementation-plan.md](contents-behaviour-namespace-implementation-plan.md) | 実施済み | **最初に実施する**。Contents.Behaviour.* の土台（Content, Scenes, Objects, Nodes, Components）を整え、Core.ContentBehaviour を Contents.Behaviour.Content に移す。以降の手順はすべてこの後の状態を前提にする。 |
 | **2** | どちらか一方（下記 2-A / 2-B） | 実施手順 | シーンまわりは「現方式のまま整理」か「案B に切り替え」の**どちらか**を選ぶ。 |
 
 ---
@@ -19,13 +19,13 @@
 
 ### 2-A: 現方式のまま「シーンを scenes 配下に集約」する場合
 
-- **実施する**: [formula-test-scene-migration-procedure.md](./formula-test-scene-migration-procedure.md)
+- **実施する**: [formula-test-scene-migration-procedure.md](formula-test-scene-migration-procedure.md)
 - **結果**: `Content.FormulaTest.Scenes.Playing` が `Contents.Scenes.FormulaTest.Playing` に移り、`apps/contents/lib/scenes` に配置される。SceneStack は従来どおり「シーンモジュール」をキーに動く。
 - **向き**: まずは影響範囲を小さくしつつ、シーン配置だけ新方式に揃えたいとき。
 
 ### 2-B: 案B（シーン種別＝atom・実装＝コンテンツ）に切り替える場合
 
-- **実施する**: [scene-type-as-atom-implementation-procedure.md](./scene-type-as-atom-implementation-procedure.md)
+- **実施する**: [scene-type-as-atom-implementation-procedure.md](scene-type-as-atom-implementation-procedure.md)
 - **結果**: シーンは `:playing` 等の atom になり、各 Content が `scene_init/2`, `scene_update/3`, `scene_render_type/1` を実装する。`Contents.Scenes.FormulaTest.Playing` のようなモジュールは作らず、FormulaTest は `Contents.Behaviour.Content` の scene_* で `:playing` を実装する。
 - **向き**: 「Contents.Scenes.Playing を Content.VampireSurvivor で使う」ような抽象化をしたいとき。
 - **注意**: 2-A を先にやってから 2-B にすると、一度作った `Contents.Scenes.FormulaTest.Playing` を廃止し、Content.FormulaTest の scene_* に寄せる作業が発生する。最初から案B で行くなら 2-A は実施しない。
@@ -68,7 +68,7 @@ contents-behaviour-namespace-implementation-plan  …… 1. 必ず最初に実�
 
 **ブランチ名**
 ```
-docs/plan-contents-behaviour-and-scene
+.workspace/0_docs/plan-contents-behaviour-and-scene
 ```
 
 **コミットメッセージ**
@@ -149,7 +149,7 @@ docs(plan): 実装順序とブランチ・コミットメッセージ案を追�
 
 ## 6. 参照
 
-- [contents-behaviour-namespace-implementation-plan.md](./contents-behaviour-namespace-implementation-plan.md)
-- [formula-test-scene-migration-procedure.md](./formula-test-scene-migration-procedure.md)
+- [contents-behaviour-namespace-implementation-plan.md](contents-behaviour-namespace-implementation-plan.md)
+- [formula-test-scene-migration-procedure.md](formula-test-scene-migration-procedure.md)
 - scene-abstraction-and-engines.md（未配置）
-- [scene-type-as-atom-implementation-procedure.md](./scene-type-as-atom-implementation-procedure.md)
+- [scene-type-as-atom-implementation-procedure.md](scene-type-as-atom-implementation-procedure.md)

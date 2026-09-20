@@ -1,7 +1,7 @@
 # P5 転送効率化 — 設計ドキュメント
 
 > 作成日: 2026-03-07  
-> 出典: [legacy_contents-defines-rust-executes.md](../1_backlog/legacy_contents-defines-rust-executes.md) P5、[legacy_contents-to-physics-bottlenecks.md](../../docs/architecture/legacy_contents-to-physics-bottlenecks.md) セクション 6
+> 出典: [legacy_contents-defines-rust-executes.md](../1_backlog/legacy_contents-defines-rust-executes.md) P5、[legacy_contents-to-physics-bottlenecks.md](../0_docs/architecture/legacy_contents-to-physics-bottlenecks.md) セクション 6
 
 ---
 
@@ -34,10 +34,10 @@ P5 は Elixir ↔ Rust 間のデータ転送効率化を目的とする。**定�
 
 1. **エンコード**: Elixir 側（contents）で protobuf にシリアライズ
 2. **デコード**: Rust 側（`native/render_frame_proto`）で `decode_pb_render_frame`
-3. **型マッピング**: [draw-command-spec.md](../../docs/architecture/draw-command-spec.md) と `.proto` のフィールド番号を整合させる
+3. **型マッピング**: [draw-command-spec.md](../0_docs/architecture/draw-command-spec.md) と `.proto` のフィールド番号を整合させる
 
 ### 2.4 関連
 
-- [draw-command-spec.md](../../docs/architecture/draw-command-spec.md)
-- [protobuf-migration.md](../../docs/architecture/protobuf-migration.md)
-- [p5-transfer-protobuf-implementation-plan.md](./p5-transfer-protobuf-implementation-plan.md)
+- [draw-command-spec.md](../0_docs/architecture/draw-command-spec.md)
+- [protobuf-migration.md](../0_docs/architecture/protobuf-migration.md)
+- [p5-transfer-protobuf-implementation-plan.md](p5-transfer-protobuf-implementation-plan.md)

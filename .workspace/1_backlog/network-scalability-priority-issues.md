@@ -4,7 +4,7 @@
 > 目的: `.workspace` 配下の計画文書を参照せず、現行ソースコードから「今すぐ手を付けると効果が高い課題」を優先度付きで整理する。  
 > 対象: Elixir Server / Zenoh / Rust Client の現行実装
 
-[← README](./README.md)
+[← README](README.md)
 
 ---
 

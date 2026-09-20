@@ -31,6 +31,6 @@ Phase 3 ではディレクトリのみ作成。以下の数学関数ノードは
 ## 関連ドキュメント
 
 - [fix-contents-implementation-procedure.md](../3_done/fix-contents-implementation-procedure.md) — 実施済み手順
-- [fix_contents.md](../../docs/architecture/fix_contents.md) — アーキテクチャ設計
+- [fix_contents.md](../0_docs/architecture/fix_contents.md) — アーキテクチャ設計
 - [contents-components-reorganization-procedure.md](../1_backlog/contents-components-reorganization-procedure.md) — コンポーネント再編成（移行と整合）
 

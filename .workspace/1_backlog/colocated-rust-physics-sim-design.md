@@ -4,7 +4,7 @@
 > ステータス: **採用方針**（実装未着手。詳細設計・スパイク後に `2_todo` 化）  
 > 目的: 本格的なサーバー側物理演算を、BEAM のライブネスと Elixir 主時間（権威 tick）を守りながら導入する構成を固定する。
 
-[← README](./README.md)
+[← README](README.md)
 
 ---
 
@@ -31,7 +31,7 @@
          クライアント（描画・予測）
 ```
 
-正本の主時間方針: [authoritative-state-sync-policy.md](../../docs/architecture/authoritative-state-sync-policy.md)
+正本の主時間方針: [authoritative-state-sync-policy.md](../0_docs/architecture/authoritative-state-sync-policy.md)
 
 ---
 
@@ -196,12 +196,12 @@ Room 終了 / sim クラッシュ
 
 | 文書 | 関係 |
 |:---|:---|
-| [authoritative-state-sync-policy.md](../../docs/architecture/authoritative-state-sync-policy.md) | 主時間・権威 tick の正本 |
-| [authoritative-state-sync-policy-gaps.md](./authoritative-state-sync-policy-gaps.md) | 現行コードとのギャップ（tick 設定化等） |
-| [vision.md](../../docs/vision.md) | Elixir / Rust 責務・主時間 |
-| [nif.md](../../docs/policy-as-code/nif.md) / [nif_rust_thread.md](../../docs/policy-as-code/nif_rust_thread.md) | NIF 長時間ループ禁止との整合 |
-| [legacy_contents-to-physics-bottlenecks.md](../../docs/architecture/legacy_contents-to-physics-bottlenecks.md) | 旧 NIF 物理の教訓（レガシー） |
-| [physics-entity-responsibility-design.md](./physics-entity-responsibility-design.md) | 旧 PhysicsEntity コンポーネント責務（別論点） |
+| [authoritative-state-sync-policy.md](../0_docs/architecture/authoritative-state-sync-policy.md) | 主時間・権威 tick の正本 |
+| [authoritative-state-sync-policy-gaps.md](authoritative-state-sync-policy-gaps.md) | 現行コードとのギャップ（tick 設定化等） |
+| [vision.md](../0_docs/vision.md) | Elixir / Rust 責務・主時間 |
+| [nif.md](../0_docs/policy-as-code/nif.md) / [nif_rust_thread.md](../0_docs/policy-as-code/nif_rust_thread.md) | NIF 長時間ループ禁止との整合 |
+| [legacy_contents-to-physics-bottlenecks.md](../0_docs/architecture/legacy_contents-to-physics-bottlenecks.md) | 旧 NIF 物理の教訓（レガシー） |
+| [physics-entity-responsibility-design.md](physics-entity-responsibility-design.md) | 旧 PhysicsEntity コンポーネント責務（別論点） |
 
 ---
 

@@ -17,7 +17,7 @@
 
 - **コンテンツ縮小（canvas_test / bullet_hell_3d / formula_test 維持）の削除対象に含めない。**
 - **ドキュメントで意図を残す**ことを優先する。実装は別タスクで行う。
-- 詳細設計が固まったら、必要に応じて `docs/architecture/overview.md` 等へ 1 節追加する。
+- 詳細設計が固まったら、必要に応じて `.workspace/0_docs/architecture/overview.md` 等へ 1 節追加する。
 
 ## パス（予定）
 

@@ -119,6 +119,6 @@ max(base_cooldown * factor, base_cooldown * 0.5)
 
 ## 6. 関連ドキュメント
 
-- [formula-hardcode-inventory.md](./formula-hardcode-inventory.md) — ハードコード一覧（P1-1）
-- [formula-vm-bytecode.md](../../docs/architecture/formula-vm-bytecode.md) — Formula VM バイトコード仕様（P1-3）
+- [formula-hardcode-inventory.md](formula-hardcode-inventory.md) — ハードコード一覧（P1-1）
+- [formula-vm-bytecode.md](../0_docs/architecture/formula-vm-bytecode.md) — Formula VM バイトコード仕様（P1-3）
 - [legacy_contents-defines-rust-executes.md](../1_backlog/legacy_contents-defines-rust-executes.md) — 方針・リファクタリング計画

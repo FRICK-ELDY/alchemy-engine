@@ -2,7 +2,7 @@
 
 > 作成日: 2026-03-10  
 > 完了日: 2026-03-15  
-> 参照: [fix-contents-implementation-procedure.md](./fix-contents-implementation-procedure.md)  
+> 参照: [fix-contents-implementation-procedure.md](fix-contents-implementation-procedure.md)  
 > 目的: `Types` 以下にプリミティブ型モジュールを作成し、コンテンツ制作の土台とする。
 >
 > **実施結果**: 設計変更により `types` → `structs` に統合。プリミティブ型は `Structs.Category.Value.*` および `Structs.Category.Text.*` として [fix_contents アーキテクチャ](../../architecture/fix_contents.md) 内で実装済み。

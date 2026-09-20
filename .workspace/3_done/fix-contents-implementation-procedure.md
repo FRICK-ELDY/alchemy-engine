@@ -2,12 +2,12 @@
 
 > 作成日: 2026-03-10  
 > 完了日: 2026-03-15  
-> 参照: [docs/architecture/fix_contents.md](../../architecture/fix_contents.md)  
+> 参照: [.workspace/0_docs/architecture/fix_contents.md](../../architecture/fix_contents.md)  
 > 目的: コンテンツを最小単位まで分解し、VR 空間で直感的な論理構築を可能にする統一ディレクトリ・アーキテクチャを構築する。
 >
 > **実施結果**: Phase 1〜5 を完了。未実施項目は [fix-contents-implementation-future.md](../0_reference/fix-contents-implementation-future.md) を参照。
 >
-> **注記（Behaviour 名前空間）**: Behaviour は現在 `Contents.Behaviour.*`（behaviour/ 配下）に集約済み。本手順書実施時点では層ごとの `core/behaviour.ex`, `scenes/core/behaviour.ex` 等であった。参照: [contents-behaviour-namespace-implementation-plan.md](./contents-behaviour-namespace-implementation-plan.md)。
+> **注記（Behaviour 名前空間）**: Behaviour は現在 `Contents.Behaviour.*`（behaviour/ 配下）に集約済み。本手順書実施時点では層ごとの `core/behaviour.ex`, `scenes/core/behaviour.ex` 等であった。参照: [contents-behaviour-namespace-implementation-plan.md](contents-behaviour-namespace-implementation-plan.md)。
 
 ---
 

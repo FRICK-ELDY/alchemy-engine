@@ -2,7 +2,7 @@
 
 > 作成日: 2026-04-07  
 > ステータス: 着手前  
-> 親計画: [component-node-struct-resonite-node-dsl-plan.md](./component-node-struct-resonite-node-dsl-plan.md)（本書は同ファイルの **フェーズ 2（Component 強化）** の先遣タスクとして位置づける）
+> 親計画: [component-node-struct-resonite-node-dsl-plan.md](component-node-struct-resonite-node-dsl-plan.md)（本書は同ファイルの **フェーズ 2（Component 強化）** の先遣タスクとして位置づける）
 
 ---
 
@@ -47,7 +47,7 @@
 
 **あと回し（本計画の初期スコープ外で明示）**
 
-- persistent / UpdateOrder / Enabled — Object・コンポーネントライフサイクル統合後に [fix_contents.md](../../docs/architecture/fix_contents.md) 側で整理。
+- persistent / UpdateOrder / Enabled — Object・コンポーネントライフサイクル統合後に [fix_contents.md](../0_docs/architecture/fix_contents.md) 側で整理。
 - OverrideBoundingBox / OverridenBoundingBox — カリング・ピッキング設計後。
 - Profile（ColorProfile）— 色空間が定義されたら。
 - BakeMesh — 「静的メッシュへ焼き込み」は別タスク。
@@ -123,7 +123,7 @@
 
 - `mix test`（`apps/contents` 範囲）が通る。
 - `mesh_definitions/0` を実装している既存コンテンツで、意図しないメッシュ名変更によるクライアント不整合が出ない（`:name` の互換方針をコメントで固定する）。
-- 親計画 [component-node-struct-resonite-node-dsl-plan.md](./component-node-struct-resonite-node-dsl-plan.md) のフェーズ 2 に進む際、**Assets → Procedural** の対応表の 1 行目として本計画の成果（Box 強化＋候補リスト）を参照できる。
+- 親計画 [component-node-struct-resonite-node-dsl-plan.md](component-node-struct-resonite-node-dsl-plan.md) のフェーズ 2 に進む際、**Assets → Procedural** の対応表の 1 行目として本計画の成果（Box 強化＋候補リスト）を参照できる。
 
 ---
 
@@ -138,6 +138,6 @@
 
 ## 10. 関連ドキュメント（リポジトリ内）
 
-- [component-node-struct-resonite-node-dsl-plan.md](./component-node-struct-resonite-node-dsl-plan.md) — 親・全体計画
-- [fix_contents.md](../../docs/architecture/fix_contents.md) — Content / メッシュ / 描画の責務
+- [component-node-struct-resonite-node-dsl-plan.md](component-node-struct-resonite-node-dsl-plan.md) — 親・全体計画
+- [fix_contents.md](../0_docs/architecture/fix_contents.md) — Content / メッシュ / 描画の責務
 

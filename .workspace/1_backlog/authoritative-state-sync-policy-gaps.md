@@ -1,10 +1,10 @@
 # バックログ: authoritative-state-sync-policy 対照のコードギャップ
 
 > 作成日: 2026-04-03  
-> 目的: [docs/architecture/authoritative-state-sync-policy.md](../../docs/architecture/authoritative-state-sync-policy.md) に書いた設計方針と、現行コードベースの差分を列挙し、`2_todo` 化しやすい単位にする。  
+> 目的: [.workspace/0_docs/architecture/authoritative-state-sync-policy.md](../0_docs/architecture/authoritative-state-sync-policy.md) に書いた設計方針と、現行コードベースの差分を列挙し、`2_todo` 化しやすい単位にする。  
 > ステータス: 未整理（優先度は別途）
 
-[← README](./README.md)
+[← README](README.md)
 
 ---
 
@@ -12,10 +12,10 @@
 
 | 文書 | 関係 |
 |:---|:---|
-| [policy-as-code/gaps/scale-and-gaps.md](../../docs/policy-as-code/gaps/scale-and-gaps.md) | ペイロード・シャーディング・予測補間などスケール観点。本書は **ポリシー条文との 1:1 ギャップ** に寄せる。 |
-| [network-render-frame-share-optimization-plan.md](./network-render-frame-share-optimization-plan.md) | クライアント側フレーム共有と描画ループ負荷。ポリシー §3.2（描画 FPS）と間接的に関連。 |
-| [asset-cdn-design.md](./asset-cdn-design.md) | CDN・パッケージ化。ポリシー §6（HTTPS＋署名）と部分重複。署名・マニフェストの **明示的統合** は本ギャップに含める。 |
-| [colocated-rust-physics-sim-design.md](./colocated-rust-physics-sim-design.md) | サーバー物理の採用方針（隣の Rust sim）。G3 の将来形。 |
+| [policy-as-code/gaps/scale-and-gaps.md](../0_docs/policy-as-code/gaps/scale-and-gaps.md) | ペイロード・シャーディング・予測補間などスケール観点。本書は **ポリシー条文との 1:1 ギャップ** に寄せる。 |
+| [network-render-frame-share-optimization-plan.md](network-render-frame-share-optimization-plan.md) | クライアント側フレーム共有と描画ループ負荷。ポリシー §3.2（描画 FPS）と間接的に関連。 |
+| [asset-cdn-design.md](asset-cdn-design.md) | CDN・パッケージ化。ポリシー §6（HTTPS＋署名）と部分重複。署名・マニフェストの **明示的統合** は本ギャップに含める。 |
+| [colocated-rust-physics-sim-design.md](colocated-rust-physics-sim-design.md) | サーバー物理の採用方針（隣の Rust sim）。G3 の将来形。 |
 ---
 
 ## ギャップ一覧
@@ -54,13 +54,13 @@
 
 **ポリシー**: 主時間は Elixir。Rust クライアントの ~60fps は **表示時間**（予測・補間）。サーバー側にゲーム用 60Hz 物理ループは置かない。
 
-**現状**: [overview.md](../../docs/architecture/overview.md) どおりサーバー NIF は **Formula VM のみ**。補間ユーティリティは存在するが配線が不完全な箇所がある（評価・gaps 参照）。
+**現状**: [overview.md](../0_docs/architecture/overview.md) どおりサーバー NIF は **Formula VM のみ**。補間ユーティリティは存在するが配線が不完全な箇所がある（評価・gaps 参照）。
 
 **ギャップ**:
 
 - 権威 tick 変更時（10/20/30/60）にクライアント補間ウィンドウが追従する契約。
 - 入力キャプチャ（高頻度）→ 権威適用（tick）のシーケンス／ack。
-- （将来）サーバー物理は **隣の Rust sim**（[colocated-rust-physics-sim-design.md](./colocated-rust-physics-sim-design.md)）。コミット境界プロトコルが別途必要。
+- （将来）サーバー物理は **隣の Rust sim**（[colocated-rust-physics-sim-design.md](colocated-rust-physics-sim-design.md)）。コミット境界プロトコルが別途必要。
 
 ---
 
@@ -128,7 +128,7 @@
 
 **ポリシー**: 当面 **HTTPS ＋ 署名**（マニフェスト／ハッシュと作者または Hub の署名）。
 
-**現状**: [asset-cdn-design.md](./asset-cdn-design.md) に `https://` とパッケージ化の方向性があるが、ポリシー用語（**署名検証・鍵ローテーション・マニフェスト形式**）との **要件トレーサビリティ**は別作業。実装は部分的。
+**現状**: [asset-cdn-design.md](asset-cdn-design.md) に `https://` とパッケージ化の方向性があるが、ポリシー用語（**署名検証・鍵ローテーション・マニフェスト形式**）との **要件トレーサビリティ**は別作業。実装は部分的。
 
 **ギャップ**:
 

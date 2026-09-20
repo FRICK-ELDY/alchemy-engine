@@ -118,7 +118,7 @@ Formula は既に「Elixir 定義 → Rust VM 実行」が実現済み。本一�
 
 ## 9. 関連ドキュメント
 
-- [formula-migration-evaluation.md](./formula-migration-evaluation.md) — 武器式の Formula 移行評価（P1-2）
-- [formula-vm-bytecode.md](../../docs/architecture/formula-vm-bytecode.md) — Formula VM バイトコード仕様（P1-3）
+- [formula-migration-evaluation.md](formula-migration-evaluation.md) — 武器式の Formula 移行評価（P1-2）
+- [formula-vm-bytecode.md](../0_docs/architecture/formula-vm-bytecode.md) — Formula VM バイトコード仕様（P1-3）
 - [legacy_contents-defines-rust-executes.md](../1_backlog/legacy_contents-defines-rust-executes.md) — 方針・リファクタリング計画
 

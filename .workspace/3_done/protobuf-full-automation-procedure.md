@@ -3,7 +3,7 @@
 > **状態**: 作業中（生成パイプラインの本実装・手書きコードの廃止は未完了。ワイヤ上の protobuf 移行完了とは別タスク）。  
 > 目的: `proto/*.proto` を**唯一の契約**とし、Rust（`prost`）と Elixir（`protobuf`）のコードを **生成物で揃える**。手書き `Message` / 手書き `use Protobuf` を廃止する。  
 > 対象読者: 本リポジトリでスキーマと生成パイプラインを触る開発者。  
-> 公開向けの短い概要: [docs/architecture/protobuf-migration.md](../../docs/architecture/protobuf-migration.md)
+> 公開向けの短い概要: [.workspace/0_docs/architecture/protobuf-migration.md](../0_docs/architecture/protobuf-migration.md)
 
 ---
 
@@ -189,7 +189,7 @@ protoc \
 - [x] 手書き `use Protobuf` の該当メッセージが消えている。
 - [x] Zenoh / NIF の結合テストまたは手動で、フレーム・入力・injection が従来どおり動く。
 - [x] CI で `protoc` が利用可能。
-- [x] `development.md` には手順を書かず、**本書と `docs/architecture/protobuf-migration.md` に集約**する。
+- [x] `development.md` には手順を書かず、**本書と `.workspace/0_docs/architecture/protobuf-migration.md` に集約**する。
 - [x] **`mix alchemy.gen.proto`** が Elixir / Rust の生成をまとめて実行する（または明確にサブステップを表示する）。
 
 ---
@@ -213,6 +213,6 @@ mix alchemy.gen.proto
 
 ## 8. 参照
 
-- [protobuf-migration-plan.md](../3_done/protobuf-migration-plan.md) — 移行フェーズ・バックログ（主経路の移行は完了）
-- [docs/architecture/protobuf-migration.md](../../docs/architecture/protobuf-migration.md) — 公開向け概要
+- [protobuf-migration-plan.md](protobuf-migration-plan.md) — 移行フェーズ・バックログ（主経路の移行は完了）
+- [.workspace/0_docs/architecture/protobuf-migration.md](../0_docs/architecture/protobuf-migration.md) — 公開向け概要
 - [development.md](../../development.md) — 開発ガイド（生成エントリは `mix alchemy.gen.proto`）

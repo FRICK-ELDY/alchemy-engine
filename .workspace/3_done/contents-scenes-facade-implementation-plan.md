@@ -182,12 +182,12 @@ apps/contents/lib/
 ### 4.3 案B（シーン種別＝atom）との関係
 
 - 本計画は「現方式（シーン＝モジュール）」のまま、**呼び出し入口を Contents.Scenes に集約し、定義は init_arg で渡す**形にする。
-- 案B（scene_type が atom、実装は Content の scene_*）を採用する場合は、Content が `content.scene_init(:playing, init_arg)` を実装するため、本ファサードの役割は変わる。その場合の整理は [scene-type-as-atom-implementation-procedure.md](./scene-type-as-atom-implementation-procedure.md) を参照。
+- 案B（scene_type が atom、実装は Content の scene_*）を採用する場合は、Content が `content.scene_init(:playing, init_arg)` を実装するため、本ファサードの役割は変わる。その場合の整理は [scene-type-as-atom-implementation-procedure.md](scene-type-as-atom-implementation-procedure.md) を参照。
 
 ---
 
 ## 5. 参照
 
-- [formula-test-scene-migration-procedure.md](./formula-test-scene-migration-procedure.md) — シーンを `scenes/formula_test/playing.ex` に移行した手順
+- [formula-test-scene-migration-procedure.md](formula-test-scene-migration-procedure.md) — シーンを `scenes/formula_test/playing.ex` に移行した手順
 - [Contents.SceneBehaviour](../../../apps/contents/lib/contents/scene_behaviour.ex) — シーン契約（init / update / render_type）
-- [scene-type-as-atom-implementation-procedure.md](./scene-type-as-atom-implementation-procedure.md) — 案B の場合の手順
+- [scene-type-as-atom-implementation-procedure.md](scene-type-as-atom-implementation-procedure.md) — 案B の場合の手順

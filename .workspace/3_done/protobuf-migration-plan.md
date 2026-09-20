@@ -4,7 +4,7 @@
 > 目的: Zenoh 通信で使用中の Erlang term（ETF）を段階的に廃止し、protobuf に統一する。  
 > 対象: フレーム配信、入力（movement/action）、frame injection、client_info
 
-**公開向けの概要**（`docs` からリンクする先）: [docs/architecture/protobuf-migration.md](../../docs/architecture/protobuf-migration.md)。本ファイルは作業用バックログであり、`development.md` 等の `docs` 配下から `**.workspace/` へのリンクは張らない**方針とする。
+**公開向けの概要**（`0_docs` からリンクする先）: [.workspace/0_docs/architecture/protobuf-migration.md](../0_docs/architecture/protobuf-migration.md)。本ファイルは作業用バックログであり、`development.md` 等の `0_docs` 配下から `**.workspace/` へのリンクは張らない**方針とする。
 
 **コード生成の完全自動化**（Rust / Elixir・**未完了**）: [protobuf-full-automation-procedure.md](../2_todo/protobuf-full-automation-procedure.md)
 
@@ -48,8 +48,8 @@
 - `native/network/src/bert_encode.rs`（movement/action の protobuf エンコード互換名）
 - `native/network/src/network_render_bridge.rs`
 - `native/nif/src/nif/world_nif.rs`
-- `docs/architecture/erlang-term-schema.md`
-- `docs/policy-as-code/why_adopted/zenoh-frame-serialization.md`
+- `.workspace/0_docs/architecture/erlang-term-schema.md`
+- `.workspace/0_docs/policy-as-code/why_adopted/zenoh-frame-serialization.md`
 - `.workspace/1_backlog/env-and-serialization-migration-plan.md`
 
 ### 3.2 新規追加想定
@@ -224,7 +224,7 @@
 - render frame / movement / action / frame injection / client_info が protobuf で稼働（主要経路）
 - ETF 依存コードが主要経路から削除済み（Zenoh フレーム・入力・`set_frame_injection_binary` は protobuf のみ。`client_info` は protobuf 優先のまま MessagePack フォールバックを維持）
 - 契約テストと統合テストが通過（`mix test` 全件、`apps/network/test/network/proto/protobuf_contract_test.exs` を追加）
-- ドキュメントと実装が一致（`docs/architecture/erlang-term-schema.md` を protobuf 前提に更新済み）
+- ドキュメントと実装が一致（`.workspace/0_docs/architecture/erlang-term-schema.md` を protobuf 前提に更新済み）
 
 ---
 

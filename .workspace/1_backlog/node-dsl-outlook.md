@@ -1,7 +1,7 @@
 # Node DSL の見通し
 
 > 作成日: 2026-03-12  
-> 参照: [fix_contents.md](../../docs/architecture/fix_contents.md)、[fix-contents-implementation-procedure.md](../3_done/fix-contents-implementation-procedure.md)
+> 参照: [fix_contents.md](../0_docs/architecture/fix_contents.md)、[fix-contents-implementation-procedure.md](../3_done/fix-contents-implementation-procedure.md)
 > 目的: Node 層の実装において、将来的に DSL（Domain Specific Language）を導入する意義と検討事項をまとめる。
 
 ---
@@ -49,7 +49,7 @@ DSL でノードを定義すると、その定義が「型付きグラフのス�
 
 ### 2.4 定義と実行の分離（contents-defines-rust-executes）
 
-[legacy_contents-defines-rust-executes.md](./legacy_contents-defines-rust-executes.md) の方針に沿うと：
+[legacy_contents-defines-rust-executes.md](legacy_contents-defines-rust-executes.md) の方針に沿うと：
 
 - **Elixir 側**: ノードの「定義」（DSL で記述）
 - **Rust 側**: 定義に基づく「実行」
@@ -110,6 +110,6 @@ Ecto.Schema、Phoenix.Router など、Elixir の DSL はマクロで `quote` / `
 
 ## 6. 関連ドキュメント
 
-- [fix_contents.md](../../docs/architecture/fix_contents.md) — アーキテクチャの全体像
+- [fix_contents.md](../0_docs/architecture/fix_contents.md) — アーキテクチャの全体像
 - [fix-contents-implementation-procedure.md](../3_done/fix-contents-implementation-procedure.md) — 実施手順
-- [legacy_contents-defines-rust-executes.md](./legacy_contents-defines-rust-executes.md) — 定義層と実行層の責務
+- [legacy_contents-defines-rust-executes.md](legacy_contents-defines-rust-executes.md) — 定義層と実行層の責務

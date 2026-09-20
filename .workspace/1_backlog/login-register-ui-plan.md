@@ -431,9 +431,9 @@ sequenceDiagram
 ## 9. 参照ドキュメント
 
 - `auth/README.md` — auth のアーキテクチャ・現行 API 仕様
-- `engine/docs/architecture/zenoh-protocol-spec.md` — raw_key 未対応の記載
-- `engine/docs/architecture/rust/desktop_client.md` — クライアント構成
+- `engine/.workspace/0_docs/architecture/zenoh-protocol-spec.md` — raw_key 未対応の記載
+- `engine/.workspace/0_docs/architecture/rust/desktop_client.md` — クライアント構成
 - `engine/rust/client/render/src/renderer/ui.rs` — 既存 egui 描画(Canvas UI)
 - `engine/apps/contents/lib/components/category/device/keyboard.ex` — 既存 ESC トグル(残置対象)
 - `engine/.workspace/1_backlog/upper-layer-infrastructure-plan.md` — 認証レイヤー計画(apps/game_auth 想定は本計画で外部 auth サービス方式に更新)
-- `engine/docs/vision-goal.md` — Hub/ログイン・コンテンツステータスの将来像
+- `engine/.workspace/0_docs/vision-goal.md` — Hub/ログイン・コンテンツステータスの将来像

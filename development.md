@@ -166,16 +166,16 @@ elixir --name b@127.0.0.1 -S mix run
 | Credo | `elixir -S mix alchemy.credo` | Elixir 静的解析 |
 | Protobuf 生成 | `elixir -S mix alchemy.gen.proto` | `.proto` から Elixir/Rust 生成（公式エントリ。詳細は `.workspace/2_todo/protobuf-full-automation-procedure.md`） |
 
-CI の詳細は [docs/warranty/ci.md](./docs/warranty/ci.md) を参照。
+CI の詳細は [.workspace/0_docs/warranty/ci.md](.workspace/0_docs/warranty/ci.md) を参照。
 
 <a id="protobuf-proto"></a>
 
 ## Protobuf（`.proto`）
 
-**Protobuf を使うペイロード**（サーバーとクライアント等が共有する **その形式の** フィールド契約）の単一ソースは Git submodule **`3rdparty/alchemy-protocol/proto/*.proto`**（上流: [FRICK-ELDY/alchemy-protocol](https://github.com/FRICK-ELDY/alchemy-protocol)）。clone 後は **`git submodule update --init --recursive`** が必要です。別ディレクトリを指す場合は環境変数 **`PROTO_ROOT`** を設定してください（`mix alchemy.gen.proto` および `rust/client/*/build.rs` が参照）。**チームで固定しているタグ・コミット**は [docs/protocol-lock.md](./docs/protocol-lock.md) を参照してください。UDP 外枠や Phoenix の JSON など **別形式のワイヤ契約**は submodule の外にあり、[docs/architecture/overview.md](./docs/architecture/overview.md#設計思想) の表を参照。ゲーム状態やルールの「公式な中身」の SSoT は引き続き **Elixir**。生成物の更新は **`mix alchemy.gen.proto`** を公式エントリとする（実装は段階的に同タスクへ集約）。ツール導入、`build.rs`、CI、生成物の置き方の詳細は、作業用ツリー `.workspace/2_todo/protobuf-full-automation-procedure.md` に書く。
+**Protobuf を使うペイロード**（サーバーとクライアント等が共有する **その形式の** フィールド契約）の単一ソースは Git submodule **`3rdparty/alchemy-protocol/proto/*.proto`**（上流: [FRICK-ELDY/alchemy-protocol](https://github.com/FRICK-ELDY/alchemy-protocol)）。clone 後は **`git submodule update --init --recursive`** が必要です。別ディレクトリを指す場合は環境変数 **`PROTO_ROOT`** を設定してください（`mix alchemy.gen.proto` および `rust/client/*/build.rs` が参照）。**チームで固定しているタグ・コミット**は [.workspace/0_docs/protocol-lock.md](.workspace/0_docs/protocol-lock.md) を参照してください。UDP 外枠や Phoenix の JSON など **別形式のワイヤ契約**は submodule の外にあり、[.workspace/0_docs/architecture/overview.md](.workspace/0_docs/architecture/overview.md#設計思想) の表を参照。ゲーム状態やルールの「公式な中身」の SSoT は引き続き **Elixir**。生成物の更新は **`mix alchemy.gen.proto`** を公式エントリとする（実装は段階的に同タスクへ集約）。ツール導入、`build.rs`、CI、生成物の置き方の詳細は、作業用ツリー `.workspace/2_todo/protobuf-full-automation-procedure.md` に書く。
 
-- 公開向けの短い概要: [docs/architecture/protobuf-migration.md](./docs/architecture/protobuf-migration.md)
-- ワイヤ形式とレガシー ETF: [docs/architecture/erlang-term-schema.md](./docs/architecture/erlang-term-schema.md)
+- 公開向けの短い概要: [.workspace/0_docs/architecture/protobuf-migration.md](.workspace/0_docs/architecture/protobuf-migration.md)
+- ワイヤ形式とレガシー ETF: [.workspace/0_docs/architecture/erlang-term-schema.md](.workspace/0_docs/architecture/erlang-term-schema.md)
 
 ## クライアントビルド
 
@@ -186,8 +186,8 @@ elixir -S mix alchemy.build --release    # リリースビルド
 
 ## 関連ドキュメント
 
-- [ラボ開発環境（ネットワーク構成図）](./docs/development/lab-environment.md)
-- [Protobuf 移行（概要）](./docs/architecture/protobuf-migration.md)
-- [ビジョンと設計思想](./docs/vision.md)
-- クライアント・サーバー分離・ランチャー設計: [README.md](./README.md) の Architecture 付近を参照（作業用ツリー配下の文書へのリンクは張らない）
-- [クライアント exe のビルド・クロスコンパイル](./docs/cross-compile.md)
+- [ラボ開発環境（ネットワーク構成図）](.workspace/0_docs/development/lab-environment.md)
+- [Protobuf 移行（概要）](.workspace/0_docs/architecture/protobuf-migration.md)
+- [ビジョンと設計思想](.workspace/0_docs/vision.md)
+- クライアント・サーバー分離・ランチャー設計: [README.md](README.md) の Architecture 付近を参照（作業用ツリー配下の文書へのリンクは張らない）
+- [クライアント exe のビルド・クロスコンパイル](.workspace/0_docs/cross-compile.md)

@@ -30,5 +30,5 @@ Steam を標準パス外（例: `D:\Environment\Steam`）にインストール�
 
 ## 参考
 
-- `docs/task/vr-debug-logs.md` — デバッグログの見方（一時的な回避策として PATH の記載あり）
+- `.workspace/0_docs/task/vr-debug-logs.md` — デバッグログの見方（一時的な回避策として PATH の記載あり）
 - Steam のインストール場所:  Steam クライアント「設定 → ストレージ」で確認可能
