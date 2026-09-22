@@ -7,7 +7,7 @@
 | 置き場 | 内容 |
 |:---|:---|
 | [`.workspace/`](.workspace/) | ビジョン・アーキテクチャ・評価・実施計画 |
-| [`alchemy-world-server/`](https://github.com/FRICK-ELDY/alchemy-world-server) | 世界サーバー（Elixir / Rust）の実行コード（submodule） |
+| [`world-server/`](https://github.com/FRICK-ELDY/alchemy-world-server) | 世界サーバー（Elixir / Rust）の実行コード（submodule → リポ名は `alchemy-world-server`） |
 
 実行コードのビルド・テスト・CI の正本は **[alchemy-world-server](https://github.com/FRICK-ELDY/alchemy-world-server)** です。ワイヤ契約は各子が [alchemy-protocol](https://github.com/FRICK-ELDY/alchemy-protocol) を `3rdparty` / `deps` の git タグで固定します（親レイアウトは参照しません）。
 
@@ -29,7 +29,7 @@ git submodule update --init --recursive
 ## 開発（コード）
 
 ```bash
-cd alchemy-world-server
+cd world-server
 mix deps.get
 mix alchemy.setup
 mix alchemy.server

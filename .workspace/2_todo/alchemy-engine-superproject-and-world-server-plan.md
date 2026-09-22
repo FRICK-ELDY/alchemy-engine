@@ -33,7 +33,7 @@ alchemy-engine/                            # スーパープロジェクト（�
 ├── .workspace/                            # ドキュメント・計画・推奨互換表
 ├── .gitmodules
 ├── README.md
-├── alchemy-world-server/                  # submodule
+├── world-server/                          # submodule（リモートは alchemy-world-server）
 │   ├── apps/  config/  mix.*  …
 │   └── 3rdparty/alchemy-protocol/         # または Mix/Cargo deps（git tag）
 │       └── （タグ vX.Y.Z に固定）
@@ -128,7 +128,7 @@ alchemy-engine/                            # スーパープロジェクト（�
 | 種別 | 内容 |
 |:---|:---|
 | `.workspace` | 設計・計画・**推奨互換表**（例: world-server `@abc` + client `@def` は protocol `v0.1.2` 想定） |
-| submodule | `alchemy-world-server`、（段階 C 後）`alchemy-client` |
+| submodule | パス `world-server/`（リモート `alchemy-world-server`）、（段階 C 後）`alchemy-client` |
 | しないこと | protocol 実体の必須配置、子への `PROTO_ROOT` 注入を前提にしたビルド |
 
 ---
@@ -137,7 +137,7 @@ alchemy-engine/                            # スーパープロジェクト（�
 
 | リポ | 親からのパス | protocol の置き場 |
 |:---|:---|:---|
-| world-server | `alchemy-world-server/` | 子内 `3rdparty/` または `deps` |
+| world-server | `world-server/`（リモート `alchemy-world-server`） | 子内 `3rdparty/` または `deps` |
 | client | `alchemy-client/` | 同上 |
 | protocol | （親には置かない） | 独立リポ。各子がタグで参照 |
 
@@ -171,7 +171,7 @@ alchemy-engine/                            # スーパープロジェクト（�
 ### フェーズ 2 — 段階 A: 親のスーパープロジェクト化
 
 1. 親からコードツリー削除、`.workspace` 残置。  
-2. `alchemy-world-server` を submodule 追加。  
+2. パス `world-server/` に `alchemy-world-server` を submodule 追加。  
 3. README・CI 分担（コード CI は子）。  
 
 ### フェーズ 3 — ドキュメント
@@ -303,3 +303,4 @@ git checkout v0.1.2
 | 2026-09-22 | protocol / client を親並列 submodule 案として追記 |
 | 2026-09-22 | **決定**: 子は親を見ない。protocol は各子が 3rdparty／deps の **git タグで固定**。親への protocol 昇格と親相対 `PROTO_ROOT` は不採用 |
 | 2026-09-22 | **決定**: コード移管の履歴方針は **H1（git filter-repo で `.workspace` を除いて履歴付き）** |
+| 2026-09-22 | 親内の submodule **パス**を `world-server/` とする（リモートリポ名は `alchemy-world-server` のまま） |

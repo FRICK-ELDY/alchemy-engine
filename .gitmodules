@@ -1,3 +1,3 @@
-[submodule "alchemy-world-server"]
-	path = alchemy-world-server
+[submodule "world-server"]
+	path = world-server
 	url = git@github.com:FRICK-ELDY/alchemy-world-server.git
