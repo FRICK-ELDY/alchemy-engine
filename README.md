@@ -8,8 +8,9 @@
 |:---|:---|
 | [`.workspace/`](.workspace/) | ビジョン・アーキテクチャ・評価・実施計画 |
 | [`world-server/`](https://github.com/FRICK-ELDY/alchemy-world-server) | 世界サーバー（Elixir / Rust）の実行コード（submodule → リポ名は `alchemy-world-server`） |
+| [`protocol/`](https://github.com/FRICK-ELDY/alchemy-protocol) | ワイヤ契約 `.proto`（submodule → リポ名は `alchemy-protocol`）。**再生成・閲覧用**。日常ビルドの必須入力ではない |
 
-実行コードのビルド・テスト・CI の正本は **[alchemy-world-server](https://github.com/FRICK-ELDY/alchemy-world-server)** です。ワイヤ契約は各子が [alchemy-protocol](https://github.com/FRICK-ELDY/alchemy-protocol) を `3rdparty` / `deps` の git タグで固定します（親レイアウトは参照しません）。
+実行コードのビルド・テスト・CI の正本は **[alchemy-world-server](https://github.com/FRICK-ELDY/alchemy-world-server)** です。ワイヤ契約の SSoT は [alchemy-protocol](https://github.com/FRICK-ELDY/alchemy-protocol)（推奨ピンは [protocol-lock.md](.workspace/0_docs/protocol-lock.md)）。子は **生成物をコミット**してビルドし、親レイアウトは参照しません。
 
 詳細な設計思想は [ビジョン](.workspace/0_docs/vision.md) と [実施計画](.workspace/2_todo/alchemy-engine-superproject-and-world-server-plan.md) を参照してください。
 
