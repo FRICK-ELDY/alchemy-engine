@@ -225,7 +225,7 @@ flowchart LR
 
 ```bash
 git clone --recurse-submodules git@github.com:FRICK-ELDY/alchemy-engine.git
-cd alchemy-engine/alchemy-world-server
+cd alchemy-engine/world-server
 mix deps.get && mix alchemy.setup   # protocol は子の 3rdparty/deps から解決
 ```
 
