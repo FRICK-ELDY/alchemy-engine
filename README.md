@@ -28,11 +28,33 @@ git submodule update --init --recursive
 
 ## 開発（コード）
 
+### Windows: `bin/*.bat`（推奨・暫定）
+
+親からそのまま実行できます（内部で `world-server/` に移動します）。`alchemy-launcher` 導入までの暫定入口です。
+
+```bat
+rem 初回
+bin\deps.get.bat
+bin\setup.bat
+
+rem 起動（ターミナルを 3 つ）
+bin\router.bat
+bin\server.bat
+bin\client.bat
+```
+
+詳細は [bin/README.md](bin/README.md) を参照。
+
+### 手動（cwd = world-server）
+
 ```bash
 cd world-server
 mix deps.get
 mix alchemy.setup
+# 別ターミナルで:
+mix alchemy.router
 mix alchemy.server
+mix alchemy.client
 ```
 
 手順の詳細は submodule 内の `development.md` を参照してください。コードだけ欲しい場合は [alchemy-world-server](https://github.com/FRICK-ELDY/alchemy-world-server) を直接 clone しても構いません。
