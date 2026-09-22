@@ -8,3 +8,7 @@
 [submodule "client"]
 	path = client
 	url = git@github.com:FRICK-ELDY/alchemy-client.git
+[submodule "auth-server"]
+	path = auth-server
+	url = git@github.com:FRICK-ELDY/alchemy-auth-server.git
+	branch = main

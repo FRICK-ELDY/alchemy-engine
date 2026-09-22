@@ -9,6 +9,7 @@
 | [`.workspace/`](.workspace/) | ビジョン・アーキテクチャ・評価・実施計画 |
 | [`world-server/`](https://github.com/FRICK-ELDY/alchemy-world-server) | 世界サーバー（Elixir / Rust NIF）の実行コード（submodule → リポ名は `alchemy-world-server`） |
 | [`client/`](https://github.com/FRICK-ELDY/alchemy-client) | デスクトップ／XR クライアント（Rust）（submodule → リポ名は `alchemy-client`） |
+| [`auth-server/`](https://github.com/FRICK-ELDY/alchemy-auth-server) | ユーザー認証 API（submodule → リポ名は `alchemy-auth-server`） |
 | [`protocol/`](https://github.com/FRICK-ELDY/alchemy-protocol) | ワイヤ契約 `.proto`（submodule → リポ名は `alchemy-protocol`）。**再生成・閲覧用**。日常ビルドの必須入力ではない |
 
 実行コードのビルド・テスト・CI の正本は各子リポジトリです。ワイヤ契約の SSoT は [alchemy-protocol](https://github.com/FRICK-ELDY/alchemy-protocol)（推奨ピンは [protocol-lock.md](.workspace/0_docs/protocol-lock.md)）。子は **生成物／PROTOCOL_PIN** でビルドし、親レイアウトは参照しません。
