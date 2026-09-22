@@ -2,8 +2,11 @@
 
 実行コードの開発手順の正本は submodule **`world-server/development.md`** です（リモートリポ名は `alchemy-world-server`）。
 
+Windows では親の **`bin/*.bat`** から同じ Mix タスクを呼べます（[bin/README.md](bin/README.md)）。
+
 ```bash
 git submodule update --init --recursive
+# 例: bin\setup.bat  /  bin\router.bat  /  bin\server.bat  /  bin\client.bat
 cd world-server
 # 以降は子リポジトリの development.md に従う
 ```
