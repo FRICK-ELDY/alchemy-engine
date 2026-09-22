@@ -67,12 +67,13 @@ alchemy-engine/                            # スーパープロジェクト
 
 #### 段階 B
 
-- [ ] `world-server` から **`3rdparty/alchemy-protocol` を削除**し、通常の `mix` / `cargo` ビルドが **proto ツリーなしで通る**。  
-- [ ] Elixir 生成物は引き続きリポにコミット（現状 `apps/network/.../generated/*.pb.ex`）。  
-- [ ] Rust も **ビルド時に 3rdparty を要求しない**（生成 Rust をコミットする、または同等の方式）。  
-- [ ] 再生成は `mix alchemy.gen.proto` が **`PROTO_ROOT`＝独立 clone／親の任意 submodule 等を明示指定**したときだけ（既定パスに 3rdparty を置かない）。  
-- [ ] [protocol-lock.md](../0_docs/protocol-lock.md) が「推奨タグ＋各子の生成物の見方」を記述。追従は **同一 PR で Elixir／Rust 生成物を更新**。  
-- [ ] 親に `alchemy-protocol` を並列ピンする場合、README で **ビルド非依存**と明記。  
+- [x] `world-server` から **`3rdparty/alchemy-protocol` を削除**（R2 採用）  
+- [x] Elixir 生成物はリポにコミット（既存）  
+- [x] Rust は **`PROTOCOL_PIN` + git fetch**（`.proto-cache/`）。`PROTO_ROOT` 上書き可  
+- [x] `mix alchemy.gen.proto` も同じ規則  
+- [ ] 親の `world-server` submodule ピン更新（world-server PR マージ後）  
+- [x] [protocol-lock.md](../0_docs/protocol-lock.md) を子ピン／R2 視点へ  
+- [x] 親に `protocol/` 並列ピン（再生成用）  
 
 #### 段階 C 以降
 
@@ -110,16 +111,14 @@ alchemy-engine/                            # スーパープロジェクト
 
 - [x] `3rdparty` 廃止＋生成物コミット＋親の推奨セット並列ピン、で合意。  
 
-### B1 — world-server: Rust を proto 非依存の日常ビルドに（本体）
+### B1 — world-server: Rust を proto 非依存の日常ツリーに（**採用: R2**）
 
-候補（いずれか一つに決める）:
+| 案 | 内容 | 本計画 |
+|:---|:---|:---|
+| R1 | prost 生成結果を `src/` にコミット | 不採用 |
+| **R2** | `PROTOCOL_PIN` + ビルド時 git fetch（`.proto-cache/`）。`PROTO_ROOT` で上書き可 | **採用** |
 
-| 案 | 内容 | 長所 | 短所 |
-|:---|:---|:---|:---|
-| **R1（推奨寄り）** | `prost` 生成結果を `src/` 配下等にコミットし、`build.rs` の proto 必須を外す（再生成時だけ gen） | clone が単純。CI が proto／protoc 不要 | 生成物の差分が大きくなりがち |
-| **R2** | ビルド時のみ git 依存／一時取得で proto を取る | リポが軽い | オフライン・再現性・ネットワーク依存 |
-
-Elixir は現状どおり生成物コミットでよい。`mix alchemy.gen.proto` の既定パスを 3rdparty から外し、**`PROTO_ROOT` 必須**（または引数）にする。
+Elixir は現状どおり生成物（`*.pb.ex`）コミット。`mix alchemy.gen.proto` も同じピン／`PROTO_ROOT` 規則。
 
 ### B2 — `3rdparty/alchemy-protocol` 削除
 
@@ -213,3 +212,4 @@ mix alchemy.gen.proto
 | 2026-09-23 | 段階 A 完了（移管・親 superproject・bin） |
 | 2026-09-23 | **改訂**: `3rdparty` 廃止＋**生成物コミット運用**＋親は**推奨セット並列ピン**（ビルドは親非依存） |
 | 2026-09-23 | 親に submodule **`protocol/`**（alchemy-protocol @ `v0.1.2`）を追加。`proto/` は world-server の `3rdparty` と一致を確認 |
+| 2026-09-23 | **段階 B / R2 実施**: `PROTOCOL_PIN` + git fetch、`3rdparty` 削除（world-server PR） |
