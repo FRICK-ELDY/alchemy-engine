@@ -1,9 +1,0 @@
-syntax = "proto3";
-
-package alchemy.client;
-
-message ClientInfo {
-  string os = 1;
-  string arch = 2;
-  string family = 3;
-}
