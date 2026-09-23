@@ -27,4 +27,4 @@ bin\server.bat
 bin\client.bat
 ```
 
-前提: `git submodule update --init --recursive` 済み、Elixir / Rust / `zenohd`（`cargo install eclipse-zenoh`）が PATH にあること。
+前提: `git submodule update --init --recursive` 済み、Elixir / Rust / `zenohd`（`cargo install zenohd`）が PATH にあること。

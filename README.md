@@ -61,7 +61,7 @@ git submodule update --init --recursive
 | OS | Windows（`bin/*.bat` 推奨。他 OS は手動手順） |
 | Elixir / Mix | `world-server` の README に従う |
 | Rust / Cargo | `client` の README に従う |
-| zenohd | `cargo install eclipse-zenoh` など、PATH に通す |
+| zenohd | `cargo install zenohd` など、PATH に通す |
 
 ### Windows: `bin/*.bat`（推奨・暫定）
 
