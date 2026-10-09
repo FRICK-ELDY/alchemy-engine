@@ -18,85 +18,99 @@ alwaysApply: false
 
 ---
 
-### 技術評価層 — apps/
+### 技術評価層 — world-server/
 
-各 Elixir アプリを独立して評価する。
+`world-server/` 配下の Elixir アプリと Rust NIF を独立して評価する。
 
-- **`apps/contents`**（コンテンツ実装・ゲームロジック・パラメータ設計）
+- **`world-server/apps/contents`**（コンテンツ実装・ゲームロジック・パラメータ設計）
   - World/Rule 実装の質、エンティティパラメータの外部化、コンテンツ交換可能性の実証
   - スポーン・レベル・ボス等のゲームシステムの設計品質
   - `core` への依存が適切に制御されているか
 
-- **`apps/core`**（エンジンコア・OTP設計・コンポーネント・シーン管理）
+- **`world-server/apps/core`**（エンジンコア・OTP設計・コンポーネント・シーン管理）
   - OTP Supervisor ツリー・GenServer 責務分離・耐障害性設計
   - `ContentBehaviour` / `SceneBehaviour` / `Component` ビヘイビア設計
   - SSoT（Elixir = Single Source of Truth）の一貫性
   - バックプレッシャー・スケジューリング設計
 
-- **`apps/network`**（ネットワーク層・トランスポート・OTP隔離）
+- **`world-server/apps/network`**（ネットワーク層・トランスポート・OTP隔離）
   - Local / Phoenix Channels / UDP トランスポートの実装度
   - OTP プロセス隔離の実証（ルーム間クラッシュ分離）
   - 認証・セキュリティ設計
 
-- **`apps/server`**（アプリケーション起動・設定・エントリポイント）
+- **`world-server/apps/server`**（アプリケーション起動・設定・エントリポイント）
   - Application 起動シーケンスの堅牢性
   - 設定管理（config.exs / runtime.exs）の設計
   - 環境別（dev/test/prod）の分離
 
----
-
-### 技術評価層 — native/
-
-各 Rust クレートを独立して評価する。
-
-- **`native/shared`**（共通データ・Elixir 契約・ゼロコピー）
-  - `#[repr(C)]` 構造体・bytemuck Pod/Zeroable
-  - Elixir-Rust 間の契約型定義の一貫性
-  - 予測・補間ロジック（interp/predict）の設計
-
-- **`native/network`**（Zenoh 通信・msgpack デコード・NetworkRenderBridge）
-  - Zenoh による Pub/Sub トランスポート
-  - MessagePack デコード・RenderFrame 変換
-  - `ClientSession` / `NetworkRenderBridge` の責務分離
-  - プラットフォーム切り替え（desktop / web）
-
-- **`native/render`**（描画パイプライン・シェーダー・補間）
-  - wgpu インスタンス描画・WGSL シェーダー
-  - サブフレーム補間（lerp）のロック外計算
-  - ヘッドレスレンダラー（CI対応）
-  - レンダーグラフ設計・フラスタムカリング・アロケーション効率
-
-- **`native/window`**（窓層・イベント管理・デスクトップループ）
-  - winit による窓・ライフサイクル管理
-  - 入力イベント正規化・RenderBridge インターフェース
-  - プラットフォーム固有処理の抽象化
-
-- **`native/audio`**（非同期設計・フォールバック・アセット管理）
-  - コマンドパターン + `mpsc::channel` 非同期設計
-  - デバイス不在時のグレースフルフォールバック
-  - ボイスリミット・優先度システム・空間オーディオ
-  - platform/ による OS 別実装
-
-- **`native/nif`**（NIF 設計・Elixir×Rust ブリッジ・physics 統合）
+- **`world-server/rust/nif`**（NIF 設計・Elixir×Rust ブリッジ・physics 統合）
   - NIF 関数カテゴリ分類（ロック競合の予測可能性）
   - `ResourceArc` による GC 連動ライフタイム管理
   - パラメータ注入パターン（Rust にゲームバランス値なし）
   - `NifBridgeBehaviour` + Mox によるモック設計
   - NIF バージョニング・ABI 互換性・エラーハンドリング
-  - **`nif/physics`**（ECS・SoA・SIMD・衝突・決定論性）
+  - **`world-server/rust/nif/physics`**（ECS・SoA・SIMD・衝突・決定論性）
     - SoA 構造・`free_list` O(1) スポーン/キル
     - SIMD 実装（SSE2）・rayon 並列・スカラーフォールバックの 3 段階戦略
     - 空間ハッシュ衝突検出・決定論的乱数（LCG）
     - プラットフォーム対応（ARM NEON・WASM）
 
-- **`native/app`**（統合層・デスクトップエントリ）
-  - 各クレート（window / render / network / audio / nif）の組み合わせ
+---
+
+### 技術評価層 — client/
+
+`client/` 配下の各 Rust クレートを独立して評価する。
+
+- **`client/shared`**（共通データ・Elixir 契約・ゼロコピー）
+  - `#[repr(C)]` 構造体・bytemuck Pod/Zeroable
+  - Elixir-Rust 間の契約型定義の一貫性
+  - 予測・補間ロジック（interp/predict）の設計
+
+- **`client/network`**（Zenoh 通信・msgpack デコード・NetworkRenderBridge）
+  - Zenoh による Pub/Sub トランスポート
+  - MessagePack デコード・RenderFrame 変換
+  - `ClientSession` / `NetworkRenderBridge` の責務分離
+  - プラットフォーム切り替え（desktop / web）
+
+- **`client/render`**（描画パイプライン・シェーダー・補間）
+  - wgpu インスタンス描画・WGSL シェーダー
+  - サブフレーム補間（lerp）のロック外計算
+  - ヘッドレスレンダラー（CI対応）
+  - レンダーグラフ設計・フラスタムカリング・アロケーション効率
+
+- **`client/window`**（窓層・イベント管理・デスクトップループ）
+  - winit による窓・ライフサイクル管理
+  - 入力イベント正規化・RenderBridge インターフェース
+  - プラットフォーム固有処理の抽象化
+
+- **`client/audio`**（非同期設計・フォールバック・アセット管理）
+  - コマンドパターン + `mpsc::channel` 非同期設計
+  - デバイス不在時のグレースフルフォールバック
+  - ボイスリミット・優先度システム・空間オーディオ
+  - platform/ による OS 別実装
+
+- **`client/app`**（統合層・デスクトップエントリ）
+  - 各クレート（window / render / network / audio）の組み合わせ
   - デスクトップクライアント（Zenoh 経由で RenderFrame 受信・入力送信）
   - エントリポイントの責務分離
 
-- **`native/tools/launcher`**（開発支援・トレイ起動ツール）
-  - zenohd / Phoenix Server / app の一括起動・終了
-  - トレイアイコン・Check for Update / acknowledgements
+---
+
+### 技術評価層 — auth-server/
+
+`auth-server/` の認証 API を独立して評価する。ゲームロジックとルーム管理は対象外とする。
+
+- **`auth-server/lib/auth`**（アイデンティティの SSoT・アカウント・トークン）
+  - User を本サービスのみが持ち、他サービスは JWT `sub` だけを参照する分離
+  - 登録・ログイン・パスワード（Argon2）・アカウントライフサイクル
+  - アクセストークン（JWT / RS256）とリフレッシュトークンの発行・失効
+  - 鍵管理とトークン失効の設計
+
+- **`auth-server/lib/auth_web`**（HTTP 境界・認証ガード・レート制限）
+  - 公開 API と認証必須 API のパイプライン分離
+  - `Authenticate` / `RateLimit` の責務分離
+  - エラー応答が認証情報を漏らさないこと
+  - ヘルスと `/.well-known/jwks.json` の公開面
 
 ---
 
@@ -136,13 +150,6 @@ alwaysApply: false
   - ローカル CI の単一エントリ（本リポジトリでは **`mix alchemy.ci`**。`.workspace/0_docs/warranty/ci.md` 参照。歴史的に `bin/ci.bat` と記載していたが廃止）
   - ビルドエラーメッセージの分かりやすさ
   - ローカル CI として **`mix alchemy.ci` がエラーゼロで通過すること**を前提とする（Rust: fmt / clippy -D warnings / test、Elixir: format / credo / `mix test --warnings-as-errors` 等。部分実行は `mix alchemy.ci check` 等）
-
-- **ゲームプレイ完成度**
-  - ゲームループの完結性（開始→プレイ→終了→リトライの全経路）
-  - コンテンツ量（敵種・武器種・ステージ数・BGM）
-  - ゲームバランスの調整可能性（パラメータ外部化の恩恵を活かせているか）
-  - 視覚的完成度（TODO スプライト・BGM 欠損・設定 UI）
-  - 「遊べるゲーム」としての完成度
 
 - **セキュリティ・配布可能性**
   - WebSocket 認証・認可の設計
@@ -227,12 +234,12 @@ alwaysApply: false
 
 ## 出力ドキュメント
 
-評価は **第1評価者（Opus）と第2評価者（GPT）が互いに独立** して行い、その後 **まとめ** を作成する。
+評価は **第1評価者（Claude Opus 5.5）と第2評価者（GPT）が互いに独立** して行い、その後 **まとめ** を作成する。
 `YYYY-MM-DD` は評価日。評価完了後、以下のファイルを**必ず日本語で作成**する。
 
 各評価者は **相手の当日評価文書を参照しない**。判断は必ず当該コードの再検証に基づく。
 
-### 第1評価者（Claude Opus 5）
+### 第1評価者（Claude Opus 5.5）
 
 当日分は `.workspace/0_docs/evaluation/opus/` 直下に置く。
 
