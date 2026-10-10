@@ -7,9 +7,9 @@
 | 項目 | 値 |
 |:---|:---|
 | **親内パス** | `protocol/`（リモート [alchemy-protocol](https://github.com/FRICK-ELDY/alchemy-protocol)） |
-| **Git タグ** | `v0.1.2` |
-| **コミット SHA** | `84278a8a6f51fe559263b36a1d5dae9c9a731504` |
-| **タグ付きツリー** | [github.com/FRICK-ELDY/alchemy-protocol @ `v0.1.2`](https://github.com/FRICK-ELDY/alchemy-protocol/tree/v0.1.2) |
+| **Git タグ** | `v1.0.0` |
+| **コミット SHA** | `01070f5db5c8555fdc15676eac9da32628686e84` |
+| **タグ付きツリー** | [github.com/FRICK-ELDY/alchemy-protocol @ `v1.0.0`](https://github.com/FRICK-ELDY/alchemy-protocol/tree/v1.0.0) |
 | **子の `PROTOCOL_PIN`** | `world-server` / `client` とも同じタグ／SHA（R2） |
 
 ## 親でピンを上げるとき
