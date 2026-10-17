@@ -43,17 +43,13 @@ alwaysApply: false
   - 設定管理（config.exs / runtime.exs）の設計
   - 環境別（dev/test/prod）の分離
 
-- **`world-server/rust/nif`**（NIF 設計・Elixir×Rust ブリッジ・physics 統合）
+- **`world-server/rust/nif`**（Formula VM・Elixir×Rust ブリッジ）
+  - バイトコード実行（`run_formula_bytecode`）。ゲーム用物理ループは対象外
+  - ゲームルールとバランス値を NIF に持たないこと。定義は Elixir の contents
   - NIF 関数カテゴリ分類（ロック競合の予測可能性）
   - `ResourceArc` による GC 連動ライフタイム管理
-  - パラメータ注入パターン（Rust にゲームバランス値なし）
   - `NifBridgeBehaviour` + Mox によるモック設計
   - NIF バージョニング・ABI 互換性・エラーハンドリング
-  - **`world-server/rust/nif/physics`**（ECS・SoA・SIMD・衝突・決定論性）
-    - SoA 構造・`free_list` O(1) スポーン/キル
-    - SIMD 実装（SSE2）・rayon 並列・スカラーフォールバックの 3 段階戦略
-    - 空間ハッシュ衝突検出・決定論的乱数（LCG）
-    - プラットフォーム対応（ARM NEON・WASM）
 
 ---
 
