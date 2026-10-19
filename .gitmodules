@@ -1,6 +1,7 @@
 [submodule "world-server"]
 	path = world-server
 	url = git@github.com:FRICK-ELDY/alchemy-world-server.git
+	branch = main
 [submodule "protocol"]
 	path = protocol
 	url = git@github.com:FRICK-ELDY/alchemy-protocol.git
@@ -8,6 +9,7 @@
 [submodule "client"]
 	path = client
 	url = git@github.com:FRICK-ELDY/alchemy-client.git
+	branch = main
 [submodule "auth-server"]
 	path = auth-server
 	url = git@github.com:FRICK-ELDY/alchemy-auth-server.git
