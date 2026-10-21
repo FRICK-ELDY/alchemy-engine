@@ -1,13 +1,26 @@
-name: CI
+name: Auth Server CI
 
 on:
   push:
     branches: [main]
+    paths:
+      - "auth-server/**"
+      - ".github/workflows/auth-server-ci.yml"
   pull_request:
+    paths:
+      - "auth-server/**"
+      - ".github/workflows/auth-server-ci.yml"
+
+concurrency:
+  group: auth-server-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: auth-server
 
     services:
       postgres:
@@ -40,11 +53,11 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            deps
-            _build
-          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+            auth-server/deps
+            auth-server/_build
+          key: ${{ runner.os }}-auth-mix-${{ hashFiles('auth-server/mix.lock') }}
           restore-keys: |
-            ${{ runner.os }}-mix-
+            ${{ runner.os }}-auth-mix-
 
       - run: mix deps.get
       - run: mix format --check-formatted

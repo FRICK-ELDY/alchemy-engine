@@ -1,14 +1,27 @@
-﻿name: Proto compile check
+name: Protocol CI
 
 on:
   push:
     branches: [main]
+    paths:
+      - "protocol/**"
+      - ".github/workflows/protocol-ci.yml"
   pull_request:
     branches: [main]
+    paths:
+      - "protocol/**"
+      - ".github/workflows/protocol-ci.yml"
+
+concurrency:
+  group: protocol-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   proto-verify:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: protocol
     steps:
       - uses: actions/checkout@v4
 
