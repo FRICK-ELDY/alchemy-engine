@@ -20,6 +20,10 @@ inputs:
   otp-version:
     required: false
     default: "28"
+  rust-workspaces:
+    description: "Swatinem/rust-cache workspaces（monorepo ルート実行時は world-server/rust）"
+    required: false
+    default: "rust"
 
 runs:
   using: composite
@@ -62,7 +66,7 @@ runs:
 
     - uses: Swatinem/rust-cache@v2
       with:
-        workspaces: rust
+        workspaces: ${{ inputs.rust-workspaces }}
 
     - name: Setup BEAM
       if: inputs.with-beam == 'true'

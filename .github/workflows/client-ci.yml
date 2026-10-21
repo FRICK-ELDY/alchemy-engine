@@ -1,17 +1,29 @@
-name: CI
+name: Client CI
+
 on:
   push:
     branches: ["**"]
+    paths:
+      - "client/**"
+      - "protocol/**"
+      - ".github/workflows/client-ci.yml"
   pull_request:
+    paths:
+      - "client/**"
+      - "protocol/**"
+      - ".github/workflows/client-ci.yml"
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: client-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   rust-check:
     name: "Rust — fmt & clippy"
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -26,6 +38,9 @@ jobs:
   rust-build:
     name: "Rust — build app"
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -40,6 +55,9 @@ jobs:
   rust-test:
     name: "Rust — test workspace"
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

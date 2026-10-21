@@ -1,8 +1,17 @@
-name: CI
+name: World Server CI
+
 on:
   push:
     branches: ["**"]
+    paths:
+      - "world-server/**"
+      - "protocol/**"
+      - ".github/workflows/world-server-ci.yml"
   pull_request:
+    paths:
+      - "world-server/**"
+      - "protocol/**"
+      - ".github/workflows/world-server-ci.yml"
 
 # 複合アクションと各ジョブで共通参照（バージョンはここだけ更新）
 env:
@@ -10,7 +19,7 @@ env:
   OTP_VERSION: "28"
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: world-server-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -20,12 +29,16 @@ jobs:
   rust-check:
     name: "Rust — fmt & clippy"
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: world-server
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/alchemy-ci-setup
+      - uses: ./world-server/.github/actions/alchemy-ci-setup
         with:
           protoc-source: apt
           rust-components: "rustfmt, clippy"
+          rust-workspaces: world-server/rust
 
       - name: cargo fmt
         run: cargo fmt --manifest-path rust/Cargo.toml --all -- --check
@@ -41,11 +54,15 @@ jobs:
   rust-test:
     name: "Rust — unit tests"
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: world-server
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/alchemy-ci-setup
+      - uses: ./world-server/.github/actions/alchemy-ci-setup
         with:
           protoc-source: apt
+          rust-workspaces: world-server/rust
 
       - name: cargo test (nif)
         run: cargo test --manifest-path rust/Cargo.toml -p nif
@@ -56,21 +73,25 @@ jobs:
   proto-verify:
     name: "Protobuf — codegen up to date"
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: world-server
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/alchemy-ci-setup
+      - uses: ./world-server/.github/actions/alchemy-ci-setup
         with:
           protoc-source: arduino
           with-beam: "true"
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
+          rust-workspaces: world-server/rust
 
       - uses: actions/cache@v4
         with:
           path: |
-            deps
-            _build
-          key: proto-verify-${{ runner.os }}-${{ hashFiles('mix.lock') }}
+            world-server/deps
+            world-server/_build
+          key: proto-verify-${{ runner.os }}-${{ hashFiles('world-server/mix.lock') }}
           restore-keys: |
             proto-verify-${{ runner.os }}-
 
@@ -94,21 +115,25 @@ jobs:
   elixir-check:
     name: "Elixir — compile & credo"
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: world-server
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/alchemy-ci-setup
+      - uses: ./world-server/.github/actions/alchemy-ci-setup
         with:
           protoc-source: arduino
           with-beam: "true"
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
+          rust-workspaces: world-server/rust
 
       - uses: actions/cache@v4
         with:
           path: |
-            deps
-            _build
-          key: elixir-check-${{ runner.os }}-${{ hashFiles('mix.lock') }}
+            world-server/deps
+            world-server/_build
+          key: elixir-check-${{ runner.os }}-${{ hashFiles('world-server/mix.lock') }}
           restore-keys: |
             elixir-check-${{ runner.os }}-
 
@@ -131,19 +156,23 @@ jobs:
   elixir-test:
     name: "Elixir — mix test (with NIF)"
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: world-server
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/alchemy-ci-setup
+      - uses: ./world-server/.github/actions/alchemy-ci-setup
         with:
           protoc-source: arduino
           with-beam: "true"
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
+          rust-workspaces: world-server/rust
 
       - uses: actions/cache@v4
         with:
-          path: deps
-          key: elixir-test-deps-${{ runner.os }}-${{ hashFiles('mix.lock') }}
+          path: world-server/deps
+          key: elixir-test-deps-${{ runner.os }}-${{ hashFiles('world-server/mix.lock') }}
           restore-keys: |
             elixir-test-deps-${{ runner.os }}-
 
