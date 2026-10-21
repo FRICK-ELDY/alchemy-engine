@@ -1,0 +1,21 @@
+defmodule Contents.FrameEncoder.DrawCommands.SpriteRaw do
+  @moduledoc false
+
+  alias Contents.FrameEncoder.Proto
+
+  def to_pb({:sprite_raw, x, y, width, height, {{uv_ox, uv_oy}, {uv_sx, uv_sy}, {r, g, b, a}}}) do
+    %Alchemy.Render.DrawCommand{
+      kind:
+        {:sprite_raw,
+         %Alchemy.Render.SpriteRaw{
+           x: Proto.pb_double(x),
+           y: Proto.pb_double(y),
+           width: Proto.pb_double(width),
+           height: Proto.pb_double(height),
+           uv_offset: Proto.vec2_to_pb_list({uv_ox, uv_oy}),
+           uv_size: Proto.vec2_to_pb_list({uv_sx, uv_sy}),
+           color_tint: Proto.color_tuple_to_pb_list({r, g, b, a})
+         }}
+    }
+  end
+end

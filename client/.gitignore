@@ -1,0 +1,14 @@
+# Rust / Cargo
+/target/
+
+# Protocol fetch cache (R2)
+.proto-cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp

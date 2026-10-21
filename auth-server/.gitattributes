@@ -1,0 +1,2 @@
+* text=auto eol=lf
+*.{ex,exs} text eol=lf

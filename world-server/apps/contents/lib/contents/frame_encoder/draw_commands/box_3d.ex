@@ -1,0 +1,21 @@
+defmodule Contents.FrameEncoder.DrawCommands.Box3d do
+  @moduledoc false
+
+  alias Contents.FrameEncoder.Proto
+
+  def to_pb({:box_3d, x, y, z, half_w, half_h, {half_d, r, g, b, a}}) do
+    %Alchemy.Render.DrawCommand{
+      kind:
+        {:box_3d,
+         %Alchemy.Render.Box3dCmd{
+           x: Proto.pb_double(x),
+           y: Proto.pb_double(y),
+           z: Proto.pb_double(z),
+           half_w: Proto.pb_double(half_w),
+           half_h: Proto.pb_double(half_h),
+           half_d: Proto.pb_double(half_d),
+           color: Proto.color_tuple_to_pb_list({r, g, b, a})
+         }}
+    }
+  end
+end

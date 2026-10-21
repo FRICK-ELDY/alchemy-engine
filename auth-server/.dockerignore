@@ -1,0 +1,11 @@
+/_build
+/deps
+/cover
+/doc
+/.fetch
+/.git
+/.elixir_ls
+/tmp
+*.ez
+erl_crash.dump
+auth-*.tar

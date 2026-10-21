@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package alchemy.input;
+
+message Movement {
+  float dx = 1;
+  float dy = 2;
+}
+
+message Action {
+  string name = 1;
+}

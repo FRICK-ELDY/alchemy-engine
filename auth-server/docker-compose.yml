@@ -1,0 +1,61 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: alchemy_auth
+      POSTGRES_PASSWORD: alchemy_auth
+      POSTGRES_DB: alchemy_auth_dev
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alchemy_auth -d alchemy_auth_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+  auth:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    ports:
+      - "4002:4002"
+    environment:
+      MIX_ENV: dev
+      PHX_SERVER: "true"
+      BIND_ALL: "true"
+      PORT: "4002"
+      DATABASE_URL: ecto://alchemy_auth:alchemy_auth@postgres:5432/alchemy_auth_dev
+      JWT_PRIVATE_KEY_PATH: /app/priv/jwt_private.pem
+      SMTP_RELAY_HOST: mailpit
+      SMTP_RELAY_PORT: "1025"
+      AUTH_FRONTEND_URL: http://localhost:4000
+    volumes:
+      - .:/app
+      - auth_deps:/app/deps
+      - auth_build:/app/_build
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    command: >
+      sh -c "mix deps.get &&
+             mix ash.setup &&
+             mix ecto.create &&
+             mix ecto.migrate &&
+             mix run priv/repo/seeds.exs &&
+             mix phx.server"
+
+volumes:
+  postgres_data:
+  auth_deps:
+  auth_build:

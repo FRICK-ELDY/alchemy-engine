@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package alchemy.render;
+
+import "render_frame/mesh.proto";
+
+message DrawCommand {
+  oneof kind {
+    PlayerSprite player_sprite = 1;
+    SpriteRaw sprite_raw = 2;
+    ParticleCmd particle = 3;
+    ItemCmd item = 4;
+    ObstacleCmd obstacle = 5;
+    Box3dCmd box_3d = 6;
+    GridPlaneCmd grid_plane = 7;
+    GridPlaneVertsCmd grid_plane_verts = 8;
+    SkyboxCmd skybox = 9;
+    Sphere3dCmd sphere_3d = 10;
+    // `Box3dCmd` と同じフィールド。`MeshDef` 名 `unit_cone` を half 拡張でワールド配置する。
+    // 将来、円錐専用パラメータ（切り口のセグメント数、先端オフセット等）を wire に載せたくなったら
+    // 別メッセージ `Cone3dCmd` を定義し oneof を差し替える（フィールド番号の互換に注意）。
+    Box3dCmd cone_3d = 11;
+  }
+}
+
+message PlayerSprite {
+  double x = 1;
+  double y = 2;
+  uint32 frame = 3;
+}
+
+message SpriteRaw {
+  double x = 1;
+  double y = 2;
+  double width = 3;
+  double height = 4;
+  repeated float uv_offset = 5;
+  repeated float uv_size = 6;
+  repeated float color_tint = 7;
+}
+
+message ParticleCmd {
+  double x = 1;
+  double y = 2;
+  float r = 3;
+  float g = 4;
+  float b = 5;
+  float alpha = 6;
+  double size = 7;
+}
+
+message ItemCmd {
+  double x = 1;
+  double y = 2;
+  uint32 kind = 3;
+}
+
+message ObstacleCmd {
+  double x = 1;
+  double y = 2;
+  double radius = 3;
+  uint32 kind = 4;
+}
+
+message Box3dCmd {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+  double half_w = 4;
+  double half_h = 5;
+  double half_d = 6;
+  repeated float color = 7;
+}
+
+// 単位球メッシュ（半径 0.5・中心原点、MeshDef 名 unit_sphere）を半径 radius でワールド配置する。
+message Sphere3dCmd {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+  double radius = 4;
+  repeated float color = 5;
+}
+
+message GridPlaneCmd {
+  double size = 1;
+  uint32 divisions = 2;
+  repeated float color = 3;
+}
+
+message GridPlaneVertsCmd {
+  repeated MeshVertex vertices = 1;
+}
+
+message SkyboxCmd {
+  repeated float top_color = 1;
+  repeated float bottom_color = 2;
+}
