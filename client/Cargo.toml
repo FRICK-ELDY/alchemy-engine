@@ -1,0 +1,23 @@
+[workspace]
+resolver = "2"
+members = [
+    "proto_resolve",
+    "shared",
+    "render_frame_proto",
+    "network",
+    "audio",
+    "render",
+    "auth_client",
+    "system_ui",
+    "window",
+    "xr",
+    "app",
+]
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

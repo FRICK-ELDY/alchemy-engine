@@ -1,0 +1,13 @@
+[package]
+name = "xr"
+version = "0.1.0"
+edition = "2021"
+description = "XR層・OpenXR セッションと入力管理（The Shell for VR）"
+
+[features]
+default = []
+openxr = ["dep:openxr"]
+
+[dependencies]
+log = "0.4"
+openxr = { version = "0.21", optional = true }

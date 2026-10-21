@@ -1,0 +1,9 @@
+[package]
+name = "proto_resolve"
+version = "0.1.0"
+edition = "2021"
+description = "Resolve alchemy-protocol proto/ for prost-build (PROTO_ROOT or git fetch pin)"
+publish = false
+
+[lib]
+path = "src/lib.rs"

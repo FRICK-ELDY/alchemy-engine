@@ -1,0 +1,25 @@
+# Elixir / Mix
+/_build/
+/deps/
+/priv/native/
+apps/*/priv/native/
+*.ez
+erl_crash.dump
+.elixir_ls/
+
+# Rust / Cargo
+rust/target/
+
+# Protocol fetch cache (R2: git clone of alchemy-protocol)
+.proto-cache/
+
+# セーブデータ
+saves/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# エディタ
+.vscode/
+*.swp

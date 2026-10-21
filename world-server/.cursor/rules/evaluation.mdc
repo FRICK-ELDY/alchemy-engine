@@ -1,0 +1,304 @@
+---
+description: プロジェクト全体を忌憚なく評価するルール。「評価して」と聞いたときに適用する。
+alwaysApply: false
+---
+
+# AlchemyEngine — Project Evaluation Rule
+
+このルールが適用されたとき、エージェントはプロジェクト全体を以下の観点で**忌憚なく**評価し、
+スコアリングと文書化を行う。
+
+---
+
+## 評価観点
+
+満点・上限は設けない。加点・減点の積み上げで総合スコアを算出する。
+
+観点は **技術評価層**（コードと1対1対応）と **横断評価層**（コードを横断する品質・プロセス・プロダクト視点）の2層で構成する。
+
+---
+
+### 技術評価層 — apps/
+
+各 Elixir アプリを独立して評価する。
+
+- **`apps/contents`**（コンテンツ実装・ゲームロジック・パラメータ設計）
+  - World/Rule 実装の質、エンティティパラメータの外部化、コンテンツ交換可能性の実証
+  - スポーン・レベル・ボス等のゲームシステムの設計品質
+  - `core` への依存が適切に制御されているか
+
+- **`apps/core`**（エンジンコア・OTP設計・コンポーネント・シーン管理）
+  - OTP Supervisor ツリー・GenServer 責務分離・耐障害性設計
+  - `ContentBehaviour` / `SceneBehaviour` / `Component` ビヘイビア設計
+  - SSoT（Elixir = Single Source of Truth）の一貫性
+  - バックプレッシャー・スケジューリング設計
+
+- **`apps/network`**（ネットワーク層・トランスポート・OTP隔離）
+  - Local / Phoenix Channels / UDP トランスポートの実装度
+  - OTP プロセス隔離の実証（ルーム間クラッシュ分離）
+  - 認証・セキュリティ設計
+
+- **`apps/server`**（アプリケーション起動・設定・エントリポイント）
+  - Application 起動シーケンスの堅牢性
+  - 設定管理（config.exs / runtime.exs）の設計
+  - 環境別（dev/test/prod）の分離
+
+---
+
+### 技術評価層 — native/
+
+各 Rust クレートを独立して評価する。
+
+- **`native/shared`**（共通データ・Elixir 契約・ゼロコピー）
+  - `#[repr(C)]` 構造体・bytemuck Pod/Zeroable
+  - Elixir-Rust 間の契約型定義の一貫性
+  - 予測・補間ロジック（interp/predict）の設計
+
+- **`native/network`**（Zenoh 通信・msgpack デコード・NetworkRenderBridge）
+  - Zenoh による Pub/Sub トランスポート
+  - MessagePack デコード・RenderFrame 変換
+  - `ClientSession` / `NetworkRenderBridge` の責務分離
+  - プラットフォーム切り替え（desktop / web）
+
+- **`native/render`**（描画パイプライン・シェーダー・補間）
+  - wgpu インスタンス描画・WGSL シェーダー
+  - サブフレーム補間（lerp）のロック外計算
+  - ヘッドレスレンダラー（CI対応）
+  - レンダーグラフ設計・フラスタムカリング・アロケーション効率
+
+- **`native/window`**（窓層・イベント管理・デスクトップループ）
+  - winit による窓・ライフサイクル管理
+  - 入力イベント正規化・RenderBridge インターフェース
+  - プラットフォーム固有処理の抽象化
+
+- **`native/audio`**（非同期設計・フォールバック・アセット管理）
+  - コマンドパターン + `mpsc::channel` 非同期設計
+  - デバイス不在時のグレースフルフォールバック
+  - ボイスリミット・優先度システム・空間オーディオ
+  - platform/ による OS 別実装
+
+- **`native/nif`**（NIF 設計・Elixir×Rust ブリッジ・physics 統合）
+  - NIF 関数カテゴリ分類（ロック競合の予測可能性）
+  - `ResourceArc` による GC 連動ライフタイム管理
+  - パラメータ注入パターン（Rust にゲームバランス値なし）
+  - `NifBridgeBehaviour` + Mox によるモック設計
+  - NIF バージョニング・ABI 互換性・エラーハンドリング
+  - **`nif/physics`**（ECS・SoA・SIMD・衝突・決定論性）
+    - SoA 構造・`free_list` O(1) スポーン/キル
+    - SIMD 実装（SSE2）・rayon 並列・スカラーフォールバックの 3 段階戦略
+    - 空間ハッシュ衝突検出・決定論的乱数（LCG）
+    - プラットフォーム対応（ARM NEON・WASM）
+
+- **`native/app`**（統合層・デスクトップエントリ）
+  - 各クレート（window / render / network / audio / nif）の組み合わせ
+  - デスクトップクライアント（Zenoh 経由で RenderFrame 受信・入力送信）
+  - エントリポイントの責務分離
+
+- **`native/tools/launcher`**（開発支援・トレイ起動ツール）
+  - zenohd / Phoenix Server / app の一括起動・終了
+  - トレイアイコン・Check for Update / acknowledgements
+
+---
+
+### 横断評価層
+
+コードを横断する品質・プロセス・プロダクト視点で評価する。
+
+- **テスト戦略**
+  - テストピラミッドの形状（ユニット/統合/E2E の比率と意図的設計）
+  - コアモジュールのカバレッジ（特に `core` アプリ）
+  - テストの独立性・再現性（外部依存のモック化・`async: true` 活用）
+  - unsafe コードの正当性テスト（SIMD/スカラー一致等）
+  - プロパティベーステスト・ファジングの有無
+
+- **可観測性・デバッグ容易性**
+  - `:telemetry` イベントの網羅性と粒度
+  - ログレベルの適切な使い分け（debug/info/warn/error の設計意図）
+  - クラッシュ時のコンテキスト情報の充実度
+  - パフォーマンスプロファイリング手段（ベンチマーク・lock_metrics 等）
+  - 本番環境でのデバッグ手段（LiveDashboard 等）
+
+- **エラーハンドリング戦略**
+  - エラー境界の設計（どこで何を回復するか、の明示的な設計）
+  - OTP Supervisor 再起動後の状態回復設計
+  - `Result` / `{:ok, _}` / `{:error, _}` の一貫性
+  - フォールバック戦略の網羅性（オーディオ・NIF・ネットワーク各層）
+
+- **変更容易性・保守性**
+  - モジュール間の循環依存の有無
+  - 変更影響範囲の予測可能性（レイヤー境界の強度）
+  - 技術的負債の定量的把握と管理（TODO/FIXME の追跡）
+  - マジックナンバーの散在度・命名の一貫性
+
+- **開発者体験（DX）**
+  - セットアップ手順の明確さ（README → 動作までのステップ数）
+  - ローカル開発環境の構築コスト（依存ツール・バージョンの明示）
+  - ローカル CI の単一エントリ（本リポジトリでは **`mix alchemy.ci`**。`.workspace/0_docs/warranty/ci.md` 参照。歴史的に `bin/ci.bat` と記載していたが廃止）
+  - ビルドエラーメッセージの分かりやすさ
+  - ローカル CI として **`mix alchemy.ci` がエラーゼロで通過すること**を前提とする（Rust: fmt / clippy -D warnings / test、Elixir: format / credo / `mix test --warnings-as-errors` 等。部分実行は `mix alchemy.ci check` 等）
+
+- **ゲームプレイ完成度**
+  - ゲームループの完結性（開始→プレイ→終了→リトライの全経路）
+  - コンテンツ量（敵種・武器種・ステージ数・BGM）
+  - ゲームバランスの調整可能性（パラメータ外部化の恩恵を活かせているか）
+  - 視覚的完成度（TODO スプライト・BGM 欠損・設定 UI）
+  - 「遊べるゲーム」としての完成度
+
+- **セキュリティ・配布可能性**
+  - WebSocket 認証・認可の設計
+  - 依存クレート/パッケージの脆弱性管理（`mix audit` / `cargo audit`）
+  - セーブデータの改ざん耐性
+  - ビルド成果物の配布手順（インストーラー・パッケージング）
+  - Windows/macOS/Linux の対応状況
+
+- **プロジェクト全体設計**
+  - ドキュメントの品質・網羅性・コードとの一致度
+  - CI/CD パイプラインの設計（ジョブ構成・ベンチマーク回帰）
+  - ビジョン（`.workspace/0_docs/vision.md`）とコードの一致度
+  - 自己改善サイクル（improvement-plan の運用）
+
+---
+
+## 採点基準
+
+加点・減点は +1〜+5 / -1〜-5 の整数で表す。上限・下限なし（同一観点内で複数項目を合算）。
+
+### プラス点
+
+| 点数 | 基準 |
+|:---:|:---|
+| +1 | 正しく実装されている。問題はないが特筆するほどではない |
+| +2 | 業界の一般的なベストプラクティスに沿った、良い設計判断 |
+| +3 | 同規模・同種プロジェクトの平均を明確に上回る実装 |
+| +4 | プロダクションレベルのゲームエンジン・OSSと比較しても遜色ない実装 |
+| +5 | このクラスの個人プロジェクトでは見たことがないレベルの卓越した実装 |
+
+### マイナス点
+
+| 点数 | 基準 |
+|:---:|:---|
+| -1 | 改善余地あり。動作はするが設計・品質上の軽微な問題 |
+| -2 | 重要な機能・設計の欠如。放置すると将来の拡張を阻害する |
+| -3 | 設計上の明確な欠陥。バグ・クラッシュ・性能劣化を引き起こしうる |
+| -4 | プロジェクトの価値命題を損なう重大な欠如。説明責任が果たせない |
+| -5 | プロジェクトの根幹を揺るがす致命的な欠陥。存在しないに等しい |
+
+### 提案点（0点）
+
+実装すれば価値が上がるが、現時点では存在しないため加点も減点もしない項目。
+**`0`** で表し、「あると尚よい」という前向きな提案として記録する。
+
+| 点数 | 基準 |
+|:---:|:---|
+| 0 | 現時点では存在しないが、実装すればプロジェクトの価値を高める提案 |
+
+**評価しないもの**: インデントが揃っている、コメントが残っている等、コーディングの当たり前の作業は評価対象外。
+思想・設計・アーキテクチャ・実装の質のみを評価する。
+
+---
+
+## 採点フォーマット
+
+各観点ごとに以下の形式で記述する。
+
+```
+## [観点名]
+
+### ✅ プラス点
+
+- **[思想/実装名]** `+N`
+  > 理由・根拠（ファイル名・行番号・コード例を引用）
+
+### ❌ マイナス点
+
+- **[思想/実装名]** `-N`
+  > 理由・根拠（ファイル名・行番号・コード例を引用）  
+  > 対象ファイル: `path/to/file.ex`
+
+### 💡 提案
+
+- **[提案名]** `0`
+  > 実装すれば価値が上がる理由・具体的な実装イメージ・参考 OSS
+
+**小計: +N / -N = N点**
+```
+
+---
+
+## 出力ドキュメント
+
+評価は **第1評価者（Opus）と第2評価者（GPT）が互いに独立** して行い、その後 **まとめ** を作成する。
+`YYYY-MM-DD` は評価日。評価完了後、以下のファイルを**必ず日本語で作成**する。
+
+各評価者は **相手の当日評価文書を参照しない**。判断は必ず当該コードの再検証に基づく。
+
+### 第1評価者（Claude Opus 5）
+
+当日分は `.workspace/0_docs/evaluation/opus/` 直下に置く。
+
+1. `.workspace/0_docs/evaluation/opus/opus-specific-weaknesses-YYYY-MM-DD.md` — マイナス点の詳細一覧
+2. `.workspace/0_docs/evaluation/opus/opus-specific-strengths-YYYY-MM-DD.md` — プラス点の詳細一覧
+3. `.workspace/0_docs/evaluation/opus/opus-specific-proposals-YYYY-MM-DD.md` — 提案（0点）の詳細一覧
+4. `.workspace/0_docs/evaluation/opus/opus-evaluation-YYYY-MM-DD.md` — 当日の総合評価レポート
+
+次回評価時、前回分を `.workspace/0_docs/evaluation/opus/archive/YYYY-MM-DD/` へ移す。
+
+### 第2評価者（GPT-5.6 Sol）
+
+当日分は `.workspace/0_docs/evaluation/gpt/` 直下に置く。第1評価者の `opus/` 配下は読まない。
+
+1. `.workspace/0_docs/evaluation/gpt/gpt-specific-weaknesses-YYYY-MM-DD.md` — マイナス点の詳細一覧
+2. `.workspace/0_docs/evaluation/gpt/gpt-specific-strengths-YYYY-MM-DD.md` — プラス点の詳細一覧
+3. `.workspace/0_docs/evaluation/gpt/gpt-specific-proposals-YYYY-MM-DD.md` — 提案（0点）の詳細一覧
+4. `.workspace/0_docs/evaluation/gpt/gpt-evaluation-YYYY-MM-DD.md` — 当日の総合評価レポート
+
+次回評価時、前回分を `.workspace/0_docs/evaluation/gpt/archive/YYYY-MM-DD/` へ移す。
+
+### まとめ
+
+両評価者の出力が出揃った後に作成する。合意・相違・採用判断を明示する。
+
+1. `.workspace/0_docs/evaluation/specific-weaknesses-YYYY-MM-DD.md` — マイナス点の統合一覧
+2. `.workspace/0_docs/evaluation/specific-strengths-YYYY-MM-DD.md` — プラス点の統合一覧
+3. `.workspace/0_docs/evaluation/specific-proposals-YYYY-MM-DD.md` — 提案（0点）の統合一覧
+4. `.workspace/0_docs/evaluation/evaluation-YYYY-MM-DD.md` — 当日の総合評価レポート
+5. `.workspace/0_reference/improvement-plan.md` — まとめのマイナス点に基づく改善提案書
+
+次回評価時、前回のまとめ（上記 1〜4）を `.workspace/0_docs/evaluation/archive/` へ移す。`improvement-plan.md` は最新版を置き換える。
+
+### アーカイブ
+
+- **まとめ**の前回分: `.workspace/0_docs/evaluation/archive/`
+- **Fable 5**（新規評価は行わない）: `.workspace/0_docs/evaluation/fable/archive/YYYY-MM-DD/`（フォルダ名は評価日）
+- **Fable 以前**（2026-03 系など）: `.workspace/0_docs/evaluation/archive/`
+
+### ドキュメントの書き方
+
+`*-specific-strengths-*.md` / `*-specific-weaknesses-*.md` / `*-specific-proposals-*.md` およびまとめの同種ファイルは以下の構造で記述する：
+
+- ファイル冒頭に採点基準を表形式で掲載する
+- セクションは `##`（大分類）→ `###`（小分類）の 2 階層にまとめる
+- 各項目は `- **タイトル** \`±N\`` のリスト形式で記述する
+- 説明文は `>` ブロック引用としてリストの子要素（インデント付き）に記述する
+- 対象ファイルがある場合は説明文の末尾に `> 対象ファイル: \`path\`` として記述する
+
+---
+
+## 評価の手順
+
+**過去の評価文書を参照するだけで判断しない。必ず当該コードを直接読み、現状を検証してから採点する。**
+
+- 前回評価は直近のまとめ `.workspace/0_docs/evaluation/evaluation-YYYY-MM-DD.md` を起点とする。まとめがまだ無い場合は `.workspace/0_docs/evaluation/fable/archive/2026-07-31/` を前回とする
+- 各評価者は自系統の前回詳細（`opus/` または `gpt/`、初回は Fable アーカイブ）のマイナス点が解決済みかどうかを、**対象ファイルを読み直して確認する**
+- 前回「解決済み」でなかった項目を「解決済み」と書く前に、コードの該当箇所を確認する
+- `mix alchemy.ci`（または同等の個別コマンド）の通過可否など、実行で確認すべき項目は可能な限り実行して結果を見る（実行環境の制約がある場合はその旨を明記する）
+
+---
+
+## 評価の姿勢
+
+- **忌憚なく**: 良い点は良い、悪い点は悪いと明確に述べる
+- **根拠を示す**: ファイル名・行番号・コード例を引用して具体的に説明する
+- **建設的に**: マイナス点には必ず改善方針を添える
+- **提案は前向きに**: 0点提案は批判ではなく「次のステップ」として記述する
+- **比較軸を持つ**: 同種の OSS（Bevy, Godot, Phoenix LiveView 等）と比較して評価する

@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package alchemy.frame;
+
+// レガシー: ETF を bytes で包んでいた形式
+message FrameInjectionEnvelope {
+  bytes payload = 1;
+}
+
+// set_frame_injection_binary 用のネイティブ injection
+message FrameInjection {
+  optional Vec2f player_input = 1;
+  optional Vec2f player_snapshot = 2;
+  optional double elapsed_seconds = 3;
+  // キーが無い場合はフィールドごと省略（適用しない）。空リストは明示ラッパで送る。
+  optional WeaponSlotsList weapon_slots = 4;
+  optional EnemyDamageList enemy_damage_this_frame = 5;
+  optional SpecialEntitySnapshot special_entity_snapshot = 6;
+}
+
+message Vec2f {
+  float x = 1;
+  float y = 2;
+}
+
+message WeaponSlotsList {
+  repeated WeaponSlot slots = 1;
+}
+
+message WeaponSlot {
+  uint32 kind_id = 1;
+  uint32 level = 2;
+  float cooldown = 3;
+  float cooldown_sec = 4;
+  int32 precomputed_damage = 5;
+}
+
+message EnemyDamageList {
+  repeated EnemyDamagePair pairs = 1;
+}
+
+message EnemyDamagePair {
+  uint32 kind_id = 1;
+  float damage = 2;
+}
+
+message SpecialEntitySnapshot {
+  oneof state {
+    SpecialNone none = 1;
+    SpecialAlive alive = 2;
+  }
+}
+
+message SpecialNone {}
+
+message SpecialAlive {
+  float x = 1;
+  float y = 2;
+  float radius = 3;
+  float damage = 4;
+  bool invincible = 5;
+}

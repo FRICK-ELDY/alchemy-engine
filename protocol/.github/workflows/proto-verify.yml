@@ -1,0 +1,28 @@
+﻿name: Proto compile check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  proto-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compile protobuf schemas
+        run: |
+          set -eux
+          protoc --version
+          protoc -I proto --include_imports --descriptor_set_out=/tmp/alchemy-descriptor.pb \
+            proto/render_frame.proto \
+            proto/input_events.proto \
+            proto/frame_injection.proto \
+            proto/client_info.proto
+          test -s /tmp/alchemy-descriptor.pb
