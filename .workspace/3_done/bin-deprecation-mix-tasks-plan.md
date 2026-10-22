@@ -76,6 +76,6 @@
 
 ## 5. 将来対応（未実施）
 
-以下の項目は将来対応として [bin-deprecation-mix-tasks-future.md](../0_reference/bin-deprecation-mix-tasks-future.md) に記載。
+以下の項目は将来対応として [bin-deprecation-mix-tasks-future.md](../0_docs/reference/bin-deprecation-mix-tasks-future.md) に記載。
 
 - `mix alchemy.build` の `--web` / `--android` / `--ios` オプション

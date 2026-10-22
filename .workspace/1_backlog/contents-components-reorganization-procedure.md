@@ -169,7 +169,7 @@ mkdir -p apps/contents/lib/contents/components/nodes/users
 | ファイル | 更新内容 |
 |:---|:---|
 | `.workspace/3_done/platform-info-crate-and-local-user-execution-plan.md` | モジュール名を新表記に |
-| `.workspace/0_reference/improvement-plan.md` | モジュール名を新表記に |
+| `.workspace/0_docs/reference/improvement-plan.md` | モジュール名を新表記に |
 | `.workspace/0_docs/architecture/elixir/contents.md` | コンポーネント一覧を新構成に |
 | `.workspace/0_docs/architecture/overview.md` | component_list の説明を新モジュール名に |
 
