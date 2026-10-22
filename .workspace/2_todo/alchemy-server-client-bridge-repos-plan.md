@@ -153,7 +153,7 @@ flowchart TB
 |:---|:---|
 | [protocol-repo-extraction-procedure.md](protocol-repo-extraction-procedure.md) | `.proto` とワイヤ仕様の別リポ化 |
 | [client-server-separation-procedure.md](../3_done/client-server-separation-procedure.md) | 既存のクライアント／サーバー分離の実施済み手順 |
-| [client-server-separation-future.md](../0_reference/client-server-separation-future.md) | 未実施・将来項目 |
+| [client-server-separation-future.md](../0_docs/reference/client-server-separation-future.md) | 未実施・将来項目 |
 
 ---
 

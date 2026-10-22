@@ -55,7 +55,7 @@
 - **前回改善計画の第 1 波が手つかず** `-2` — **Opus**（-2）
   > 2026-08-25 の第 1 波 6 件（クライアントテストの CI、prod 認証の fail-secure、Zenoh 再接続、保証文書、依存監査、Tetris の dt）は、現行ソースで未着手だった。
   > **採用判断**: プロセスの停止として **-2**。各技術項目は個別に再計上済みなので、ここで二重に重くしない。
-  > 対象ファイル: `.workspace/0_reference/improvement-plan.md`
+  > 対象ファイル: `.workspace/0_docs/reference/improvement-plan.md`
 
 ---
 

@@ -24,4 +24,4 @@
 ## 参照ドキュメント
 
 - 実施順序・依存関係: [roadmap.md](roadmap.md)
-- 時期非依存の調査・設計メモ: [0_reference/](0_reference)
+- 時期非依存の調査・設計メモ: [0_docs/reference/](0_docs/reference)

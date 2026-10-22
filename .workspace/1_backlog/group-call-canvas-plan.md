@@ -302,4 +302,4 @@ flowchart LR
 - [fix_contents.md](../0_docs/architecture/fix_contents.md) — アーキテクチャ設計
 - [canvas-test-design.md](../3_done/canvas-test-design.md) — Canvas UI 設計の参考
 - [upper-layer-infrastructure-plan.md](upper-layer-infrastructure-plan.md) — ディスカバリ設計
-- [client-server-separation-procedure.md](../3_done/client-server-separation-procedure.md) — ネットワーク構成（未実施項目は [client-server-separation-future.md](../0_reference/client-server-separation-future.md)）
+- [client-server-separation-procedure.md](../3_done/client-server-separation-procedure.md) — ネットワーク構成（未実施項目は [client-server-separation-future.md](../0_docs/reference/client-server-separation-future.md)）

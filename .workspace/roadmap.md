@@ -31,7 +31,7 @@
 
 | 順序 | ドキュメント | フェーズ | 依存 | 状態 |
 |:---:|-------------|----------|------|------|
-| 1 | [client-server-separation-procedure](3_done/client-server-separation-procedure.md) | 0〜3 実施済み、4〜5 は [client-server-separation-future](0_reference/client-server-separation-future.md) | なし | 一部完了 |
+| 1 | [client-server-separation-procedure](3_done/client-server-separation-procedure.md) | 0〜3 実施済み、4〜5 は [client-server-separation-future](0_docs/reference/client-server-separation-future.md) | なし | 一部完了 |
 | 2 | [env-and-serialization-migration-plan](1_backlog/env-and-serialization-migration-plan.md) | 環境変数・Erlang term 化 | B-1 の Phase 1 と整合 | 一部完了（platform-info 実装済み） |
 | 3 | [render-thread-offload-plan](1_backlog/render-thread-offload-plan.md) | 1〜3 | B-1 の Phase 2 と並行検討可能 | 未着手 |
 
@@ -80,9 +80,9 @@
 
 | ドキュメント | 用途 |
 |-------------|------|
-| [improvement-plan](0_reference/improvement-plan.md) | 課題一覧・優先度・改善方針 |
-| [rust-ecs-implementation-status](0_reference/rust-ecs-implementation-status.md) | ECS 実装状況の整理 |
-| [game-world-inner-flow](0_reference/game-world-inner-flow.md) | データフロー・ボトルネック整理 |
+| [improvement-plan](0_docs/reference/improvement-plan.md) | 課題一覧・優先度・改善方針 |
+| [rust-ecs-implementation-status](0_docs/reference/rust-ecs-implementation-status.md) | ECS 実装状況の整理 |
+| [game-world-inner-flow](0_docs/reference/game-world-inner-flow.md) | データフロー・ボトルネック整理 |
 
 ---
 

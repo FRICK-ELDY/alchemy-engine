@@ -19,7 +19,7 @@
 | 第1評価者 | `.workspace/0_docs/evaluation/opus/` |
 | 第2評価者 | `.workspace/0_docs/evaluation/gpt/` |
 | 統合一覧 | 本ディレクトリの `specific-*-2026-10-09.md` |
-| 改善提案書 | `.workspace/0_reference/improvement-plan.md` |
+| 改善提案書 | `.workspace/0_docs/reference/improvement-plan.md` |
 
 `mix alchemy.ci` の全体は、両者ともビルド競合を避けて実行していない。Opus は別の `CARGO_TARGET_DIR` で `cargo test -p shared`（18 pass）、`cargo test -p nif`（6 pass）、golden 契約 1 件の pass を確認した。GPT は実行していない。したがって本まとめは、CI が緑であることを保証しない。
 
@@ -113,7 +113,7 @@ Bevy や Godot と機能量で比べる段階ではない。先に「登録し�
 
 ## 次に直す順序
 
-改善計画の第 1 波と対応する。詳細は `.workspace/0_reference/improvement-plan.md`。
+改善計画の第 1 波と対応する。詳細は `.workspace/0_docs/reference/improvement-plan.md`。
 
 1. `"__quit__"` をネットワークからノード停止へ届かせない。`Events.Game` に受け皿を足す。
 2. クライアントの `cargo test` を CI に載せる。

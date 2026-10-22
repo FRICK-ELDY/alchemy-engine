@@ -47,9 +47,9 @@
 ### 自己改善サイクル
 
 - **前回改善計画の第 1 波 6 件が 45 日間で 1 件も消化されていない** `-2`（新規）
-  > `.workspace/0_reference/improvement-plan.md:59-143` の第 1 波（P-1 クライアントテストを CI に載せる / P-2 prod 認証の fail-secure / P-3 Elixir `ZenohBridge` の再接続 / P-4 保証文書の追従 / P-5 依存監査 / P-6 Tetris の dt 化）を現行ソースで 1 件ずつ確認した。P-1 は `client/.github/workflows/ci.yml` に `cargo test` がなく未了、P-2 は `config.exs:57` が依然 `false`、P-3 は `zenoh_bridge.ex:52-84` に死活監視なし、P-4 は `ci.md:10,13` が依然 `cargo test -p physics` / `cargo bench`、P-5 は 4 リポジトリとも `dependabot.yml` なし、P-6 は `tetris/playing.ex:10,13` が依然 `1.0 / 60.0` と `45` フレーム。いずれも「数行〜1 日」と見積もられていた項目である。`world-server` の Elixir テスト数も core 46 / contents 32 / network 102 で前回と完全に同数だった。分割作業を優先した判断はありうるが、評価 → 計画 → 実装のループがこのサイクルでは回っていない。
+  > `.workspace/0_docs/reference/improvement-plan.md:59-143` の第 1 波（P-1 クライアントテストを CI に載せる / P-2 prod 認証の fail-secure / P-3 Elixir `ZenohBridge` の再接続 / P-4 保証文書の追従 / P-5 依存監査 / P-6 Tetris の dt 化）を現行ソースで 1 件ずつ確認した。P-1 は `client/.github/workflows/ci.yml` に `cargo test` がなく未了、P-2 は `config.exs:57` が依然 `false`、P-3 は `zenoh_bridge.ex:52-84` に死活監視なし、P-4 は `ci.md:10,13` が依然 `cargo test -p physics` / `cargo bench`、P-5 は 4 リポジトリとも `dependabot.yml` なし、P-6 は `tetris/playing.ex:10,13` が依然 `1.0 / 60.0` と `45` フレーム。いずれも「数行〜1 日」と見積もられていた項目である。`world-server` の Elixir テスト数も core 46 / contents 32 / network 102 で前回と完全に同数だった。分割作業を優先した判断はありうるが、評価 → 計画 → 実装のループがこのサイクルでは回っていない。
   > **改善方針**: 構造変更のサイクルでも、第 1 波のうち 1 行で済むもの（P-1 の `cargo test --workspace`、P-2 の prod 既定反転）だけは同じ PR 列に混ぜる運用にする。
-  > 対象ファイル: `.workspace/0_reference/improvement-plan.md`
+  > 対象ファイル: `.workspace/0_docs/reference/improvement-plan.md`
 
 **プロジェクト全体 小計: -13**
 

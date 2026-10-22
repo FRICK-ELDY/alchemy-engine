@@ -4,7 +4,7 @@
 > 完了日: 2026-03-15  
 > 目的: render + input を別プロセス・別 exe として分離し、サーバー（Elixir）とネットワークで接続する構成を実現する。あわせて Elixir と Rust の状態・定義の切り分けを明確にする。
 >
-> **実施結果**: フェーズ 0〜3 を完了。NetworkRenderBridge、Zenoh 経路、FrameBroadcaster/ZenohBridge によるフレーム配信・入力受信が実装済み。未実施項目は [client-server-separation-future.md](../0_reference/client-server-separation-future.md) を参照。
+> **実施結果**: フェーズ 0〜3 を完了。NetworkRenderBridge、Zenoh 経路、FrameBroadcaster/ZenohBridge によるフレーム配信・入力受信が実装済み。未実施項目は [client-server-separation-future.md](../0_docs/reference/client-server-separation-future.md) を参照。
 
 ---
 
@@ -16,8 +16,8 @@
 | 1 | プロトコル設計（フレーム・入力の仕様） | 1〜2 週間 | ✅ 完了 |
 | 2 | クライアント exe 土台（NetworkRenderBridge） | 2〜3 週間 | ✅ 完了 |
 | 3 | サーバー側フレーム配信経路 | 2〜3 週間 | ✅ 完了 |
-| 4 | ビルド・配布 | 1 週間 | → [reference](../0_reference/client-server-separation-future.md) |
-| 5 | ヘッドレスモード・オプション化 | 1〜2 週間（任意） | → [reference](../0_reference/client-server-separation-future.md) |
+| 4 | ビルド・配布 | 1 週間 | → [reference](../0_docs/reference/client-server-separation-future.md) |
+| 5 | ヘッドレスモード・オプション化 | 1〜2 週間（任意） | → [reference](../0_docs/reference/client-server-separation-future.md) |
 
 ---
 
@@ -313,7 +313,7 @@ game/room/{room_id}/input/action    # クライアント → サーバー（sele
 
 **課題**: client_desktop 終了後も zenohd は残り続ける。ユーザーが気づかず PC リソースを消費する。
 
-**対応**: → [improvement-plan.md I-G](../0_reference/improvement-plan.md#i-g-ランチャーlauncherの課題) に統合。Discord 風トレイランチャーで zenohd / HL-Server / Client を一括管理。
+**対応**: → [improvement-plan.md I-G](../0_docs/reference/improvement-plan.md#i-g-ランチャーlauncherの課題) に統合。Discord 風トレイランチャーで zenohd / HL-Server / Client を一括管理。
 
 ---
 

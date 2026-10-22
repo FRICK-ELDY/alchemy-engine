@@ -5,7 +5,7 @@
 > 参照: [.workspace/0_docs/architecture/fix_contents.md](../../architecture/fix_contents.md)  
 > 目的: コンテンツを最小単位まで分解し、VR 空間で直感的な論理構築を可能にする統一ディレクトリ・アーキテクチャを構築する。
 >
-> **実施結果**: Phase 1〜5 を完了。未実施項目は [fix-contents-implementation-future.md](../0_reference/fix-contents-implementation-future.md) を参照。
+> **実施結果**: Phase 1〜5 を完了。未実施項目は [fix-contents-implementation-future.md](../0_docs/reference/fix-contents-implementation-future.md) を参照。
 >
 > **注記（Behaviour 名前空間）**: Behaviour は現在 `Contents.Behaviour.*`（behaviour/ 配下）に集約済み。本手順書実施時点では層ごとの `core/behaviour.ex`, `scenes/core/behaviour.ex` 等であった。参照: [contents-behaviour-namespace-implementation-plan.md](contents-behaviour-namespace-implementation-plan.md)。
 
@@ -313,7 +313,7 @@ bool ベクトルに対する集約演算。
 
 #### Step 3-9: ノード実装例（math）
 
-数学関数。sign, cos, tan 等を配置予定。本 Phase ではディレクトリのみ作成し、実装は後続とする。→ [fix-contents-implementation-future.md](../0_reference/fix-contents-implementation-future.md#2-ノード実装math-カテゴリ) 参照。
+数学関数。sign, cos, tan 等を配置予定。本 Phase ではディレクトリのみ作成し、実装は後続とする。→ [fix-contents-implementation-future.md](../0_docs/reference/fix-contents-implementation-future.md#2-ノード実装math-カテゴリ) 参照。
 
 ---
 
@@ -571,7 +571,7 @@ flowchart TB
 
 本手順書では **新規ディレクトリ・モジュールの構築** に限定する。
 
-未実施の移行項目は [fix-contents-implementation-future.md](../0_reference/fix-contents-implementation-future.md#1-現行コード移行別タスク) を参照。
+未実施の移行項目は [fix-contents-implementation-future.md](../0_docs/reference/fix-contents-implementation-future.md#1-現行コード移行別タスク) を参照。
 
 ---
 

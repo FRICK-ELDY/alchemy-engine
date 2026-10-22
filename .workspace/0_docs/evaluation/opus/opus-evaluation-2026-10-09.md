@@ -4,7 +4,7 @@
 
 - **評価者**: Claude Opus 5.5（第1評価者）。他の評価者とは協調せず独立に評価した。GPT 系の評価ファイルと、本日付の他のファイルは読んでいない。
 - **準拠ルール**: ルートの `.cursor/rules/evaluation.mdc`。`world-server/.cursor/rules/evaluation.mdc` は古いため使っていない。
-- **前回資料の扱い**: `archive/` にある 2026-08-25 の総合まとめ（weaknesses / strengths / proposals / evaluation）と、自系統の前回詳細 `opus/archive/2026-08-25/` は「再検証すべき主張の一覧」としてだけ使った。点数は一切引き継いでいない。`.workspace/0_reference/improvement-plan.md` は計画の文脈として参照し、各項目が消化されたかを現行ソースで確かめた。
+- **前回資料の扱い**: `archive/` にある 2026-08-25 の総合まとめ（weaknesses / strengths / proposals / evaluation）と、自系統の前回詳細 `opus/archive/2026-08-25/` は「再検証すべき主張の一覧」としてだけ使った。点数は一切引き継いでいない。`.workspace/0_docs/reference/improvement-plan.md` は計画の文脈として参照し、各項目が消化されたかを現行ソースで確かめた。
 - **評価の根拠**: 自分で開いた現行ソースのみ。各詳細ファイルの行番号は今回読んだものである。
 
 ### 実行したこと

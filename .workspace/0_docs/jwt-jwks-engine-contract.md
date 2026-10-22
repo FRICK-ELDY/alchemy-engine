@@ -182,4 +182,4 @@ JWT 発行 → Bearer (room_token 等) → JWKS 署名 + iss/aud/exp + kid
 - [x] clock skew ±60 秒の許容
 - [x] auth base URL を設定可能にする（`AUTH_JWKS_URL` または `AUTH_BASE_URL`）
 
-参照: [fable-improvement-plan.md](../../../engine/.workspace/0_reference/fable-improvement-plan.md)
+参照: [fable-improvement-plan.md](reference/fable-improvement-plan.md)

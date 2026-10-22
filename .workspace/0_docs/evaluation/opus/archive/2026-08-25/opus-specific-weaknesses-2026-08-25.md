@@ -226,7 +226,7 @@
 ## engine — apps/server
 
 - **テストが 0 件** `-1`
-  > `apps/server/test/` ディレクトリが依然存在しない。lib は `server.ex` と `application.ex` の 2 ファイル 41 行で、`:main` ルーム起動失敗時に raise する fail-fast の起動シーケンス（プラス点として評価している箇所）そのものが無検証。改善方針: Supervisor ツリーが起動して `:main` ルームが Registry に登録されるところまでを見る smoke test 1 本。`.workspace/0_reference/improvement-plan.md` の D-4 に同じ項目が挙がっており、今回も未着手のまま。
+  > `apps/server/test/` ディレクトリが依然存在しない。lib は `server.ex` と `application.ex` の 2 ファイル 41 行で、`:main` ルーム起動失敗時に raise する fail-fast の起動シーケンス（プラス点として評価している箇所）そのものが無検証。改善方針: Supervisor ツリーが起動して `:main` ルームが Registry に登録されるところまでを見る smoke test 1 本。`.workspace/0_docs/reference/improvement-plan.md` の D-4 に同じ項目が挙がっており、今回も未着手のまま。
   > 対象ファイル: `engine/apps/server/`
 
 - **リリース定義の不在** `-1`

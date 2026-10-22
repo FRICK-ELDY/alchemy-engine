@@ -36,8 +36,8 @@
   > 対象ファイル: `client/proto_resolve/src/lib.rs`, `world-server/PROTOCOL_PIN`, `client/PROTOCOL_PIN`
 
 - **認証をサービスとして切り出し、JWT / JWKS 契約で疎結合にした** `+2`
-  > `auth-server` は RS256 JWT を発行して JWKS を公開し、`world-server` は `Network.AuthVerifier` で JWKS を引いて検証するだけ。両者の取り決めは `auth-server/.workspace/0_docs/jwt-jwks-engine-contract.md` に文書化されている。
-  > 対象ファイル: `world-server/apps/network/lib/network/auth_verifier.ex`, `auth-server/.workspace/0_docs/jwt-jwks-engine-contract.md`
+  > `auth-server` は RS256 JWT を発行して JWKS を公開し、`world-server` は `Network.AuthVerifier` で JWKS を引いて検証するだけ。両者の取り決めは `.workspace/0_docs/jwt-jwks-engine-contract.md` に文書化されている。
+  > 対象ファイル: `world-server/apps/network/lib/network/auth_verifier.ex`, `.workspace/0_docs/jwt-jwks-engine-contract.md`
 
 - **protocol リポジトリが自前のコンパイル検証 CI を持つ** `+1`（新規）
   > `protocol/.github/workflows/proto-verify.yml` で全 `.proto` を protoc でコンパイルする。スキーマ単体の健全性は消費側に依存せず守られる。
@@ -403,7 +403,7 @@
 
 - **world-server との契約文書** `+2`
   > `jwt-jwks-engine-contract.md` に claims と検証手順を明記している。
-  > 対象ファイル: `auth-server/.workspace/0_docs/jwt-jwks-engine-contract.md`
+  > 対象ファイル: `.workspace/0_docs/jwt-jwks-engine-contract.md`
 
 - **統一されたエラー JSON** `+1`
   > `ErrorJSON` で形式を揃えている。
@@ -459,7 +459,7 @@
 
 - **自己評価サイクルの仕組み** `+2`
   > 評価 → 改善計画 → 実装のループを文書として持っている（回っていない点は別途マイナス）。
-  > 対象ファイル: `.workspace/0_reference/improvement-plan.md`
+  > 対象ファイル: `.workspace/0_docs/reference/improvement-plan.md`
 
 ### 可観測性
 
@@ -470,8 +470,8 @@
 ### 技術的負債の管理
 
 - **技術的負債を文書で追跡** `+1`
-  > 未実施項目を `0_reference` に書き出している。
-  > 対象ファイル: `.workspace/0_reference/`
+  > 未実施項目を `reference` に書き出している。
+  > 対象ファイル: `.workspace/0_docs/reference/`
 
 **横断評価層 小計: +23**
 

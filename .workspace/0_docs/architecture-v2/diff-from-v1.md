@@ -5,7 +5,7 @@
 > **対象**: [overview.md](overview.md)（v2 目標図）と [../architecture/](../architecture/)（v1 現行正本）  
 > **方針**: 洗い出し＋一部衝突の方針決定を記録する。v1 本文の書き換え・アーカイブ移動は行わない（決定内容の本文化は別タスク）。  
 > **補足**: 「v1 に無い」は **`.workspace/0_docs/architecture/` 内に正本が無い** という意味。  
-> 兄弟サービス（例: `auth-server/.workspace/`）に既にある文書は §8 で別扱いする。
+> 兄弟サービス（例: `.workspace/`）に既にある文書は §8 で別扱いする。
 
 凡例:
 
@@ -34,7 +34,7 @@
 | M5 | **クライアントは Pure Rust（wgpu / OpenXR）** | VRAlchemy = winit/wgpu、任意で OpenXR。**クライアントは nif 非依存** | サーバ側 NIF の有無は C2 | [rust/desktop_client.md](../architecture/rust/desktop_client.md), [overview.md](../architecture/overview.md) |
 | M6 | **最終ゴールは分散連合型 VRSNS** | vision-goal / federation。運営者間連携を目指す | 連合の具体手段は **§2.1 / C6 で決定**（S2S HTTPS 必須・運営者間フルメッシュ禁止） | [vision-goal.md](../vision-goal.md), [federation.md](../architecture/federation.md) |
 | M7 | **スケールアウトと連合は別層** | 単一運営者内スケール ≠ 運営者間連合 | §2.1: Zenoh Mesh は主にスケールアウト層（＋ Trusted+ACL）。連合の正面は S2S | [federation.md](../architecture/federation.md) |
-| M8 | **認証は RS256 JWT + JWKS** | federation / auth 契約。`/.well-known/jwks.json`、`sub` = user UUID | ToS / Friendship 等の拡張は §8・A1。**署名検証モデルは一致** | [federation.md](../architecture/federation.md), [jwt-jwks-engine-contract.md](../../../auth-server/.workspace/0_docs/jwt-jwks-engine-contract.md) |
+| M8 | **認証は RS256 JWT + JWKS** | federation / auth 契約。`/.well-known/jwks.json`、`sub` = user UUID | ToS / Friendship 等の拡張は §8・A1。**署名検証モデルは一致** | [federation.md](../architecture/federation.md), [jwt-jwks-engine-contract.md](../jwt-jwks-engine-contract.md) |
 | M9 | **Room Token で入室をゲート** | v1: `Network.RoomToken`（Phoenix.Token）。v2: world-server が Room Token 発行、入力に付与 | 発行主体・JWT 必須化の進みは実装差。**概念は一致** | [elixir/network.md](../architecture/elixir/network.md), [overview.md](overview.md) |
 | M10 | **Formula を空間ギミック／数式実行に使う** | バイトコード VM の存在と「定義と実行の分離」思想 | **実行場所**（NIF vs shared-sim）は C2 / C11。命令仕様は部分維持可 | [formula-vm-bytecode.md](../architecture/formula-vm-bytecode.md) |
 | M11 | **旧ゲーム用 60Hz NIF / GameWorld は復活させない** | v1: physics NIF・Rust 60Hz ループ撤去済み。v2: world-server NIF 完全廃止 | Rapier を Pure Rust host に置くのは **別経路**（C4）。NIF 物理の復活ではない | [rust/nif.md](../architecture/rust/nif.md), [legacy_contents-to-physics-bottlenecks.md](../architecture/legacy_contents-to-physics-bottlenecks.md) |
@@ -125,7 +125,7 @@ v1 の `architecture/` に **同等のコンポーネント正本がない**（�
 
 | ID | 要素 | 概要 | 既存文書の所在 |
 |:---|:---|:---|:---|
-| A1 | **auth-server** | JWT (RS256)・ToS 同意・Friendship・JWKS。Stage 1 SQLite / Stage 2+ PostgreSQL | **あり** — [`auth-server/.workspace/0_docs/jwt-jwks-engine-contract.md`](../../../auth-server/.workspace/0_docs/jwt-jwks-engine-contract.md)（§8）。署名検証モデル自体は **M8 で一致** |
+| A1 | **auth-server** | JWT (RS256)・ToS 同意・Friendship・JWKS。Stage 1 SQLite / Stage 2+ PostgreSQL | **あり** — [`.workspace/0_docs/jwt-jwks-engine-contract.md`](../jwt-jwks-engine-contract.md)（§8）。署名検証モデル自体は **M8 で一致** |
 | A2 | **assets-server** | Spatial VCS（Commit/Branch/Tag）・Quota・アップロード検疫・Origin Cert・R2 CAS | なし（v2 図のみ） |
 | A3 | **BillingProvider** | MoR/Stripe・プリペイドコイン・Quota 即時拡張（Optional Profile） | なし |
 | A4 | **market-server** | BOOTH 風ストア・License Token・エスクロー・連合 Trusted/Blocked | なし |
@@ -241,14 +241,14 @@ v1 の `architecture/` に **同等のコンポーネント正本がない**（�
 ### 8.1 現状：差分が「薄い」理由
 
 `architecture/`（v1）から見ると auth は断片のみ（[federation.md](../architecture/federation.md) の `auth/`・JWKS、overview の identity federation 箱）。  
-一方、**実装契約の正本は既に** [`auth-server/.workspace/0_docs/jwt-jwks-engine-contract.md`](../../../auth-server/.workspace/0_docs/jwt-jwks-engine-contract.md) にある。
+一方、**実装契約の正本は既に** [`.workspace/0_docs/jwt-jwks-engine-contract.md`](../jwt-jwks-engine-contract.md) にある。
 
 | 層 | 置き場 | 内容の粒度 |
 |:---|:---|:---|
 | engine 全体図（v2） | `architecture-v2/overview.md` | auth-server 箱・JWT/JWKS/ToS/Friendship のビジョン |
 | engine 連合方針（v1） | `architecture/federation.md` | Phase 4 identity federation・`auth/` をホーム IdP とする |
-| **auth ↔ engine 契約** | `auth-server/.workspace/0_docs/` | RS256・iss/aud・JWKS・失効モデル・engine 検証チェックリスト（**実装済み寄り**） |
-| auth 内部 hardening | `auth-server/.workspace/3_done/` 等 | セッション・レート制限・アカウントライフサイクル（サービス固有） |
+| **auth ↔ engine 契約** | `.workspace/0_docs/` | RS256・iss/aud・JWKS・失効モデル・engine 検証チェックリスト（**実装済み寄り**） |
+| auth 内部 hardening | `.workspace/3_done/` 等 | セッション・レート制限・アカウントライフサイクル（サービス固有） |
 
 洗い出しで A1 を「追加」としたのは **engine の `architecture/` ツリーに正本が無い** からであり、**auth 側に文書が無いからではない**。
 
@@ -270,7 +270,7 @@ v1 の `architecture/` に **同等のコンポーネント正本がない**（�
 | 案 | 内容 | 長所 | 短所 |
 |:---|:---|:---|:---|
 | **A. 移設** | `jwt-jwks-engine-contract.md` を `architecture-v2/auth-jwt-jwks-contract.md`（または `architecture/auth/`）へ移動し、auth 側はスタブリンク | engine 側で横断契約が一覧できる | auth リポジトリ単体で契約が遠くなり、サービス開発時の導線が弱る |
-| **B. 索引（推奨）** | `architecture-v2/auth-server.md` を薄い索引にする（責務・図上の位置・ギャップ表）。契約正本は `auth-server/.workspace/0_docs/` のまま | 保証の単位＝フォルダ（サービス）を維持。二重管理を避けやすい | engine だけ見ると詳細がワンホップ先 |
+| **B. 索引（推奨）** | `architecture-v2/auth-server.md` を薄い索引にする（責務・図上の位置・ギャップ表）。契約正本は `.workspace/0_docs/` のまま | 保証の単位＝フォルダ（サービス）を維持。二重管理を避けやすい | engine だけ見ると詳細がワンホップ先 |
 | **C. 複製** | 両方に全文を置く | 単体閲覧は楽 | すぐ乖離する。非推奨 |
 
 ### 8.4 統合後にやる最小セット（案 B 前提）
@@ -287,6 +287,6 @@ v1 の `architecture/` に **同等のコンポーネント正本がない**（�
 - [v2 overview（目標図）](overview.md)
 - [v1 overview（現行正本）](../architecture/overview.md)
 - [vision-goal.md](../vision-goal.md)
-- [auth: JWT/JWKS engine 契約](../../../auth-server/.workspace/0_docs/jwt-jwks-engine-contract.md)
+- [auth: JWT/JWKS engine 契約](../jwt-jwks-engine-contract.md)
 - [v1 federation（auth 断片）](../architecture/federation.md)
 - [authoritative-state-sync-policy.md](../architecture/authoritative-state-sync-policy.md)（C1/C12 本文化先）
