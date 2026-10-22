@@ -31,7 +31,7 @@ fn main() {
     loop {
         world.step(TICK_DT_SECS);
 
-        if world.tick % AUTHORITATIVE_TICK_HZ as u64 == 0 {
+        if world.tick.is_multiple_of(AUTHORITATIVE_TICK_HZ as u64) {
             log::info!("tick={} manifest={}", world.tick, world.manifest_id);
         }
 
