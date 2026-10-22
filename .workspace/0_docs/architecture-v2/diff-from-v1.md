@@ -1,7 +1,7 @@
 # architecture v1 ↔ v2 — 追加・削除・衝突の洗い出し
 
 > **作成日**: 2026-10-22  
-> **更新**: 2026-10-22 — C6 / C1・C12 / C10・D3 / host-server 配置を方針決定。C9・D6 は保留  
+> **更新**: 2026-10-23 — C9・D6 を方針決定（Network Transport = Zenoh 一本化／Device Input Edge = OSC over UDP）。2026-10-22 — C6 / C1・C12 / C10・D3 / host-server 配置を方針決定  
 > **対象**: [overview.md](overview.md)（v2 目標図）と [../architecture/](../architecture/)（v1 現行正本）  
 > **方針**: 洗い出し＋一部衝突の方針決定を記録する。v1 本文の書き換え・アーカイブ移動は行わない（決定内容の本文化は別タスク）。  
 > **補足**: 「v1 に無い」は **`.workspace/0_docs/architecture/` 内に正本が無い** という意味。  
@@ -30,7 +30,7 @@
 | M1 | **権威更新レートは推奨 20Hz** | v1: Elixir tick 推奨 20Hz（10/30/非推奨60）。v2: host-server 権威 Tick 20Hz | **誰が tick するか**は C1 | [authoritative-state-sync-policy.md](../architecture/authoritative-state-sync-policy.md), [overview.md](overview.md) |
 | M2 | **表示時間と主時間の分離** | クライアント描画は ~60fps（v2 は ~60–120）で予測・補間。表示は権威スナップショットを埋めない | 権威の主体は C1。補間方針自体は一致 | 同上, [policy/render-interpolation.md](../policy/render-interpolation.md) |
 | M3 | **ワイヤ契約 SSoT = alchemy-protocol `proto/`** | RenderFrame / 入力等は Protobuf。PROTOCOL_PIN 方向 | ドメイン権威の置き場は C1 / C12。**ペイロード形は一致** | [overview.md](../architecture/overview.md)#設計思想, [protobuf-migration.md](../architecture/protobuf-migration.md) |
-| M4 | **リアルタイム中核は Zenoh** | フレーム・入力を Zenoh で運ぶ。zenohd / zenoh-router を別プロセス想定 | UDP/Phoenix の存続は C9。Zenoh を捨てない点は一致 | [network-protocol-current.md](../architecture/network-protocol-current.md), [zenoh-protocol-spec.md](../architecture/zenoh-protocol-spec.md) |
+| M4 | **リアルタイム中核は Zenoh** | フレーム・入力を Zenoh で運ぶ。zenohd / zenoh-router を別プロセス想定 | **クライアント⇔サーバー間の転送は C9 で Zenoh 一本化**。トラッカー等のローカル OSC は Device Input Edge（C9）として別層 | [network-protocol-current.md](../architecture/network-protocol-current.md), [zenoh-protocol-spec.md](../architecture/zenoh-protocol-spec.md) |
 | M5 | **クライアントは Pure Rust（wgpu / OpenXR）** | VRAlchemy = winit/wgpu、任意で OpenXR。**クライアントは nif 非依存** | サーバ側 NIF の有無は C2 | [rust/desktop_client.md](../architecture/rust/desktop_client.md), [overview.md](../architecture/overview.md) |
 | M6 | **最終ゴールは分散連合型 VRSNS** | vision-goal / federation。運営者間連携を目指す | 連合の具体手段は **§2.1 / C6 で決定**（S2S HTTPS 必須・運営者間フルメッシュ禁止） | [vision-goal.md](../vision-goal.md), [federation.md](../architecture/federation.md) |
 | M7 | **スケールアウトと連合は別層** | 単一運営者内スケール ≠ 運営者間連合 | §2.1: Zenoh Mesh は主にスケールアウト層（＋ Trusted+ACL）。連合の正面は S2S | [federation.md](../architecture/federation.md) |
@@ -58,12 +58,12 @@
 | C6 | **方針決定済**（§2.1） | **連合の形** | スケールアウト層（libcluster）と連合層（S2S HTTP / JWKS / identity federation）の二層。Phase 4 正本 | World 連合リスト交換・Zenoh Federation Mesh・マーケット Trusted/Blocked が前面。S2S ActivityPub 系は図上で明示されない | [federation.md](../architecture/federation.md), [vision-goal.md](../vision-goal.md) |
 | C7 | 要決定 | **シェーダー定義経路** | Elixir コンテンツのアセットパスから WGSL を起動時ロード（サーバ定義寄り） | Dual Representation（ノードグラフ ⇄ WGSL）をクライアント Dual Editor + Naga 中心。規格は共通層 | [shader-elixir-interface.md](../architecture/shader-elixir-interface.md) |
 | C8 | 要決定 | **ドキュメント分割軸** | サーバー / クライアント、Elixir / Rust クレート単位 | Operator / Shared / Client Host / Guest+Platform | [policy/architecture-docs-structure.md](../policy/architecture-docs-structure.md) |
-| C9 | **保留** | **並列トランスポート** | Zenoh + UDP + Phoenix Channel を並列で記述 | 図は Zenoh 統合メッシュ中心。UDP/Phoenix の存続は未記述 | [elixir/network.md](../architecture/elixir/network.md), [network-protocol-current.md](../architecture/network-protocol-current.md) |
+| C9 | **方針決定済**（§2.1） | **Network Transport vs Device Input Edge** | Zenoh + 独自 UDP（`Network.UDP.Protocol`）+ 空間同期用 Phoenix Channel を並列で記述 | **転送は Zenoh 一本化**。独自 UDP / 空間同期用 Phoenix Channel は廃止。OSC over UDP はクライアント局所の入力エッジとして存続 | [elixir/network.md](../architecture/elixir/network.md), [network-protocol-current.md](../architecture/network-protocol-current.md) |
 | C10 | **方針決定済**（§2.1） | **コンテンツモデル** | 第一級コンテンツ 3 本（CanvasTest / BulletHell3D / FormulaTest）+ Scene/Component | WorldManifest / AlchemyPrefab / Spatial VCS / 空間ギミック Formula。検証用 3 コンテンツの位置づけが未定義だった | [elixir/contents.md](../architecture/elixir/contents.md), [scene-and-object.md](../architecture/scene-and-object.md) |
 | C11 | 要決定 | **Formula 実行場所** | Elixir `Core.Formula` → NIF VM（サーバプロセス内） | host-server / shared-sim 内の Pure Rust Formula VM（クライアント・クラウドホスト共通） | [formula-vm-bytecode.md](../architecture/formula-vm-bytecode.md), [elixir/core.md](../architecture/elixir/core.md) |
 | C12 | **方針決定済**（§2.1・C1 と一体） | **SSoT の層表現** | ドメイン = Elixir、ワイヤ = alchemy-protocol proto | ドメイン権威が host-server 側へ寄る一方、protocol / assets / auth が複数 SSoT として並立（→ **時間軸別 4 SSoT で解消**） | [overview.md](../architecture/overview.md)#設計思想 |
 
-### 2.1 方針決定（2026-10-22）
+### 2.1 方針決定（2026-10-22〜23）
 
 #### C6 — 連合の形：S2S HTTPS 必須／Zenoh フルメッシュ禁止
 
@@ -92,9 +92,21 @@ v2 overview 図の「Federation Mesh」エッジは、上記の限定用途に�
 
 本文化先: [authoritative-state-sync-policy.md](../architecture/authoritative-state-sync-policy.md) の改訂版に上記 4 行を書く。v1 の「Elixir = 状態 SSOT・主時間」は **セッション・台帳** に縮約し、**空間ティック** のみ host へ移譲する（D4 もこの読み替え）。
 
-#### C9 / D6 — 並列トランスポート：**保留**
+#### C9 / D6 — Network Transport と Device Input Edge を分離する
 
-UDP / Phoenix Channel の縮小・廃止は **後で詰める**。当面は未決のまま残し、Zenoh 中核（M4）は維持する。
+**問題**: 「独自 UDP 廃止」と書くと、フルボディ／フェイシャルトラッカー連携のための **OSC over UDP** まで消えると読まれうる。実際に廃止したいのは **クライアント⇔サーバー／ホスト間のネットワーク転送** 側であり、機器入力エッジとは層が違う。
+
+**結論**: 層を分けて決める。
+
+| 層 | 範囲 | 方針 | 保証すること | 保証しないこと |
+|:---|:---|:---|:---|:---|
+| **Network Transport** | クライアント ⇔ サーバー／ホスト間のネットワーク転送 | **Zenoh に完全一本化** | 空間状態・入力・RenderFrame 等のワイヤ上のリアルタイム経路は Zenoh（M4 と一致） | world-server 側の独自 UDP（`Network.UDP.Protocol`）および **空間同期用** Phoenix Channel による転送 |
+| **Device Input Edge** | トラッカー ⇔ クライアント間のローカル機器入力 | alchemy-client の局所入力エッジとして **標準 OSC over UDP（127.0.0.1 / LAN）** をサポート | フルボディ／フェイシャル等の OSC をクライアントが受信し、**検証・Protobuf 化**したうえで **Zenoh トピックとして送信**する | OSC をそのまま WAN／運営者間メッシュへ流すこと。world-server が OSC/UDP を直接受けて空間同期すること |
+
+**廃止（D6）**: `Network.UDP.Protocol`、空間同期を担う Phoenix Channel を前面に出す記述・経路。  
+**存続（入力エッジ）**: クライアント上の OSC over UDP 受信。ネットワーク上の正は常に Zenoh + Protobuf（alchemy-protocol）。
+
+本文化先: [network-protocol-current.md](../architecture/network-protocol-current.md) / [elixir/network.md](../architecture/elixir/network.md) の改訂、および [rust/desktop/input.md](../architecture/rust/desktop/input.md)（または `architecture-v2/osc-input-edge.md`）への OSC エッジ追記。
 
 #### C10 / D3 — 第一級コンテンツ 3 本：捨てず「v2 初期検証用 WorldManifest」へ昇格
 
@@ -155,7 +167,7 @@ v1 の `architecture/` に **同等のコンポーネント正本がない**（�
 | D3 | **第一級コンテンツ 3 本を中心とした contents 記述** | CanvasTest 等が現行第一級 | **廃止ではなく昇格**（§2.1 / C10）。Elixir ハードコード → 公式ビルトイン WorldManifest / Prefab テストスイートへ移植。記述の中心は WorldManifest / Prefab / VCS |
 | D4 | **「Elixir が状態 SSOT・主時間」の前提（単一軸）** | authoritative-state-sync-policy の核 | **時間軸分割で縮約**（§2.1 / C1・C12）。セッション・台帳は Elixir 維持。空間ティックのみ host へ。単一「Elixir=全状態 SSOT」表現は廃止 |
 | D5 | **リポジトリ内 launcher の mix run 中心モデル** | zenohd + Phoenix + Client | プロセス分離ホストモデルへ（C5）。旧メニュー構成は縮小 |
-| D6 | **UDP / Phoenix を前面に出す記述** | network の三本柱 | 図から消える（C9）。**縮小／廃止は保留**（§2.1） |
+| D6 | **独自 UDP / 空間同期用 Phoenix を前面に出す記述** | network の三本柱（Zenoh + UDP + Phoenix） | **Network Transport としては廃止**（§2.1 / C9）。OSC over UDP は Device Input Edge としてクライアント局所に残す |
 | D7 | **サーバ NIF 経由の描画・物理・入力** | 既に廃止済みの歴史記述 | v2 でも復活させない（物理は Pure Rust host として別経路で再登場＝C4） |
 
 ※ D7 は「v1 がすでに削除したものを v2 が NIF として戻す」のではなく、「Pure Rust host として再配置する」点で C4 とセットで読む。
@@ -169,18 +181,18 @@ v1 の `architecture/` に **同等のコンポーネント正本がない**（�
 | [overview.md](../architecture/overview.md) | **要改訂**（移行時） | 全体図・責務表が C1–C5 と全面衝突。当面は現行正本のまま併存 |
 | [authoritative-state-sync-policy.md](../architecture/authoritative-state-sync-policy.md) | **要改訂** | C1 / C12 正本。§2.1 の **時間軸別 4 SSoT** を本文に書く（host = 空間ティック実行権威、Elixir = セッション・台帳） |
 | [federation.md](../architecture/federation.md) | **要改訂** | C6 決定済。S2S HTTPS 必須・運営者間フルメッシュ禁止・Zenoh Mesh 用途限定を統合 |
-| [network-protocol-current.md](../architecture/network-protocol-current.md) | **要改訂** | C3 / C9。発行元とトランスポート前面の変更 |
+| [network-protocol-current.md](../architecture/network-protocol-current.md) | **要改訂** | C3 / C9 決定済。発行元変更＋ **Zenoh 一本化**（独自 UDP / 空間同期用 Phoenix を前面から外す） |
 | [draw-command-spec.md](../architecture/draw-command-spec.md) | **要改訂** | C3。組み立て主体が Elixir → host-server へ |
 | [elixir/core.md](../architecture/elixir/core.md) | **要改訂** | C2 / C11。NIF Bridge 廃止方向 |
 | [elixir/contents.md](../architecture/elixir/contents.md) | **要改訂** | C1 / C10 決定済。tick は時間軸分割。3 本はビルトイン WorldManifest テストスイートへ |
-| [elixir/network.md](../architecture/elixir/network.md) | **要改訂** | C3 / C9。案内・Room Token・verifier 連携へ寄せる想定 |
+| [elixir/network.md](../architecture/elixir/network.md) | **要改訂** | C3 / C9 決定済。案内・Room Token・verifier 連携へ寄せる。`Network.UDP.Protocol` / 空間同期用 Phoenix は廃止方向 |
 | [elixir/server.md](../architecture/elixir/server.md) | **要改訂** | world-server への名称・責務再編候補 |
 | [rust/nif.md](../architecture/rust/nif.md) | **要改訂 → アーカイブ候補** | C2。NIF 廃止後は legacy 扱いへ |
 | [rust/launcher.md](../architecture/rust/launcher.md) | **要改訂** | C5。ホスト分離・alchemy:// 前提へ |
 | [rust/desktop_client.md](../architecture/rust/desktop_client.md) | **要改訂** | ローカル IPC・LOD ビルド・Dual Editor 追加 |
 | [rust/desktop/render.md](../architecture/rust/desktop/render.md) | **要改訂** | 受信元は維持しつつ発行側記述を host 側へ |
-| [rust/desktop/input.md](../architecture/rust/desktop/input.md) | **部分維持** | 入力キャプチャはクライアント。送信先は host（C1） |
-| [rust/desktop/input_openxr.md](../architecture/rust/desktop/input_openxr.md) | **部分維持** | VR 入力経路。権威適用先の記述のみ要更新 |
+| [rust/desktop/input.md](../architecture/rust/desktop/input.md) | **要改訂** | 入力キャプチャはクライアント。送信は Zenoh（C1 / C9）。**OSC over UDP 受信 → 検証・Protobuf → Zenoh** の Device Input Edge を追記 |
+| [rust/desktop/input_openxr.md](../architecture/rust/desktop/input_openxr.md) | **部分維持** | VR 入力経路。権威適用先の記述のみ要更新。OSC エッジ（C9）と並立 |
 | [rust/nif/audio.md](../architecture/rust/nif/audio.md) | **要改訂** | A11。Zenoh Audio Streaming / 空間 DSP へ拡張 |
 | [shader-elixir-interface.md](../architecture/shader-elixir-interface.md) | **要改訂 / v2 移譲** | C7。Dual Representation 正本へ置き換え候補 |
 | [formula-vm-bytecode.md](../architecture/formula-vm-bytecode.md) | **部分維持** | バイトコード契約は維持しうる。実行場所は C11 |
@@ -212,7 +224,8 @@ v1 の `architecture/` に **同等のコンポーネント正本がない**（�
 | `architecture-v2/shared-sim.md` | C11, Rapier, Formula VM | **文書**はここ。**コード**は同 Workspace の `shared-sim` クレート（host / client / Worker 共有） |
 | `architecture-v2/dual-representation.md` | A12, C7 | 同上 |
 | `architecture-v2/multi-platform.md` | A13 | 同上 |
-| `architecture-v2/zenoh-mesh.md` | A10, A11, C6, C9 | C6 決定: 同一運営者スケールアウト ＋ Trusted+ACL のみ。運営者間フルメッシュは書かない |
+| `architecture-v2/zenoh-mesh.md` | A10, A11, C6, C9 | C6 決定: 同一運営者スケールアウト ＋ Trusted+ACL のみ。運営者間フルメッシュは書かない。C9: **Network Transport = Zenoh のみ** |
+| `architecture-v2/osc-input-edge.md`（案） | C9 / D6 | トラッカー等の OSC over UDP（127.0.0.1 / LAN）→ 検証・Protobuf → Zenoh。Network Transport とは分離 |
 | `architecture-v2/builtin-world-manifests.md`（案） | C10 / D3 | CanvasTest / BulletHell3D / FormulaTest のビルトイン移植仕様・DoD |
 
 ### 6.1 コード配置（方針決定済）
@@ -228,9 +241,9 @@ v1 の `architecture/` に **同等のコンポーネント正本がない**（�
 ## 7. 推奨する次ステップ（文書作業）
 
 1. **auth-server 文書の統合方針を決める**（§8）。A1 を「無いから書く」ではなく「どこを正本にするか」の問題として扱う。
-2. **決定済みの本文化**: §2.1 を [authoritative-state-sync-policy.md](../architecture/authoritative-state-sync-policy.md)（C1/C12）と [federation.md](../architecture/federation.md)（C6）へ反映。overview v2 図の Federation Mesh 注釈を更新。
-3. **未決の衝突**: C2 / C3 / C4 / C5 / C7 / C8 / C11 を方針決定する。**§1 の一致（M1–M16）は維持したまま**決める。C1 は §2.1 で時間軸分割済みなので「主時間を誰が持つか」の再議論は不要（ティック実行 vs 台帳の切り分け済み）。
-4. **保留**: C9 / D6（UDP / Phoenix）は後で詰める。
+2. **決定済みの本文化**: §2.1 を [authoritative-state-sync-policy.md](../architecture/authoritative-state-sync-policy.md)（C1/C12）、[federation.md](../architecture/federation.md)（C6）、[network-protocol-current.md](../architecture/network-protocol-current.md) / [elixir/network.md](../architecture/elixir/network.md) / input 系（C9/D6）へ反映。overview v2 図の Federation Mesh 注釈と「転送＝Zenoh／OSC＝クライアント局所」を更新。
+3. **未決の衝突**: C2 / C3 / C4 / C5 / C7 / C8 / C11 を方針決定する。**§1 の一致（M1–M16）は維持したまま**決める。C1 は §2.1 で時間軸分割済みなので「主時間を誰が持つか」の再議論は不要（ティック実行 vs 台帳の切り分け済み）。C9 は Network Transport / Device Input Edge 分割済み。
+4. **C9 実装準備**: OSC 受信・検証・Protobuf・Zenoh publish のクライアント契約を `osc-input-edge.md`（案）または [rust/desktop/input.md](../architecture/rust/desktop/input.md) に落とす。world-server の `Network.UDP.Protocol` / 空間同期用 Phoenix の廃止手順を別途起票。
 5. **C10 実装準備**: 3 本の WorldManifest / Prefab 移植仕様と DoD（host 上 20Hz）を `builtin-world-manifests.md`（案）または contents 改訂に落とす。
 6. 方針決定後、v1 の「要改訂」ファイルを順に更新するか、v2 詳細ドキュメントへ移し v1 をアーカイブするかを選ぶ。
 
