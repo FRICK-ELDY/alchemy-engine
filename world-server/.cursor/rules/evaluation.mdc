@@ -20,28 +20,24 @@ alwaysApply: false
 
 ### 技術評価層 — apps/
 
-各 Elixir アプリを独立して評価する。
+各 Elixir アプリを独立して評価する。  
+**SSoT は時間軸別 4 SSoT**（architecture-v2/diff-from-v1.md §2.1）。単一「Elixir = 全状態 SSOT」は目標ではない。モノレポ根の evaluation ルールと同趣旨。
 
-- **`apps/contents`**（コンテンツ実装・ゲームロジック・パラメータ設計）
-  - World/Rule 実装の質、エンティティパラメータの外部化、コンテンツ交換可能性の実証
-  - スポーン・レベル・ボス等のゲームシステムの設計品質
-  - `core` への依存が適切に制御されているか
+- **`apps/contents`**（コンテンツ定義・台帳寄り）
+  - World/Rule / パラメータ外部化（現行）。目標は WorldManifest データ化（C10）
+  - `core` 依存制御。空間ティック実行の host 移譲整合
 
-- **`apps/core`**（エンジンコア・OTP設計・コンポーネント・シーン管理）
-  - OTP Supervisor ツリー・GenServer 責務分離・耐障害性設計
-  - `ContentBehaviour` / `SceneBehaviour` / `Component` ビヘイビア設計
-  - SSoT（Elixir = Single Source of Truth）の一貫性
-  - バックプレッシャー・スケジューリング設計
+- **`apps/core`**（エンジンコア・OTP・シーン契約）
+  - OTP・GenServer・`ContentBehaviour` / `SceneBehaviour` / `Component`
+  - **セッション・台帳 SSoT** としての一貫性（空間ティック実行権威は目標では host）
+  - バックプレッシャー・スケジューリング
 
-- **`apps/network`**（ネットワーク層・トランスポート・OTP隔離）
-  - Local / Phoenix Channels / UDP トランスポートの実装度
-  - OTP プロセス隔離の実証（ルーム間クラッシュ分離）
-  - 認証・セキュリティ設計
+- **`apps/network`**（ネットワーク・OTP隔離）
+  - 現行: Local / Phoenix / UDP / Zenoh。目標（C9）: Zenoh 一本化・Room Token・案内・verifier
+  - OTP 隔離・認証・セキュリティ。新規空間同期用 UDP/Phoenix は減点方向
 
-- **`apps/server`**（アプリケーション起動・設定・エントリポイント）
-  - Application 起動シーケンスの堅牢性
-  - 設定管理（config.exs / runtime.exs）の設計
-  - 環境別（dev/test/prod）の分離
+- **`apps/server`**（起動・設定）
+  - Application・config・環境分離。目標: 案内所・門番・verifier（NIF 非依存）
 
 ---
 

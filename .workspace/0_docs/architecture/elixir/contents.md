@@ -1,6 +1,11 @@
 # Elixir: contents — ゲームコンテンツ層
 
-> **2026-07-23 更新**: 第一級コンテンツは **3 本**（`CanvasTest` / `BulletHell3D` / `FormulaTest`）。**主時間は Elixir 権威 tick**（推奨 20Hz。設定で 10/30/非推奨 60）。Rust 60Hz ゲーム NIF なし。正本: [authoritative-state-sync-policy.md](../authoritative-state-sync-policy.md)。
+> **ステータス**: 現行実装の記述  
+> **目標**: [architecture-v2/](../../architecture-v2/)  
+> **決定済みの上書き**: [diff-from-v1.md](../../architecture-v2/diff-from-v1.md) §2.1（**C10**: 3 本は廃止せずビルトイン WorldManifest へ昇格。**C1**: 空間ティックは host、台帳は Elixir）を優先  
+> **読む順**: [architecture-v2/README.md](../../architecture-v2/README.md)
+
+> **2026-07-23 更新**: 第一級コンテンツは **3 本**（`CanvasTest` / `BulletHell3D` / `FormulaTest`）。**現行**の主時間は Elixir 権威 tick（推奨 20Hz。設定で 10/30/非推奨 60）。Rust 60Hz ゲーム NIF なし。正本: [authoritative-state-sync-policy.md](../authoritative-state-sync-policy.md)。**目標**: 3 本は公式ビルトイン WorldManifest テストスイートへ移植（[builtin-world-manifests.md](../../architecture-v2/builtin-world-manifests.md)）。
 
 ## 概要
 

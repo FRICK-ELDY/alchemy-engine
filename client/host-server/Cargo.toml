@@ -1,0 +1,14 @@
+[package]
+name = "host-server"
+version = "0.1.0"
+edition = "2021"
+description = "空間ティック権威プロセス（20Hz）— RenderFrame 発行予定"
+
+[[bin]]
+name = "alchemy-host-server"
+path = "src/main.rs"
+
+[dependencies]
+shared-sim = { path = "../shared-sim" }
+log = "0.4"
+env_logger = "0.11"

@@ -1,8 +1,30 @@
 # 既存ネットワークプロトコル仕様
 
+> **ステータス**: 現行実装の記述  
+> **目標**: [architecture-v2/](../architecture-v2/)  
+> **決定済みの上書き**: [diff-from-v1.md](../architecture-v2/diff-from-v1.md) §2.1（特に **C9**: Network Transport = Zenoh 一本化。独自 UDP / 空間同期用 Phoenix は廃止方向。OSC over UDP は Device Input Edge としてクライアント局所に存続）を優先  
+> **読む順**: [architecture-v2/README.md](../architecture-v2/README.md)
+
 > 作成日: 2026-03-07  
 > 出典: [client-server-separation-procedure.md](../plan/completed/client-server-separation-procedure.md) フェーズ 0.2  
-> 目的: 現状の Network.Channel と Network.UDP のプロトコル形式を文書化する
+> 目的: 現状の Network.Channel と Network.UDP のプロトコル形式を文書化する（**歴史・現行コード参照**。目標転送経路は Zenoh）  
+> 最終更新: 2026-10-23 — §0 に C9（Network Transport / Device Input Edge）追記
+
+---
+
+## 0. 目標転送方針（v2 決定・C9 / D6）
+
+> **正**: [diff-from-v1.md §2.1 / C9](../architecture-v2/diff-from-v1.md)
+
+| 層 | 範囲 | 方針 |
+|:---|:---|:---|
+| **Network Transport** | クライアント ⇔ サーバー／ホスト間 | **Zenoh に完全一本化**。空間状態・入力・RenderFrame は Zenoh + Protobuf |
+| **Device Input Edge** | トラッカー ⇔ クライアント（局所） | **OSC over UDP**（127.0.0.1 / LAN）をクライアントが受信 → 検証・Protobuf 化 → **Zenoh で送信** |
+
+**廃止方向（D6）**: `Network.UDP.Protocol`、空間同期を担う Phoenix Channel を前面に出す経路。  
+**存続**: クライアント上の OSC 受信。world-server が OSC/UDP を直接受けて空間同期することはしない。
+
+以下 §1 以降は **現行コード／歴史**の記録であり、目標経路ではない。
 
 ---
 

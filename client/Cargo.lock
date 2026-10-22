@@ -1888,6 +1888,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "host-server"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "log",
+ "shared-sim",
+]
+
+[[package]]
 name = "http"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4888,6 +4897,10 @@ dependencies = [
  "bytemuck",
  "serde",
 ]
+
+[[package]]
+name = "shared-sim"
+version = "0.1.0"
 
 [[package]]
 name = "shellexpand"

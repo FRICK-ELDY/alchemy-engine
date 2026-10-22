@@ -1,7 +1,12 @@
 # 方針: 連合層アーキテクチャ
 
+> **ステータス**: 現行実装の記述  
+> **目標**: [architecture-v2/](../architecture-v2/)  
+> **決定済みの上書き**: [diff-from-v1.md](../architecture-v2/diff-from-v1.md) §2.1（特に **C6**: S2S HTTPS 必須・運営者間 Zenoh フルメッシュ禁止）を優先  
+> **読む順**: [architecture-v2/README.md](../architecture-v2/README.md)
+
 > 作成日: 2026-07-13  
-> ステータス: 採用（設計方針。Phase 4-2 read-only S2S の第一歩は `Network.S2S` に着地済み。identity federation 以降は未実装）  
+> ステータス（文書）: 採用（設計方針。Phase 4-2 read-only S2S の第一歩は `Network.S2S` に着地済み。identity federation 以降は未実装）  
 > 背景: 分散連合型 VRSNS へ向け、スケールアウト層と連合層を分離して明文化する。
 
 ---
@@ -44,7 +49,19 @@ AlchemyEngine の「分散」には **性質の異なる二層** がある。混
 | 層 | 誰のサーバか | 典型技術 | 現状 |
 |:---|:---|:---|:---|
 | **スケールアウト層** | 同一運営者の BEAM クラスタ | libcluster, `Network.Distributed`, Zenoh | 基盤あり（デフォルトは単一ノード） |
-| **連合層** | 別運営者のインスタンス同士 | S2S HTTP, JWKS, （将来）ActivityPub ハイブリッド | **未実装** |
+| **連合層** | 別運営者のインスタンス同士 | **S2S HTTPS（必須）**, JWKS, （将来）ActivityPub ハイブリッド | **未実装**（方針は §1.1） |
+
+### 1.1 連合の形（v2 決定・C6）
+
+> **正**: [diff-from-v1.md §2.1 / C6](../architecture-v2/diff-from-v1.md)。運営者間の zenoh-router を **無制限フルメッシュで結ばない**。
+
+| 経路 | 手段 | 保証すること | 保証しないこと |
+|:---|:---|:---|:---|
+| **案内・認証・マーケットの連合** | **S2S HTTPS REST** | ワールド一覧、JWKS / `alchemy-node-info.json`、連合カタログ。Blocked はドメイン／IP 単位で遮断 | リアルタイム空間状態の運営者間中継 |
+| **空間への入室（Cross-Origin）** | ゲスト **client が相手運営者へ直接接続** | ホーム JWT → 訪問先 Room Token → **訪問先 zenoh-router に直接接続** | 自運営者の zenoh-router 経由での相手空間中継 |
+| **Zenoh Mesh** | 用途限定 | (1) **同一運営者内**スケールアウト (2) **Trusted + ACL** で対象ルームのみのブリッジ | 未信頼運営者間の無制限 Peering |
+
+auth 索引: [architecture-v2/auth-server.md](../architecture-v2/auth-server.md)。契約正本: [jwt-jwks-engine-contract.md](../jwt-jwks-engine-contract.md)。
 
 ---
 
@@ -88,16 +105,16 @@ Authorization: Signature ...（呼び出し元インスタンスの署名）
 
 ### 4-3. identity federation（訪問トークン）
 
-1. ユーザーは **ホーム** の auth（`auth/` サービス）でログイン
+1. ユーザーは **ホーム** の **auth-server** でログイン
 2. リモート参加時、ホーム発行の JWT（または短命訪問トークン）を提示
 3. **訪問先** engine が、ホームの `/.well-known/jwks.json` で検証
 4. 訪問先の `POST /api/room_token` は検証済み `@user@home` にスコープした room token を発行
 
-**横断インターフェース**（engine ↔ auth）:
+**横断インターフェース**（engine ↔ auth-server）:
 
 | コンポーネント | Phase 3 まで | Phase 4 以降 |
 |:---|:---|:---|
-| `auth/` | RS256 JWT + JWKS（単体 IdP） | 連合内のホーム IdP として機能 |
+| `auth-server` | RS256 JWT + JWKS（単体 IdP） | 連合内のホーム IdP として機能 |
 | `Network.Router` `POST /api/room_token` | 現状は無認証で発行可能 | Bearer JWT 必須 → 訪問先検証へ拡張 |
 | `Network.RoomToken` | 単一デプロイの秘密鍵 | ホーム／訪問先の役割を区別できる設計へ |
 
@@ -110,14 +127,14 @@ Authorization: Signature ...（呼び出し元インスタンスの署名）
 
 ### 4-5. クロスインスタンス入室
 
-リアルタイム同期は連合層の HTTP だけでは足りない。方針（未決・[vision-goal.md](../vision-goal.md) 参照）:
+リアルタイム同期は連合層の HTTP だけでは足りない。**C6 決定**: ゲスト client が訪問先の zenoh-router に **直接接続**する（自運営者ルーター経由の空間中継はしない）。空間ティック実行は訪問先の host-server（ローカルまたは貸し出し）。
 
-| 案 | 概要 |
+| 層 | 手段 |
 |:---|:---|
-| **A: ホスト権威** | ホストインスタンスで演算し、クライアントは Zenoh 等でストリーミング受信 |
-| **B: 決定論的** | 各クライアントが同一入力列でローカル演算（Formula VM 等との整合が必要） |
+| メタデータ・認証・一覧 | S2S HTTPS + JWKS |
+| 空間状態・入力・RenderFrame | 訪問先 Zenoh（Network Transport 一本化・C9） |
 
-**プロトコル**: メタデータは ActivityPub 互換または独自 S2S、リアルタイムは Zenoh／独自バイナリの **ハイブリッド** を想定。ワイヤ契約の SSoT は [alchemy-protocol](https://github.com/FRICK-ELDY/alchemy-protocol) の `proto/` に追加する。
+ワイヤ契約の SSoT は [alchemy-protocol](https://github.com/FRICK-ELDY/alchemy-protocol) の `proto/`。
 
 ---
 

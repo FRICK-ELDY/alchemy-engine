@@ -1,27 +1,35 @@
 # AlchemyEngine — アーキテクチャ概要
 
-> **2026-07-23 更新**: **主時間は Elixir の権威 tick**（推奨 **20Hz**。設定で 10 / 30 / 非推奨 60Hz）。Rust クライアントは描画 ~60fps で予測・補間する。ゲーム用 Rust NIF（physics / 60Hz ループ）は撤去済み。`nif` は **Formula VM（`run_formula_bytecode`）のみ**。ローカルディスクセーブは未実装。  
-> ※ 実装: `config :server, :tick_hz`（デフォルト **20**）と `Core.Config.tick_ms/0`。`Events.Game` はこれに従う。`TICK_HZ` で実行時上書き可。
+> **ステータス**: 現行実装の記述  
+> **目標**: [architecture-v2/](../architecture-v2/)  
+> **決定済みの上書き**: [diff-from-v1.md](../architecture-v2/diff-from-v1.md) §2.1（C1/C12・C6・C9・C10 等）を優先  
+> **読む順**: [architecture-v2/README.md](../architecture-v2/README.md)
+
+> **2026-07-23 更新**: **現行**の主時間は Elixir の権威 tick（推奨 **20Hz**。設定で 10 / 30 / 非推奨 60Hz）。Rust クライアントは描画 ~60fps で予測・補間する。ゲーム用 Rust NIF（physics / 60Hz ループ）は撤去済み。`nif` は **Formula VM（`run_formula_bytecode`）のみ**。ローカルディスクセーブは未実装。  
+> ※ 実装: `config :server, :tick_hz`（デフォルト **20**）と `Core.Config.tick_ms/0`。`Events.Game` はこれに従う。`TICK_HZ` で実行時上書き可。  
+> ※ **目標（v2）**: 空間ティック（20Hz）は host-server、セッション・台帳は Elixir（world-server）。単一「Elixir = 全状態 SSOT」ではない — [diff-from-v1.md §2.1](../architecture-v2/diff-from-v1.md)。
 
 ## 設計思想
 
 AlchemyEngine は **サーバー上の権威あるゲーム状態とルール**を **Elixir** を中心に置き、**数式 VM** と **デスクトップ描画・予測補間** に Rust を使う構成です。入力のキャプチャとサーバー側の公式入力列・tick 方針の整理は [authoritative-state-sync-policy.md](authoritative-state-sync-policy.md) を参照。
 
-### 二層の SSoT（ドメインとワイヤ契約）
+### SSoT（現行記述と目標）
 
 ドキュメントや議論で **「SSoT」** と書くとき、**何についての単一の真実か**を混同しないようにします。
 
+**目標（v2・優先）**: [diff-from-v1.md §2.1](../architecture-v2/diff-from-v1.md) の **時間軸別 4 SSoT**（永続 / セッション・台帳 / 空間ティック / ワイヤ）。単一「Elixir = 全状態 SSOT」ではない。
+
+**現行実装**の近似（移行前）:
+
 | 対象 | 主な担い手 | 例 |
 |:---|:---|:---|
-| **ドメイン**（公式状態、ルール、コンテンツ定義、「いつ何を送るか」の判断） | **Elixir**（contents / core / network のアプリロジック） | ルーム、tick、コンポーネント、`Contents.FrameEncoder` が組み立てる論理データ |
-| **ワイヤ契約（Protobuf ペイロード）** | **[alchemy-protocol](https://github.com/FRICK-ELDY/alchemy-protocol)** の **`proto/`**（本リポでは submodule **`3rdparty/alchemy-protocol/proto`**。Elixir / Rust は生成コードで従う） | Zenoh 等の `RenderFrame`、入力イベントなど **`.proto` で定義されるメッセージ** |
-| **ワイヤ契約（Protobuf 以外）** | **該当モジュールと設計ドキュメント**（単一のファイルに集約されないこともある） | UDP パケット外枠は `Network.UDP.Protocol`（`@moduledoc`）。Phoenix Channel は JSON イベント形（`Network.Channel` のモジュールドキュメント等） |
+| **ドメイン（現行）** | **Elixir**（contents / core / network） | ルーム、tick、`Contents.FrameEncoder` |
+| **ワイヤ契約（Protobuf）** | **[alchemy-protocol](https://github.com/FRICK-ELDY/alchemy-protocol)** の **`proto/`** | `RenderFrame`、入力イベント |
+| **ワイヤ契約（Protobuf 以外・現行）** | モジュール docs | `Network.UDP.Protocol` 等（**C9 で廃止方向**） |
 
-**Elixir がドメインの SSoT であること**と、**Protobuf ペイロードでは alchemy-protocol の `proto/` がワイヤ上の SSoT であること**は両立します。経路ごとに別の契約の SSoT が並立するのは正常です。前者を捨てて後者に一本化する必要はありません。
-
-- **Elixir（サーバ）**: シーン・コンポーネント・**権威 tick（主時間・推奨 20Hz）**、Zenoh への `RenderFrame` publish、入力・イベントの受信
-- **Rust（サーバ `nif`）**: `Core.Formula` 経由のバイトコード実行のみ（Rustler NIF）
-- **Rust（クライアント `app`）**: winit / wgpu 描画（表示時間・既定 ~60fps）、予測・補間、Zenoh でフレーム受信・入力送信。`xr` は OpenXR（クライアント側）。**`nif` には依存しない**
+- **Elixir（サーバ・現行）**: シーン・権威 tick・Frame publish。**目標**: セッション・台帳・verifier。空間ティックと Frame 発行は host-server（C1/C3）
+- **Rust（サーバ `nif`・現行）**: Formula VM のみ。**目標**: NIF 廃止 → shared-sim（C2/C11）。**新規 NIF 禁止**
+- **Rust（クライアント / host）**: 描画・予測補間。**目標**: 同 Workspace の `shared-sim` + `alchemy-host-server`
 
 ### 分散連合型 VRSNS との関係（二層）
 
