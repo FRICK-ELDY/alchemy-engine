@@ -3,6 +3,8 @@ resolver = "2"
 members = [
     "proto_resolve",
     "shared",
+    "shared-sim",
+    "host-server",
     "render_frame_proto",
     "network",
     "audio",

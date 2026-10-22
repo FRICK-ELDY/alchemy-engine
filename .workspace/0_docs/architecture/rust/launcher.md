@@ -1,10 +1,16 @@
 # Rust: launcher — トレイアイコン・ zenohd / Phoenix / Client Run
 
+> **ステータス**: 現行実装の記述  
+> **目標**: [architecture-v2/](../../architecture-v2/)  
+> **決定済みの上書き**: [diff-from-v1.md](../../architecture-v2/diff-from-v1.md) §2.1（**C5**: client とローカル **host-server** のプロセス分離・死活・`alchemy://`。画面クローズでもホスト維持）
+
 ## 概要
 
-`launcher` はトレイアイコンを表示し、メニューから **zenohd**・**Phoenix Server（mix run）**・**VRAlchemy**（app バイナリ）を起動・終了するデスクトップアプリケーションです。Check for Update で GitHub releases を確認し、acknowledgements で謝辞・ライセンスを表示します。
+`launcher` は **現行**ではトレイアイコンを表示し、メニューから **zenohd**・**Phoenix Server（mix run）**・**VRAlchemy**（app バイナリ）を起動・終了するデスクトップアプリケーションです。Check for Update で GitHub releases を確認し、acknowledgements で謝辞・ライセンスを表示します。
 
-- **パス**: `rust/launcher/`
+**目標（C5）**: **client（画面）** と **alchemy-host-server（裏プロセス）** を分離起動・監視。`alchemy://` ディープリンク。client 終了 ≠ ルーム host 終了。
+
+- **パス**: `rust/launcher/`（現行）／目標は alchemy-launcher として host 分離を追加
 - **依存**: tao, tray-icon, kill_tree, reqwest, rfd, semver
 
 ---
@@ -17,6 +23,7 @@ graph TB
     LAUNCHER -->|起動| ZENOHD[zenohd]
     LAUNCHER -->|起動| MIX[mix run]
     LAUNCHER -->|起動| APP[VRAlchemy]
+    LAUNCHER -.->|目標 C5| HOST[alchemy-host-server]
 ```
 
 launcher は physics / nif 等のゲームクレートに依存せず、独立したバイナリです。

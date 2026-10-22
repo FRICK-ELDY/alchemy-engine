@@ -1,5 +1,10 @@
 # Rust: window — デスクトップ入力・ウィンドウ・イベントループ
 
+> **ステータス**: 現行実装の記述  
+> **目標**: [architecture-v2/](../../../architecture-v2/)  
+> **決定済みの上書き**: [diff-from-v1.md](../../../architecture-v2/diff-from-v1.md) §2.1（**C9**: Device Input Edge = OSC over UDP（127.0.0.1 / LAN）→ 検証・Protobuf → Zenoh。Network Transport は Zenoh のみ）を優先  
+> **読む順**: [architecture-v2/README.md](../../../architecture-v2/README.md)
+
 ## 概要
 
 `window` クレートは **winit** によるウィンドウ生成とイベントループを担当します（The Shell）。`render` の `Renderer` を用いて描画しますが、イベントループの所有権はここにあります。
@@ -38,6 +43,21 @@ pub fn run_desktop_loop<B: RenderBridge>(bridge: B, config: WindowConfig) -> Res
 | `app`（VRAlchemy） | `NetworkRenderBridge` | Zenoh リモートモード（現行） |
 
 ローカル NIF 描画モードは廃止済み。描画は Zenoh 経由で client 側に委譲。
+
+---
+
+## Device Input Edge（v2 決定・C9）
+
+トラッカー等の **OSC over UDP**（127.0.0.1 / LAN）はクライアント局所の入力エッジとしてサポートする。
+
+| 段階 | 内容 |
+|:---|:---|
+| 受信 | クライアントが OSC（フルボディ／フェイシャル等）を受信 |
+| 検証 | 値のサニタイズ・範囲チェック（WAN へ生 OSC を流さない） |
+| 符号化 | alchemy-protocol Protobuf へ変換 |
+| 送信 | **Zenoh トピック**として Network Transport へ（C9） |
+
+world-server が OSC/UDP を直接受けて空間同期することはしない。詳細契約は今後 `architecture-v2/osc-input-edge.md` に落とす。
 
 ---
 

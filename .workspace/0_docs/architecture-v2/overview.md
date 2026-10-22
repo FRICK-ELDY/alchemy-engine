@@ -103,8 +103,8 @@ flowchart TB
 
             subgraph ZenohInfra["zenoh-router (zenohd メッシュルーター)"]
                 ZenohRelay["Zenoh 統合通信メッシュ (Native: QUIC/TCP ｜ Web: WebTransport/WebSocket)<br/>・経路① [空間同期]: host-server が1回送った 20Hz RenderFrame を全参加者へ一斉配信 (Fan-out)<br/>・経路② [Zenoh Audio Streaming]: Opus音声をQUIC Datagramで参加者間に直接低遅延中継<br/>・経路③ [セキュアP2Pキャッシュ]: ルーム参加者間でアセットチャンクをIP秘匿融通"]:::zenoh
-                ZenohFed["別運営者の zenoh-router"]:::zenoh
-                ZenohRelay <-->|"Federation Mesh"| ZenohFed
+                ZenohFed["別運営者の zenoh-router<br/>※C6: 無制限フルメッシュ禁止<br/>Trusted+ACL または同一運営者スケールのみ"]:::zenoh
+                ZenohRelay <-->|"Federation Mesh<br/>(C6: 限定用途のみ)"| ZenohFed
             end
 
             subgraph CloudHostPool["運営側 host-server プール (100% Pure Rust — 貸し出し・常設用)"]
@@ -206,7 +206,17 @@ flowchart TB
 
 ## 関連ドキュメント
 
-- [現行アーキテクチャ概要（v1・正本）](../architecture/overview.md)
+- [読む順（AI / 人間）](README.md)
+- [現行アーキテクチャ概要（v1・現行実装記述）](../architecture/overview.md)
 - [v1 との追加・削除・衝突](diff-from-v1.md)
+- [auth-server 索引](auth-server.md) · [JWT/JWKS 契約](../jwt-jwks-engine-contract.md)
 - [最終ゴール・Phase ロードマップ](../vision-goal.md)
 - [ビジョンと設計思想](../vision.md)
+
+### C6 注釈（図の Federation Mesh）
+
+図上の「Federation Mesh」エッジは **無制限フルメッシュを意味しない**。用途は (1) 同一運営者内スケールアウト (2) Trusted + ACL のルーム限定ブリッジのみ。連合の正面は **S2S HTTPS**。詳細は [diff-from-v1.md §2.1 / C6](diff-from-v1.md)・[federation.md §1.1](../architecture/federation.md)。
+
+### C9 注釈（転送と OSC）
+
+クライアント⇔サーバー／ホスト間の **Network Transport は Zenoh のみ**。OSC over UDP はクライアント局所の Device Input Edge（検証・Protobuf 後に Zenoh 送信）。

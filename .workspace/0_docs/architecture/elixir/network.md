@@ -1,8 +1,23 @@
 # Elixir: network — 通信レイヤー
 
+> **ステータス**: 現行実装の記述  
+> **目標**: [architecture-v2/](../../architecture-v2/)  
+> **決定済みの上書き**: [diff-from-v1.md](../../architecture-v2/diff-from-v1.md) §2.1（**C9**: 転送は Zenoh 一本化。`Network.UDP.Protocol` / 空間同期用 Phoenix は廃止方向。案内・Room Token・verifier 連携へ寄せる）を優先  
+> **読む順**: [architecture-v2/README.md](../../architecture-v2/README.md)
+
 ## 概要
 
-`network` は Phoenix Channels（WebSocket）・UDP トランスポート・Zenoh フレーム配信を提供します。ローカルマルチルーム管理により、OTP 隔離などに利用されます。
+`network` は **現行**では Phoenix Channels（WebSocket）・UDP トランスポート・Zenoh フレーム配信を提供します。ローカルマルチルーム管理により、OTP 隔離などに利用されます。  
+**目標（C9）**: Network Transport は Zenoh のみ。`Network.UDP.Protocol` / 空間同期用 Phoenix は廃止方向。責務は案内・Room Token・verifier 連携へ寄せる（OSC 入力エッジはクライアント側）。
+
+### 目標責務（v2）
+
+| 残す | 外す（廃止方向） |
+|:---|:---|
+| Zenoh ブリッジ（または host 発行 Frame の監査購読） | `Network.UDP` / `Network.UDP.Protocol` による空間同期 |
+| `Network.RoomToken`・入室ゲート | 空間同期用 Phoenix Channel を正面経路にする記述 |
+| S2S / ワールド一覧・連合リスト | — |
+| verifier 連携（Spot-Check・死活） | — |
 
 ---
 

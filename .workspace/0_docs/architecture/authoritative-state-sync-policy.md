@@ -1,7 +1,12 @@
 # 方針: 権威ある状態・入力・同期レート
 
+> **ステータス**: 現行実装の記述  
+> **目標**: [architecture-v2/](../architecture-v2/)  
+> **決定済みの上書き**: [diff-from-v1.md](../architecture-v2/diff-from-v1.md) §2.1（特に **C1/C12**: 時間軸別 4 SSoT。セッション・台帳 = Elixir、空間ティック = host-server）を優先  
+> **読む順**: [architecture-v2/README.md](../architecture-v2/README.md)
+
 > 作成日: 2026-04-03  
-> 最終更新: 2026-07-23  
+> 最終更新: 2026-10-23 — §1.1 時間軸別 4 SSoT（C1/C12）追記  
 > ステータス: 採用（設計方針。実装は [overview.md](overview.md) と逐次整合させる）  
 > 背景: 分散連合型 VRSNS を見据えたアーキテクチャ議論の引き継ぎ用まとめ。
 
@@ -39,6 +44,22 @@
 クライアントは信頼できないため、「クライアントが送った内容＝無条件に真実」とはしない。**採用された入力の順序**はサーバーが宣言する。
 
 **確定フレーム**（公式にコミットするタイムステップの区切り）は **Elixir** が行う。クライアント側の予測・補間や入力キャプチャが 60Hz でも、**権威ある状態のコミット**は Elixir の主時間に収束させる。
+
+---
+
+## 1.1 時間軸別 4 SSoT（v2 決定・C1/C12）
+
+> **正**: [diff-from-v1.md §2.1](../architecture-v2/diff-from-v1.md)。単一の「状態の SSOT = Elixir」表現は **セッション・台帳** に縮約する。
+
+| 時間軸 | SSoT | 担い手 | 保証すること |
+|:---|:---|:---|:---|
+| **永続** | 永続 SSoT | auth-server / assets-server | アカウント・権利・アセット履歴 |
+| **セッション・台帳**（秒〜分） | セッション・台帳 SSoT | **world-server（Elixir）** | 誰が部屋にいて、どのアセットをスポーン・着用する権利があるか（Scene Manifest） |
+| **空間ティック**（~50ms / 推奨 20Hz） | 空間ティック SSoT | **host-server / shared-sim** | 台帳の範囲内で座標・物理・Formula を回す **実行権威**（Untrusted・verifier 監査） |
+| **ワイヤ契約** | ワイヤ契約 SSoT | alchemy-protocol `proto/` | 通信の形 |
+
+**現行実装**はまだ Elixir 権威 tick が空間ティックも担う。移行完了までは本節の表が目標、§1〜§3 の Elixir tick 記述が現行。
+
 
 ---
 

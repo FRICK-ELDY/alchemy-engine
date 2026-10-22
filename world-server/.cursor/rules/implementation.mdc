@@ -7,49 +7,55 @@ alwaysApply: true
 
 # 実装ルール
 
+## ドキュメントの読む順（矛盾時）
+
+1. [architecture-v2/README.md](/.workspace/0_docs/architecture-v2/README.md)
+2. [architecture-v2/diff-from-v1.md](/.workspace/0_docs/architecture-v2/diff-from-v1.md) §2.1（方針決定済を最優先）
+3. [architecture-v2/overview.md](/.workspace/0_docs/architecture-v2/overview.md)
+4. [architecture/](/.workspace/0_docs/architecture/)（現行実装・バナー付き）
+
+モノレポ根の [`.cursor/rules/implementation.mdc`](../../.cursor/rules/implementation.mdc) と同趣旨。食い違う場合は §2.1 と根ルールを正とする。
+
 ## 保証の原則（プログラミングの自論）
 
 - 何を保証して、何を保証しないかを明確にする
-- 参照: [vision.md](/.workspace/0_docs/vision.md) — エンジンが保証するものと、コンテンツが持ち込むものの境界。主時間は Elixir の権威 tick
+- 参照: [vision.md](/.workspace/0_docs/vision.md) — エンジンが保証するものと、コンテンツが持ち込むものの境界
 - 依存関係を利用するとき、何が保証され、何が保証されないかを明確に知っておく
-- プロジェクト単位で何を保証するか保証しないかを明確にする
-- フォルダ単位で何を保証するか保証しないかを明確にする
-- ファイル単位で何を保証するか保証しないかを明確にする
-- 保証の単位でフォルダやファイルを分ける
+- プロジェクト単位・フォルダ単位・ファイル単位で保証を明確にし、保証の単位で分ける
 
-## アーキテクチャ原則
+## アーキテクチャ原則（時間軸別 4 SSoT）
 
-- **コンテンツは `apps/contents` に置く。** 旧来のゲーム層（`GameWorld`、ゲーム用物理ループ、`WorldBehaviour` / `RuleBehaviour` / `GameContent.*`）は廃止し、コンテンツへ統合済み。敵・武器・スコア・レベル等はエンジンの語彙ではない。
-- **命名**: 個別コンテンツは `Content.*`（例: `Content.BulletHell3D`）。contents アプリ内の共有インフラは `Contents.*`（シーン、イベント、コンポーネント）。
-- **Elixir（contents）= ドメインの SSoT**: コンテンツの定義・ルール・パラメータ・権威 tick（推奨 20Hz）・「何が起きたか」は Elixir 側。シーン管理も contents の責務。
-- **Rust サーバー `nif` は Formula VM（`run_formula_bytecode`）のみ。** コンテンツのルールやパラメータをハードコードしない。Elixir から渡されたバイトコードを実行する。
-- **Rust クライアントは表示の補完。** 描画・入力キャプチャ・予測・補間・DSP。権威状態にはならない。フレームと入力は Zenoh 経由。
-- **ワイヤ契約**: Protobuf ペイロードの形式は alchemy-protocol の `proto/` が SSoT。ドメイン判断は Elixir。
+| 時間軸 | SSoT | 担い手 | 保証すること |
+|:---|:---|:---|:---|
+| **永続** | 永続 SSoT | auth-server / assets-server | アカウント・権利・アセット履歴 |
+| **セッション・台帳** | セッション・台帳 SSoT | **world-server（Elixir）** | 入室・着用・配置の権利（Scene Manifest）。秩序の権威 |
+| **空間ティック（推奨 20Hz）** | 空間ティック SSoT | **host-server / shared-sim** | 台帳範囲内の座標・物理・Formula 実行（Untrusted・verifier 監査） |
+| **ワイヤ契約** | ワイヤ契約 SSoT | alchemy-protocol `proto/` | 通信の形 |
+
+- **コンテンツは `apps/contents` に置く。** 命名: `Content.*`＝個別、`Contents.*`＝共有インフラ。
+- **現行**: Elixir が権威 tick と FrameEncoder を持つ実装が残る。**目標**: 空間ティックと RenderFrame 発行は host-server へ（C1/C3）。Elixir は案内・門番・verifier。
+- **Rust サーバー `nif`**: 現行は Formula VM のみ。**新規 NIF は追加しない**。目標は NIF 廃止（C2）・shared-sim へ移譲。
+- **クライアント**: 描画・入力・予測補間。フレーム／入力の Network Transport は Zenoh（C9）。
+- **検証用 3 本**（CanvasTest / BulletHell3D / FormulaTest）は廃止せず、ビルトイン WorldManifest へ昇格（C10）。
 
 ## 層間インターフェース設計の原則
 
-層をまたぐ関数・NIF・型を設計・レビューするとき、以下の問いを必ず確認する。
-
 | 問い | 違反の典型例 |
 |:---|:---|
-| **固有の概念を扱っていないか？** | `spawn_boss`・`set_hud_level_state` など特定コンテンツの概念が NIF 名や `core` に露出している |
-| **固有知識を持ちすぎていないか？** | `render` や `core` が武器スロット・ボス・スコアポップアップを直接参照している |
-| **本質的に知りたい情報か？** | `RenderFrame` にプレイヤー座標フィールドが独立して存在し、描画データとの暗黙的な二重管理が生まれている |
-| **情報を知りすぎていないか？** | 描画ブリッジがウィンドウタイトル・アトラスパスをハードコードし、コンテンツ選択の知識を持っている |
-| **定義と権威は contents にあるか？** | Rust がコンテンツのルールやパラメータを持ち、Elixir は実行結果を受け取るだけになっている。定義と権威ある状態は `Content.*` / `Contents.*`、Rust は式の実行と表示に留める |
-
-これらのいずれかに該当する場合、**その知識はコンテンツ（呼び出し側）が持つべき**であり、
-エンジン（`core` / `nif` / クライアント描画）はより汎用的なインターフェースに留めるよう設計を見直す。
+| **固有の概念を扱っていないか？** | 特定コンテンツ概念が NIF 名や `core` に露出 |
+| **固有知識を持ちすぎていないか？** | render / core が武器スロット・ボスを直接参照 |
+| **どの時間軸の SSoT か？** | 空間ティックを Elixir が二重管理、または権利を host が独断 |
+| **定義 vs 実行か？** | 実行側が定義・権利を持ち、台帳側が数値だけ渡す逆転 |
 
 ## レイヤー別の責務
 
 | レイヤー | 追加・変更してよいもの | 追加・変更してはいけないもの |
 |:---|:---|:---|
-| `core` | ループ制御・イベント受信・`ContentBehaviour` / `Component` 契約 | コンテンツ固有ロジック・個別 `Content.*` の知識 |
-| `contents` | `Content.*`（個別コンテンツ）、`Contents.*`（シーンスタック・`SceneBehaviour`・`Events.Game`・コンポーネント・パラメータ） | エンジンコアの変更 |
-| `network` | 同期・Zenoh / UDP / Channel | コンテンツのルール・パラメータ |
-| `nif`（`world-server/rust/nif`） | Formula VM（`run_formula_bytecode`） | コンテンツのルール、ゲーム用物理ループ、`GameWorld` |
-| クライアント（`client/render`・`app`・`network`・`audio`） | 描画パイプライン・入力キャプチャ・予測・補間・DSP | 権威状態の決定、コンテンツ固有ルール |
+| `core` | ループ制御・イベント受信・`ContentBehaviour` / `Component` 契約 | コンテンツ固有ロジック |
+| `contents` | `Content.*` / `Contents.*`（定義・台帳寄り） | エンジンコアの変更 |
+| `network` | Zenoh・Room Token・案内。目標は Zenoh 一本化 | コンテンツルール；新規の空間同期用 UDP/Phoenix |
+| `nif` | Formula VM のみ（現行）。**新規追加禁止** | 物理ループ・ゲームルール |
+| クライアント | 描画・入力・予測補間・OSC エッジ | 権威状態の独断決定 |
 
 ## Rust 実装規則
 
@@ -67,60 +73,21 @@ struct EntityBuffers {
     free_list: Vec<usize>,
 }
 
-// ❌ BAD: AoS形式（キャッシュ効率が悪い）
+// ❌ BAD: AoS形式
 struct Entity { x: f32, y: f32, z: f32, alive: bool }
 struct EntityBuffers { entities: Vec<Entity> }
 ```
 
-### unsafe ブロックの使用
+### unsafe / エラーハンドリング
 
-- `unsafe` を使う場合は必ずコメントで安全性の根拠を説明する
-- SIMD（SSE2等）使用時は `#[cfg(target_feature = "sse2")]` でフォールバックを用意する
-
-### エラーハンドリング
-
-```rust
-// ✅ GOOD
-fn process() -> Result<(), ProcessError> { ... }
-
-// ❌ BAD: unwrap/expect をホットパスで使わない
-let val = some_option.unwrap();
-```
+- `unsafe` には安全性の根拠コメント。SIMD はフォールバックを用意
+- ホットパスで `unwrap` / `expect` を使わない
 
 ## Elixir 実装規則
 
-### GenServer の責務を分離する
-
-- 1つのGenServerに複数の責務を持たせない
-- 状態の読み取りは `handle_call`、副作用は `handle_cast` / `handle_info` を使い分ける
-
-### パターンマッチを活用する
-
-```elixir
-# ✅ GOOD
-def handle_info({:frame_events, events}, state) do
-  Enum.reduce(events, state, &process_event/2)
-end
-
-# ❌ BAD: if/case の多用
-def handle_info(msg, state) do
-  if is_tuple(msg) and elem(msg, 0) == :frame_events do ...
-```
+- GenServer の責務分離（読取 = `handle_call`、副作用 = `handle_cast` / `handle_info`）
+- パターンマッチを活用し、`if/case` の多用を避ける
 
 ## 実装完了後のフロー
 
-### Elixir ファイルを変更した場合
-
-コミット前に必ず `mix format` を実行してフォーマットを統一する：
-
-```powershell
-mix format
-```
-
-`mix format` はフォーマットを自動修正する。実行後に差分が生じた場合はコミットに含める。
-`--check-formatted` オプションは CI で使用するもので、ローカルでは不要。
-
-### PR 作成
-
-`pr-workflow` ルールに従ってPRを作成し、
-新しいチャットで `code-review` ルールを使ってレビューを依頼する。
+Elixir 変更後はコミット前に `mix format`。PR は `pr-workflow`、レビューは `code-review`。

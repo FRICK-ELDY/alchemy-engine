@@ -20,75 +20,67 @@ alwaysApply: false
 
 ### 技術評価層 — world-server/
 
-`world-server/` 配下の Elixir アプリと Rust NIF を独立して評価する。
+`world-server/` 配下の Elixir アプリと（現行）Rust NIF を独立して評価する。  
+**SSoT 評価は時間軸別 4 SSoT**（[architecture-v2/diff-from-v1.md](/.workspace/0_docs/architecture-v2/diff-from-v1.md) §2.1）に従う。単一「Elixir = 全状態 SSOT」は目標ではない。
 
-- **`world-server/apps/contents`**（コンテンツ実装・ゲームロジック・パラメータ設計）
-  - World/Rule 実装の質、エンティティパラメータの外部化、コンテンツ交換可能性の実証
-  - スポーン・レベル・ボス等のゲームシステムの設計品質
+- **`world-server/apps/contents`**（コンテンツ定義・台帳寄り）
+  - World/Rule / パラメータ外部化・交換可能性（現行）。目標は WorldManifest / Prefab データ化（C10）
   - `core` への依存が適切に制御されているか
+  - 空間ティック実行を contents に閉じ込めすぎていないか（目標: host-server へ）
 
-- **`world-server/apps/core`**（エンジンコア・OTP設計・コンポーネント・シーン管理）
-  - OTP Supervisor ツリー・GenServer 責務分離・耐障害性設計
-  - `ContentBehaviour` / `SceneBehaviour` / `Component` ビヘイビア設計
-  - SSoT（Elixir = Single Source of Truth）の一貫性
-  - バックプレッシャー・スケジューリング設計
+- **`world-server/apps/core`**（エンジンコア・OTP・シーン契約）
+  - OTP Supervisor・GenServer 責務分離・耐障害性
+  - `ContentBehaviour` / `SceneBehaviour` / `Component`
+  - **セッション・台帳 SSoT** としての一貫性（入室・権利・Scene Manifest）。空間ティック実行権威は目標では host
+  - バックプレッシャー・スケジューリング
 
-- **`world-server/apps/network`**（ネットワーク層・トランスポート・OTP隔離）
-  - Local / Phoenix Channels / UDP トランスポートの実装度
-  - OTP プロセス隔離の実証（ルーム間クラッシュ分離）
-  - 認証・セキュリティ設計
+- **`world-server/apps/network`**（ネットワーク・OTP隔離）
+  - **現行**: Local / Phoenix / UDP / Zenoh の実装度
+  - **目標（C9）**: Network Transport = Zenoh 一本化。独自 UDP・空間同期用 Phoenix は廃止方向。Room Token・案内・verifier 連携を評価
+  - OTP 隔離・認証・セキュリティ
 
-- **`world-server/apps/server`**（アプリケーション起動・設定・エントリポイント）
-  - Application 起動シーケンスの堅牢性
-  - 設定管理（config.exs / runtime.exs）の設計
-  - 環境別（dev/test/prod）の分離
+- **`world-server/apps/server`**（起動・設定）
+  - Application 起動・config / runtime・環境分離
+  - 目標: world-server = 案内所・門番・verifier（NIF 非依存）
 
-- **`world-server/rust/nif`**（Formula VM・Elixir×Rust ブリッジ）
-  - バイトコード実行（`run_formula_bytecode`）。ゲーム用物理ループは対象外
-  - ゲームルールとバランス値を NIF に持たないこと。定義は Elixir の contents
-  - NIF 関数カテゴリ分類（ロック競合の予測可能性）
-  - `ResourceArc` による GC 連動ライフタイム管理
-  - `NifBridgeBehaviour` + Mox によるモック設計
-  - NIF バージョニング・ABI 互換性・エラーハンドリング
+- **`world-server/rust/nif`**（現行残存・廃止方向）
+  - **現行**: Formula VM（`run_formula_bytecode`）のみ。ゲーム用物理ループは対象外
+  - ゲームルールを NIF に持たないこと。**新規 NIF は減点**（C2）
+  - 目標移行度: shared-sim への Formula 移譲計画との整合
+  - `ResourceArc` / `NifBridgeBehaviour` + Mox / ABI（現行メンテ範囲のみ）
 
 ---
 
 ### 技術評価層 — client/
 
-`client/` 配下の各 Rust クレートを独立して評価する。
+`client/` 配下の各 Rust クレートを独立して評価する。  
+**目標**: 同 Workspace に `shared-sim` / `host-server` が同居（空間ティック実行権威）。
 
-- **`client/shared`**（共通データ・Elixir 契約・ゼロコピー）
-  - `#[repr(C)]` 構造体・bytemuck Pod/Zeroable
-  - Elixir-Rust 間の契約型定義の一貫性
-  - 予測・補間ロジック（interp/predict）の設計
+- **`client/shared`**（共通データ・契約・ゼロコピー）
+  - `#[repr(C)]`・bytemuck・予測・補間
+  - ワイヤ契約（alchemy-protocol）との一貫性
 
-- **`client/network`**（Zenoh 通信・msgpack デコード・NetworkRenderBridge）
-  - Zenoh による Pub/Sub トランスポート
-  - MessagePack デコード・RenderFrame 変換
-  - `ClientSession` / `NetworkRenderBridge` の責務分離
-  - プラットフォーム切り替え（desktop / web）
+- **`client/shared-sim` / `client/host-server`**（目標・空間ティック）
+  - Rapier / Formula VM / 20Hz Tick / RenderFrame 発行（C3）
+  - Untrusted 前提（Room Token・`is_finite`・verifier 監査対象）
+  - host と client 予測補間で同一クレートを共有できているか
 
-- **`client/render`**（描画パイプライン・シェーダー・補間）
-  - wgpu インスタンス描画・WGSL シェーダー
-  - サブフレーム補間（lerp）のロック外計算
-  - ヘッドレスレンダラー（CI対応）
-  - レンダーグラフ設計・フラスタムカリング・アロケーション効率
+- **`client/network`**（Zenoh・RenderFrame）
+  - Zenoh Pub/Sub（Network Transport の正）
+  - Protobuf RenderFrame・入力。Device Input Edge（OSC）は検証後に Zenoh へ
+  - `ClientSession` / bridge 責務分離・desktop / web
 
-- **`client/window`**（窓層・イベント管理・デスクトップループ）
-  - winit による窓・ライフサイクル管理
-  - 入力イベント正規化・RenderBridge インターフェース
-  - プラットフォーム固有処理の抽象化
+- **`client/render`**（描画・補間）
+  - wgpu / WGSL・サブフレーム補間・ヘッドレス CI・レンダーグラフ
 
-- **`client/audio`**（非同期設計・フォールバック・アセット管理）
-  - コマンドパターン + `mpsc::channel` 非同期設計
-  - デバイス不在時のグレースフルフォールバック
-  - ボイスリミット・優先度システム・空間オーディオ
-  - platform/ による OS 別実装
+- **`client/window`**（窓・入力）
+  - winit・入力正規化。OSC over UDP 受信エッジ（C9）の有無・設計
 
-- **`client/app`**（統合層・デスクトップエントリ）
-  - 各クレート（window / render / network / audio）の組み合わせ
-  - デスクトップクライアント（Zenoh 経由で RenderFrame 受信・入力送信）
-  - エントリポイントの責務分離
+- **`client/audio`**（非同期・空間オーディオ）
+  - コマンドチャネル・フォールバック・ボイスリミット。目標の Zenoh Audio（A11）との整合
+
+- **`client/app`**（統合・エントリ）
+  - クレート組み合わせ・Zenoh 受信。launcher による host 分離（C5）との境界
 
 ---
 
@@ -132,7 +124,7 @@ alwaysApply: false
   - エラー境界の設計（どこで何を回復するか、の明示的な設計）
   - OTP Supervisor 再起動後の状態回復設計
   - `Result` / `{:ok, _}` / `{:error, _}` の一貫性
-  - フォールバック戦略の網羅性（オーディオ・NIF・ネットワーク各層）
+  - フォールバック戦略の網羅性（オーディオ・現行 NIF / 目標 shared-sim・ネットワーク各層）
 
 - **変更容易性・保守性**
   - モジュール間の循環依存の有無

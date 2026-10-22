@@ -1,0 +1,8 @@
+[package]
+name = "shared-sim"
+version = "0.1.0"
+edition = "2021"
+description = "空間ティック実行（物理・Formula・状態）— host / client / Worker 共有"
+
+[dependencies]
+# Rapier / Formula VM は段階導入（architecture-v2/shared-sim.md）

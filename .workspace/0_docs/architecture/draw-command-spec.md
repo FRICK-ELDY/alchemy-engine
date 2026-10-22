@@ -1,8 +1,12 @@
 # DrawCommand タグ・フィールド仕様（SSoT）
 
+> **ステータス**: 現行実装の記述  
+> **目標**: [architecture-v2/](../architecture-v2/)  
+> **決定済みの上書き**: [diff-from-v1.md](../architecture-v2/diff-from-v1.md) §2.1（**C3**: RenderFrame の組み立て・Publish 主体は **host-server**。Elixir FrameEncoder は移行期の現行経路）
+
 > 作成日: 2026-03-07  
 > 出典: [legacy_contents-defines-rust-executes.md](../plan/backlog/legacy_contents-defines-rust-executes.md) P2-1  
-> 目的: DrawCommand のタグ・フィールド（Elixir タプル形）を文書化する。**ワイヤ契約の SSoT** は [alchemy-protocol の `render_frame.proto`（タグ `v0.1.1`）](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/render_frame.proto)（本リポでは submodule **`3rdparty/alchemy-protocol/proto/`** 配下。ドメインの SSoT は Elixir。二層の整理は [overview.md](overview.md#設計思想)）。本ドキュメントは人間可読な対応表と `Contents.FrameEncoder` の入力形式を示す。
+> 目的: DrawCommand のタグ・フィールド（Elixir タプル形）を文書化する。**ワイヤ契約の SSoT** は [alchemy-protocol の `render_frame.proto`（タグ `v0.1.1`）](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/render_frame.proto)（本リポでは submodule **`3rdparty/alchemy-protocol/proto/`** 配下。時間軸別 SSoT は [diff-from-v1 §2.1](../architecture-v2/diff-from-v1.md)）。本ドキュメントは人間可読な対応表と **現行** `Contents.FrameEncoder` の入力形式を示す。
 >
 > **プロトコル仕様**: ワイヤ上のバイト列は **protobuf**（上記 `render_frame.proto` と `render_frame/*.proto`）。本ドキュメントは同じ意味論の **Elixir タプル入力**を述べる。Zenoh 経由のフレーム配信でも同じ契約を用いる（歴史的出典: [client-server-separation-procedure.md](../plan/completed/client-server-separation-procedure.md) フェーズ 1）。
 
@@ -10,10 +14,12 @@
 
 ## 1. 概要
 
-**DrawCommand** は Elixir 側（contents の Render コンポーネント等）が **タプル**として組み立てる描画命令リストの要素である。**サーバーからクライアントへは NIF を経由しない。** `Contents.FrameEncoder.encode_frame/6` が **`Alchemy.Render.RenderFrame` の protobuf** に変換し、Zenoh 等で配信する。クライアント（Rust）は `render_frame_proto::decode_pb_render_frame` でデコードし、`render` が描画する。
+**DrawCommand** は **現行**では Elixir 側（contents の Render コンポーネント等）が **タプル**として組み立てる描画命令リストの要素である。**サーバーからクライアントへは NIF を経由しない。** `Contents.FrameEncoder.encode_frame/6` が **`Alchemy.Render.RenderFrame` の protobuf** に変換し、Zenoh 等で配信する。クライアント（Rust）は `render_frame_proto::decode_pb_render_frame` でデコードし、`render` が描画する。
 
-- **ワイヤ契約（SSoT）**: [alchemy-protocol `render_frame.proto`（`v0.1.1`）](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/render_frame.proto)（protobuf）。Elixir 側の対応実装は `Contents.FrameEncoder`（`command_to_pb/1` 等）。
-- **実行**: クライアント Rust（`rust/client/render_frame_proto` → `rust/client/shared` の `DrawCommand`、`rust/client/render`）。`Core.NifBridge` は **`run_formula_bytecode/3` のみ**であり、DrawCommand 型や描画 NIF は持たない。
+**目標（C3）**: 組み立て・1 回 Publish は [host-server](../architecture-v2/host-server.md)。verifier は抜き打ち監査のみ。ワイヤ契約（proto）は不変。
+
+- **ワイヤ契約（SSoT）**: [alchemy-protocol `render_frame.proto`（`v0.1.1`）](https://github.com/FRICK-ELDY/alchemy-protocol/blob/v0.1.1/proto/render_frame.proto)（protobuf）。現行 Elixir 側は `Contents.FrameEncoder`（`command_to_pb/1` 等）。
+- **実行（描画）**: クライアント Rust。`Core.NifBridge` は **`run_formula_bytecode/3` のみ**（廃止方向・C2）。DrawCommand 型や描画 NIF は持たない。
 
 ---
 

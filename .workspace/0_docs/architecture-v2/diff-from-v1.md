@@ -1,9 +1,9 @@
 # architecture v1 ↔ v2 — 追加・削除・衝突の洗い出し
 
 > **作成日**: 2026-10-22  
-> **更新**: 2026-10-23 — C9・D6 を方針決定（Network Transport = Zenoh 一本化／Device Input Edge = OSC over UDP）。2026-10-22 — C6 / C1・C12 / C10・D3 / host-server 配置を方針決定  
-> **対象**: [overview.md](overview.md)（v2 目標図）と [../architecture/](../architecture/)（v1 現行正本）  
-> **方針**: 洗い出し＋一部衝突の方針決定を記録する。v1 本文の書き換え・アーカイブ移動は行わない（決定内容の本文化は別タスク）。  
+> **更新**: 2026-10-23 — Phase 0–2: AI 正本整備、決定済み本文化、**C2/C3/C4/C5/C7/C8/C11 を方針決定**（全衝突 ID が方針決定済）。同日より前: C9・D6 / C6 / C1・C12 / C10・D3 / host-server 配置  
+> **対象**: [overview.md](overview.md)（v2 目標図）と [../architecture/](../architecture/)（v1 現行実装記述）  
+> **方針**: 洗い出し＋方針決定を記録。v1 一括アーカイブはしない（C8）。決定の本文化は進行中。  
 > **補足**: 「v1 に無い」は **`.workspace/0_docs/architecture/` 内に正本が無い** という意味。  
 > 兄弟サービス（例: `.workspace/`）に既にある文書は §8 で別扱いする。
 
@@ -51,16 +51,16 @@
 | ID | 状態 | 論点 | v1（現行正本） | v2（目標図） | 主な v1 参照 |
 |:---|:---|:---|:---|:---|:---|
 | C1 | **方針決定済**（§2.1） | **主時間 / 状態 SSOT** | Elixir 権威 tick が主時間。状態の SSOT は Elixir サーバー | Rust `host-server` が権威 Tick 20Hz。Elixir（world-server）は案内所・門番・verifier | [authoritative-state-sync-policy.md](../architecture/authoritative-state-sync-policy.md), [overview.md](../architecture/overview.md) |
-| C2 | 要決定 | **NIF** | Formula VM のみ Rustler NIF として残存（`run_formula_bytecode`） | world-server は **NIF 完全廃止**。Formula VM は `shared-sim`（Pure Rust）内 | [rust/nif.md](../architecture/rust/nif.md), [elixir/core.md](../architecture/elixir/core.md) |
-| C3 | 要決定 | **RenderFrame 発行元** | Elixir `Contents.FrameEncoder` → `FrameBroadcaster` → Zenoh publish | `host-server` が 20Hz RenderFrame を 1 回 Publish → Zenoh Fan-out。verifier が抜き打ち監査 | [network-protocol-current.md](../architecture/network-protocol-current.md), [draw-command-spec.md](../architecture/draw-command-spec.md), [rust/desktop/render.md](../architecture/rust/desktop/render.md) |
-| C4 | 要決定 | **物理の置き場** | ゲーム用物理 NIF は **撤去済み**（再導入しない前提の現行記述） | Rapier3d を `host-server` / `shared-sim` に配置（旧 NIF 物理とは別経路） | [rust/nif/legacy_physics.md](../architecture/rust/nif/legacy_physics.md), [legacy_contents-to-physics-bottlenecks.md](../architecture/legacy_contents-to-physics-bottlenecks.md) |
-| C5 | 要決定 | **launcher 責務** | zenohd + mix run（Phoenix）+ VRAlchemy の起動・トレイ管理 | client とローカル host-server のプロセス分離・死活・`alchemy://` 起動。画面クローズでもホスト維持 | [rust/launcher.md](../architecture/rust/launcher.md), [overview.md](../architecture/overview.md)（外部 alchemy-launcher） |
+| C2 | **方針決定済**（§2.1） | **NIF** | Formula VM のみ Rustler NIF として残存（`run_formula_bytecode`） | world-server は **NIF 完全廃止**。Formula VM は `shared-sim`（Pure Rust）内 | [rust/nif.md](../architecture/rust/nif.md), [elixir/core.md](../architecture/elixir/core.md) |
+| C3 | **方針決定済**（§2.1） | **RenderFrame 発行元** | Elixir `Contents.FrameEncoder` → `FrameBroadcaster` → Zenoh publish | `host-server` が 20Hz RenderFrame を 1 回 Publish → Zenoh Fan-out。verifier が抜き打ち監査 | [network-protocol-current.md](../architecture/network-protocol-current.md), [draw-command-spec.md](../architecture/draw-command-spec.md), [rust/desktop/render.md](../architecture/rust/desktop/render.md) |
+| C4 | **方針決定済**（§2.1） | **物理の置き場** | ゲーム用物理 NIF は **撤去済み**（再導入しない前提の現行記述） | Rapier3d を `host-server` / `shared-sim` に配置（旧 NIF 物理とは別経路） | [rust/nif/legacy_physics.md](../architecture/rust/nif/legacy_physics.md), [legacy_contents-to-physics-bottlenecks.md](../architecture/legacy_contents-to-physics-bottlenecks.md) |
+| C5 | **方針決定済**（§2.1） | **launcher 責務** | zenohd + mix run（Phoenix）+ VRAlchemy の起動・トレイ管理 | client とローカル host-server のプロセス分離・死活・`alchemy://` 起動。画面クローズでもホスト維持 | [rust/launcher.md](../architecture/rust/launcher.md), [overview.md](../architecture/overview.md)（外部 alchemy-launcher） |
 | C6 | **方針決定済**（§2.1） | **連合の形** | スケールアウト層（libcluster）と連合層（S2S HTTP / JWKS / identity federation）の二層。Phase 4 正本 | World 連合リスト交換・Zenoh Federation Mesh・マーケット Trusted/Blocked が前面。S2S ActivityPub 系は図上で明示されない | [federation.md](../architecture/federation.md), [vision-goal.md](../vision-goal.md) |
-| C7 | 要決定 | **シェーダー定義経路** | Elixir コンテンツのアセットパスから WGSL を起動時ロード（サーバ定義寄り） | Dual Representation（ノードグラフ ⇄ WGSL）をクライアント Dual Editor + Naga 中心。規格は共通層 | [shader-elixir-interface.md](../architecture/shader-elixir-interface.md) |
-| C8 | 要決定 | **ドキュメント分割軸** | サーバー / クライアント、Elixir / Rust クレート単位 | Operator / Shared / Client Host / Guest+Platform | [policy/architecture-docs-structure.md](../policy/architecture-docs-structure.md) |
+| C7 | **方針決定済**（§2.1） | **シェーダー定義経路** | Elixir コンテンツのアセットパスから WGSL を起動時ロード（サーバ定義寄り） | Dual Representation（ノードグラフ ⇄ WGSL）をクライアント Dual Editor + Naga 中心。規格は共通層 | [shader-elixir-interface.md](../architecture/shader-elixir-interface.md) |
+| C8 | **方針決定済**（§2.1） | **ドキュメント分割軸** | サーバー / クライアント、Elixir / Rust クレート単位 | Operator / Shared / Client Host / Guest+Platform | [policy/architecture-docs-structure.md](../policy/architecture-docs-structure.md) |
 | C9 | **方針決定済**（§2.1） | **Network Transport vs Device Input Edge** | Zenoh + 独自 UDP（`Network.UDP.Protocol`）+ 空間同期用 Phoenix Channel を並列で記述 | **転送は Zenoh 一本化**。独自 UDP / 空間同期用 Phoenix Channel は廃止。OSC over UDP はクライアント局所の入力エッジとして存続 | [elixir/network.md](../architecture/elixir/network.md), [network-protocol-current.md](../architecture/network-protocol-current.md) |
 | C10 | **方針決定済**（§2.1） | **コンテンツモデル** | 第一級コンテンツ 3 本（CanvasTest / BulletHell3D / FormulaTest）+ Scene/Component | WorldManifest / AlchemyPrefab / Spatial VCS / 空間ギミック Formula。検証用 3 コンテンツの位置づけが未定義だった | [elixir/contents.md](../architecture/elixir/contents.md), [scene-and-object.md](../architecture/scene-and-object.md) |
-| C11 | 要決定 | **Formula 実行場所** | Elixir `Core.Formula` → NIF VM（サーバプロセス内） | host-server / shared-sim 内の Pure Rust Formula VM（クライアント・クラウドホスト共通） | [formula-vm-bytecode.md](../architecture/formula-vm-bytecode.md), [elixir/core.md](../architecture/elixir/core.md) |
+| C11 | **方針決定済**（§2.1・C2 と一体） | **Formula 実行場所** | Elixir `Core.Formula` → NIF VM（サーバプロセス内） | host-server / shared-sim 内の Pure Rust Formula VM（クライアント・クラウドホスト共通） | [formula-vm-bytecode.md](../architecture/formula-vm-bytecode.md), [elixir/core.md](../architecture/elixir/core.md) |
 | C12 | **方針決定済**（§2.1・C1 と一体） | **SSoT の層表現** | ドメイン = Elixir、ワイヤ = alchemy-protocol proto | ドメイン権威が host-server 側へ寄る一方、protocol / assets / auth が複数 SSoT として並立（→ **時間軸別 4 SSoT で解消**） | [overview.md](../architecture/overview.md)#設計思想 |
 
 ### 2.1 方針決定（2026-10-22〜23）
@@ -128,6 +128,57 @@ v2 overview 図の「Federation Mesh」エッジは、上記の限定用途に�
 
 文書上の `architecture-v2/host-server.md` / `shared-sim.md` は **責務・契約の正本**とし、コードの置き場はこの Workspace 方針に従う（§6 参照）。
 
+#### C3 — RenderFrame 発行元：host-server
+
+**結論（2026-10-23）**: 20Hz RenderFrame の **組み立て・1 回 Publish** は **host-server** が行う。Zenoh Fan-out。world-server（verifier）は抜き打ち監査のみで、定常経路の FrameEncoder 発行主体にはならない。
+
+| 保証すること | 保証しないこと |
+|:---|:---|
+| host が台帳範囲内の状態から binary64 RenderFrame を生成し Zenoh へ 1 回 publish | Elixir が毎 tick Frame を組み立て続ける現行経路の永続化 |
+| verifier が Spot-Check で改ざん検知できること | verifier が全フレームを再エンコードすること |
+
+移行中は Elixir `FrameEncoder` 経路が現行。DoD: host が BulletHell3D 相当で 20Hz publish し、クライアントが受信描画できること。本文化先: [draw-command-spec.md](../architecture/draw-command-spec.md) / [host-server.md](host-server.md)。
+
+#### C2 / C11 — NIF 廃止と Formula 実行場所：shared-sim
+
+**結論（2026-10-23）**: world-server から **Rustler NIF を完全廃止**する。Formula VM は **shared-sim（Pure Rust）** 内に置き、host-server（権威 tick）と client（予測補間）と Worker で同一クレートを共有する。バイトコード契約（[formula-vm-bytecode.md](../architecture/formula-vm-bytecode.md)）は維持しうる。
+
+| 段階 | 内容 |
+|:---|:---|
+| 現行 | `Core.Formula` → `run_formula_bytecode` NIF（新規 NIF 追加禁止） |
+| 目標 | NIF 削除。Formula は shared-sim のみ。Elixir はバイトコード／定義を台帳経由で渡す側 |
+
+本文化先: [shared-sim.md](shared-sim.md)、[rust/nif.md](../architecture/rust/nif.md) をレガシー／アーカイブ候補へ。
+
+#### C4 — 物理：Rapier3d を shared-sim に（旧 NIF 物理とは別経路）
+
+**結論（2026-10-23）**: Rapier3d は **shared-sim** に置く。旧ゲーム用物理 NIF（撤去済み）の復活ではない（M11 / D7）。パラメータ・スポーン定義は台帳／WorldManifest 側。物理ルールのハードコードを shared-sim に埋め込まない。
+
+#### C5 — launcher：client とローカル host-server のプロセス分離
+
+**結論（2026-10-23）**: launcher（alchemy-launcher）は **client（画面）とローカル host-server（裏プロセス）を分離起動・監視**する。画面クローズでも host は維持。`alchemy://` ディープリンク起動を担う。zenohd / world-server（mix）の起動も継続しうるが、**ローカル空間ティックの主体は host-server**。
+
+| 保証すること | 保証しないこと |
+|:---|:---|
+| client 終了 ≠ ルーム host 終了（Private / ローカル host 時） | 電源 OFF 時の無停止（その場合はゲスト昇格または貸し出し host） |
+
+本文化先: [rust/launcher.md](../architecture/rust/launcher.md)。
+
+#### C7 — シェーダー：Dual Representation（クライアント Dual Editor + Naga）
+
+**結論（2026-10-23）**: シェーダー／ギミックの正は **Dual Representation**（ノードグラフ ⇄ テキスト、共通 AST → Naga / Formula VM）。編集 UX の中心は **クライアント Dual Editor**。Elixir アセットパスからの WGSL 起動時ロードは移行期の互換に留め、正本は `architecture-v2/dual-representation.md`（新設予定）へ。現行 [shader-elixir-interface.md](../architecture/shader-elixir-interface.md) は要改訂／移譲。
+
+#### C8 — ドキュメント分割軸：architecture-v2 を Operator / Shared / Client 軸に、v1 は現行実装記述として併存
+
+**結論（2026-10-23）**:
+
+| ツリー | 役割 | 分割軸 |
+|:---|:---|:---|
+| **architecture-v2/** | 目標・決定・索引 | Operator / Shared / Client Host / Guest+Platform（overview 図に合わせる） |
+| **architecture/**（v1） | 現行実装の詳細 | 当面 Server/Client・クレート単位を維持。先頭バナーで v2 決定を優先 |
+
+v1 を一括アーカイブはしない。決定のたびに v1 要改訂ファイルへ段落反映し、詳細正本が v2 に移ったものから v1 をレガシー／アーカイブ候補にする。ポリシー [architecture-docs-structure.md](../policy/architecture-docs-structure.md) は「v1 現行向け」と注釈し、v2 軸を追記する。
+
 ---
 
 ## 3. 追加（v2 only）
@@ -137,7 +188,7 @@ v1 の `architecture/` に **同等のコンポーネント正本がない**（�
 
 | ID | 要素 | 概要 | 既存文書の所在 |
 |:---|:---|:---|:---|
-| A1 | **auth-server** | JWT (RS256)・ToS 同意・Friendship・JWKS。Stage 1 SQLite / Stage 2+ PostgreSQL | **あり** — [`.workspace/0_docs/jwt-jwks-engine-contract.md`](../jwt-jwks-engine-contract.md)（§8）。署名検証モデル自体は **M8 で一致** |
+| A1 | **auth-server** | JWT (RS256)・ToS 同意・Friendship・JWKS。Stage 1 SQLite / Stage 2+ PostgreSQL | **既存・分散 (sibling)** — 索引 [auth-server.md](auth-server.md)、契約 [jwt-jwks-engine-contract.md](../jwt-jwks-engine-contract.md)（§8 案 B）。署名検証は **M8 で一致** |
 | A2 | **assets-server** | Spatial VCS（Commit/Branch/Tag）・Quota・アップロード検疫・Origin Cert・R2 CAS | なし（v2 図のみ） |
 | A3 | **BillingProvider** | MoR/Stripe・プリペイドコイン・Quota 即時拡張（Optional Profile） | なし |
 | A4 | **market-server** | BOOTH 風ストア・License Token・エスクロー・連合 Trusted/Blocked | なし |
@@ -220,8 +271,9 @@ v1 の `architecture/` に **同等のコンポーネント正本がない**（�
 | `architecture-v2/market-server.md` | A4, A8 | 同上 |
 | `architecture-v2/world-server.md` | WorldDir, Room Token, alchemy:// | world-server 配下に `.workspace/0_docs` があれば同様に突合 |
 | `architecture-v2/verifier.md` | A5, A15 | 同上 |
-| `architecture-v2/host-server.md` | A6, A7, C1, C4 | **文書**はここ。**コード**は client 側 Cargo Workspace の `host-server` バイナリ（§2.1） |
-| `architecture-v2/shared-sim.md` | C11, Rapier, Formula VM | **文書**はここ。**コード**は同 Workspace の `shared-sim` クレート（host / client / Worker 共有） |
+| `architecture-v2/host-server.md` | A6, A7, C1, C4 | **文書**あり。**コード**スキャフォールド: `client/host-server`（`alchemy-host-server`） |
+| `architecture-v2/shared-sim.md` | C11, Rapier, Formula VM | **文書**あり。**コード**スキャフォールド: `client/shared-sim` |
+| `architecture-v2/builtin-world-manifests.md` | C10 / D3 | 移植仕様・DoD あり |
 | `architecture-v2/dual-representation.md` | A12, C7 | 同上 |
 | `architecture-v2/multi-platform.md` | A13 | 同上 |
 | `architecture-v2/zenoh-mesh.md` | A10, A11, C6, C9 | C6 決定: 同一運営者スケールアウト ＋ Trusted+ACL のみ。運営者間フルメッシュは書かない。C9: **Network Transport = Zenoh のみ** |
@@ -240,12 +292,14 @@ v1 の `architecture/` に **同等のコンポーネント正本がない**（�
 
 ## 7. 推奨する次ステップ（文書作業）
 
-1. **auth-server 文書の統合方針を決める**（§8）。A1 を「無いから書く」ではなく「どこを正本にするか」の問題として扱う。
+> **2026-10-23 Phase 0 完了**: AI 正本の矛盾解消 — [README.md](README.md)（読む順）、v1 主要ファイル先頭バナー、[`.cursor/rules/implementation.mdc`](../../../.cursor/rules/implementation.mdc) / evaluation を時間軸別 4 SSoT に更新。
+
+1. **auth-server 文書の統合方針を決める**（§8）。A1 を「無いから書く」ではなく「どこを正本にするか」の問題として扱う。→ **案 B 採用**（索引＋契約は既存パス）。
 2. **決定済みの本文化**: §2.1 を [authoritative-state-sync-policy.md](../architecture/authoritative-state-sync-policy.md)（C1/C12）、[federation.md](../architecture/federation.md)（C6）、[network-protocol-current.md](../architecture/network-protocol-current.md) / [elixir/network.md](../architecture/elixir/network.md) / input 系（C9/D6）へ反映。overview v2 図の Federation Mesh 注釈と「転送＝Zenoh／OSC＝クライアント局所」を更新。
-3. **未決の衝突**: C2 / C3 / C4 / C5 / C7 / C8 / C11 を方針決定する。**§1 の一致（M1–M16）は維持したまま**決める。C1 は §2.1 で時間軸分割済みなので「主時間を誰が持つか」の再議論は不要（ティック実行 vs 台帳の切り分け済み）。C9 は Network Transport / Device Input Edge 分割済み。
-4. **C9 実装準備**: OSC 受信・検証・Protobuf・Zenoh publish のクライアント契約を `osc-input-edge.md`（案）または [rust/desktop/input.md](../architecture/rust/desktop/input.md) に落とす。world-server の `Network.UDP.Protocol` / 空間同期用 Phoenix の廃止手順を別途起票。
-5. **C10 実装準備**: 3 本の WorldManifest / Prefab 移植仕様と DoD（host 上 20Hz）を `builtin-world-manifests.md`（案）または contents 改訂に落とす。
-6. 方針決定後、v1 の「要改訂」ファイルを順に更新するか、v2 詳細ドキュメントへ移し v1 をアーカイブするかを選ぶ。
+3. **未決の衝突**: ~~C2 / C3 / C4 / C5 / C7 / C8 / C11~~ → **2026-10-23 方針決定済**（§2.1）。§1 の一致（M1–M16）は維持。
+4. **C9 実装準備**: OSC 契約を `osc-input-edge.md` または input 系へ。world-server の UDP / 空間同期用 Phoenix 廃止手順を起票。
+5. **C10 実装準備**: [builtin-world-manifests.md](builtin-world-manifests.md) と host 上 20Hz DoD。
+6. **C8 運用**: v1 改訂と v2 詳細の併存。一括アーカイブしない。コード背骨は client Workspace の `shared-sim` / `host-server`（Phase 3）。
 
 ---
 
@@ -276,15 +330,15 @@ v1 の `architecture/` に **同等のコンポーネント正本がない**（�
 | Stage SQLite→PostgreSQL | あり | 未記載（Ash DataLayer は実装側） | auth 運用 docs へ |
 | engine の room_token + Bearer | 図は Room Token 発行を world-server 側に記載 | engine チェックリストあり（AUTH_REQUIRED） | world-server / federation と相互リンク |
 
-### 8.3 統合オプション（要決定）
+### 8.3 統合オプション — **案 B 採用（2026-10-23）**
 
-推奨は **B（索引＋契約は auth 側に残す）**。サービス固有の hardening は auth に置き、プラットフォーム横断の「見え方」だけ engine の architecture-v2 に寄せる。
+**結論**: **B（索引＋契約は既存パスに残す）**。サービス固有の hardening は auth に置き、プラットフォーム横断の「見え方」だけ engine の architecture-v2 に寄せる。正本: [auth-server.md](auth-server.md)。
 
 | 案 | 内容 | 長所 | 短所 |
 |:---|:---|:---|:---|
-| **A. 移設** | `jwt-jwks-engine-contract.md` を `architecture-v2/auth-jwt-jwks-contract.md`（または `architecture/auth/`）へ移動し、auth 側はスタブリンク | engine 側で横断契約が一覧できる | auth リポジトリ単体で契約が遠くなり、サービス開発時の導線が弱る |
-| **B. 索引（推奨）** | `architecture-v2/auth-server.md` を薄い索引にする（責務・図上の位置・ギャップ表）。契約正本は `.workspace/0_docs/` のまま | 保証の単位＝フォルダ（サービス）を維持。二重管理を避けやすい | engine だけ見ると詳細がワンホップ先 |
-| **C. 複製** | 両方に全文を置く | 単体閲覧は楽 | すぐ乖離する。非推奨 |
+| **A. 移設** | 契約を architecture-v2 へ移動 | engine で一覧しやすい | auth 単体の導線が弱る |
+| **B. 索引（採用）** | 薄い索引＋契約は `.workspace/0_docs/` のまま | 保証の単位＝フォルダを維持 | 詳細がワンホップ先 |
+| **C. 複製** | 両方に全文 | 単体閲覧は楽 | すぐ乖離。非推奨 |
 
 ### 8.4 統合後にやる最小セット（案 B 前提）
 
